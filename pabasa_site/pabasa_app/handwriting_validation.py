@@ -369,6 +369,103 @@ def is_recognizable_session4_pair(value, letter):
     return (len(strokes) >= 2 and max_x - min_x >= .08 and max_y - min_y >= .06)
 
 
+def is_recognizable_lesson13_pair(value, letter):
+    """Conservative, target-aware geometry gate for Lesson 13 Gawain 4."""
+    strokes = normalize_strokes(value)
+    target = str(letter or '')[:1]
+    if strokes is None or target not in {'L', 'l', 'K', 'k'} or not strokes:
+        return False
+    points = [point for stroke in strokes for point in stroke]
+    if len(points) < 3 or is_scribble_like(strokes):
+        return False
+    xs, ys = zip(*points)
+    width, height = max(xs) - min(xs), max(ys) - min(ys)
+    if height < .10 or (width < .012 and target != 'l'):
+        return False
+    if target == 'l':
+        return width <= max(.08, height * .55) and sum(len(stroke) for stroke in strokes) >= 3
+    if target == 'k':
+        if len(strokes) in {2, 3}:
+            stem = min(strokes, key=lambda stroke: (
+                (max(point[0] for point in stroke) - min(point[0] for point in stroke))
+                / max(max(point[1] for point in stroke) - min(point[1] for point in stroke), .001)))
+            stem_x = (min(point[0] for point in stem) + max(point[0] for point in stem)) / 2
+            upper_right = False
+            lower_right = False
+            global_midpoint = (min(point[1] for stroke in strokes for point in stroke)
+                               + max(point[1] for stroke in strokes for point in stroke)) / 2
+            for stroke in strokes:
+                if stroke is stem:
+                    continue
+                upper_right = upper_right or (stroke[0][1] <= global_midpoint
+                                              and max(point[0] for point in stroke) > stem_x + .009)
+                lower_right = lower_right or (stroke[0][1] >= global_midpoint
+                                              and max(point[0] for point in stroke) > stem_x + .009)
+                if min(point[1] for point in stroke) < global_midpoint < max(point[1] for point in stroke):
+                    upper_right = upper_right or max(point[0] for point in stroke) > stem_x + .009
+                    lower_right = lower_right or max(point[0] for point in stroke) > stem_x + .009
+            return ((max(point[1] for point in stem) - min(point[1] for point in stem)) >= .07
+                    and upper_right and lower_right and width >= .018)
+        return False
+    if target == 'L':
+        if len(strokes) == 1:
+            stroke = strokes[0]
+            if len(stroke) < 3:
+                return False
+            lowest_index = max(range(len(stroke)), key=lambda index: stroke[index][1])
+            lowest_y = stroke[lowest_index][1]
+            height = max(point[1] for point in stroke) - min(point[1] for point in stroke)
+            bottom = stroke[max(0, lowest_index - 2):]
+            bottom_span = max(point[0] for point in bottom) - min(point[0] for point in bottom)
+            downward = lowest_index >= max(1, int(len(stroke) * .45))
+            starts_high = stroke[0][1] <= min(point[1] for point in stroke) + height * .45
+            rightward = max(point[0] for point in bottom) - stroke[max(0, lowest_index - 1)][0]
+            return (height >= .10 and starts_high and downward
+                    and lowest_y >= min(point[1] for point in stroke) + height * .55
+                    and bottom_span >= .012 and rightward >= .012)
+        if len(strokes) >= 2:
+            stem = [stroke for stroke in strokes if (max(p[1] for p in stroke) - min(p[1] for p in stroke)) >= .08]
+            foot = [stroke for stroke in strokes if (max(p[0] for p in stroke) - min(p[0] for p in stroke)) >= .012]
+            if stem and foot:
+                stem_bottom = max(p[1] for p in stem[0])
+                foot_top = min(p[1] for p in foot[0])
+                return abs(stem_bottom - foot_top) <= .22
+        return width >= .025 and any(max(p[0] for p in stroke) - min(p[0] for p in stroke) >= .018 for stroke in strokes)
+    if target in {'K', 'k'}:
+        if target == 'K':
+            if len(strokes) == 2:
+                stems = [min(strokes, key=lambda stroke: (
+                    (max(point[0] for point in stroke) - min(point[0] for point in stroke))
+                    / max(max(point[1] for point in stroke) - min(point[1] for point in stroke), .001)))]
+            else:
+                stems = [stroke for stroke in strokes
+                         if max(point[1] for point in stroke) - min(point[1] for point in stroke) >= .10
+                         and (max(point[0] for point in stroke) - min(point[0] for point in stroke))
+                         <= (max(point[1] for point in stroke) - min(point[1] for point in stroke)) * .35]
+            stem_x = (min(point[0] for point in stems[0]) + max(point[0] for point in stems[0])) / 2 if stems else None
+            if stem_x is not None:
+                upper_right = False
+                lower_right = False
+                for stroke in strokes:
+                    if stroke in stems:
+                        continue
+                    ys = [point[1] for point in stroke]
+                    xs = [point[0] for point in stroke]
+                    midpoint = (min(ys) + max(ys)) / 2
+                    upper_right = upper_right or any(point[1] <= midpoint and point[0] > stem_x + .012 for point in stroke)
+                    lower_right = lower_right or any(point[1] >= midpoint and point[0] > stem_x + .012 for point in stroke)
+                if len(strokes) in {2, 3} and upper_right and lower_right:
+                    return width >= .025
+        diagonals = 0
+        for stroke in strokes:
+            if len(stroke) >= 2:
+                start, end = stroke[0], stroke[-1]
+                if abs(end[0] - start[0]) >= .018 and abs(end[1] - start[1]) >= .018:
+                    diagonals += 1
+        return diagonals >= 2 and width >= (.045 if target == 'K' else .035)
+    return False
+
+
 def segment_session4_trace_groups(value, group_count=3):
     """Cluster completed strokes into left-to-right handwritten letters."""
     # The endpoint normalizes the browser payload before calling this helper.
@@ -442,6 +539,78 @@ def segment_session4_trace_groups(value, group_count=3):
         [[{'x': point[0], 'y': point[1]} for point in stroke] for stroke in group]
         for group in groups
     ] if len(groups) == group_count and all(groups) else None
+
+
+def segment_lesson13_trace_groups(value, letter, group_count=3):
+    """Group Lesson 13 L/l/K/k strokes without changing Session 4 rules.
+
+    L/l commonly uses a stem plus a short stroke at the baseline. Those
+    strokes can have almost no vertical bounding-box overlap, so the generic
+    Session 4 proximity rule rejects them. For the common six-stroke L/l
+    payload, pair adjacent strokes by horizontal position, then leave the
+    target-specific recognizer to decide whether each pair is a real letter.
+    Other shapes continue through the established spatial grouping helper.
+    """
+    strokes = normalize_strokes(value)
+    if strokes is None or not strokes:
+        return None
+    if str(letter or '') in {'L', 'l'} and len(strokes) == group_count:
+        indexed = []
+        for index, stroke in enumerate(strokes):
+            xs = [point[0] for point in stroke]
+            indexed.append((index, (min(xs) + max(xs)) / 2))
+        indexed.sort(key=lambda entry: entry[1])
+        return [
+            [[{'x': point[0], 'y': point[1]} for point in strokes[index]]]
+            for index, _ in indexed
+        ]
+    if str(letter or '') == 'L' and len(strokes) == group_count * 2:
+        shapes = []
+        for index, stroke in enumerate(strokes):
+            xs = [point[0] for point in stroke]
+            ys = [point[1] for point in stroke]
+            min_x, max_x = min(xs), max(xs)
+            min_y, max_y = min(ys), max(ys)
+            shapes.append({'index': index, 'min_x': min_x, 'max_x': max_x,
+                           'min_y': min_y, 'max_y': max_y,
+                           'width': max_x - min_x, 'height': max_y - min_y,
+                           'center_x': (min_x + max_x) / 2})
+        # Group spatially first. Do not classify stems/feet before pairing:
+        # a narrow or slightly slanted Grade 2 foot is still part of the L.
+        # Pair the leftmost unassigned stroke with its nearest remaining
+        # horizontal-neighbour by x-center, which works for both drawing
+        # orders (stem+foot and all stems followed by all feet).
+        unused = set(shape['index'] for shape in shapes)
+        groups = []
+        by_index = {shape['index']: shape for shape in shapes}
+        while unused:
+            first = min((by_index[index] for index in unused), key=lambda shape: shape['center_x'])
+            unused.remove(first['index'])
+            if not unused:
+                return None
+            second = min((by_index[index] for index in unused),
+                         key=lambda shape: abs(shape['center_x'] - first['center_x']))
+            unused.remove(second['index'])
+            groups.append([strokes[first['index']], strokes[second['index']]])
+        groups.sort(key=lambda group: sum(point[0] for stroke in group for point in stroke)
+                    / sum(len(stroke) for stroke in group))
+        return [
+            [[{'x': point[0], 'y': point[1]} for point in stroke] for stroke in group]
+            for group in groups
+        ]
+    if str(letter or '') in {'K', 'k'} and len(strokes) in {group_count * 2, group_count * 3}:
+        shapes = []
+        for index, stroke in enumerate(strokes):
+            xs = [point[0] for point in stroke]
+            shapes.append((index, (min(xs) + max(xs)) / 2))
+        shapes.sort(key=lambda shape: shape[1])
+        per_group = len(strokes) // group_count
+        return [
+            [[{'x': point[0], 'y': point[1]} for point in strokes[index]]
+             for index, _ in shapes[offset:offset + per_group]]
+            for offset in range(0, len(shapes), per_group)
+        ]
+    return segment_session4_trace_groups(strokes, group_count)
 
 
 # Explicit per-letter entry points keep each target isolated at the activity

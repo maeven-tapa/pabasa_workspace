@@ -205,7 +205,7 @@ def _enforce_prescribed_activity_sequence(request, activity_key):
     if not student or not _student_can_open_prescribed_activity(student, activity_key):
         return redirect('assessment')
     return None
-from .handwriting_validation import is_recognizable_a, is_recognizable_f, is_recognizable_h, is_recognizable_i, is_recognizable_ii, is_recognizable_l, is_recognizable_m, is_recognizable_s, is_recognizable_t, is_recognizable_letter_pair, is_recognizable_n, is_recognizable_p, is_recognizable_trace, is_scribble_like, normalize_strokes, is_recognizable_session4_pair, segment_session4_trace_groups
+from .handwriting_validation import is_recognizable_a, is_recognizable_f, is_recognizable_h, is_recognizable_i, is_recognizable_ii, is_recognizable_l, is_recognizable_m, is_recognizable_s, is_recognizable_t, is_recognizable_letter_pair, is_recognizable_n, is_recognizable_p, is_recognizable_trace, is_scribble_like, normalize_strokes, is_recognizable_session4_pair, is_recognizable_lesson13_pair, segment_session4_trace_groups, segment_lesson13_trace_groups
 from .reader_classification import classify_student_account
 from .scoring import (
     ADAPTED_READING_LEVEL_DISCLAIMER,
@@ -15378,8 +15378,16 @@ def prescribed_activity_page(request, activity_key):
     if activity_key == 'lesson-13-gawain-4':
         context = _dashboard_context(request)
         saved_strokes = raw_state.get('strokes') if isinstance(raw_state.get('strokes'), list) else []
-        total_writing_entries = len(activity['items']) * 5
-        has_incomplete_progress = bool(progress and not progress.activity_completed and (progress.current_index > 0 or saved_strokes))
+        total_writing_items = len(activity['items'])
+        legacy_state = (progress and progress.total_items == len(activity['items']) * 5) or len(saved_strokes) > total_writing_items
+        if legacy_state and progress and progress.activity_completed:
+            has_incomplete_progress = False
+        else:
+            has_incomplete_progress = bool(progress and not progress.activity_completed and (progress.current_index > 0 or saved_strokes))
+        saved_index = max(0, min(total_writing_items, int(progress.current_index))) if progress else 0
+        if legacy_state:
+            saved_index = max(0, min(total_writing_items, saved_index // 5))
+            saved_strokes = []
         context['lesson13_gawain4_data'] = {
             'activity_key': activity_key, 'session_key': 'session-5',
             'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
@@ -15388,11 +15396,11 @@ def prescribed_activity_page(request, activity_key):
             'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
             'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
             'has_incomplete_progress': has_incomplete_progress,
-            'progress': {'current_index': progress.current_index if progress else 0,
+            'progress': {'current_index': saved_index,
                          'completed_items': progress.completed_items if progress else 0,
-                         'total_items': total_writing_entries,
+                         'total_items': total_writing_items,
                          'activity_completed': progress.activity_completed if progress else False,
-                         'strokes': saved_strokes, 'state': raw_state},
+                         'strokes': saved_strokes, 'state': raw_state, 'legacy_state': legacy_state},
         }
         return render(request, 'pabasa_app/lesson_13_gawain_4_page.html', context)
     if activity_key == 'session-5-lesson-14-gawain-4':
@@ -16076,6 +16084,108 @@ def prescribed_activity_progress(request, activity_key):
             payload = {'current_item': index, 'traces': traces, 'phase': phase, 'state_version': int(old.get('state_version', 0) or 0) + 1}
             progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index, 'total_items': total, 'activity_completed': False, 'state': payload})
             return JsonResponse({'success': True, 'accepted': True, 'progress': {'state': payload, 'current_index': index, 'completed_items': index, 'activity_completed': False}})
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    if activity_key == 'lesson-13-gawain-4':
+        try:
+            data = json.loads(request.body or '{}')
+            total = len(activity.get('items') or [])
+            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            old = existing.state if existing and isinstance(existing.state, dict) else {}
+            now = timezone.now()
+            started_at = old.get('started_at') or now.isoformat()
+            elapsed_seconds = max(0, int(data.get('elapsed_seconds', old.get('elapsed_seconds', 0)) or 0))
+            if data.get('reset') is True:
+                state = {'current_item': 0, 'strokes': [], 'phase': 'trace', 'state_version': 0,
+                         'started_at': now.isoformat(), 'elapsed_seconds': 0}
+                progress, _ = StudentActivityProgress.objects.update_or_create(
+                    student=student, activity_key=activity_key,
+                    defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+                              'total_items': total, 'activity_completed': False, 'state': state})
+                return JsonResponse({'success': True, 'progress': {'state': state, 'current_index': 0,
+                    'completed_items': 0, 'activity_completed': False}})
+            action = data.get('action')
+            requested_index = int(data.get('item_index', -1))
+            if action not in {'validate_trace', 'save_trace'}:
+                raise ValueError('Invalid handwriting action.')
+            if requested_index not in range(total):
+                raise ValueError('Trace item index is invalid.')
+            normalized = normalize_strokes(data.get('strokes'))
+            if normalized is None:
+                return JsonResponse({'success': True, 'accepted': False, 'item_index': requested_index,
+                                     'diagnostics': {'target': activity['items'][requested_index]['letter'], 'group_count': 0, 'groups': []}}) if action == 'validate_trace' else JsonResponse({'success': False, 'error': 'Invalid stroke payload.'}, status=400)
+            target = activity['items'][requested_index]['letter']
+            grouping_branch = ('exact-three-single-stroke' if target in {'L', 'l'} and len(normalized) == 3
+                               else 'lesson13-two-stroke-L' if target == 'L' and len(normalized) == 6
+                               else 'lesson13-two-stroke-K' if target == 'K' and len(normalized) == 6
+                               else 'lesson13-three-stroke-K' if target == 'K' and len(normalized) == 9
+                               else 'lesson13-two-stroke-k' if target == 'k' and len(normalized) == 6
+                               else 'lesson13-three-stroke-k' if target == 'k' and len(normalized) == 9
+                               else 'lesson13-spatial')
+            if target in {'L', 'l'} and len(normalized) == 3:
+                groups = [[[{'x': point[0], 'y': point[1]} for point in stroke]] for stroke in sorted(
+                    normalized, key=lambda stroke: (min(point[0] for point in stroke) + max(point[0] for point in stroke)) / 2)]
+            elif target in {'K', 'k'} and len(normalized) in {6, 9}:
+                ordered = sorted(normalized, key=lambda stroke: (min(point[0] for point in stroke) + max(point[0] for point in stroke)) / 2)
+                per_group = len(ordered) // 3
+                groups = [[[{'x': point[0], 'y': point[1]} for point in stroke] for stroke in ordered[offset:offset + per_group]]
+                          for offset in range(0, len(ordered), per_group)]
+            else:
+                groups = segment_lesson13_trace_groups(normalized, target, 3)
+            def recognize(group):
+                points = [point for stroke in group for point in stroke]
+                xs = [point['x'] if isinstance(point, dict) else point[0] for point in points]
+                ys = [point['y'] if isinstance(point, dict) else point[1] for point in points]
+                bbox = {'min_x': min(xs), 'max_x': max(xs), 'min_y': min(ys), 'max_y': max(ys)} if points else {}
+                result = is_recognizable_lesson13_pair(group, target)
+                diagnostic = {'stroke_count': len(group), 'point_count': len(points), 'bbox': bbox,
+                              'recognizable': result, 'reason': None if result else 'target geometry not recognized'}
+                if target == 'L' and len(group) == 1 and group[0]:
+                    stroke = group[0]
+                    lowest = max(range(len(stroke)), key=lambda index: stroke[index]['y'])
+                    tail = stroke[lowest:]
+                    diagnostic.update({'width': bbox['max_x'] - bbox['min_x'],
+                                       'height': bbox['max_y'] - bbox['min_y'],
+                                       'start_x': stroke[0]['x'], 'start_y': stroke[0]['y'],
+                                       'end_x': stroke[-1]['x'], 'end_y': stroke[-1]['y'],
+                                       'lowest_y': stroke[lowest]['y'],
+                                       'bottom_horizontal_span': max(point['x'] for point in tail) - min(point['x'] for point in tail),
+                                       'rejection_reason': None if result else 'one-stroke L path geometry not recognized'})
+                return diagnostic
+            details = [recognize(group) for group in (groups or [])]
+            cluster_assignments = []
+            for group in (groups or []):
+                assignment = []
+                for stroke in group:
+                    signature = [(point['x'], point['y']) for point in stroke]
+                    assignment.append(next((index for index, original in enumerate(normalized)
+                                            if original == signature), None))
+                cluster_assignments.append(assignment)
+            valid = bool(groups and len(groups) == 3 and all(detail['recognizable'] for detail in details))
+            if action == 'validate_trace':
+                return JsonResponse({'success': True, 'accepted': valid, 'complete': valid, 'item_index': requested_index,
+                    'diagnostics': {'target': target, 'raw_stroke_count': len(data.get('strokes') or []),
+                                    'normalized_stroke_count': len(normalized), 'grouping_engine': 'lesson13',
+                                    'grouping_branch': grouping_branch, 'group_count': len(groups or []),
+                                    'stroke_counts': [len(group) for group in (groups or [])],
+                                    'cluster_assignments': cluster_assignments,
+                                    'groups': details}})
+            if not valid:
+                raise ValueError(f'Invalid {target} trace shape.')
+            traces = old.get('traces') if isinstance(old.get('traces'), list) else []
+            traces = traces[:requested_index * 3] + groups
+            next_index = requested_index + 1
+            completed = next_index >= total
+            state = {'current_item': next_index, 'traces': traces, 'strokes': [], 'phase': 'complete' if completed else 'trace',
+                     'state_version': int(old.get('state_version', 0) or 0) + 1, 'started_at': started_at,
+                     'elapsed_seconds': elapsed_seconds, **({'completed_at': now.isoformat()} if completed else {})}
+            progress, _ = StudentActivityProgress.objects.update_or_create(
+                student=student, activity_key=activity_key,
+                defaults={'current_index': next_index, 'completed_items': next_index, 'correct_items': next_index,
+                          'total_items': total, 'activity_completed': completed, 'state': state})
+            return JsonResponse({'success': True, 'accepted': True, 'progress': {'state': state,
+                'current_index': next_index, 'completed_items': next_index, 'total_items': total,
+                'activity_completed': completed}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity_key == 'lesson9-gawain3':
@@ -18057,31 +18167,6 @@ def prescribed_activity_progress(request, activity_key):
         )
         return JsonResponse({'success': True, 'progress': {'state': saved, 'current_index': current_index,
             'completed_items': completed_items, 'activity_completed': progress.activity_completed}})
-    if activity_key == 'lesson-13-gawain-4':
-        try:
-            data = json.loads(request.body or '{}')
-            incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
-            old = existing.state if existing and isinstance(existing.state, dict) else {}
-            total = len(activity['items']) * 5
-            current_index = max(0, min(total, int(data.get('current_index', old.get('current_index', 0)) or 0)))
-            strokes = data.get('strokes', old.get('strokes', []))
-            if not isinstance(strokes, list):
-                raise ValueError('Invalid handwriting strokes.')
-            strokes = strokes[:total]
-            payload = {'activity_key': activity_key, 'session_key': 'session-5',
-                       'current_index': current_index, 'completed_items': current_index,
-                       'strokes': strokes, 'state_version': int(old.get('state_version') or 0) + 1,
-                       **{key: incoming[key] for key in ('canvas_width', 'canvas_height') if key in incoming}}
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': current_index, 'completed_items': current_index,
-                          'correct_items': 0, 'total_items': total, 'activity_completed': False, 'state': payload})
-            return JsonResponse({'success': True, 'progress': {'state': payload,
-                'current_index': progress.current_index, 'completed_items': progress.completed_items,
-                'activity_completed': progress.activity_completed}})
-        except (TypeError, ValueError, json.JSONDecodeError):
-            return JsonResponse({'success': False, 'error': 'Invalid handwriting progress.'}, status=400)
     if activity_key == 'lesson-13-gawain-1':
         data = json.loads(request.body or '{}'); state = data.get('state') if isinstance(data.get('state'), dict) else {}
         existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first(); old = existing.state if existing and isinstance(existing.state, dict) else {}
@@ -19415,14 +19500,14 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity_key == 'lesson-13-gawain-4':
         progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
-        total = len(activity['items']) * 5
+        total = len(activity['items'])
         if not progress or progress.completed_items < total:
-            return JsonResponse({'success': False, 'error': 'Complete all twenty writing entries first.'}, status=400)
+            return JsonResponse({'success': False, 'error': 'Complete all four writing items first.'}, status=400)
         progress.current_index = progress.completed_items = progress.total_items = total
-        progress.correct_items = 0
+        progress.correct_items = total
         progress.activity_completed = True
         progress.save(update_fields=['current_index', 'completed_items', 'correct_items', 'total_items', 'activity_completed', 'updated_at'])
-        return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': 0, 'accuracy': None}})
+        return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity_key == 'lesson-13-gawain-1':
         progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
         if not progress or progress.completed_items < 4:
