@@ -2078,6 +2078,9 @@ class StudentActivityRecordingSubmission(models.Model):
     substep = models.PositiveIntegerField(null=True, blank=True)
     audio_file = models.FileField(upload_to="activity_recordings/%Y/%m/%d/")
     duration_seconds = models.PositiveIntegerField(null=True, blank=True)
+    teacher_score = models.PositiveSmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
     checked_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='checked_activity_recordings')
     checked_at = models.DateTimeField(null=True, blank=True)
@@ -2087,6 +2090,10 @@ class StudentActivityRecordingSubmission(models.Model):
     class Meta:
         db_table = "student_activity_recording_submissions"
         constraints = [
+            models.CheckConstraint(
+                condition=models.Q(teacher_score__isnull=True) | models.Q(teacher_score__in=[0, 1]),
+                name='teacher_score_zero_or_one',
+            ),
             models.UniqueConstraint(
                 fields=("student", "activity_key"),
                 condition=models.Q(item_index__isnull=True),
