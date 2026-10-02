@@ -20291,9 +20291,10 @@ def lesson_13_gawain_1_recording(request):
             submission.audio_file = audio
             submission.duration_seconds = duration or None
             submission.status = 'submitted'
+            submission.teacher_score = None
             submission.checked_by = None
             submission.checked_at = None
-            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'checked_by', 'checked_at', 'updated_at'])
+            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'teacher_score', 'checked_by', 'checked_at', 'updated_at'])
         else:
             submission = StudentActivityRecordingSubmission.objects.create(student=student, activity_key=activity_key, item_index=item_index, audio_file=audio, duration_seconds=duration or None)
         new_name = submission.audio_file.name if submission.audio_file else ''
@@ -20526,6 +20527,123 @@ def teacher_session_4_gawain_1_score(request):
         'success': True, 'submission_id': submission.id, 'teacher_score': score,
         'status': submission.status, 'correct_items': correct_items,
         'total_items': total, 'all_reviewed': reviewed.count() == total,
+    })
+
+
+@login_required(role='teacher')
+@require_http_methods(['GET'])
+def teacher_session_4_gawain_2_recordings(request):
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    try:
+        student_id = int(request.GET.get('student_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'A valid student is required.'}, status=400)
+    if str(student_id) not in {str(value) for value in _teacher_session4_student_ids(teacher)}:
+        return JsonResponse({'success': False, 'error': 'Student access denied.'}, status=403)
+    activity = prescribed_activity('session-4-gawain-2') or {}
+    catalog_items = activity.get('items') or []
+    progress = StudentActivityProgress.objects.filter(student_id=student_id, activity_key='session-4-gawain-2').first()
+    progress_state = progress.state if progress and isinstance(progress.state, dict) else {}
+    submissions = {
+        (row.item_index, row.substep): row
+        for row in StudentActivityRecordingSubmission.objects.filter(
+            student_id=student_id, activity_key='session-4-gawain-2', item_index__isnull=False,
+            substep__in=(0, 1),
+        )
+    }
+    items = []
+    for item_index, item in enumerate(catalog_items):
+        for substep, field in ((0, 'first'), (1, 'second')):
+            row = submissions.get((item_index, substep))
+            items.append({
+                'submission_id': row.id if row else None,
+                'item_index': item_index,
+                'substep': substep,
+                'item_label': item.get(field, ''),
+                'item_type': 'letter',
+                'recording_available': bool(row and row.audio_file),
+                'audio_url': reverse('teacher_session_4_gawain_2_audio', args=[row.id]) if row and row.audio_file else None,
+                'teacher_score': row.teacher_score if row else None,
+                'status': row.status if row else None,
+            })
+    completed_at = progress_state.get('completed_at') if progress and progress.activity_completed else None
+    if not completed_at and progress and progress.activity_completed:
+        completed_at = progress.updated_at.isoformat()
+    return JsonResponse({
+        'success': True,
+        'completed': bool(progress and progress.activity_completed),
+        'completed_at': completed_at,
+        'duration_seconds': progress_state.get('elapsed_seconds'),
+        'automatic_subtotal': max(0, min(len(catalog_items), int(progress.completed_items if progress else 0))),
+        'items': items,
+    })
+
+
+@login_required(role='teacher')
+@require_http_methods(['GET'])
+def teacher_session_4_gawain_2_audio(request, submission_id):
+    submission = StudentActivityRecordingSubmission.objects.filter(
+        pk=submission_id, activity_key='session-4-gawain-2', substep__in=(0, 1),
+    ).first()
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    if not submission or str(submission.student_id) not in {str(value) for value in _teacher_session4_student_ids(teacher)} or not submission.audio_file:
+        return HttpResponseForbidden('Recording unavailable.')
+    response = FileResponse(
+        submission.audio_file.open('rb'),
+        content_type=mimetypes.guess_type(submission.audio_file.name)[0] or 'audio/webm',
+    )
+    response['Content-Disposition'] = 'inline'
+    return response
+
+
+@login_required(role='teacher')
+@csrf_protect
+@require_http_methods(['POST'])
+def teacher_session_4_gawain_2_score(request):
+    try:
+        payload = json.loads(request.body or '{}')
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({'success': False, 'error': 'Invalid request.'}, status=400)
+    score = payload.get('score')
+    if isinstance(score, bool) or not isinstance(score, int) or score not in (0, 1):
+        return JsonResponse({'success': False, 'error': 'Score must be 0 or 1.'}, status=400)
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    allowed_ids = _teacher_session4_student_ids(teacher)
+    with transaction.atomic():
+        submission = StudentActivityRecordingSubmission.objects.select_for_update().filter(
+            pk=payload.get('submission_id'), activity_key='session-4-gawain-2', substep__in=(0, 1),
+        ).first()
+        if not submission or str(submission.student_id) not in {str(value) for value in allowed_ids}:
+            return JsonResponse({'success': False, 'error': 'Recording access denied.'}, status=403)
+        if not submission.audio_file:
+            return JsonResponse({'success': False, 'error': 'No recording submitted.'}, status=409)
+        submission.teacher_score = score
+        submission.status = 'checked'
+        submission.checked_by = teacher
+        submission.checked_at = timezone.now()
+        submission.save(update_fields=['teacher_score', 'status', 'checked_by', 'checked_at', 'updated_at'])
+        activity_total = len((prescribed_activity('session-4-gawain-2') or {}).get('items') or [])
+        manual_rows = StudentActivityRecordingSubmission.objects.filter(
+            student_id=submission.student_id, activity_key='session-4-gawain-2',
+            item_index__isnull=False, substep__in=(0, 1), teacher_score__isnull=False,
+        )
+        manual_total = activity_total * 2
+        manual_subtotal = sum(row.teacher_score for row in manual_rows)
+        progress = StudentActivityProgress.objects.filter(
+            student_id=submission.student_id, activity_key='session-4-gawain-2',
+        ).first()
+        automatic_subtotal = max(0, min(activity_total, int(progress.completed_items if progress else 0)))
+        all_reviewed = manual_rows.count() == manual_total
+        final_correct = manual_subtotal + automatic_subtotal
+        if progress:
+            progress.correct_items = final_correct if all_reviewed else automatic_subtotal
+            progress.total_items = manual_total + activity_total
+            progress.save(update_fields=['correct_items', 'total_items', 'updated_at'])
+    return JsonResponse({
+        'success': True, 'submission_id': submission.id, 'teacher_score': score,
+        'status': submission.status, 'manual_correct_items': manual_subtotal,
+        'automatic_subtotal': automatic_subtotal, 'correct_items': final_correct,
+        'total_items': manual_total + activity_total, 'all_reviewed': all_reviewed,
     })
 
 

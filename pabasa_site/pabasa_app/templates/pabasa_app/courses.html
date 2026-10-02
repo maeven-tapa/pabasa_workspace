@@ -13408,6 +13408,24 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         }] }];
                         return [String(rawId), null];
                     }
+                    if (String(rawId) === 'prescribed-session-4-gawain-2') {
+                        const res = await fetch('{% url "teacher_session_4_gawain_2_recordings" %}?student_id=' + encodeURIComponent(window.__studentProgressStudentId || ''), { credentials: 'same-origin' });
+                        const data = await res.json();
+                        if (res.ok && data.success) return [String(rawId), { attempts: [{
+                            student_id: window.__studentProgressStudentId,
+                            student_name: window.__studentProgressStudentName || '',
+                            status: data.completed ? 'completed' : 'in_progress',
+                            completed_at: data.completed_at,
+                            duration_seconds: data.duration_seconds,
+                            activity_type: 'session_4_gawain_2',
+                            session4_recordings: data.items || [],
+                            session4_automatic_subtotal: data.automatic_subtotal || 0,
+                            session4_correct_items: data.items?.filter(item => item.teacher_score !== null && item.teacher_score !== undefined).reduce((sum, item) => sum + Number(item.teacher_score), 0) + Number(data.automatic_subtotal || 0),
+                            session4_reviewed_items: data.items?.filter(item => item.teacher_score !== null && item.teacher_score !== undefined).length || 0,
+                            session4_total_items: (data.items || []).length + Number(data.automatic_subtotal ? 4 : 4),
+                        }] }];
+                        return [String(rawId), null];
+                    }
                     if (String(rawId).startsWith('material-')) {
                         const id = String(rawId).replace(/^material-/, '');
                         const res = await fetch(`/dashboard/teacher/material-attempts/?material_id=${encodeURIComponent(id)}`, {
@@ -14658,6 +14676,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 activityType: 'session_4_gawain_1',
                 activityLabel: 'Session 4',
             });
+            tasks.push({
+                title: 'Lessons 10, 11, at 12 · Gawain 2',
+                assessmentId: 'prescribed-session-4-gawain-2',
+                source_type: 'prescribed',
+                activityType: 'session_4_gawain_2',
+                activityLabel: 'Session 4',
+            });
 
             return tasks;
         }
@@ -14803,6 +14828,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const isLesson1Recording = activityType === 'lesson_1_recording';
                     const isLesson29TraceSay = activityType === 'lesson_29_trace_say';
                     const isSession4Gawain1 = activityType === 'session_4_gawain_1';
+                    const isSession4Gawain2 = activityType === 'session_4_gawain_2';
                     const timeSpent = isLesson1Recording && attempt?.recording_duration_seconds !== undefined
                         ? attempt.recording_duration_seconds
                         : (attempt ? latestAttemptValue(attempt, 'time_spent', 'duration_seconds', 'duration') : null);
@@ -14827,15 +14853,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const retellRecordingKey = String(retellSubmissionId || `${task.assessmentId || task.title}-${studentId}`);
                     const retellRecordingAvailable = (isRetellStory || isStoryResponse || isLesson1Recording || isLesson29TraceSay) && attempt?.recording_available && attempt?.recording_url;
                     const lesson29Recordings = isLesson29TraceSay && Array.isArray(attempt?.recordings) ? attempt.recordings : [];
-                    const session4Recordings = isSession4Gawain1 && Array.isArray(attempt?.session4_recordings) ? attempt.session4_recordings : [];
-                    const session4Reviewed = isSession4Gawain1 && session4Recordings.length > 0 && session4Recordings.every(recording => recording.teacher_score !== null && recording.teacher_score !== undefined);
-                    const session4Score = isSession4Gawain1
+                    const session4Recordings = (isSession4Gawain1 || isSession4Gawain2) && Array.isArray(attempt?.session4_recordings) ? attempt.session4_recordings : [];
+                    const session4Reviewed = (isSession4Gawain1 || isSession4Gawain2) && session4Recordings.length > 0 && session4Recordings.every(recording => recording.teacher_score !== null && recording.teacher_score !== undefined);
+                    const session4Score = (isSession4Gawain1 || isSession4Gawain2)
                         ? (session4Reviewed ? `${attempt.session4_correct_items}/${attempt.session4_total_items}` : 'Awaiting teacher')
                         : null;
                     const session4RecordingHtml = session4Recordings.map(recording => {
                         const score = recording.teacher_score;
                         const hasRecording = recording.recording_available && recording.audio_url;
-                        return `<div class="session4-letter-recording" data-submission-id="${escapeHtml(recording.submission_id || '')}"><div class="session4-letter-heading"><strong>${escapeHtml(recording.item_label || '')}</strong><span>Letter Sound</span></div>${hasRecording ? `<audio class="session4-native-audio" controls preload="metadata" src="${escapeHtml(recording.audio_url)}" aria-label="Play recording for ${escapeHtml(recording.item_label || '')}"></audio><div class="session4-score-heading">Teacher Score</div><div class="session4-score-controls" role="group" aria-label="Teacher score for ${escapeHtml(recording.item_label || '')}"><button type="button" class="session4-score-button${score === 0 ? ' selected' : ''}" data-score="0" ${recording.submission_id ? '' : 'disabled'}>Incorrect — 0</button><button type="button" class="session4-score-button${score === 1 ? ' selected' : ''}" data-score="1" ${recording.submission_id ? '' : 'disabled'}>Correct — 1</button></div><span class="session4-score-feedback" aria-live="polite"></span>` : '<span class="session4-no-recording">No recording submitted</span>'}</div>`;
+                        return `<div class="session4-letter-recording" data-submission-id="${escapeHtml(recording.submission_id || '')}" data-session4-activity="${escapeHtml(task.assessmentId)}" data-session4-student-id="${escapeHtml(studentId)}"><div class="session4-letter-heading"><strong>${escapeHtml(recording.item_label || '')}</strong><span>Letter Sound</span></div>${hasRecording ? `<audio class="session4-native-audio" controls preload="metadata" src="${escapeHtml(recording.audio_url)}" aria-label="Play recording for ${escapeHtml(recording.item_label || '')}"></audio><div class="session4-score-heading">Teacher Score</div><div class="session4-score-controls" role="group" aria-label="Teacher score for ${escapeHtml(recording.item_label || '')}"><button type="button" class="session4-score-button${score === 0 ? ' selected' : ''}" data-score="0" ${recording.submission_id ? '' : 'disabled'}>Incorrect — 0</button><button type="button" class="session4-score-button${score === 1 ? ' selected' : ''}" data-score="1" ${recording.submission_id ? '' : 'disabled'}>Correct — 1</button></div><span class="session4-score-feedback" aria-live="polite"></span>` : '<span class="session4-no-recording">No recording submitted</span>'}</div>`;
                     }).join('');
                     const lesson29RecordingHtml = lesson29Recordings
                         .filter(recording => recording.recording_available && recording.recording_url)
@@ -14846,12 +14872,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         }).join('');
                     const recordingHtml = isLesson29TraceSay
                         ? lesson29RecordingHtml
-                        : isSession4Gawain1
+                        : (isSession4Gawain1 || isSession4Gawain2)
                             ? `<div class="session4-recording-review"><h6>Teacher Review</h6><p>Listen to each recording and score the student's letter sound.</p><div class="session4-recording-list">${session4RecordingHtml}</div></div>`
                         : (retellRecordingAvailable
                             ? `<div class="student-progress-audio-controls"><button type="button" class="student-progress-retell-play" data-url="${escapeHtml(attempt.recording_url)}" aria-label="Play recording"><i class="bi bi-play-fill"></i></button><input class="student-progress-retell-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"><span class="student-progress-retell-time">0:00 / ${escapeHtml(formatStudentProgressAudioTime(attempt.recording_duration_seconds))}</span></div>`
                             : '<span class="student-progress-recording-unavailable">Recording unavailable</span>');
-                    const scoreValue = isSession4Gawain1
+                    const scoreValue = (isSession4Gawain1 || isSession4Gawain2)
                         ? session4Score
                         : isLesson1Recording
                         ? (attempt?.status === 'checked' ? '1' : '-')
@@ -14862,7 +14888,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         : displayedScore;
                     const typeLabel = task.activityLabel || 'Reading Activity';
                     return `
-                        <article class="student-progress-card${isLesson1Recording ? ' lesson1-recording-card' : ''}${isSession4Gawain1 ? ' session4-recording-card' : ''}">
+                        <article class="student-progress-card${isLesson1Recording ? ' lesson1-recording-card' : ''}${(isSession4Gawain1 || isSession4Gawain2) ? ' session4-recording-card' : ''}">
                             <div class="student-progress-card-header">
                                 <div class="student-progress-identity">
                                     <span class="student-progress-type">${escapeHtml(typeLabel)}</span>
@@ -14875,7 +14901,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Time Spent</span><span class="student-progress-stat-value">${timeSpent !== undefined && timeSpent !== null && timeSpent !== '' ? escapeHtml(formatCourseReportDuration(timeSpent)) : '—'}</span></div>
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Score</span><span class="student-progress-stat-value student-progress-score">${scoreValue}</span></div>
                             </div>
-                            ${(isRetellStory || isStoryResponse || isLesson1Recording || isLesson29TraceSay || isSession4Gawain1) ? `<div class="student-progress-recording" data-recording-key="${escapeHtml(retellRecordingKey)}">
+                            ${(isRetellStory || isStoryResponse || isLesson1Recording || isLesson29TraceSay || isSession4Gawain1 || isSession4Gawain2) ? `<div class="student-progress-recording" data-recording-key="${escapeHtml(retellRecordingKey)}">
                                 <div class="student-progress-recording-panel">
                                     ${recordingHtml}
                                     ${isLesson1Recording && (attempt?.can_retry || attempt?.can_check) ? `<div class="d-flex gap-2 mt-2 lesson1-review-actions"><button type="button" class="btn btn-outline-secondary btn-sm student-progress-lesson1-action" data-id="${escapeHtml(attempt.submission_id || '')}" data-action="retry" ${attempt.can_retry ? '' : 'disabled'}>Retry</button><button type="button" class="btn btn-primary btn-sm student-progress-lesson1-action" data-id="${escapeHtml(attempt.submission_id || '')}" data-action="checked" ${attempt.can_check ? '' : 'disabled'}>Mark as Checked</button></div>` : ''}
@@ -14955,7 +14981,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const previous = buttons.map(button => button.classList.contains('selected'));
             buttons.forEach(button => { button.disabled = true; });
             if (feedback) feedback.textContent = 'Saving...';
-            ensureCsrfToken().then(token => fetch('{% url "teacher_session_4_gawain_1_score" %}', {
+            const scoreUrl = row.dataset.session4Activity === 'prescribed-session-4-gawain-2'
+                ? '{% url "teacher_session_4_gawain_2_score" %}'
+                : '{% url "teacher_session_4_gawain_1_score" %}';
+            ensureCsrfToken().then(token => fetch(scoreUrl, {
                 method: 'POST', credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
                 body: JSON.stringify({ submission_id: Number(submissionId), score: Number(session4ScoreButton.dataset.score) })
