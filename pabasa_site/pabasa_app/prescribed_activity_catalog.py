@@ -242,7 +242,7 @@ PRESCRIBED_ACTIVITIES = {
     },
     'lesson7-gawain4b': {
         'activity_key': 'lesson7-gawain4b', 'session_key': 'session-3', 'session_number': 3,
-        'lesson_number': 7, 'gawain_number': '4B', 'title': 'GAWAIN 4B: Letrang Ii at Oo',
+        'lesson_number': 7, 'gawain_number': '4B', 'title': 'Letrang Ii at Oo',
         'instruction': 'I-type ang i kung ang larawan ay nagsisimula sa titik /i/. I-type ang o kung ang larawan ay nagsisimula sa titik /o/.',
         'interaction': 'oral_then_written', 'items': [
             {'word': 'orasan', 'answer': 'o', 'image_path': 'pabasa_app/images/letrang_o_4b/orasan.png'},
@@ -641,7 +641,7 @@ PRESCRIBED_ACTIVITIES = {
     'session-5-lesson-14-gawain-4': {'activity_key': 'session-5-lesson-14-gawain-4', 'session_key': 'session-5', 'session_number': 5, 'lesson_number': 14, 'gawain_number': 4, 'title': 'Gawain 4', 'instruction': 'Lagyan ng tsek (✓) ang bawat hanay kung nagawa ng bata ang kanyang gawain.', 'interaction': 'teacher_reading_checklist', 'total_items': 22, 'legend': {'good': 'Nabasa nang maayos', 'choppy': 'Nabasa pero medyo putol-putol', 'not_read': 'Di nabasa'}, 'section_labels': [{'label': 'Parirala', 'after_item': 7}, {'label': 'Pangungusap', 'after_item': 17}], 'items': [{'text': 'tita'}, {'text': 'buto'}, {'text': 'tasa'}, {'text': 'nota'}, {'text': 'baon'}, {'text': 'mani'}, {'text': 'salamin'}, {'text': 'Sina Tina at Tim'}, {'text': 'May bola si'}, {'text': 'ang tuta'}, {'text': 'Sina Tina at Tim'}, {'text': 'May bola si'}, {'text': 'salamin ni Ana'}, {'text': 'may mais si'}, {'text': 'mais at mani'}, {'text': 'salamin ni Ana'}, {'text': 'may mais si'}, {'text': 'May mais si Tim.'}, {'text': 'Sina Tina at Tim ay may tuta.'}, {'text': 'Nakikita ni Tina ang salamin ni Ana.'}, {'text': 'Mais at mani ang baon ni Tina'}, {'text': 'Si ate ay sasama kay tita sa misa'}]},
     'lesson7-gawain4a': {
         'activity_key': 'lesson7-gawain4a', 'session_key': 'session-3', 'session_number': 3,
-        'lesson_number': 7, 'gawain_number': '4A', 'title': 'GAWAIN 4A: Letrang Oo',
+        'lesson_number': 7, 'gawain_number': '4A', 'title': 'Letrang Oo',
         'instruction': 'I-drag ang parisukat sa MALAKING O at I-drag ang bilog sa maliit na o.',
         'interaction': 'shape_stamp',
         'cells': [
@@ -654,7 +654,7 @@ PRESCRIBED_ACTIVITIES = {
     },
     'lesson7-gawain4': {
         'activity_key': 'lesson7-gawain4', 'session_number': 3, 'lesson_number': 7,
-        'gawain_number': 4, 'title': 'GAWAIN 4: Letrang Oo', 'instruction': 'Magsanay Magsulat',
+        'gawain_number': 4, 'title': 'Letrang Oo', 'instruction': 'Magsanay Magsulat',
         'interaction': 'handwriting',
         'items': [
             {'word': 'Oo', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_o/orasan.png'},
@@ -664,7 +664,7 @@ PRESCRIBED_ACTIVITIES = {
     },
     'lesson8-gawain1': {
         'activity_key': 'lesson8-gawain1', 'session_key': 'session-3', 'session_number': 3, 'lesson_number': 8,
-        'gawain_number': 1, 'title': 'GAWAIN 1: Letrang Ee', 'instruction': 'Magsanay Magsulat',
+        'gawain_number': 1, 'title': 'Letrang Ee', 'instruction': 'Magsanay Magsulat',
         'interaction': 'handwriting',
         'items': [
             {'word': 'Ee', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_e/gawain_1a/elepante.png'},
@@ -674,7 +674,7 @@ PRESCRIBED_ACTIVITIES = {
     },
     'lesson8-gawain1a': {
         'activity_key': 'lesson8-gawain1a', 'session_key': 'session-3', 'session_number': 3, 'lesson_number': 8,
-        'gawain_number': '1A', 'title': 'GAWAIN 1A: Letrang Ee',
+        'gawain_number': '1A', 'title': 'Letrang Ee',
         'instruction': 'Panuto: I-click ang larawang nagsisimula sa titik Ee.',
         'interaction': 'picture_selection_with_oral_reading',
         'items': [
@@ -683,7 +683,7 @@ PRESCRIBED_ACTIVITIES = {
     },
     'lesson9-gawain1': {
         'activity_key': 'lesson9-gawain1', 'session_key': 'session-3', 'session_number': 3,
-        'lesson_number': 9, 'gawain_number': 1, 'title': 'GAWAIN 1: Letrang Ii, Oo, Ee',
+        'lesson_number': 9, 'gawain_number': 1, 'title': 'Letrang Ii, Oo, Ee',
         'instruction': 'Basahin ang mga pantig na nasa loob ng kahon.',
         'interaction': 'syllable_blending_with_oral_reading',
         'card_image_path': 'pabasa_app/images/sound_detective/detective_bg.png',
@@ -703,7 +703,7 @@ PRESCRIBED_ACTIVITIES = {
     },
     'lesson9-gawain2': {
         'activity_key': 'lesson9-gawain2', 'session_key': 'session-3', 'session_number': 3,
-        'lesson_number': 9, 'gawain_number': 2, 'title': 'GAWAIN 2: Letrang Ii, Oo, Ee',
+        'lesson_number': 9, 'gawain_number': 2, 'title': 'Letrang Ii, Oo, Ee',
         'instruction': 'Tukuyin at Basahin ang pangalan ng mga larawan.',
         'interaction': 'initial_syllable_picture_selection_with_oral_reading',
         'card_image_path': 'pabasa_app/images/sound_detective/detective_bg.png',
@@ -717,7 +717,7 @@ PRESCRIBED_ACTIVITIES = {
     },
     'lesson9-gawain3': {
         'activity_key': 'lesson9-gawain3', 'session_key': 'session-3', 'session_number': 3,
-        'lesson_number': 9, 'gawain_number': 3, 'title': 'GAWAIN 3: Letrang Ii, Oo, Ee',
+        'lesson_number': 9, 'gawain_number': 3, 'title': 'Letrang Ii, Oo, Ee',
         'instruction': 'Basahin ang mga salita at pangungusap.',
         'interaction': 'oral_reading_sequence',
         'items': [
@@ -729,7 +729,7 @@ PRESCRIBED_ACTIVITIES = {
     },
     'lesson7-gawain3': {
         'activity_key': 'lesson7-gawain3', 'session_number': 3, 'lesson_number': 7,
-        'gawain_number': 3, 'title': 'Gawain 3: Letrang Oo',
+        'gawain_number': 3, 'title': 'Letrang Oo',
         'instruction': 'Ikahon ang larawang may unang tunog na nasa unang kolum.',
         'interaction': 'target_picture_selection_with_oral_reading',
         'targets': [
@@ -749,7 +749,7 @@ PRESCRIBED_ACTIVITIES = {
     },
     'lesson7-gawain2b': {
         'activity_key': 'lesson7-gawain2b', 'session_number': 3, 'lesson_number': 7,
-        'gawain_number': '2B', 'title': 'Gawain 2B: Letrang Ii',
+        'gawain_number': '2B', 'title': 'Letrang Ii',
         'instruction': 'Bilugan ang larawang nagsisimula sa titik Ii.',
         'interaction': 'picture_selection_with_oral_reading',
         'items': [
@@ -763,7 +763,7 @@ PRESCRIBED_ACTIVITIES = {
     },
     'lesson7-gawain2a': {
         'activity_key': 'lesson7-gawain2a', 'session_number': 3, 'lesson_number': 7,
-        'gawain_number': '2A', 'title': 'Gawain 2A: Letrang Ii',
+        'gawain_number': '2A', 'title': 'Letrang Ii',
         'instruction': 'Isulat ang i sa kahon ng bagay na nagsisimula sa /i/.',
         'interaction': 'picture_handwriting_with_oral_reading',
         'items': [
@@ -780,7 +780,7 @@ PRESCRIBED_ACTIVITIES = {
         'session_number': 3,
         'lesson_number': 7,
         'gawain_number': '2C',
-        'title': 'GAWAIN 2: Letrang Ii',
+        'title': 'Letrang Ii',
         'instruction': 'Magsanay Magsulat',
         'interaction': 'handwriting',
         'items': [{'word': 'Ii', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_i/ilaw.png'}, {'word': 'Ii', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_i/itlog.png'}, {'word': 'Ii', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_i/ilong.png'}],

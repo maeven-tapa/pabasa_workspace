@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded',function(){
     intro.dataset.narrationBound='1';
     if(!intro.querySelector('.lesson7-intro-eyebrow')){const eyebrow=document.createElement('p');eyebrow.className='eyebrow lesson7-intro-eyebrow';eyebrow.textContent='SESSION 3 · LESSON 7 · GAWAIN 1';intro.prepend(eyebrow)}
     const first='Tingnan ang mga larawan sa bilog',second='Isa-isa nating pangalanan ang mga ito.',start='Magsimula na tayo!';
-    const heading=intro.querySelector('h2'),description=intro.querySelector('p');
+    const heading=intro.querySelector('h2'),description=intro.querySelector('.lesson7-overview > p:not(.lesson7-intro-eyebrow)');
     if(heading)heading.textContent=first;
     if(description)description.textContent=second;
     button.textContent='Magsimula';

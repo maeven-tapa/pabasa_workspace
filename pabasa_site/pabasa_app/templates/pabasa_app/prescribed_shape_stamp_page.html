@@ -48,6 +48,7 @@
   <main class="page">
     <a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a>
     <section id="app" class="card">
+      <p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 4A</p>
       <h1>{{ shape_stamp_activity_data.title }}</h1>
       <p class="instruction">{{ shape_stamp_activity_data.instruction }}</p>
       <div class="toolbox">
@@ -59,7 +60,6 @@
           <div class="cell"><span class="cell-letter">{{ cell.letter }}</span></div>
         {% endfor %}
       </div>
-      <p class="status">Ilagay ang hugis sa tamang titik.</p>
       <button class="button" type="button">ISUMITE</button>
     </section>
   </main>
@@ -74,7 +74,8 @@
           app.innerHTML='<div class="done"><h1>Tapos na ang gawain! 🎉</h1><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><a class="button" href="{% url "assessment" %}">BALIK SA AKING ARALIN</a></div>';app.inert=false;
           return
         }
-        app.innerHTML='<h1>'+d.title+'</h1><p class="instruction">'+d.instruction+'</p><div class="toolbox" aria-label="Mga reusable na hugis"><button class="tool" draggable="true" data-shape="square"><span class="shape square"></span>PARISUKAT</button><button class="tool" draggable="true" data-shape="circle"><span class="shape circle"></span>BILOG</button></div><div class="sheet">'+(Array.isArray(d.cells)?d.cells:[]).map(c=>'<div class="cell" data-id="'+c.id+'"><span class="cell-letter">'+c.letter+'</span>'+(s.placements[c.id]?'<span class="stamp '+s.placements[c.id]+'"></span>':'')+'</div>').join('')+'</div><p class="status" id="status">'+(feedback||'Ilagay ang hugis sa tamang titik.')+'</p><button class="button" id="submit">ISUMITE</button>';
+        app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 4A</p><h1>'+d.title+'</h1><p class="instruction">'+d.instruction+'</p><div class="toolbox" aria-label="Mga reusable na hugis"><button class="tool" draggable="true" data-shape="square"><span class="shape square"></span>PARISUKAT</button><button class="tool" draggable="true" data-shape="circle"><span class="shape circle"></span>BILOG</button></div><div class="sheet">'+(Array.isArray(d.cells)?d.cells:[]).map(c=>'<div class="cell" data-id="'+c.id+'"><span class="cell-letter">'+c.letter+'</span>'+(s.placements[c.id]?'<span class="stamp '+s.placements[c.id]+'"></span>':'')+'</div>').join('')+'</div><p class="status" id="status">'+(feedback||'Ilagay ang hugis sa tamang titik.')+'</p><button class="button" id="submit">ISUMITE</button>';
+        document.getElementById('status')?.remove();
         document.querySelectorAll('.tool').forEach(t=>{t.ondragstart=e=>e.dataTransfer.setData('shape',t.dataset.shape)});
         document.querySelectorAll('.cell').forEach(c=>{c.ondragover=e=>{e.preventDefault();c.classList.add('over')};c.ondragleave=()=>c.classList.remove('over');c.ondrop=async e=>{e.preventDefault();c.classList.remove('over');s.placements[c.dataset.id]=e.dataTransfer.getData('shape');await save();render()};c.onclick=async()=>{if(s.placements[c.dataset.id]){delete s.placements[c.dataset.id];await save();render()}}});
         document.getElementById('submit').onclick=async()=>{if(busy||narrationLocked)return;busy=true;const r=await fetch(d.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});busy=false;if(r.ok){d.progress.activity_completed=true;render()}else{s.placements={};feedback='May mali. Tingnan muli ang mga titik. Ikahon ang MALAKING O at bilugan ang maliit na o.';await save();render();playNarration(retryFeedback)}};

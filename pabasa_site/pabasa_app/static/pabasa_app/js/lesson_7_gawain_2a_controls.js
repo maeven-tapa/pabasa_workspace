@@ -122,6 +122,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const bindReading = reading => {
     const read = reading.querySelector('#read');
     if (!read) return;
+    read.dataset.basahinButton = 'true';
     const instruction = app.querySelector('.instruction');
     if (instruction && instruction.textContent !== 'Tingnan ang larawang nasa ibaba. Ano ito?') instruction.textContent = 'Tingnan ang larawang nasa ibaba. Ano ito?';
     let actions = reading.querySelector('.lesson7-g2a-reading-actions');

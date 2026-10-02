@@ -15,18 +15,18 @@
   const fallbackKey = path.includes('lesson-9-gawain-3') ? 'lesson9-gawain3' : path.includes('lesson-9-gawain-2') ? 'lesson9-gawain2' : path.includes('lesson-9-gawain-1') ? 'lesson9-gawain1' : path.includes('lesson-8') ? 'lesson8-gawain1' : path.includes('lesson-7') ? 'lesson7-gawain1' : 'session3-activity';
   const session3Metadata = {
     'lesson7-gawain1': {lesson: 7, gawain: 1, title: 'Letrang Ii'},
-    'lesson7-gawain2a': {lesson: 7, gawain: '2A', title: 'Gawain 2A: Letrang Ii'},
-    'lesson7-gawain2b': {lesson: 7, gawain: '2B', title: 'Gawain 2B: Letrang Ii'},
-    'lesson7-gawain2c': {lesson: 7, gawain: '2C', title: 'GAWAIN 2: Letrang Ii'},
-    'lesson7-gawain3': {lesson: 7, gawain: 3, title: 'Gawain 3: Letrang Oo'},
-    'lesson7-gawain4': {lesson: 7, gawain: 4, title: 'GAWAIN 4: Letrang Oo'},
-    'lesson7-gawain4a': {lesson: 7, gawain: '4A', title: 'GAWAIN 4A: Letrang Oo'},
-    'lesson7-gawain4b': {lesson: 7, gawain: '4B', title: 'GAWAIN 4B: Letrang Ii at Oo'},
-    'lesson8-gawain1': {lesson: 8, gawain: 1, title: 'GAWAIN 1: Letrang Ee'},
-    'lesson8-gawain1a': {lesson: 8, gawain: '1A', title: 'GAWAIN 1A: Letrang Ee'},
-    'lesson9-gawain1': {lesson: 9, gawain: 1, title: 'GAWAIN 1: Letrang Ii, Oo, Ee'},
-    'lesson9-gawain2': {lesson: 9, gawain: 2, title: 'GAWAIN 2: Letrang Ii, Oo, Ee'},
-    'lesson9-gawain3': {lesson: 9, gawain: 3, title: 'GAWAIN 3: Letrang Ii, Oo, Ee'}
+    'lesson7-gawain2a': {lesson: 7, gawain: '2A', title: 'Letrang Ii'},
+    'lesson7-gawain2b': {lesson: 7, gawain: '2B', title: 'Letrang Ii'},
+    'lesson7-gawain2c': {lesson: 7, gawain: '2C', title: 'Letrang Ii'},
+    'lesson7-gawain3': {lesson: 7, gawain: 3, title: 'Letrang Oo'},
+    'lesson7-gawain4': {lesson: 7, gawain: 4, title: 'Letrang Oo'},
+    'lesson7-gawain4a': {lesson: 7, gawain: '4A', title: 'Letrang Oo'},
+    'lesson7-gawain4b': {lesson: 7, gawain: '4B', title: 'Letrang Ii at Oo'},
+    'lesson8-gawain1': {lesson: 8, gawain: 1, title: 'Letrang Ee'},
+    'lesson8-gawain1a': {lesson: 8, gawain: '1A', title: 'Letrang Ee'},
+    'lesson9-gawain1': {lesson: 9, gawain: 1, title: 'Letrang Ii, Oo, Ee'},
+    'lesson9-gawain2': {lesson: 9, gawain: 2, title: 'Letrang Ii, Oo, Ee'},
+    'lesson9-gawain3': {lesson: 9, gawain: 3, title: 'Letrang Ii, Oo, Ee'}
   };
   const compactPathKey = path.match(/lesson(7|8|9)-gawain([1234][ab]?)/)?.[0] || '';
   const metadata = session3Metadata[data.activity_key || compactPathKey || fallbackKey] || {};

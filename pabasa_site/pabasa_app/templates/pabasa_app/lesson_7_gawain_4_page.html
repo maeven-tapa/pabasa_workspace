@@ -104,7 +104,7 @@
     function render(playInstruction=true){
       if(index>=3){app.innerHTML='<div class="done"><h1>Tapos na ang gawain! 🎉</h1><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><a class="button" href="{% url "assessment" %}">BALIK SA AKING ARALIN</a></div>';app.inert=false;return}
       const row='<div class="row"><span class="model"><b>O</b><i>o</i></span><canvas aria-label="Hanay '+(index+1)+'"></canvas></div>';
-      app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 4</p><h1>GAWAIN 4: Letrang Oo</h1><p class="instruction">'+instructionText+'</p><p class="progress">Hanay '+(index+1)+' ng 3</p><div class="sheet">'+row+'</div><p class="hint" id="hint">'+normalHint+'</p><div class="actions"><button class="button clear" id="clear" type="button">Burahin</button><button class="button" id="next" type="button">'+(index===2?'Tapusin':'Susunod')+'</button></div>';
+      app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 4</p><h1>Letrang Oo</h1><p class="instruction">'+instructionText+'</p><p class="progress">Hanay '+(index+1)+' ng 3</p><div class="sheet">'+row+'</div><p class="hint" id="hint">'+normalHint+'</p><div class="actions"><button class="button clear" id="clear" type="button">Burahin</button><button class="button" id="next" type="button">'+(index===2?'Tapusin':'Susunod')+'</button></div>';
       const canvas=app.querySelector('canvas');
       bindCanvas(canvas);
       app.querySelector('#clear').onclick=()=>{if(busy)return;rows[index]=[];canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);setHint()};
