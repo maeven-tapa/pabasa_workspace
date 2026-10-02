@@ -532,7 +532,8 @@ function initProfilePage() {
         setCounterValue(activeClassesCount, stats.activeClasses, 0);
         setCounterValue(heroActiveClassesCount, stats.activeClasses, 0);
         setCounterValue(totalStudentsCount, stats.totalStudents, 0);
-        setCounterValue(materialsPostedCount, stats.materialsPosted, 0);
+        const serverMaterialsPosted = materialsPostedCount ? normalizeOverviewCount(materialsPostedCount.dataset.serverValue, null) : null;
+        setCounterValue(materialsPostedCount, stats.materialsPosted || (Number.isFinite(serverMaterialsPosted) ? serverMaterialsPosted : 0), 0);
         setCounterValue(reportsGeneratedCount, stats.reportsGenerated, 0);
 
         // If the current user is a teacher, request authoritative overview from the server

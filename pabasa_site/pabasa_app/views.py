@@ -28258,6 +28258,7 @@ def profile(request):
         teacher_assigned_section = _teacher_current_sections(user).select_related('school').first()
         teacher_active_classes = _teacher_current_sections(user).count()
         teacher_assessment_phase = _teacher_assessment_phase_context(user)
+        teacher_overview = _compute_teacher_overview(user)
         if teacher_assigned_section:
             joined_classes.append({
                 'id': teacher_assigned_section.id,
@@ -28469,6 +28470,7 @@ def profile(request):
         'contact_number': user.contact_no or '',
         'notification_settings': _notification_settings_for_user(user),
         'teacher_active_classes': teacher_active_classes,
+        'teacher_materials_posted': teacher_overview.get('materials_posted', 0) if user.role == 'teacher' else 0,
         'teacher_current_term_label': teacher_assessment_phase.get('current_term_label', 'No Active Term'),
         'teacher_assessment_phase_label': teacher_assessment_phase.get('assessment_phase_label', 'No Active Assessment Window'),
         'teacher_assessment_phase_badge': teacher_assessment_phase.get('assessment_phase_badge', 'No Active Phase'),
