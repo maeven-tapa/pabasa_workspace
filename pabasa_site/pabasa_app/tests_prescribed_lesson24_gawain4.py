@@ -96,6 +96,21 @@ class Lesson24Gawain4WorkbookTests(SimpleTestCase):
         self.assertIn('aral-l24-g4-x-pictures', template)
         self.assertNotIn('overflow:hidden', css)
 
+    def test_picture_instruction_waits_for_lesson24_start_event(self):
+        js = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
+        template = (Path(__file__).parent / 'templates/pabasa_app/prescribed_workbook_page.html').read_text(encoding='utf-8')
+        self.assertIn(
+            'if(!preview&&!instructionSpoken&&!pictureReading)',
+            js,
+        )
+        self.assertIn(
+            'if(pictureReading&&!activityStarted&&text===instructionText)return;',
+            js,
+        )
+        self.assertIn("document.addEventListener('pabasa:l24-started'", js)
+        self.assertIn('playPrescribedAudio(instructionText,true)', js)
+        self.assertIn('20261002-l24-g4-picture-start-2', template)
+
 
 class Lesson24Gawain5SyllabicationTests(SimpleTestCase):
     def test_worked_example_and_exact_student_content(self):

@@ -40,6 +40,13 @@
 @media(max-width:760px) and (min-height:650px){.l22g6-page .layout{grid-template-rows:minmax(0,1fr) minmax(0,.9fr)}}
 @media(max-width:520px){.l22g6-page .back:after{font-size:1rem}.l22g6-page .back{width:230px;min-height:58px}}
 
+/* Lesson 22, Gawain 6: use the approved page-level back-navigation slot
+   without changing the shared reading activity or its controls. */
+.l22g6-page #l22g2-app{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:clamp(22px,3vh,32px);width:min(1250px,100%);height:calc(100dvh - 38px);margin:auto}
+.l22g6-page #l22g2-app>.shell{position:relative;top:auto;left:auto;flex:1 1 0;width:100%;height:auto;min-height:0;max-height:none;margin:0;transform:none}
+.l22g6-page #l22g2-app>.back{position:relative;top:auto;left:auto;z-index:3;align-self:flex-start;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:13px;width:280px;min-height:64px;padding:10px 18px;border-radius:999px;background:#fff;color:var(--l22-ref-ink);font-size:0;line-height:1.15;text-align:center;text-decoration:none;box-shadow:0 8px 17px #145ca744}
+@media(max-width:760px){.l22g6-page #l22g2-app{gap:clamp(18px,3vh,24px)}.l22g6-page #l22g2-app>.back{width:230px;min-height:58px;font-size:0}}
+
 /* Keep the existing .word.current state as the sole source of truth while
    making the active reading target explicit to the learner. */
 .l22g2-page .word.current{position:relative;isolation:isolate;box-sizing:border-box;padding:clamp(18px,2.2vw,22px) 8px 5px;background:transparent;border-color:transparent;box-shadow:none;color:var(--l22-ref-ink)}

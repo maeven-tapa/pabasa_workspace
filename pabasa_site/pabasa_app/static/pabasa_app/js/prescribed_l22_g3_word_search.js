@@ -86,7 +86,8 @@
       moveBackOutsideShell();
       return;
     }
-    app.innerHTML = `<div class="shell"><header class="header"><a class="back" href="${esc(data.back_url)}">${backLabel}</a><p class="eyebrow">LESSON 22 • GAWAIN 3</p><h1>Hanap-Salita</h1><p class="instruction">${esc(instruction)}</p><button id="tts" class="tts" type="button">🔊 Pakinggan ang Panuto</button><p class="progress">Nahanap: ${count} / 9</p></header><section class="activity-card"><div class="grid-wrap"><div id="grid" class="grid" aria-label="9 by 9 na hanap-salita" role="grid">${activity.grid.map((row, r) => Array.from(row).map((letter, c) => `<button class="cell" type="button" role="gridcell" data-row="${r}" data-col="${c}" aria-label="Hanay ${r+1}, kolum ${c+1}: ${esc(letter)}">${esc(letter)}</button>`).join('')).join('')}</div><p class="helper">Pindutin ang unang letra at i-drag hanggang sa huling letra.</p></div><aside class="word-list"><h2>MGA SALITANG HAHANAPIN</h2><ul>${words.map(word => `<li class="${found()[word] ? 'found' : ''}"><span aria-hidden="true">${found()[word] ? '✓' : '○'}</span><span>${esc(word)}</span></li>`).join('')}</ul><div class="tools"><span aria-label="Paboritong kulay">Kulay:</span>${colors.map(color => `<button type="button" class="swatch" data-color="${color}" aria-label="Pumili ng kulay ${color}" style="width:32px;height:32px;border-radius:50%;border:3px solid ${color === selectedColor ? '#17485d' : '#fff'};background:${color};cursor:pointer"></button>`).join('')}</div><p id="feedback" class="feedback" role="status" aria-live="polite">${esc(state.last_feedback || '')}</p><button id="restart" class="restart" type="button">Ulitin Mula sa Simula</button></aside></section><div id="confirm" class="confirm" hidden><div class="confirm-card"><p>Sigurado ka bang gusto mong magsimula muli? Mawawala ang progreso mo sa Gawain 3.</p><div class="confirm-actions"><button id="cancel" type="button">Kanselahin</button><button id="confirm-restart" class="primary" type="button">Magsimula Muli</button></div></div></div></div>`;moveBackOutsideShell();
+    app.innerHTML = `<div class="shell"><header class="header"><a class="back" href="${esc(data.back_url)}">${backLabel}</a><p class="eyebrow">LESSON 22 • GAWAIN 3</p><h1>Hanap-Salita</h1><p class="instruction">${esc(instruction)}</p><button id="tts" class="tts" type="button">🔊 Pakinggan ang Panuto</button><p class="progress">Nahanap: ${count} / 9</p></header><section class="activity-card"><div class="grid-wrap"><div id="grid" class="grid" aria-label="9 by 9 na hanap-salita" role="grid">${activity.grid.map((row, r) => Array.from(row).map((letter, c) => `<button class="cell" type="button" role="gridcell" data-row="${r}" data-col="${c}" aria-label="Hanay ${r+1}, kolum ${c+1}: ${esc(letter)}">${esc(letter)}</button>`).join('')).join('')}</div><p class="helper">Pindutin ang unang letra at i-drag hanggang sa huling letra.</p></div><aside class="word-list"><h2>MGA SALITANG HAHANAPIN</h2><ul>${words.map(word => `<li class="${found()[word] ? 'found' : ''}"><span aria-hidden="true">${found()[word] ? '✓' : '○'}</span><span>${esc(word)}</span></li>`).join('')}</ul><div class="tools"><span aria-label="Paboritong kulay">Kulay:</span>${colors.map(color => `<button type="button" class="swatch" data-color="${color}" aria-label="Pumili ng kulay ${color}" style="width:32px;height:32px;border-radius:50%;border:3px solid ${color === selectedColor ? '#17485d' : '#fff'};background:${color};cursor:pointer"></button>`).join('')}</div><p id="feedback" class="feedback" role="status" aria-live="polite">${esc(state.last_feedback || '')}</p><button id="restart" class="restart" type="button">Ulitin Mula sa Simula</button></aside></section><div id="confirm" class="confirm" hidden><div class="confirm-card"><p>Sigurado ka bang gusto mong magsimula muli? Mawawala ang progreso mo sa Gawain 3.</p><div class="confirm-actions"><button id="cancel" type="button">Kanselahin</button><button id="confirm-restart" class="primary" type="button">Magsimula Muli</button></div></div></div></div>`;
+    moveBackOutsideShell();
     const grid = document.getElementById('grid');
     Object.entries(found()).forEach(([, entry]) => entry.path.forEach(([r,c]) => { const cell = grid.querySelector(`[data-row="${r}"][data-col="${c}"]`); if (cell) { cell.classList.add('found'); cell.style.background = entry.color; } }));
     document.getElementById('tts').onclick = playInstruction; updateInstructionButton();
@@ -100,5 +101,17 @@
     grid.addEventListener('pointerup', end); grid.addEventListener('pointercancel', end); grid.addEventListener('lostpointercapture', () => { active = null; setSelection([]); });
   }
   window.addEventListener('pagehide', stopAudio); render();
-  if (!data.preview && !state.completed && !automaticInstructionAttempted) { automaticInstructionAttempted = true; setTimeout(() => playInstruction({automatic:true}), 0); }
+  if (!data.preview && !state.completed) {
+    window.PabasaLessonStart?.({
+      modalId: 'wb-l22-g3-start',
+      startId: 'wb-l22-g3-start-button',
+      laterId: 'wb-l22-g3-later-button',
+      backUrl: data.back_url,
+      onStart: () => {
+        if (automaticInstructionAttempted) return;
+        automaticInstructionAttempted = true;
+        playInstruction({automatic:true});
+      },
+    });
+  }
 })();
