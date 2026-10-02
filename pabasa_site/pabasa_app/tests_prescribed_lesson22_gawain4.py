@@ -35,6 +35,25 @@ class PrescribedLesson22Gawain4Tests(TestCase):
             self.assertIn(index, state['completed_reading'])
         self.assertEqual(state['reading_phase'], 'complete')
 
+    def test_reading_highlight_tracks_the_single_authoritative_target(self):
+        script = (Path(__file__).resolve().parent / 'static/pabasa_app/js/prescribed_l22_g4_f_builder.js').read_text(encoding='utf-8')
+        css = (Path(__file__).resolve().parent / 'static/pabasa_app/css/prescribed_l22_g4_f_builder_refinement.css').read_text(encoding='utf-8')
+        self.assertIn("const target=items[Math.min(n,8)]||items[8]", script)
+        self.assertIn("tile.classList.toggle('active',locked&&i===n)", script)
+        self.assertIn('.tile.active', css)
+        self.assertIn(".tile.active::before", css)
+        self.assertIn("content:'BASAHIN ITO'", css)
+
+        activity = get_activity(self.key)
+        state = initial_l22_g4_state()
+        apply_event(activity, state, {'action': 'reading_started'})
+        apply_event(activity, state, {'action': 'reading_attempt', 'transcript': 'wrong'}, False)
+        self.assertEqual(state['reading_index'], 0)
+        self.assertEqual(state['completed_reading'], [])
+        apply_event(activity, state, {'action': 'reading_attempt', 'transcript': 'free'}, True)
+        self.assertEqual(state['reading_index'], 1)
+        self.assertEqual(state['completed_reading'], [0])
+
     def test_wrong_and_unclear_readings_have_correct_attempt_behavior(self):
         activity = get_activity(self.key)
         state = initial_l22_g4_state()

@@ -36,6 +36,10 @@
   };
   start.onclick = () => {
     if (!finish()) return;
+    if (key === 'aral-l24-g6-z-word-search') {
+      window.PabasaL24G6Start?.();
+      return;
+    }
     document.dispatchEvent(new CustomEvent('pabasa:l24-started', {detail: {activityKey: key}}));
   };
   later.onclick = () => {

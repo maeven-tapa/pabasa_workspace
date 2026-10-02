@@ -2,10 +2,33 @@
   'use strict';
   const data = JSON.parse(document.getElementById('workbook-payload').textContent || '{}');
   const activity = data.activity, app = document.getElementById('l22g5-app');
+  const moveBackOutsideShell = () => {
+    const shell = app.querySelector('.shell'), back = shell?.querySelector('.back');
+    if (shell && back) app.insertBefore(back, shell);
+  };
+  new MutationObserver(moveBackOutsideShell).observe(app, {childList:true, subtree:true});
+  const startLesson = window.PabasaLessonStart || (({modalId, startId, laterId, backUrl, onStart} = {}) => {
+    const modal = document.getElementById(modalId), start = document.getElementById(startId), later = document.getElementById(laterId);
+    if (!modal || !start || !later) return null;
+    let closed = false;
+    document.body.classList.add('lesson-start-open');
+    const close = callback => {
+      if (closed) return;
+      closed = true; start.disabled = true; later.disabled = true;
+      try { callback?.(); } finally { modal.remove(); document.body.classList.remove('lesson-start-open'); }
+    };
+    start.addEventListener('click', () => close(onStart));
+    later.addEventListener('click', () => {
+      if (closed) return;
+      closed = true; start.disabled = true; later.disabled = true; document.body.classList.remove('lesson-start-open');
+      window.location.href = backUrl || document.getElementById('wb-back')?.href || '/dashboard/assessment/';
+    });
+    return {close};
+  });
   const instruction = 'Hanapin at bilugan sa loob ng Big Box ang mga salita sa ibaba.';
   const localAudio = data.local_audio || {}, localFeedback = localAudio.feedback || {};
   const paths = {Fina:[[0,3],[0,4],[0,5],[0,6]],fries:[[2,1],[2,2],[2,3],[2,4],[2,5]],Filipino:[[3,0],[3,1],[3,2],[3,3],[3,4],[3,5],[3,6],[3,7]],freezer:[[4,0],[4,1],[4,2],[4,3],[4,4],[4,5],[4,6]],Felix:[[5,3],[5,4],[5,5],[5,6],[5,7]]};
-  let state = {...(data.state || {})}, phase = 'READY', active = null, busy = false, audio = null, audioBusy = false;
+  let state = {...(data.state || {})}, phase = 'READY', active = null, busy = false, audio = null, audioBusy = false, automaticInstructionAttempted = false;
   const words = activity.items.map(item => item.text), found = () => state.found_words && typeof state.found_words === 'object' ? state.found_words : {};
   const csrf = () => document.querySelector('[name=csrfmiddlewaretoken]').value;
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -26,7 +49,10 @@
     audioBusy = true; const source = mappedAudio(text);
     try {
       if(source){await playMappedAudio(source);return;}
-      const form = new FormData(); form.append('target_text', text); form.append('language','Filipino'); form.append('mode','reading'); form.append('prescribed_activity_key', activity.activity_key);
+      const form = new FormData();
+      if (text === instruction) form.append('target_text', instruction);
+      else form.append('target_text', text);
+      form.append('language','Filipino'); form.append('mode','reading'); form.append('prescribed_activity_key', activity.activity_key);
       const r=await fetch(data.read_aloud_url,{method:'POST',credentials:'same-origin',headers:{'Accept':'application/json','X-CSRFToken':csrf()},body:form}); const j=await r.json(); if(!r.ok||!j.success||!j.audio_content) throw Error('Hindi available ang audio. Subukan muli.'); audio=new Audio(`data:${j.mime_type||'audio/mpeg'};base64,${j.audio_content}`); await audio.play(); await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=reject;});
     } catch(e){const message=e.message||'Hindi available ang audio. Subukan muli.';setFeedback(message,true);const unavailable=localFeedback['Hindi available ang audio. Subukan muli.'];if(unavailable&&source!==unavailable){try{await playMappedAudio(unavailable);}catch(_){}}} finally {audio?.pause();audio=null;audioBusy=false;}
   }
@@ -38,8 +64,8 @@
   }
   function render(){
     const done=found(), count=Object.keys(done).length;
-    if(state.completed){app.innerHTML=`<div class="shell"><header class="header"><a class="back" href="${esc(data.back_url)}">Aking Aralin</a><p class="eyebrow">SESSION 8 · LESSON 22 · GAWAIN 5</p><h1>Hanapin ang mga salita: F</h1></header><section class="complete"><h2>Magaling! Nahanap mo ang lahat ng salita!</h2><p class="progress">Nahanap: 5 / 5</p><div class="controls"><a class="button" href="${esc(data.next_url||data.back_url)}">Magpatuloy sa Gawain 6</a><a class="button secondary" href="${esc(data.back_url)}">Bumalik sa Aking Aralin</a></div></section></div>`; return;}
-    app.innerHTML=`<div class="shell"><header class="header"><a class="back" href="${esc(data.back_url)}">Aking Aralin</a><p class="eyebrow">SESSION 8 · LESSON 22 · GAWAIN 5</p><h1>Hanapin ang mga salita: F</h1><p class="instruction">${esc(instruction)}</p><button id="tts" class="tts" type="button">🔊 Pakinggan ang Panuto</button><p class="progress">Nahanap: ${count} / 5</p></header><section class="activity-card"><div class="grid-wrap"><div id="grid" class="grid" aria-label="6 by 8 na Big Box" role="grid">${activity.grid.map((row,r)=>Array.from(row).map((letter,c)=>`<button class="cell" type="button" role="gridcell" data-row="${r}" data-col="${c}" aria-label="Hanay ${r+1}, kolum ${c+1}: ${esc(letter)}">${esc(letter)}</button>`).join('')).join('')}</div><p class="helper">Pindutin ang unang letra at i-drag pakaliwa pakanan sa iisang hanay.</p></div><aside class="word-list"><h2>MGA SALITANG HAHANAPIN</h2><ul>${words.map(word=>`<li class="${done[word]?'found':''}"><span aria-hidden="true">${done[word]?'✓':'○'}</span><span>${esc(word)}</span></li>`).join('')}</ul><p id="feedback" class="feedback" role="status" aria-live="polite">${esc(state.last_feedback||'')}</p><button id="restart" class="restart" type="button">Ulitin Mula sa Simula</button></aside></section><div id="confirm" class="confirm" hidden><div class="confirm-card"><p>Sigurado ka bang gusto mong magsimula muli? Mawawala ang kasalukuyang progreso sa Gawain 5.</p><div class="confirm-actions"><button id="cancel" type="button">Kanselahin</button><button id="confirm-restart" class="primary" type="button">Magsimula Muli</button></div></div></div></div>`;
+    if(state.completed){app.innerHTML=`<div class="shell"><header class="header"><a class="back" href="${esc(data.back_url)}">Balik sa Aking Aralin</a><p class="eyebrow">SESSION 8 · LESSON 22 · GAWAIN 5</p><h1>Hanapin ang mga salita: F</h1></header><section class="complete"><h2>Magaling! Nahanap mo ang lahat ng salita!</h2><p class="progress">Nahanap: 5 / 5</p><div class="controls"><a class="button" href="${esc(data.next_url||data.back_url)}">Magpatuloy sa Gawain 6</a><a class="button secondary" href="${esc(data.back_url)}">Bumalik sa Aking Aralin</a></div></section></div>`; return;}
+    app.innerHTML=`<div class="shell"><header class="header"><a class="back" href="${esc(data.back_url)}">Balik sa Aking Aralin</a><p class="eyebrow">SESSION 8 · LESSON 22 · GAWAIN 5</p><h1>Hanapin ang mga salita: F</h1><p class="instruction">${esc(instruction)}</p><button id="tts" class="tts" type="button">🔊 Pakinggan ang Panuto</button><p class="progress">Nahanap: ${count} / 5</p></header><section class="activity-card"><div class="grid-wrap"><div id="grid" class="grid" aria-label="6 by 8 na Big Box" role="grid">${activity.grid.map((row,r)=>Array.from(row).map((letter,c)=>`<button class="cell" type="button" role="gridcell" data-row="${r}" data-col="${c}" aria-label="Hanay ${r+1}, kolum ${c+1}: ${esc(letter)}">${esc(letter)}</button>`).join('')).join('')}</div><p class="helper">Pindutin ang unang letra at i-drag pakaliwa pakanan sa iisang hanay.</p></div><aside class="word-list"><h2>MGA SALITANG HAHANAPIN</h2><ul>${words.map(word=>`<li class="${done[word]?'found':''}"><span aria-hidden="true">${done[word]?'✓':'○'}</span><span>${esc(word)}</span></li>`).join('')}</ul><p id="feedback" class="feedback" role="status" aria-live="polite">${esc(state.last_feedback||'')}</p><button id="restart" class="restart" type="button">Ulitin Mula sa Simula</button></aside></section><div id="confirm" class="confirm" hidden><div class="confirm-card"><p>Sigurado ka bang gusto mong magsimula muli? Mawawala ang kasalukuyang progreso sa Gawain 5.</p><div class="confirm-actions"><button id="cancel" type="button">Kanselahin</button><button id="confirm-restart" class="primary" type="button">Magsimula Muli</button></div></div></div></div>`;
     const grid=document.getElementById('grid'); Object.values(done).forEach(entry=>entry.path.forEach(([r,c])=>grid.querySelector(`[data-row="${r}"][data-col="${c}"]`)?.classList.add('found')));
     document.getElementById('tts').onclick=playInstruction;
     document.getElementById('restart').onclick=()=>document.getElementById('confirm').hidden=false;
@@ -51,4 +77,17 @@
     grid.addEventListener('pointerup',finish);grid.addEventListener('pointercancel',()=>{active=null;paint([]);phase='READY';});grid.addEventListener('lostpointercapture',()=>{if(phase==='SELECTING'){active=null;paint([]);phase='READY';}});
   }
   window.addEventListener('pagehide',()=>audio?.pause()); render();
+  if (!data.preview && !state.completed) {
+    startLesson({
+      modalId: 'wb-l22-g5-start',
+      startId: 'wb-l22-g5-start-button',
+      laterId: 'wb-l22-g5-later-button',
+      backUrl: data.back_url,
+      onStart: () => {
+        if (automaticInstructionAttempted) return;
+        automaticInstructionAttempted = true;
+        playInstruction();
+      },
+    });
+  }
 })();

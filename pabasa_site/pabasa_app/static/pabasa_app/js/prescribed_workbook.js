@@ -157,7 +157,7 @@
     if (!state.draft || typeof state.draft !== 'object') state.draft = {builder: [], words: []};
     if (!state.oral || typeof state.oral !== 'object') state.oral = {};
   }
-  let activeRecorder = null, activeStream = null, activeReadAloud = null, audioController = null;
+  let activeRecorder = null, activeStream = null, activeReadAloud = null, activeAudioSource = null, audioController = null;
   let audioRun = 0, instructionSpoken = false, pendingSpeech = '';
   const instructionText = a.instruction;
   const session9Activity = s9Family || s9Helping;
@@ -181,11 +181,14 @@
     audioController?.abort();
     audioController = null;
     if(activeReadAloud){activeReadAloud.pause();activeReadAloud.currentTime=0;activeReadAloud=null;}
+    if(activeAudioSource){try{activeAudioSource.stop();}catch(_){ }activeAudioSource.disconnect?.();activeAudioSource=null;}
   };
   const localAudioUrl = text => text === instructionText ? localAudio.instruction
     : (localAudio.words || {})[text] || (localAudio.syllables || {})[text] || (localAudio.feedback || {})[text]
     || (localAudio.completion || {})[text] || null;
   async function playPrescribedAudio(text,allowBusy=false){
+    if(pictureReading&&!activityStarted&&text===instructionText)return;
+    if(g5Syllables&&!activityStarted&&text===instructionText)return;
     if(!text || (busy&&!allowBusy) || activeStream)return;
     stopReadAloud();
     const run=audioRun, controller=new AbortController();audioController=controller;
@@ -195,7 +198,9 @@
       if(!localUrl){if(audioController===controller)audioController=null;throw Error((jSyllables||l24Builder)&&text===instructionText?'Hindi available ang panuto.':'Hindi available ang audio.');}
       try{
         if(run!==audioRun||(busy&&!allowBusy)||activeStream)return;
-        const audio=new Audio(localUrl);activeReadAloud=audio;await audio.play();
+        const audio=new Audio(localUrl);activeReadAloud=audio;
+        const playPromise=audio.play();
+        await playPromise;
         await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=()=>reject(Error((l23G3||jSyllables)?(text===instructionText?'Hindi available ang panuto.':'Hindi available ang audio.'):'Hindi ma-play ang nakatalagang audio.'));});
       }finally{
         if(audioController===controller)audioController=null;
@@ -212,7 +217,8 @@
       if(fil&&!result.local_audio&&(result.tts_language !== 'fil-PH' || result.voice_name !== 'fil-PH-Wavenet-A'))throw Error(session9Activity?'The right voice is not available.':'Hindi available ang tamang Filipino voice.');
       if(!fil&&!result.local_audio&&result.tts_language!==expectedTtsLanguage)throw Error('The correct English voice is unavailable.');
       if(run!==audioRun||(busy&&!allowBusy)||activeStream)return;
-      const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);activeReadAloud=audio;
+      if(g5Syllables&&await playG5TtsAudio(result.audio_content,run))return;
+      const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);audio.preload='auto';activeReadAloud=audio;audio.load();
       await audio.play();
       await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=()=>reject(Error(session9Activity?'Audio could not play.':'Hindi ma-play ang Filipino audio.'));});
     }finally{
@@ -240,6 +246,17 @@
       if(later.disabled)return;
       later.disabled=true;if(start)start.disabled=true;stopReadAloud();window.location.href=document.getElementById('wb-back')?.href||'/dashboard/assessment/';
     });
+  }
+  function initializeLesson23Entry(){
+    if(!lesson23Activity||preview||state.completed)return;
+    const suffix=l23G1?'g1':l23G3?'g3':jSyllables?'g4':qG6?'g6':'g7';
+    const modal=document.getElementById(`wb-l23-${suffix}-start`);
+    if(!modal)return;
+    const start=document.getElementById(`wb-l23-${suffix}-start-button`),later=document.getElementById(`wb-l23-${suffix}-later-button`);
+    const close=callback=>{if(start?.disabled)return;if(start)start.disabled=true;if(later)later.disabled=true;stopReadAloud();try{callback?.();}finally{modal.remove();document.body.classList.remove('lesson-start-open');}};
+    document.body.classList.add('lesson-start-open');
+    if(start)start.onclick=()=>close(()=>{activityStarted=true;instructionSpoken=true;render();playPrescribedAudio(instructionText,true).catch(error=>{if(error?.name!=='AbortError')console.error('Lesson 23 instruction audio failed',error);});});
+    if(later)later.onclick=()=>{if(later.disabled)return;later.disabled=true;if(start)start.disabled=true;stopReadAloud();window.location.href=document.getElementById('wb-back')?.href||'/dashboard/assessment/';};
   }
   function initializeSession9Entry(){
     const modal=document.getElementById('wb-s9-start'),stage=document.querySelector('.wb-s9-activity-stage');
@@ -440,7 +457,7 @@
     if(current<a.items.length){
       const word=a.items[current];
       const card=document.createElement('div');card.className='wb-j-controls';
-      const read=button(window.BasahinButton.LABEL,recordJ,true);read.setAttribute('aria-label',`Basahin ang salitang ${word.text}`);
+      const read=button(window.BasahinButton?.LABEL||'Basahin',recordJ,true);read.setAttribute('aria-label',`Basahin ang salitang ${word.text}`);
       const help=button('Pakinggan ang Tamang Pagbigkas',()=>playPrescribedAudio(word.text).catch(e=>{const text=e.message||'Hindi available ang audio.';setJFeedback(text,true);if((l23G3&&G3_MAPPED_TEXT.has(text))||(qReading&&G7_MAPPED_TEXT.has(text))||(l24G3WordReading&&L24_G3_WORD_MAPPED_TEXT.has(text)))playPrescribedAudio(text,true).catch(()=>{});}),false);help.setAttribute('aria-label',`Pakinggan ang tamang pagbigkas ng ${word.text}`);
       card.append(read,help);action.appendChild(card);
     }
@@ -456,7 +473,7 @@
     content.innerHTML=`${instructionBanner()}<section class="wb-picture-reading">${state.completed?`<div class="wb-picture-complete" role="status">Magaling! Natapos mo ang gawain. 🎉</div>`:`<img class="wb-picture-image" src="${esc(a.images?.[target.id]||'')}" alt="Larawan ng ${esc(target.text)}"><strong class="wb-picture-word">${esc(target.text)}</strong><p class="wb-picture-feedback" id="wb-picture-feedback" role="status" aria-live="polite">${esc(state.last_feedback||'Basahin ang salitang nasa larawan.')}</p>`}</section>`;
     const replay=document.getElementById('wb-instruction-replay');
     replay.onclick=()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>setPictureFeedback(e.message||'Hindi available ang panuto.',true));};
-    if(!preview&&!instructionSpoken){instructionSpoken=true;setTimeout(async()=>{try{await playPrescribedAudio(instructionText);if(!state.last_feedback)await playPrescribedAudio('Basahin ang salitang nasa larawan.');}catch(e){console.error('Picture activity instruction audio failed',e);}},0);}
+    if(!preview&&!instructionSpoken&&!pictureReading){instructionSpoken=true;setTimeout(async()=>{try{await playPrescribedAudio(instructionText);if(!state.last_feedback)await playPrescribedAudio('Basahin ang salitang nasa larawan.');}catch(e){console.error('Picture activity instruction audio failed',e);}},0);}
     if(preview||state.completed)return;
     const listen=button('🔊 Pakinggan',()=>playPrescribedAudio(target.text).catch(e=>setPictureFeedback(e.message||'Hindi available ang audio.',true)),false);
     listen.setAttribute('aria-label',`Pakinggan ang ${target.text}`);
@@ -657,7 +674,6 @@
     const input=document.getElementById('wb-written');
     if(input&&!preview)input.oninput=()=>draft({text:input.value});
     document.getElementById('wb-g5-reset')?.addEventListener('click',()=>{if(window.confirm('Ulitin ang Gawain 5 mula sa simula? Mawawala ang kasalukuyang progreso.'))perform({action:'restart'});});
-    if(!preview)speakInstruction();
     if(preview){action.innerHTML='';return;}
     if(currentItem)button('Suriin ang Sagot',()=>perform({action:'answer',item_index:current,answer:{text:document.getElementById('wb-written').value}}),true);
     lock();
@@ -697,7 +713,6 @@
       perform({action:'select_word',word,path,color:'#b6e6c3'});
     });
     document.getElementById('wb-g6-reset')?.addEventListener('click',requestG6Restart);
-    if(!preview&&!instructionSpoken)speakInstruction();
     if(preview)content.querySelectorAll('button').forEach(button=>button.disabled=true);
   }
   function renderFill(){
@@ -767,10 +782,15 @@
   window.addEventListener('beforeunload',e=>{activeRecorder?.stop();activeStream?.getTracks().forEach(t=>t.stop());stopReadAloud();if(!specializedBuilder&&busy){e.preventDefault();e.returnValue='';}});
   window.addEventListener('pagehide',stopReadAloud);
   if(lesson24Activity&&!preview&&!state.completed){
-    document.addEventListener('pabasa:l24-started',()=>{
-      activityStarted=true;instructionSpoken=true;render();
-      playPrescribedAudio(instructionText,true).catch(error=>{if(error?.name!=='AbortError')console.error('Lesson 24 instruction audio failed',error);});
-    },{once:true});
+    const startLesson24=()=>{
+      activityStarted=true;render();
+      if(!instructionSpoken){
+        instructionSpoken=true;
+        playPrescribedAudio(instructionText,true).catch(error=>{if(error?.name!=='AbortError')console.error('Lesson 24 instruction audio failed',error);});
+      }
+    };
+    if(g6Search)window.PabasaL24G6Start=startLesson24;
+    else document.addEventListener('pabasa:l24-started',startLesson24,{once:true});
   }
   initializeLesson23Entry();
   render();
