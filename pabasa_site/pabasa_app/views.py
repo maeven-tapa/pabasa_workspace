@@ -22735,9 +22735,11 @@ def reading_transcribe_api(request):
                 target_text, analysis_transcript, sentence_word_results, language_code, debug=sentence_debug,
             )
         else:
-            pronunciation_aliases = ({'lili': {'lili', 'lily'}, 'lily': {'lili', 'lily'}}
-                                      if request.POST.get('prescribed_activity_key') == 'lesson-13-gawain-3'
-                                      and language_code.lower() == 'fil-ph' else None)
+            pronunciation_aliases = None
+            if request.POST.get('prescribed_activity_key') == 'lesson-13-gawain-3' and language_code.lower() == 'fil-ph':
+                pronunciation_aliases = {'lili': {'lili', 'lily'}, 'lily': {'lili', 'lily'}}
+            elif request.POST.get('prescribed_activity_key') == 'lesson-14-gawain-3' and target_text.strip().lower() == 'elisi' and language_code.lower() == 'fil-ph':
+                pronunciation_aliases = {'elisi': {'elisi', 'ilisi', 'lc', 'lcc'}}
             analysis = analyze_reading(
                 target_text,
                 current_syllable_index,
