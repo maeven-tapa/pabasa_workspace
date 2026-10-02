@@ -14838,6 +14838,20 @@ def prescribed_activity_page(request, activity_key):
         # legacy completed-count field and may be one step ahead.
         lesson13_current_item = raw_state.get('current_item') if isinstance(raw_state.get('current_item'), int) else (progress.current_index if progress else 0)
         lesson13_current_item = max(0, min(len(activity['items']) - 1, lesson13_current_item))
+        if not progress:
+            raw_state = {'activity_key': activity_key, 'phase': 'initial', 'current_item': 0,
+                         'recorded_items': [], 'started_at': timezone.now().isoformat(),
+                         'elapsed_seconds': 0, 'state_version': 0}
+            progress = StudentActivityProgress.objects.create(
+                student=_active_prescribed_student(request), activity_key=activity_key,
+                current_index=0, completed_items=0, correct_items=0,
+                total_items=len(activity['items']), activity_completed=False,
+                state=raw_state,
+            )
+        elif not progress.activity_completed and 'started_at' not in raw_state:
+            raw_state = {**raw_state, 'started_at': timezone.now().isoformat(), 'elapsed_seconds': 0}
+            progress.state = raw_state
+            progress.save(update_fields=['state', 'updated_at'])
         context['lesson13_data'] = {'activity_key': activity_key, 'session_key': 'session-5', 'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'], 'title': activity['title'], 'instruction': activity['instruction'], 'competencies': activity['competencies'], 'items': [{'letter': i['letter'], 'word': i['word'], 'image_url': static(i['image_path'])} for i in activity['items']], 'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}), 'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}), 'progress': {'current_index': progress.current_index if progress else 0, 'completed_items': progress.completed_items if progress else 0, 'activity_completed': progress.activity_completed if progress else False, 'state': raw_state}}
         context['lesson13_data']['progress']['current_index'] = lesson13_current_item
         return render(request, 'pabasa_app/lesson_13_gawain_1_page.html', context)
@@ -18083,6 +18097,7 @@ def prescribed_activity_progress(request, activity_key):
                 StudentActivityRecordingSubmission.objects.filter(student=student, activity_key=activity_key, item_index__isnull=False).delete()
             saved = {'activity_key': activity_key, 'phase': 'initial', 'current_item': 0,
                      'reading_attempts': 0, 'aloud_attempts': 0, 'oral_satisfied': False,
+                     'started_at': timezone.now().isoformat(), 'elapsed_seconds': 0,
                      'state_version': 0}
             progress, _ = StudentActivityProgress.objects.update_or_create(
                 student=student, activity_key=activity_key,
@@ -18103,12 +18118,20 @@ def prescribed_activity_progress(request, activity_key):
             # current_index identifies the active item; completed is tracked separately.
             # A recording on item 0 must not advance the resume cursor to item 1.
             current_index = incoming_index
+            started_at = old.get('started_at') or timezone.now().isoformat()
+            try:
+                elapsed_seconds = max(0, int((timezone.now() - timezone.datetime.fromisoformat(started_at.replace('Z', '+00:00'))).total_seconds()))
+            except (TypeError, ValueError, AttributeError):
+                elapsed_seconds = int(old.get('elapsed_seconds', 0) or 0)
             saved = {'activity_key': activity_key,
                      'phase': state.get('phase', old.get('phase', 'initial')),
                      'current_item': current_index,
                      'reading_attempts': bounded_l13(state.get('reading_attempts', old.get('reading_attempts', 0)), 0, 3),
                      'aloud_attempts': bounded_l13(state.get('aloud_attempts', old.get('aloud_attempts', 0)), 0, 3),
                      'oral_satisfied': bool(state.get('oral_satisfied', old.get('oral_satisfied', False))),
+                     'started_at': started_at,
+                     'elapsed_seconds': elapsed_seconds,
+                     **({'completed_at': timezone.now().isoformat()} if state.get('phase') == 'complete' else ({'completed_at': old.get('completed_at')} if old.get('completed_at') else {})),
                      'state_version': int(old.get('state_version', 0) or 0) + 1}
             progress, _ = StudentActivityProgress.objects.update_or_create(
                 student=student, activity_key=activity_key,
@@ -20620,6 +20643,115 @@ def teacher_session_4_gawain_1_score(request):
             student_id=submission.student_id, activity_key='session-4-gawain-1',
         ).first()
         if progress:
+            progress.correct_items = correct_items
+            progress.total_items = total
+            progress.save(update_fields=['correct_items', 'total_items', 'updated_at'])
+    return JsonResponse({
+        'success': True, 'submission_id': submission.id, 'teacher_score': score,
+        'status': submission.status, 'correct_items': correct_items,
+        'total_items': total, 'all_reviewed': reviewed.count() == total,
+    })
+
+
+@login_required(role='teacher')
+@require_http_methods(['GET'])
+def teacher_lesson_13_gawain_1_recordings(request):
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    try:
+        student_id = int(request.GET.get('student_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'A valid student is required.'}, status=400)
+    if str(student_id) not in {str(value) for value in _teacher_session4_student_ids(teacher)}:
+        return JsonResponse({'success': False, 'error': 'Student access denied.'}, status=403)
+    activity = prescribed_activity('lesson-13-gawain-1') or {}
+    progress = StudentActivityProgress.objects.filter(
+        student_id=student_id, activity_key='lesson-13-gawain-1',
+    ).first()
+    progress_state = progress.state if progress and isinstance(progress.state, dict) else {}
+    submissions = {
+        row.item_index: row
+        for row in StudentActivityRecordingSubmission.objects.filter(
+            student_id=student_id, activity_key='lesson-13-gawain-1', item_index__isnull=False,
+        )
+    }
+    completed_at = progress_state.get('completed_at') if progress and progress.activity_completed else None
+    if not completed_at and progress and progress.activity_completed:
+        completed_at = progress.updated_at.isoformat()
+    return JsonResponse({
+        'success': True,
+        'completed': bool(progress and progress.activity_completed),
+        'completed_at': completed_at,
+        'duration_seconds': progress_state.get('elapsed_seconds'),
+        'items': [
+            {
+                'submission_id': row.id if row else None,
+                'item_index': index,
+                'item_label': item.get('letter', ''),
+                'recording_available': bool(row and row.audio_file),
+                'audio_url': reverse('teacher_lesson_13_gawain_1_audio', args=[row.id]) if row and row.audio_file else None,
+                'teacher_score': row.teacher_score if row else None,
+                'status': row.status if row else None,
+            }
+            for index, item in enumerate(activity.get('items') or [])
+            for row in [submissions.get(index)]
+        ],
+    })
+
+
+@login_required(role='teacher')
+@require_http_methods(['GET'])
+def teacher_lesson_13_gawain_1_audio(request, submission_id):
+    submission = StudentActivityRecordingSubmission.objects.filter(
+        pk=submission_id, activity_key='lesson-13-gawain-1',
+    ).first()
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    allowed_ids = {str(value) for value in _teacher_session4_student_ids(teacher)}
+    if not submission or str(submission.student_id) not in allowed_ids or not submission.audio_file:
+        return HttpResponseForbidden('Recording unavailable.')
+    response = FileResponse(
+        submission.audio_file.open('rb'),
+        content_type=mimetypes.guess_type(submission.audio_file.name)[0] or 'audio/webm',
+    )
+    response['Content-Disposition'] = 'inline'
+    return response
+
+
+@login_required(role='teacher')
+@csrf_protect
+@require_http_methods(['POST'])
+def teacher_lesson_13_gawain_1_score(request):
+    try:
+        payload = json.loads(request.body or '{}')
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({'success': False, 'error': 'Invalid request.'}, status=400)
+    score = payload.get('score')
+    if isinstance(score, bool) or not isinstance(score, int) or score not in (0, 1):
+        return JsonResponse({'success': False, 'error': 'Score must be 0 or 1.'}, status=400)
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    allowed_ids = _teacher_session4_student_ids(teacher)
+    with transaction.atomic():
+        submission = StudentActivityRecordingSubmission.objects.select_for_update().filter(
+            pk=payload.get('submission_id'), activity_key='lesson-13-gawain-1',
+        ).first()
+        if not submission or str(submission.student_id) not in {str(value) for value in allowed_ids}:
+            return JsonResponse({'success': False, 'error': 'Recording access denied.'}, status=403)
+        if not submission.audio_file:
+            return JsonResponse({'success': False, 'error': 'No recording submitted.'}, status=409)
+        submission.teacher_score = score
+        submission.status = 'checked'
+        submission.checked_by = teacher
+        submission.checked_at = timezone.now()
+        submission.save(update_fields=['teacher_score', 'status', 'checked_by', 'checked_at', 'updated_at'])
+        total = len((prescribed_activity('lesson-13-gawain-1') or {}).get('items') or [])
+        reviewed = StudentActivityRecordingSubmission.objects.filter(
+            student_id=submission.student_id, activity_key='lesson-13-gawain-1',
+            item_index__isnull=False, teacher_score__isnull=False,
+        )
+        correct_items = sum(row.teacher_score for row in reviewed)
+        progress = StudentActivityProgress.objects.filter(
+            student_id=submission.student_id, activity_key='lesson-13-gawain-1',
+        ).first()
+        if progress and reviewed.count() == total:
             progress.correct_items = correct_items
             progress.total_items = total
             progress.save(update_fields=['correct_items', 'total_items', 'updated_at'])

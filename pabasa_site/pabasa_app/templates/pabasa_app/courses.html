@@ -13426,6 +13426,22 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         }] }];
                         return [String(rawId), null];
                     }
+                    if (String(rawId) === 'prescribed-lesson-13-gawain-1') {
+                        const res = await fetch('{% url "teacher_lesson_13_gawain_1_recordings" %}?student_id=' + encodeURIComponent(window.__studentProgressStudentId || ''), { credentials: 'same-origin' });
+                        const data = await res.json();
+                        if (res.ok && data.success) return [String(rawId), { attempts: [{
+                            student_id: window.__studentProgressStudentId,
+                            student_name: window.__studentProgressStudentName || '',
+                            status: data.completed ? 'completed' : 'in_progress',
+                            completed_at: data.completed_at,
+                            duration_seconds: data.duration_seconds,
+                            activity_type: 'lesson_13_gawain_1',
+                            session4_recordings: data.items || [],
+                            session4_correct_items: (data.items || []).filter(item => item.teacher_score !== null && item.teacher_score !== undefined).reduce((sum, item) => sum + Number(item.teacher_score), 0),
+                            session4_total_items: (data.items || []).length,
+                        }] }];
+                        return [String(rawId), null];
+                    }
                     if (String(rawId).startsWith('material-')) {
                         const id = String(rawId).replace(/^material-/, '');
                         const res = await fetch(`/dashboard/teacher/material-attempts/?material_id=${encodeURIComponent(id)}`, {
@@ -14683,6 +14699,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 activityType: 'session_4_gawain_2',
                 activityLabel: 'Session 4',
             });
+            tasks.push({
+                title: 'Lesson 13 · Gawain 1',
+                assessmentId: 'prescribed-lesson-13-gawain-1',
+                source_type: 'prescribed',
+                activityType: 'lesson_13_gawain_1',
+                activityLabel: 'Session 5',
+            });
 
             return tasks;
         }
@@ -14829,6 +14852,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const isLesson29TraceSay = activityType === 'lesson_29_trace_say';
                     const isSession4Gawain1 = activityType === 'session_4_gawain_1';
                     const isSession4Gawain2 = activityType === 'session_4_gawain_2';
+                    const isLesson13Gawain1 = activityType === 'lesson_13_gawain_1';
                     const timeSpent = isLesson1Recording && attempt?.recording_duration_seconds !== undefined
                         ? attempt.recording_duration_seconds
                         : (attempt ? latestAttemptValue(attempt, 'time_spent', 'duration_seconds', 'duration') : null);
@@ -14853,9 +14877,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const retellRecordingKey = String(retellSubmissionId || `${task.assessmentId || task.title}-${studentId}`);
                     const retellRecordingAvailable = (isRetellStory || isStoryResponse || isLesson1Recording || isLesson29TraceSay) && attempt?.recording_available && attempt?.recording_url;
                     const lesson29Recordings = isLesson29TraceSay && Array.isArray(attempt?.recordings) ? attempt.recordings : [];
-                    const session4Recordings = (isSession4Gawain1 || isSession4Gawain2) && Array.isArray(attempt?.session4_recordings) ? attempt.session4_recordings : [];
-                    const session4Reviewed = (isSession4Gawain1 || isSession4Gawain2) && session4Recordings.length > 0 && session4Recordings.every(recording => recording.teacher_score !== null && recording.teacher_score !== undefined);
-                    const session4Score = (isSession4Gawain1 || isSession4Gawain2)
+                    const session4Recordings = (isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1) && Array.isArray(attempt?.session4_recordings) ? attempt.session4_recordings : [];
+                    const session4Reviewed = (isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1) && session4Recordings.length > 0 && session4Recordings.every(recording => recording.teacher_score !== null && recording.teacher_score !== undefined);
+                    const session4Score = (isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1)
                         ? (session4Reviewed ? `${attempt.session4_correct_items}/${attempt.session4_total_items}` : 'Awaiting teacher')
                         : null;
                     const session4RecordingHtml = session4Recordings.map(recording => {
@@ -14872,12 +14896,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         }).join('');
                     const recordingHtml = isLesson29TraceSay
                         ? lesson29RecordingHtml
-                        : (isSession4Gawain1 || isSession4Gawain2)
+                        : (isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1)
                             ? `<div class="session4-recording-review"><h6>Teacher Review</h6><p>Listen to each recording and score the student's letter sound.</p><div class="session4-recording-list">${session4RecordingHtml}</div></div>`
                         : (retellRecordingAvailable
                             ? `<div class="student-progress-audio-controls"><button type="button" class="student-progress-retell-play" data-url="${escapeHtml(attempt.recording_url)}" aria-label="Play recording"><i class="bi bi-play-fill"></i></button><input class="student-progress-retell-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"><span class="student-progress-retell-time">0:00 / ${escapeHtml(formatStudentProgressAudioTime(attempt.recording_duration_seconds))}</span></div>`
                             : '<span class="student-progress-recording-unavailable">Recording unavailable</span>');
-                    const scoreValue = (isSession4Gawain1 || isSession4Gawain2)
+                    const scoreValue = (isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1)
                         ? session4Score
                         : isLesson1Recording
                         ? (attempt?.status === 'checked' ? '1' : '-')
@@ -14888,7 +14912,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         : displayedScore;
                     const typeLabel = task.activityLabel || 'Reading Activity';
                     return `
-                        <article class="student-progress-card${isLesson1Recording ? ' lesson1-recording-card' : ''}${(isSession4Gawain1 || isSession4Gawain2) ? ' session4-recording-card' : ''}">
+                        <article class="student-progress-card${isLesson1Recording ? ' lesson1-recording-card' : ''}${(isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1) ? ' session4-recording-card' : ''}">
                             <div class="student-progress-card-header">
                                 <div class="student-progress-identity">
                                     <span class="student-progress-type">${escapeHtml(typeLabel)}</span>
@@ -14901,7 +14925,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Time Spent</span><span class="student-progress-stat-value">${timeSpent !== undefined && timeSpent !== null && timeSpent !== '' ? escapeHtml(formatCourseReportDuration(timeSpent)) : '—'}</span></div>
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Score</span><span class="student-progress-stat-value student-progress-score">${scoreValue}</span></div>
                             </div>
-                            ${(isRetellStory || isStoryResponse || isLesson1Recording || isLesson29TraceSay || isSession4Gawain1 || isSession4Gawain2) ? `<div class="student-progress-recording" data-recording-key="${escapeHtml(retellRecordingKey)}">
+                            ${(isRetellStory || isStoryResponse || isLesson1Recording || isLesson29TraceSay || isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1) ? `<div class="student-progress-recording" data-recording-key="${escapeHtml(retellRecordingKey)}">
                                 <div class="student-progress-recording-panel">
                                     ${recordingHtml}
                                     ${isLesson1Recording && (attempt?.can_retry || attempt?.can_check) ? `<div class="d-flex gap-2 mt-2 lesson1-review-actions"><button type="button" class="btn btn-outline-secondary btn-sm student-progress-lesson1-action" data-id="${escapeHtml(attempt.submission_id || '')}" data-action="retry" ${attempt.can_retry ? '' : 'disabled'}>Retry</button><button type="button" class="btn btn-primary btn-sm student-progress-lesson1-action" data-id="${escapeHtml(attempt.submission_id || '')}" data-action="checked" ${attempt.can_check ? '' : 'disabled'}>Mark as Checked</button></div>` : ''}
@@ -14983,6 +15007,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (feedback) feedback.textContent = 'Saving...';
             const scoreUrl = row.dataset.session4Activity === 'prescribed-session-4-gawain-2'
                 ? '{% url "teacher_session_4_gawain_2_score" %}'
+                : row.dataset.session4Activity === 'prescribed-lesson-13-gawain-1'
+                ? '{% url "teacher_lesson_13_gawain_1_score" %}'
                 : '{% url "teacher_session_4_gawain_1_score" %}';
             ensureCsrfToken().then(token => fetch(scoreUrl, {
                 method: 'POST', credentials: 'same-origin',
