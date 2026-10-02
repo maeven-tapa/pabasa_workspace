@@ -205,7 +205,7 @@ def _enforce_prescribed_activity_sequence(request, activity_key):
     if not student or not _student_can_open_prescribed_activity(student, activity_key):
         return redirect('assessment')
     return None
-from .handwriting_validation import is_recognizable_a, is_recognizable_f, is_recognizable_h, is_recognizable_i, is_recognizable_ii, is_recognizable_l, is_recognizable_m, is_recognizable_s, is_recognizable_t, is_recognizable_letter_pair, is_recognizable_n, is_recognizable_p, is_recognizable_trace, is_scribble_like, normalize_strokes
+from .handwriting_validation import is_recognizable_a, is_recognizable_f, is_recognizable_h, is_recognizable_i, is_recognizable_ii, is_recognizable_l, is_recognizable_m, is_recognizable_s, is_recognizable_t, is_recognizable_letter_pair, is_recognizable_n, is_recognizable_p, is_recognizable_trace, is_scribble_like, normalize_strokes, is_recognizable_session4_pair, segment_session4_trace_groups
 from .reader_classification import classify_student_account
 from .scoring import (
     ADAPTED_READING_LEVEL_DISCLAIMER,
@@ -15974,6 +15974,63 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
     if not _student_can_open_prescribed_activity(student, activity_key):
         return JsonResponse({'success': False, 'error': 'Complete the previous activity first.'}, status=403)
+    if activity_key == 'session-4-gawain-5':
+        try:
+            data = json.loads(request.body or '{}')
+            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            old = existing.state if existing and isinstance(existing.state, dict) else {}
+            if data.get('reset') is True:
+                payload = {'current_item': 0, 'traces': [], 'phase': 'trace', 'state_version': 0}
+                progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': len(activity['items']), 'activity_completed': False, 'state': payload})
+                return JsonResponse({'success': True, 'progress': {'state': payload, 'current_index': 0, 'completed_items': 0, 'activity_completed': False}})
+            total = len(activity['items'])
+            index = max(0, min(total, int(old.get('current_item', existing.current_index if existing else 0) or 0)))
+            traces = old.get('traces') if isinstance(old.get('traces'), list) else []
+            traces = traces[:total * 3]
+            if index >= total:
+                raise ValueError('The activity is already complete.')
+            if data.get('action') != 'save_trace' or int(data.get('item_index', -1)) != index:
+                raise ValueError('Trace the displayed letter pair first.')
+            raw_strokes = data.get('strokes')
+            normalized = normalize_strokes(raw_strokes)
+            if normalized is None and isinstance(raw_strokes, list) and raw_strokes:
+                candidate = []
+                for raw_stroke in raw_strokes[:100]:
+                    if not isinstance(raw_stroke, list):
+                        continue
+                    points = []
+                    for raw_point in raw_stroke[:2000]:
+                        if not isinstance(raw_point, dict):
+                            continue
+                        try:
+                            x, y = float(raw_point.get('x')), float(raw_point.get('y'))
+                        except (TypeError, ValueError):
+                            continue
+                        if 0 <= x <= 1 and 0 <= y <= 1:
+                            points.append({'x': x, 'y': y})
+                    if len(points) >= 2:
+                        candidate.append(points)
+                normalized = candidate or None
+            letter = activity['items'][index]['letter']
+            # The target-specific validator handles normal rounded B/b curves
+            # itself; the generic gate falsely rejects legitimate bowl strokes.
+            if normalized is None:
+                raise ValueError('Invalid stroke payload.')
+            groups = segment_session4_trace_groups(normalized, 3)
+            if groups is None:
+                raise ValueError(f'Expected three {letter} traces.')
+            if not all(is_recognizable_session4_pair(group, letter) for group in groups):
+                raise ValueError(f'Invalid {letter} trace shape.')
+            if len(traces) // 3 != index:
+                traces = traces[:index * 3]
+            traces.extend(groups)
+            index += 1
+            phase = 'complete' if index >= total else 'trace'
+            payload = {'current_item': index, 'traces': traces, 'phase': phase, 'state_version': int(old.get('state_version', 0) or 0) + 1}
+            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index, 'total_items': total, 'activity_completed': False, 'state': payload})
+            return JsonResponse({'success': True, 'accepted': True, 'progress': {'state': payload, 'current_index': index, 'completed_items': index, 'activity_completed': False}})
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity_key == 'lesson9-gawain3':
         try:
             data = json.loads(request.body or '{}')
@@ -16313,6 +16370,16 @@ def prescribed_activity_progress(request, activity_key):
                 'activity_completed': False, 'state': progress.state}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    if activity_key == 'session-4-gawain-5':
+        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        state = existing.state if existing and isinstance(existing.state, dict) else {}
+        total = len(activity['items'])
+        if not existing or state.get('phase') != 'complete' or len(state.get('traces', [])) != total * 3:
+            return JsonResponse({'success': False, 'error': 'Complete three valid traces for every letter pair first.'}, status=400)
+        existing.activity_completed = True
+        existing.current_index = existing.completed_items = existing.correct_items = existing.total_items = total
+        existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
+        return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity_key == 'session-4-gawain-2':
         try:
             data = json.loads(request.body or '{}')
@@ -20764,12 +20831,13 @@ def session_4_gawain_5_page(request):
     if progress and progress.activity_completed:
         return redirect('assessment')
     raw_state = progress.state if progress and isinstance(progress.state, dict) else {}
+    total_items = len(activity['items'])
     try:
-        saved_index = max(0, min(4, int(progress.current_index))) if progress else 0
+        saved_index = max(0, min(total_items, int(progress.current_index))) if progress else 0
     except (TypeError, ValueError):
         saved_index = 0
     try:
-        saved_completed = max(0, min(4, int(progress.completed_items))) if progress else 0
+        saved_completed = max(0, min(total_items, int(progress.completed_items))) if progress else 0
     except (TypeError, ValueError):
         saved_completed = 0
     context['session4_gawain5_data'] = {
@@ -20786,7 +20854,7 @@ def session_4_gawain_5_page(request):
         'progress': {
             'current_index': saved_index,
             'completed_items': saved_completed,
-            'total_items': 4,
+            'total_items': total_items,
             'activity_completed': progress.activity_completed if progress else False,
             'strokes': raw_state.get('strokes') if isinstance(raw_state.get('strokes'), list) else [],
             'state': raw_state,

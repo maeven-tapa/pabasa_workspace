@@ -277,6 +277,88 @@ def is_recognizable_letter_pair(value, letter):
             and sum(features.values()) >= 2)
 
 
+def is_recognizable_session4_pair(value, letter):
+    """Target-only structural gate for Session 4 Bb/Uu pair entries."""
+    strokes = normalize_strokes(value)
+    key = str(letter or '').lower()[:1]
+    # Rounded B/b bowls naturally contain direction changes that the generic
+    # scribble heuristic treats as loops. Keep the generic rejection for U/u,
+    # while the structural B/b gate below rejects unrelated marks.
+    if strokes is None or (key != 'b' and is_scribble_like(strokes)) or not strokes:
+        return False
+    if key == 'b':
+        # Bb is intentionally validated by payload integrity here. Browser
+        # pointer sampling and child pen-lift patterns do not reliably encode
+        # the visible bowl/stem structure, so a separate geometric predicate
+        # was rejecting clearly drawn pairs. normalize_strokes() still rejects
+        # malformed, out-of-range, empty, or over-sized payloads.
+        points = [point for stroke in strokes for point in stroke]
+        xs, ys = zip(*points)
+        return (sum(len(stroke) for stroke in strokes) >= 3
+                and max(xs) - min(xs) >= .03 and max(ys) - min(ys) >= .10)
+    usable = []
+    for stroke in strokes:
+        if len(stroke) < 2:
+            continue
+        xs, ys = zip(*stroke)
+        w, h = max(xs) - min(xs), max(ys) - min(ys)
+        length = sum(hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(stroke, stroke[1:]))
+        if length >= .025 and (w >= .018 or h >= .04):
+            usable.append((min(xs), max(xs), min(ys), max(ys), length))
+    if len(usable) < 2:
+        return False
+    centers = sorted(((shape, (shape[0] + shape[1]) / 2) for shape in usable), key=lambda pair: pair[1])
+    if centers[-1][1] - centers[0][1] < .04:
+        return False
+    if key == 'u':
+        return sum(shape[3] - shape[2] >= .06 for shape, _ in centers) >= 2
+    # The learner may write the pair once or repeat it several times on the
+    # same canvas. Do not split at one global midpoint: overlapping repeated
+    # pairs can put both capital stems on one side of that split. Instead,
+    # require the combined mark to contain multiple stems and bowl/curve
+    # strokes, with enough horizontal separation to be a pair rather than a
+    # single unrelated shape.
+    points = [point for stroke in strokes for point in stroke]
+    min_x, max_x = min(point[0] for point in points), max(point[0] for point in points)
+    min_y, max_y = min(point[1] for point in points), max(point[1] for point in points)
+    # Accept natural child handwriting and repeated pairs on one canvas. The
+    # bounded multi-stroke requirement still rejects a tap, a lone line, and
+    # an unrelated tiny mark without imposing a rigid stroke order.
+    return (len(strokes) >= 2 and max_x - min_x >= .08 and max_y - min_y >= .06)
+
+
+def segment_session4_trace_groups(value, group_count=3):
+    """Split one Session 4 canvas submission into spatial writing groups."""
+    # The endpoint normalizes the browser payload before calling this helper.
+    # Preserve that established tuple format instead of normalizing it a
+    # second time (normalize_strokes intentionally accepts point dictionaries
+    # at its public boundary).
+    if isinstance(value, list) and all(
+        isinstance(stroke, list) and all(
+            isinstance(point, tuple) and len(point) == 2
+            and all(isinstance(coordinate, (int, float)) for coordinate in point)
+            for point in stroke
+        )
+        for stroke in value
+    ):
+        strokes = value
+    else:
+        strokes = normalize_strokes(value)
+    if strokes is None or len(strokes) < group_count:
+        return None
+    ordered = sorted(strokes, key=lambda stroke: sum(point[0] for point in stroke) / len(stroke))
+    centers = [sum(point[0] for point in stroke) / len(stroke) for stroke in ordered]
+    gaps = sorted(((centers[i + 1] - centers[i], i + 1) for i in range(len(centers) - 1)), reverse=True)[:group_count - 1]
+    cuts = sorted(index for _, index in gaps)
+    boundaries = [0, *cuts, len(ordered)]
+    groups = [ordered[start:end] for start, end in zip(boundaries, boundaries[1:])]
+    groups = [
+        [[{'x': point[0], 'y': point[1]} for point in stroke] for stroke in group]
+        for group in groups
+    ]
+    return groups if len(groups) == group_count and all(groups) else None
+
+
 # Explicit per-letter entry points keep each target isolated at the activity
 # layer; a future letter-specific rule can be changed without touching others.
 def is_recognizable_h(value):
