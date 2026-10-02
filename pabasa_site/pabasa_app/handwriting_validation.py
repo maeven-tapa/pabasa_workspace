@@ -278,15 +278,25 @@ def is_recognizable_letter_pair(value, letter):
 
 
 def is_recognizable_session4_pair(value, letter):
-    """Target-only structural gate for Session 4 Bb/Uu pair entries."""
+    """Target-specific structural gate for Session 4 Gawain 5 letters.
+
+    The expected target is kept case-sensitive at the call boundary.  The
+    structural rules are intentionally tolerant because canvas strokes do not
+    carry a reliable machine-readable case label; B/b and U/u are therefore
+    validated against the exact catalog item selected by the progress index,
+    never against a lower-cased combined target.
+    """
     strokes = normalize_strokes(value)
-    key = str(letter or '').lower()[:1]
+    target = str(letter or '')[:1]
+    if target not in {'B', 'b', 'U', 'u'}:
+        return False
+    key = target
     # Rounded B/b bowls naturally contain direction changes that the generic
     # scribble heuristic treats as loops. Keep the generic rejection for U/u,
     # while the structural B/b gate below rejects unrelated marks.
     if strokes is None or (key != 'b' and is_scribble_like(strokes)) or not strokes:
         return False
-    if key == 'b':
+    if key in {'B', 'b'}:
         # Bb is intentionally validated by payload integrity here. Browser
         # pointer sampling and child pen-lift patterns do not reliably encode
         # the visible bowl/stem structure, so a separate geometric predicate
@@ -305,12 +315,44 @@ def is_recognizable_session4_pair(value, letter):
         length = sum(hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(stroke, stroke[1:]))
         if length >= .025 and (w >= .018 or h >= .04):
             usable.append((min(xs), max(xs), min(ys), max(ys), length))
+    if len(usable) == 1:
+        # A child may draw U/u in one continuous down-and-up gesture. Accept
+        # only a clearly U-shaped path: both endpoints near the upper band,
+        # with the path descending into the lower band.
+        stroke = next(stroke for stroke in strokes if len(stroke) >= 2)
+        xs, ys = zip(*stroke)
+        width, height = max(xs) - min(xs), max(ys) - min(ys)
+        lowest_index = max(range(len(stroke)), key=lambda index: stroke[index][1])
+        lower = min(ys) + height * .60
+        endpoint_band = min(ys) + height * .70
+        return (width >= .025 and height >= .12
+                and 0 < lowest_index < len(stroke) - 1
+                and stroke[0][1] <= endpoint_band
+                and stroke[-1][1] <= endpoint_band
+                and stroke[lowest_index][1] >= lower)
     if len(usable) < 2:
         return False
     centers = sorted(((shape, (shape[0] + shape[1]) / 2) for shape in usable), key=lambda pair: pair[1])
-    if centers[-1][1] - centers[0][1] < .04:
+    if key == 'u' and len(centers) == 2:
+        left = strokes[usable.index(centers[0][0])]
+        right = strokes[usable.index(centers[1][0])]
+        combined_width = max(point[0] for stroke in strokes for point in stroke) - min(point[0] for stroke in strokes for point in stroke)
+        left_height = max(point[1] for point in left) - min(point[1] for point in left)
+        right_height = max(point[1] for point in right) - min(point[1] for point in right)
+        valley_gap = abs(left[-1][1] - right[0][1])
+        if (combined_width >= .02 and left_height >= .06 and right_height >= .06
+                and left[0][1] < left[-1][1]
+                and right[0][1] > right[-1][1]
+                and valley_gap <= .15):
+            return True
+    # Narrow lowercase u strokes can sit much closer together than the
+    # uppercase/pair geometry. Keep the broader separation rule for U and
+    # other targets, but allow the two strokes of a child-sized u to form one
+    # segmented letter region.
+    minimum_separation = .02 if key == 'u' else .04
+    if centers[-1][1] - centers[0][1] < minimum_separation:
         return False
-    if key == 'u':
+    if key in {'U', 'u'}:
         return sum(shape[3] - shape[2] >= .06 for shape, _ in centers) >= 2
     # The learner may write the pair once or repeat it several times on the
     # same canvas. Do not split at one global midpoint: overlapping repeated
@@ -328,7 +370,7 @@ def is_recognizable_session4_pair(value, letter):
 
 
 def segment_session4_trace_groups(value, group_count=3):
-    """Split one Session 4 canvas submission into spatial writing groups."""
+    """Cluster completed strokes into left-to-right handwritten letters."""
     # The endpoint normalizes the browser payload before calling this helper.
     # Preserve that established tuple format instead of normalizing it a
     # second time (normalize_strokes intentionally accepts point dictionaries
@@ -344,19 +386,62 @@ def segment_session4_trace_groups(value, group_count=3):
         strokes = value
     else:
         strokes = normalize_strokes(value)
-    if strokes is None or len(strokes) < group_count:
+    if strokes is None or len(strokes) < 1:
         return None
-    ordered = sorted(strokes, key=lambda stroke: sum(point[0] for point in stroke) / len(stroke))
-    centers = [sum(point[0] for point in stroke) / len(stroke) for stroke in ordered]
-    gaps = sorted(((centers[i + 1] - centers[i], i + 1) for i in range(len(centers) - 1)), reverse=True)[:group_count - 1]
-    cuts = sorted(index for _, index in gaps)
-    boundaries = [0, *cuts, len(ordered)]
-    groups = [ordered[start:end] for start, end in zip(boundaries, boundaries[1:])]
-    groups = [
+    boxes = []
+    for index, stroke in enumerate(strokes):
+        xs, ys = zip(*stroke)
+        boxes.append({
+            'index': index,
+            'min_x': min(xs), 'max_x': max(xs),
+            'min_y': min(ys), 'max_y': max(ys),
+        })
+
+    parent = list(range(len(boxes)))
+
+    def find(index):
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    def union(first, second):
+        first, second = find(first), find(second)
+        if first != second:
+            parent[second] = first
+
+    def overlaps_or_is_near(first, second):
+        first_width = max(first['max_x'] - first['min_x'], .01)
+        second_width = max(second['max_x'] - second['min_x'], .01)
+        overlap_x = max(0, min(first['max_x'], second['max_x']) - max(first['min_x'], second['min_x']))
+        overlap_y = max(0, min(first['max_y'], second['max_y']) - max(first['min_y'], second['min_y']))
+        min_width = min(first_width, second_width)
+        min_height = max(min(first['max_y'] - first['min_y'], second['max_y'] - second['min_y']), .01)
+        gap_x = max(first['min_x'] - second['max_x'], second['min_x'] - first['max_x'], 0)
+        # A zero/near-zero gap with vertical overlap usually belongs to a
+        # multi-stroke letter. Keep the proximity window narrow so adjacent
+        # handwritten letters are not merged into one cluster.
+        proximity = min(.02, min_width * .35)
+        return (overlap_x / min_width >= .15
+                or (gap_x <= proximity and overlap_y / min_height >= .15))
+
+    for first_index, first in enumerate(boxes):
+        for second in boxes[first_index + 1:]:
+            if overlaps_or_is_near(first, second):
+                union(first['index'], second['index'])
+
+    grouped = {}
+    for box in boxes:
+        grouped.setdefault(find(box['index']), []).append(strokes[box['index']])
+    groups = sorted(
+        grouped.values(),
+        key=lambda group: sum(point[0] for stroke in group for point in stroke)
+        / sum(len(stroke) for stroke in group),
+    )
+    return [
         [[{'x': point[0], 'y': point[1]} for point in stroke] for stroke in group]
         for group in groups
-    ]
-    return groups if len(groups) == group_count and all(groups) else None
+    ] if len(groups) == group_count and all(groups) else None
 
 
 # Explicit per-letter entry points keep each target isolated at the activity

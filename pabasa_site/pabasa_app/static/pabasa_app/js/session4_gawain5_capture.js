@@ -23,7 +23,7 @@ window.__s4g5CaptureReady = true;
   };
   const advanceInPage = nextIndex => {
     const target = data.letters?.[nextIndex];
-    const targetNode = app.querySelector('.g4-target span');
+    const targetNode = app.querySelector('.g4-instruction-target');
     if (targetNode && target !== undefined) targetNode.textContent = target;
     app.querySelectorAll('.g4-step').forEach((step, stepIndex) => {
       step.classList.toggle('active', stepIndex === nextIndex);
@@ -68,7 +68,7 @@ window.__s4g5CaptureReady = true;
           headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf()},
           body: JSON.stringify({action: 'save_trace', item_index: index, strokes})});
         const result = await response.json().catch(() => ({}));
-        if (!response.ok || !result.success) throw Error(result.error || 'Write both letters clearly, then try again.');
+        if (!response.ok || !result.success) throw Error(result.error || 'Write the letter clearly three times, then try again.');
         data.progress = result.progress;
         strokes = [];
         if (Number(result.progress?.state?.current_item) >= Number(data.letters?.length || 0)) {

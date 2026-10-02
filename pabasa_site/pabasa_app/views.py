@@ -15989,7 +15989,15 @@ def prescribed_activity_progress(request, activity_key):
             traces = traces[:total * 3]
             if index >= total:
                 raise ValueError('The activity is already complete.')
-            if data.get('action') != 'save_trace' or int(data.get('item_index', -1)) != index:
+            action = data.get('action')
+            requested_index = int(data.get('item_index', -1))
+            if action not in {'save_trace', 'validate_trace'}:
+                raise ValueError('Trace the displayed letter pair first.')
+            if action == 'validate_trace':
+                if requested_index not in range(total):
+                    raise ValueError('Trace item index is invalid.')
+                index = requested_index
+            elif requested_index != index:
                 raise ValueError('Trace the displayed letter pair first.')
             raw_strokes = data.get('strokes')
             normalized = normalize_strokes(raw_strokes)
@@ -16012,11 +16020,36 @@ def prescribed_activity_progress(request, activity_key):
                         candidate.append(points)
                 normalized = candidate or None
             letter = activity['items'][index]['letter']
+            if letter not in {'B', 'b', 'U', 'u'}:
+                raise ValueError('Unsupported Session 4 Gawain 5 target.')
             # The target-specific validator handles normal rounded B/b curves
             # itself; the generic gate falsely rejects legitimate bowl strokes.
             if normalized is None:
                 raise ValueError('Invalid stroke payload.')
             groups = segment_session4_trace_groups(normalized, 3)
+            if data.get('action') == 'validate_trace':
+                group_details = []
+                for group in groups or []:
+                    points = [point for stroke in group for point in stroke]
+                    group_details.append({
+                        'stroke_count': len(group),
+                        'point_count': len(points),
+                        'bbox': {
+                            'min_x': min(point['x'] for point in points) if points else None,
+                            'max_x': max(point['x'] for point in points) if points else None,
+                            'min_y': min(point['y'] for point in points) if points else None,
+                            'max_y': max(point['y'] for point in points) if points else None,
+                        },
+                        'recognizable': is_recognizable_session4_pair(group, letter),
+                    })
+                valid = bool(groups and len(groups) == 3 and all(detail['recognizable'] for detail in group_details))
+                raw_count = len(raw_strokes) if isinstance(raw_strokes, list) else 0
+                normalized_count = len(normalized) if normalized else 0
+                return JsonResponse({'success': True, 'accepted': valid, 'complete': valid, 'item_index': index,
+                                     'diagnostics': {'target': letter, 'raw_stroke_count': raw_count,
+                                                     'normalized_stroke_count': normalized_count,
+                                                     'rejected_stroke_count': max(0, raw_count - normalized_count),
+                                                     'group_count': len(groups or []), 'groups': group_details}})
             if groups is None:
                 raise ValueError(f'Expected three {letter} traces.')
             if not all(is_recognizable_session4_pair(group, letter) for group in groups):
@@ -16375,7 +16408,7 @@ def prescribed_activity_progress(request, activity_key):
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['items'])
         if not existing or state.get('phase') != 'complete' or len(state.get('traces', [])) != total * 3:
-            return JsonResponse({'success': False, 'error': 'Complete three valid traces for every letter pair first.'}, status=400)
+            return JsonResponse({'success': False, 'error': 'Complete three valid traces for every letter first.'}, status=400)
         existing.activity_completed = True
         existing.current_index = existing.completed_items = existing.correct_items = existing.total_items = total
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
