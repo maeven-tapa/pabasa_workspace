@@ -1271,6 +1271,28 @@ function initProfilePage() {
             if (!dropdown || !trigger) return;
             dropdown.classList.toggle("is-open", Boolean(isOpen));
             trigger.setAttribute("aria-expanded", Boolean(isOpen));
+            const menu = dropdown.querySelector(".custom-device-menu");
+            if (menu) {
+                menu.classList.remove("opens-up");
+                if (isOpen) {
+                    requestAnimationFrame(() => {
+                        const scrollBody = dropdown.closest(".player-settings-modal .modal-body");
+                        if (!scrollBody) return;
+                        const bodyRect = scrollBody.getBoundingClientRect();
+                        const triggerRect = trigger.getBoundingClientRect();
+                        const spaceAbove = Math.max(0, triggerRect.top - bodyRect.top - 12);
+                        const spaceBelow = Math.max(0, bodyRect.bottom - triggerRect.bottom - 12);
+                        const opensUp = spaceAbove > spaceBelow;
+                        const availableSpace = Math.max(96, Math.min(opensUp ? spaceAbove : spaceBelow, 320));
+                        menu.classList.toggle("opens-up", opensUp);
+                        menu.style.maxHeight = `${availableSpace}px`;
+                        menu.style.overflowY = "auto";
+                    });
+                } else {
+                    menu.style.maxHeight = "";
+                    menu.style.overflowY = "";
+                }
+            }
         }
 
         function buildDeviceOptions(selectEl, menuEl, optionButtons, getSubtitle) {
