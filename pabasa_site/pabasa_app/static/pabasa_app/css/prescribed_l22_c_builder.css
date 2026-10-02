@@ -158,9 +158,108 @@
   }
 }
 
+/* Match Lesson 22 Gawain 2's single centered progress component. */
+.wb-l22-g1-page #wb-progress-row{
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  width:min(420px,70%);
+  margin:9px auto clamp(8px,2vh,18px);
+}
+.wb-l22-g1-page #wb-progress{
+  flex:0 0 auto;
+  margin:0;
+  padding:0;
+  background:transparent;
+  box-shadow:none;
+  white-space:nowrap;
+}
+.wb-l22-g1-page #wb-progress-track{
+  flex:1 1 auto;
+  width:auto;
+  min-width:0;
+  height:8px;
+  margin:0;
+}
+
 @media(max-width:760px){
   .wb-l22-g1-page .wb-shell{
     height:auto;
     min-height:0;
   }
+}
+
+/* Keep the desktop learner card inside the available viewport. The previous
+   zoom rule combined an auto-height shell with a 68dvh builder minimum, so
+   the header, progress row, and content accumulated into document overflow. */
+@media(min-width:761px){
+  .wb-l22-g1-page{
+    display:flex;
+    flex-direction:column;
+    height:100dvh;
+    min-height:100dvh;
+    box-sizing:border-box;
+    overflow-x:hidden;
+    overflow-y:auto;
+  }
+  .wb-l22-g1-page .wb-shell{
+    flex:1 1 auto;
+    width:min(1250px,100%);
+    height:auto;
+    max-height:100%;
+    min-height:0;
+    margin:0 auto;
+    padding:clamp(52px,7dvh,82px) clamp(14px,5vw,64px) clamp(10px,2dvh,22px);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .wb-l22-g1-page .wb-l22-builder{
+    flex:1 1 0;
+    min-height:0;
+  }
+}
+
+/* Match the approved Lesson 22 Gawain 2 page-level navigation flow. */
+.wb-l22-g1-page .wb-l22-g1-page-layout{
+  position:relative;
+  display:flex;
+  flex:1 1 0;
+  flex-direction:column;
+  gap:clamp(22px,3vh,32px);
+  width:min(1250px,100%);
+  min-height:0;
+  margin:0 auto;
+}
+.wb-l22-g1-page .wb-l22-g1-page-layout>#wb-g1-back{
+  position:relative;
+  top:auto;
+  left:auto;
+  z-index:3;
+  align-self:flex-start;
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  width:280px;
+  min-height:64px;
+  padding:10px 18px;
+  border-radius:999px;
+  background:#fff;
+  color:var(--l22-ref-ink);
+  font-size:1.2rem;
+  line-height:1.15;
+  text-align:center;
+  text-decoration:none;
+  box-shadow:0 8px 17px #145ca744;
+}
+.wb-l22-g1-page .wb-l22-g1-page-layout>#wb-g1-back:before{content:'\2190';font-size:2rem;line-height:1}
+.wb-l22-g1-page .wb-l22-g1-page-layout>.wb-shell{flex:1 1 0;width:100%;height:auto;min-height:0;max-height:none;margin:0}
+.wb-l22-g1-page .wb-lesson-copy>#wb-back{display:none}
+@media(max-width:760px){
+  .wb-l22-g1-page .wb-l22-g1-page-layout{gap:clamp(18px,3vh,24px)}
+  .wb-l22-g1-page .wb-l22-g1-page-layout>#wb-g1-back{width:230px;min-height:56px;font-size:1rem}
 }
