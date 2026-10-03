@@ -324,6 +324,14 @@
   async function perform(event,form=null){if(busy)return;busy=true;lock();const wasCompleted=Boolean(state.completed);try{await send(event,form);render();if(s9Family&&state.completed&&!wasCompleted)await playPrescribedAudio('Good job! Activity 1 is complete!',true);if(s9Helping&&state.completed&&!wasCompleted)await playPrescribedAudio('Good job! Activity 2 is complete!',true);if(l23G1){if(state.completed){await playPrescribedAudio('Magaling! Natapos mo ang Gawain 1.',true);await playPrescribedAudio('Magaling! Nabuo mo ang salitang Niño',true);}else if(G1_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}if(jSyllables){if(state.completed)await playPrescribedAudio('Natapos mo ang gawain!',true);else if(G4_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}if(qG6&&G6_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);if(g6Search&&L24_G6_WORD_SEARCH_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);if(l24Builder){if(state.completed)await playPrescribedAudio('Magaling! Nabasa mo nang tama ang lahat ng pantig.',true);else if(L24_G1_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}if(l24G4Builder){if(state.completed)await playPrescribedAudio('Magaling! Natapos mo ang Gawain 4.',true);else if(L24_G4_BUILDER_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}if(g5Syllables){if(state.completed)await playPrescribedAudio('Magaling! Natapos mo ang Gawain 5!',true);else if(L24_G5_SYLLABLE_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}}catch(e){const text=e.message||'Hindi na-save. Subukan muli.';message(text,true);if((l23G1&&G1_MAPPED_TEXT.has(text))||(jSyllables&&G4_MAPPED_TEXT.has(text))||(qG6&&G6_MAPPED_TEXT.has(text))||(g6Search&&L24_G6_WORD_SEARCH_MAPPED_TEXT.has(text))||(l24Builder&&L24_G1_MAPPED_TEXT.has(text))||(l24G4Builder&&L24_G4_BUILDER_MAPPED_TEXT.has(text))||(g5Syllables&&L24_G5_SYLLABLE_MAPPED_TEXT.has(text))||(s9Helping&&S9_A2_MAPPED_TEXT.has(text)))playPrescribedAudio(text,true).catch(()=>{});}finally{busy=false;lock();}}
   function lock(){action.querySelectorAll('button').forEach(b=>b.disabled=busy||preview);}
   function lockG3(){if(l23G3)content.querySelectorAll('.wb-l23-g3-content button').forEach(b=>b.disabled=busy||preview);}
+  function setG1ReadingState(next){
+    if(!l22G1)return;
+    const read=document.getElementById('wb-basahin');
+    if(!read)return;
+    read.disabled=next!=='idle'||preview;
+    if(window.BasahinButton?.setState)window.BasahinButton.setState(read,next);
+    else read.textContent=next==='listening'?'Nakikinig...':next==='processing'?'Sinusuri...':next==='calibrating'?'Sandali...':'Basahin';
+  }
   function button(text,fn,primary=false){const b=document.createElement('button');b.type='button';b.textContent=text;b.className=primary?'wb-primary':'';if([record,recordJ,recordPictureReading,startCReading].includes(fn)){b.id='wb-basahin';if(window.Basahin?.bindActivity)window.Basahin.bindActivity(b,fn);else if(lesson23Activity)b.onclick=fn;}else b.onclick=fn;action.appendChild(b);return b;}
   function table(){let n=0;return `<table class="wb-table">${a.column_headers?'<thead><tr>'+a.column_headers.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr></thead>':''}<tbody>${a.rows.map(row=>'<tr>'+row.map(text=>{const i=text?a.items[n++]:null;return `<td class="${!preview&&i?(n-1===state.index?'wb-current':n-1<state.index?'wb-done':''):''}">${i&&a.images?.[i.id]?`<img src="${esc(a.images[i.id])}" alt="${esc(text)}"><br>`:''}${esc(i?(a.cell_display?.[i.id]||text):'')}</td>`;}).join('')+'</tr>').join('')}</tbody></table>`;}
   function requestG6Restart(){
@@ -620,16 +628,18 @@
     }
   }
   async function startCReading(){
-    if(busy)return;stopReadAloud();busy=true;lock();let chunks=[],readTimer,recorder;const requestIndex=Number(state.index||0),requestActivity=a.activity_key;
+    if(busy)return;stopReadAloud();busy=true;lock();setG1ReadingState('calibrating');let chunks=[],readTimer,recorder;const requestIndex=Number(state.index||0),requestActivity=a.activity_key;
     try{
       await send({action:'reading_started'},null,false);
       if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error('Hindi available ang mikropono sa browser na ito.');
       activeStream=await window.Basahin.openMicrophone({audio:true},{timeoutMs:8000});
       message('Nakikinig...');
+      setG1ReadingState('listening');
       const audio=await window.Basahin.capture({button:document.getElementById('wb-basahin'),stream:activeStream,onRecorder:value=>{recorder=activeRecorder=value;}});activeStream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
       if(!audio.size)throw new Error('Walang nakuha sa recording. Subukan muli.');
       if(requestActivity!==a.activity_key||requestIndex!==Number(state.index||0))return;
       const form=new FormData();form.append('audio',audio,'reading.webm');message('Sinusuri ang iyong pagbasa...');
+      setG1ReadingState('processing');
       await send({action:'reading_syllable_attempt',item_index:requestIndex},form,false);render();
       pendingSpeech=state.read_aloud_completed?'Magaling! Nabasa mo nang tama ang lahat ng pantig.':state.last_feedback==='Tama!'?'Tama!':'Subukan muli.';
       message(pendingSpeech);
@@ -640,7 +650,7 @@
       render();
       pendingSpeech=micError?'Hindi magamit ang mikropono. Subukan muli.':(error?.message||'Hindi nakuha ang iyong boses. Subukan muli.');
       message(pendingSpeech,true);
-    }finally{clearTimeout(readTimer);busy=false;lock();const speech=pendingSpeech;pendingSpeech='';if(speech)playPrescribedAudio(speech).catch(e=>console.error('Lesson 22 feedback audio failed',e));}
+    }finally{clearTimeout(readTimer);const speech=pendingSpeech;pendingSpeech='';if(speech){setG1ReadingState('processing');await playPrescribedAudio(speech).catch(e=>console.error('Lesson 22 feedback audio failed',e));}busy=false;lock();setG1ReadingState('idle');}
   }
   async function retryCReading(){
     if(busy)return;stopReadAloud();busy=true;lock();
