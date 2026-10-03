@@ -67,3 +67,18 @@ class PrescribedLesson23Gawain6Tests(SimpleTestCase):
         source = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
         self.assertIn("aral-l23-g6-q-syllable-builder", source)
         self.assertNotIn('{% url', source)
+
+    def test_startup_has_one_g6_owner_and_exact_modal_content(self):
+        template = (Path(__file__).parent / 'templates/pabasa_app/prescribed_workbook_page.html').read_text(encoding='utf-8')
+        startup = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_l23_startup.js').read_text(encoding='utf-8')
+        self.assertEqual(template.count('id="wb-l23-g6-start"'), 1)
+        self.assertIn('id="wb-l23-g6-start-button"', template)
+        self.assertIn('id="wb-l23-g6-later-button"', template)
+        self.assertIn('{{ workbook_payload.activity.instruction }}', template)
+        self.assertNotIn("'aral-l23-g6-q-syllable-builder': 'g6'", startup)
+
+    def test_shared_startup_uses_the_same_instruction_playback_path(self):
+        source = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
+        self.assertIn("const suffix=l23G1?'g1':l23G3?'g3':jSyllables?'g4':qG6?'g6':'g7';", source)
+        self.assertIn('activityStarted=true;instructionSpoken=true;render();playPrescribedAudio(instructionText,true)', source)
+        self.assertIn("replay.onclick=()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch", source)

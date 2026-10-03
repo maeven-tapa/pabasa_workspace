@@ -23488,6 +23488,8 @@ def reading_transcribe_api(request):
         return JsonResponse({'success': False, 'error': str(exc)}, status=exc.status)
     except Exception as exc:
         logger.exception('Reading transcription failed')
+        if request.POST.get('prescribed_activity_key') == 'aral-l23-g6-q-syllable-builder':
+            return JsonResponse({'success': False, 'error': 'Hindi magamit ang mikropono ngayon. Subukan muli mamaya.'}, status=502)
         return JsonResponse({'success': False, 'error': str(exc)}, status=502)
 
 
@@ -23763,6 +23765,8 @@ def reading_read_aloud_api(request):
         })
     except Exception as exc:
         logger.exception('Read aloud synthesis failed')
+        if prescribed_key == 'aral-l23-g6-q-syllable-builder':
+            return JsonResponse({'success': False, 'error': 'Hindi available ang audio ngayon. Subukan muli mamaya.'}, status=502)
         return JsonResponse({'success': False, 'error': str(exc)}, status=502)
 
 

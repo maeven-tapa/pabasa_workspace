@@ -5,7 +5,7 @@
   --g6-teal-dark: #187b7a;
   --g6-gold: #e7af45;
   min-height: 100dvh;
-  overflow-x: hidden;
+  overflow-x: visible;
   background:
     radial-gradient(circle at 8% 7%, rgba(255, 255, 255, .78) 0 10rem, transparent 28rem),
     radial-gradient(circle at 94% 88%, rgba(254, 221, 145, .42) 0 11rem, transparent 27rem),
@@ -95,7 +95,36 @@
 .wb-l23-g6-page .wb-bigbox-grid { border: 3px solid #8cc4ce; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 22px rgba(24, 62, 99, .1); }
 .wb-l23-g6-page .wb-q-builder .wb-bigbox-tile { color: var(--g6-ink); background: #fff; font-size: clamp(1.35rem, 3vw, 2.1rem); transition: background .16s, box-shadow .16s, transform .16s; }
 .wb-l23-g6-page .wb-q-builder .wb-bigbox-tile:hover:not(:disabled) { background: #f6fdff; transform: translateY(-1px); }
-.wb-l23-g6-page .wb-q-builder .wb-bigbox-tile.is-active { background: #fff3bf; box-shadow: inset 0 0 0 4px var(--g6-gold); }
+.wb-l23-g6-page .wb-q-builder .wb-bigbox-tile.is-active {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding-top: clamp(16px, 2.2vw, 22px);
+  background: #fff3bf;
+  box-shadow: inset 0 0 0 4px var(--g6-gold);
+}
+.wb-l23-g6-page .wb-q-builder .wb-bigbox-tile.is-active::before {
+  content: 'BASAHIN ITO';
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  z-index: 1;
+  max-width: calc(100% - 8px);
+  padding: 2px 4px;
+  border-radius: 999px;
+  background: #f6c93e;
+  color: #5b3b00;
+  font-size: clamp(.34rem, .55vw, .58rem);
+  font-weight: 900;
+  letter-spacing: .02em;
+  line-height: 1;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  box-shadow: 0 2px 4px rgba(183, 123, 27, .2);
+  pointer-events: none;
+}
 .wb-l23-g6-page .wb-q-builder .wb-bigbox-tile.is-complete { background: #dff4ee; color: #276c50; }
 .wb-l23-g6-page .wb-start-cue { padding: 5px 13px; border-radius: 999px; background: #ffbd20; color: #714a00; font-size: .8rem; box-shadow: 0 3px 0 #e9a91b; }
 .wb-l23-g6-page .wb-reading-panel { display: flex; flex-direction: column; }
@@ -127,4 +156,425 @@
   .wb-l23-g6-page .wb-shell { padding-inline: 10px; }
   .wb-l23-g6-page .wb-l22-banner { padding-inline: 12px; }
   .wb-l23-g6-page .wb-bigbox, .wb-l23-g6-page .wb-reading-panel, .wb-l23-g6-page .wb-word-panel { padding: 16px 13px; }
+}
+
+/* Lesson 23 · Gawain 6 outer composition. The existing activity cards remain intact. */
+.wb-l23-g6-page {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  height: 100dvh;
+  margin: 0;
+  padding: clamp(12px, 2vh, 22px) clamp(12px, 4vw, 42px) clamp(14px, 2.5vh, 24px);
+  overflow-x: visible;
+  overflow-y: auto;
+  background: url("../prescribed/PRESCRIBED-BG.jpg") center / cover no-repeat;
+}
+.wb-l23-g6-page *,
+.wb-l23-g6-page *::before,
+.wb-l23-g6-page *::after { box-sizing: border-box; }
+.wb-l23-g6-page .wb-l23-g6-page-layout {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: clamp(14px, 2.5vh, 26px);
+  width: min(1250px, 100%);
+  height: 100%;
+  min-height: 0;
+  margin: 0 auto;
+}
+.wb-l23-g6-page .wb-l23-g6-page-layout > #wb-g6-back {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  gap: 12px;
+  width: 280px;
+  min-height: 56px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--g6-ink);
+  font-size: 1.08rem;
+  font-weight: 900;
+  line-height: 1.15;
+  text-align: center;
+  text-decoration: none;
+  box-shadow: 0 8px 17px rgba(20, 92, 122, .24);
+}
+.wb-l23-g6-page .wb-l23-g6-page-layout > #wb-g6-back::before {
+  content: "←";
+  color: var(--g6-teal);
+  font-size: 1.7rem;
+  line-height: 1;
+}
+.wb-l23-g6-page .wb-l23-g6-page-layout > .wb-shell {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0 clamp(14px, 4vw, 58px) clamp(14px, 2.5vh, 26px);
+  border: 2px solid rgba(255, 255, 255, .84);
+  border-radius: 38px;
+  background: rgba(255, 255, 255, .58);
+  box-shadow: 0 20px 48px rgba(30, 91, 122, .2);
+  backdrop-filter: blur(10px);
+}
+.wb-l23-g6-page .wb-lesson-header {
+  display: block;
+  flex: 0 0 auto;
+  min-height: 0;
+  margin: 0;
+  padding: clamp(18px, 3vh, 34px) clamp(18px, 4vw, 58px) clamp(10px, 1.5vh, 18px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
+}
+.wb-l23-g6-page .wb-lesson-header::after,
+.wb-l23-g6-page .wb-lesson-art { display: none; }
+.wb-l23-g6-page .wb-lesson-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+.wb-l23-g6-page .wb-lesson-header #wb-back { display: none; }
+.wb-l23-g6-page .wb-lesson-label {
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto 9px !important;
+  padding: 8px 22px;
+  border-radius: 999px;
+  background: var(--g6-teal-dark);
+  color: #fff !important;
+  font-size: clamp(.76rem, 1.2vw, .98rem) !important;
+  font-weight: 900 !important;
+  letter-spacing: .07em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.wb-l23-g6-page .wb-lesson-header h1 {
+  margin: 0;
+  color: var(--g6-ink);
+  font-size: clamp(1.8rem, 3.5vw, 3.1rem);
+  line-height: 1.08;
+  text-align: center;
+}
+.wb-l23-g6-page .wb-instruction {
+  max-width: 920px;
+  margin: 8px auto 0 !important;
+  color: #365a72 !important;
+  font-size: clamp(.95rem, 1.45vw, 1.16rem);
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+}
+.wb-l23-g6-page #wb-instruction-replay {
+  min-height: 44px;
+  margin-top: 9px;
+  padding: 8px 18px;
+  border: 3px solid #a7dcda;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--g6-teal-dark);
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 900;
+  box-shadow: 0 4px 0 #b7d6dc;
+  cursor: pointer;
+}
+.wb-l23-g6-page #wb-status {
+  flex: 0 0 auto;
+  min-height: 0;
+  height: 0;
+  margin: 0;
+  overflow: hidden;
+}
+.wb-l23-g6-page #wb-progress-row {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: min(420px, 70%);
+  margin: 7px auto clamp(8px, 1.5vh, 15px);
+}
+.wb-l23-g6-page #wb-progress {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .68);
+  color: var(--g6-teal-dark);
+  font-size: .9rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.wb-l23-g6-page #wb-progress-track {
+  flex: 1 1 auto;
+  width: auto;
+  height: 9px;
+  margin: 0;
+}
+.wb-l23-g6-page .wb-l22-builder {
+  flex: 1 1 auto;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr) auto;
+  margin: 0;
+  padding: clamp(12px, 1.8vw, 22px);
+  border: 3px solid #94d9d6;
+  border-radius: 34px;
+  background: rgba(255, 255, 255, .9);
+  box-shadow: 0 12px 25px rgba(30, 91, 122, .12);
+}
+.wb-l23-g6-page .wb-l22-banner { display: none; }
+.wb-l23-g6-page .wb-l22-builder .wb-bigbox,
+.wb-l23-g6-page .wb-l22-builder .wb-reading-panel,
+.wb-l23-g6-page .wb-l22-builder .wb-word-panel {
+  min-width: 0;
+  min-height: 0;
+  padding: clamp(14px, 1.8vw, 24px);
+  border: 3px solid #94d9d6;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 8px 18px rgba(30, 91, 122, .08);
+}
+.wb-l23-g6-page .wb-l22-builder .wb-bigbox,
+.wb-l23-g6-page .wb-l22-builder .wb-reading-panel { display: flex; flex-direction: column; }
+.wb-l23-g6-page .wb-l22-builder .wb-word-panel { grid-column: 1 / -1; }
+.wb-l23-g6-page .wb-l22-builder .wb-bigbox-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.wb-l23-g6-page .wb-l22-builder h2 {
+  flex: 0 0 auto;
+  margin: 0 0 10px;
+  font-size: clamp(1rem, 1.8vw, 1.35rem);
+  line-height: 1.1;
+  text-align: center;
+}
+.wb-l23-g6-page .wb-box-help {
+  flex: 0 0 auto;
+  margin: 0 0 10px;
+  font-size: .82rem;
+  text-align: center;
+}
+.wb-l23-g6-page .wb-g6-workspace > .wb-reading-panel {
+  align-items: stretch;
+  min-width: 0;
+  text-align: center;
+}
+.wb-l23-g6-page .wb-reading-panel h2 { margin-bottom: 8px; }
+.wb-l23-g6-page .wb-phase-status {
+  min-height: 2.3em;
+  margin: 8px 0 0 !important;
+  font-size: clamp(1rem, 2.2vw, 1.35rem);
+  line-height: 1.35;
+}
+.wb-l23-g6-page .wb-reading-target-label {
+  margin: 0 !important;
+  font-size: .78rem !important;
+}
+.wb-l23-g6-page .wb-reading-target {
+  display: block;
+  margin: 0 0 8px;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  line-height: 1.05;
+}
+.wb-l23-g6-page .wb-reading-attempts {
+  margin: 5px 0 10px !important;
+  font-size: 1rem !important;
+}
+.wb-l23-g6-page .wb-transcript {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
+  min-height: 58px;
+  margin: 0 0 2px;
+  padding: 10px 12px;
+  text-align: center;
+}
+.wb-l23-g6-page .wb-transcript span {
+  display: block;
+  font-size: .72rem;
+  letter-spacing: .12em;
+}
+.wb-l23-g6-page .wb-transcript strong {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  font-size: clamp(1rem, 1.7vw, 1.35rem);
+  line-height: 1.1;
+}
+.wb-l23-g6-page #wb-l22-reading-action { gap: 8px; margin: 8px 0; justify-items: stretch; }
+.wb-l23-g6-page #wb-l22-reading-action button { width: 100%; min-height: 52px; border-radius: 999px; font-size: 1rem; }
+.wb-l23-g6-page .wb-reading-tip { margin: auto 0 8px !important; padding: 10px; font-size: .78rem; }
+.wb-l23-g6-page .wb-word-panel.is-locked { background: rgba(251, 253, 255, .96); }
+.wb-l23-g6-page .wb-locked-note { min-height: 74px; padding: 14px 20px; font-size: 1rem; }
+.wb-l23-g6-page #wb-action { margin-top: 8px; }
+
+@media (max-height: 760px) and (min-width: 761px) {
+  .wb-l23-g6-page { padding-top: 8px; padding-bottom: 10px; }
+  .wb-l23-g6-page .wb-l23-g6-page-layout { gap: 12px; }
+  .wb-l23-g6-page .wb-l23-g6-page-layout > #wb-g6-back { min-height: 48px; }
+  .wb-l23-g6-page .wb-l23-g6-page-layout > .wb-shell { padding-bottom: 8px; }
+  .wb-l23-g6-page .wb-lesson-header { padding-top: 12px; padding-bottom: 7px; }
+  .wb-l23-g6-page .wb-lesson-label { margin-bottom: 5px !important; padding: 5px 12px; }
+  .wb-l23-g6-page .wb-instruction { margin-top: 4px !important; font-size: .82rem; }
+  .wb-l23-g6-page #wb-instruction-replay { min-height: 34px; margin-top: 4px; padding: 4px 11px; font-size: .72rem; }
+  .wb-l23-g6-page #wb-progress-row { margin-top: 3px; margin-bottom: 6px; }
+  .wb-l23-g6-page .wb-l22-builder { gap: 8px; padding: 8px; }
+  .wb-l23-g6-page .wb-l22-builder .wb-bigbox,
+  .wb-l23-g6-page .wb-l22-builder .wb-reading-panel,
+  .wb-l23-g6-page .wb-l22-builder .wb-word-panel { padding: 10px 12px; border-radius: 20px; }
+  .wb-l23-g6-page .wb-l22-builder h2 { margin-bottom: 5px; font-size: .9rem; }
+  .wb-l23-g6-page .wb-box-help { margin-bottom: 4px; font-size: .65rem; }
+  .wb-l23-g6-page .wb-reading-target { font-size: clamp(1.4rem, 3vw, 2.35rem); }
+  .wb-l23-g6-page .wb-reading-tip { font-size: .65rem; }
+  .wb-l23-g6-page .wb-locked-note { min-height: 58px; padding: 10px 14px; font-size: .85rem; }
+}
+
+@media (max-width: 760px) {
+  .wb-l23-g6-page { height: auto; min-height: 100dvh; padding: 12px; }
+  .wb-l23-g6-page .wb-l23-g6-page-layout { height: auto; min-height: 0; gap: 18px; }
+  .wb-l23-g6-page .wb-l23-g6-page-layout > #wb-g6-back { width: 230px; min-height: 52px; font-size: 1rem; }
+  .wb-l23-g6-page .wb-l23-g6-page-layout > .wb-shell { display: block; padding: 0 10px 22px; border-radius: 30px; }
+  .wb-l23-g6-page .wb-lesson-header { padding: 20px 8px 12px; }
+  .wb-l23-g6-page .wb-lesson-label { padding: 7px 15px; }
+  .wb-l23-g6-page .wb-lesson-header h1 { font-size: clamp(1.5rem, 8vw, 2.35rem); }
+  .wb-l23-g6-page .wb-instruction { font-size: clamp(.82rem, 2.5vw, 1rem); }
+  .wb-l23-g6-page #wb-progress-row { width: 75%; margin-top: 5px; }
+  .wb-l23-g6-page .wb-l22-builder { grid-template-columns: 1fr; grid-template-rows: none; gap: 12px; padding: 8px; border-radius: 24px; }
+  .wb-l23-g6-page .wb-l22-builder .wb-bigbox,
+  .wb-l23-g6-page .wb-l22-builder .wb-reading-panel,
+  .wb-l23-g6-page .wb-l22-builder .wb-word-panel { padding: 14px 10px; border-radius: 20px; }
+  .wb-l23-g6-page .wb-l22-builder .wb-bigbox { order: 1; }
+  .wb-l23-g6-page .wb-l22-builder .wb-reading-panel { order: 2; }
+  .wb-l23-g6-page .wb-l22-builder .wb-word-panel { order: 3; }
+  .wb-l23-g6-page .wb-q-builder .wb-bigbox-grid { flex: 0 0 auto; }
+  .wb-l23-g6-page .wb-locked-note { min-height: 64px; padding: 12px 14px; font-size: .9rem; }
+}
+
+/* Gawain 6 keeps the permanent Big Box left and swaps one right workspace
+   between BASAHIN and BUMUO NG SALITA as the existing gate changes. */
+.wb-l23-g6-page .wb-l22-builder {
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+.wb-l23-g6-page .wb-l22-builder > .wb-bigbox {
+  grid-column: 1;
+  grid-row: 1;
+}
+.wb-l23-g6-page .wb-g6-workspace {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  gap: 10px;
+}
+.wb-l23-g6-page .wb-g6-workspace > .wb-reading-panel,
+.wb-l23-g6-page .wb-g6-workspace > .wb-word-panel {
+  min-height: 0;
+  margin: 0;
+}
+.wb-l23-g6-page .wb-g6-reading .wb-g6-workspace > .wb-reading-panel,
+.wb-l23-g6-page .wb-g6-building .wb-g6-workspace > .wb-word-panel {
+  display: flex;
+  flex: 1 1 auto;
+}
+.wb-l23-g6-page .wb-g6-reading .wb-g6-workspace > .wb-word-panel,
+.wb-l23-g6-page .wb-g6-building .wb-g6-workspace > .wb-reading-panel {
+  display: none;
+}
+.wb-l23-g6-page .wb-g6-workspace > #wb-action {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+}
+.wb-l23-g6-page .wb-g6-workspace > #wb-action button {
+  min-width: 0;
+  width: 100%;
+  min-height: 40px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: .82rem;
+}
+.wb-l23-g6-page .wb-g6-building .wb-g6-workspace > #wb-action button {
+  width: auto;
+  flex: 1 1 45%;
+}
+.wb-l23-g6-page .wb-g6-workspace .wb-word-panel {
+  grid-column: auto;
+}
+.wb-l23-g6-page .wb-g6-workspace .wb-word-panel .wb-selected-parts,
+.wb-l23-g6-page .wb-g6-workspace .wb-word-panel .wb-builder-words {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .wb-l23-g6-page .wb-l22-builder {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+  .wb-l23-g6-page .wb-l22-builder > .wb-bigbox,
+  .wb-l23-g6-page .wb-g6-workspace {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .wb-l23-g6-page .wb-g6-workspace { min-height: 0; }
+}
+
+/* Keep the single existing reset/action row beneath both Gawain 6 panels. */
+.wb-l23-g6-page .wb-l22-builder {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+.wb-l23-g6-page .wb-l22-builder > #wb-action {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+}
+.wb-l23-g6-page .wb-l22-builder > #wb-action button {
+  min-width: 180px;
+  min-height: 40px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: .82rem;
+}
+@media (max-width: 760px) {
+  .wb-l23-g6-page .wb-l22-builder {
+    grid-template-rows: auto auto;
+  }
+  .wb-l23-g6-page .wb-l22-builder > #wb-action {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .wb-l23-g6-page .wb-l22-builder > #wb-action button {
+    min-width: 0;
+    width: 100%;
+  }
 }

@@ -164,7 +164,7 @@
   const session9SaveError = 'Could not save your work. Try again.';
   const session9AudioError = 'Audio is not available. Try again.';
   let activityStarted = (!session9Activity && !l22G1 && !lesson23Activity && !lesson24Activity) || preview || Boolean(state.completed), instructionPlayback = false;
-  const content = document.getElementById('wb-content'), action = document.getElementById('wb-action');
+  const content = document.getElementById('wb-content'), action = document.getElementById('wb-action'), actionHost = action?.parentElement;
   const status = document.getElementById('wb-status');
   if (jReading) {
     const shell = document.querySelector('.wb-shell'), back = document.getElementById('wb-back');
@@ -419,6 +419,7 @@
     document.getElementById('wb-progress').textContent=preview?'Preview':(g6Search?`Nahanap: ${Object.keys(state.found_words||{}).length} / ${a.items.length}`:g7Reading?`Nabasa: ${Math.min(a.items.length,Number(state.index||0))} / ${a.items.length}`:l24G4Builder?`Nabuo: ${Number(state.built_words?.length||0)} salita`:g5Syllables?`Nasagot: ${Math.min(a.items.length,Number(state.index||0))} / ${a.items.length}`:cBuilder?`Nabasa: ${Math.min(a.items.length,Number(state.index||0))} / ${a.items.length}`:(a.activity_key==='aral-l23-g1-n-syllable-builder'||l24Builder?`Nabasa: ${Math.min(12,Number(state.index||0))} / 12`:`${progressValue} / ${totalProgress}`));
     const progressFill=document.getElementById('wb-progress-fill');if(progressFill)progressFill.style.width=l24G4Builder?(state.completed?'100%':'0%'):`${preview?0:Math.max(0,Math.min(100,progressValue/totalProgress*100))}%`;
     document.getElementById('wb-back').hidden=preview;
+    if(qBuilder&&actionHost&&action.parentElement!==actionHost)actionHost.appendChild(action);
     action.replaceChildren();
     if(state.completed){
       const completionWord=a.activity_key==='aral-l23-g1-n-syllable-builder'?'Niño':(state.found_words||[]).join(', ');
@@ -449,7 +450,7 @@
     if(jSyllables){renderSyllables();return;}
     if(g5Syllables){renderL24G5Syllables();return;}
     if(g6Search){renderL24G6WordSearch();return;}
-    if(specializedBuilder&&!preview){renderCBuilder();lock();return;}
+    if(specializedBuilder&&!preview){renderCBuilder();if(qBuilder){const workspace=document.createElement('div');workspace.className='wb-g6-workspace';const readingPanel=content.querySelector('.wb-reading-panel');const wordPanel=content.querySelector('.wb-word-panel');if(readingPanel)workspace.appendChild(readingPanel);if(wordPanel)workspace.appendChild(wordPanel);content.appendChild(workspace);content.appendChild(action);}lock();return;}
     if(l24G4Builder&&!preview){renderBuilder();lock();return;}
     if(state.index>=a.items.length&&!preview){content.innerHTML='<div class="wb-focus">'+(session9Activity?'All parts are saved.':(fil?'Na-save ang lahat ng bahagi ng gawain.':'All required parts are saved.'))+'</div>';button(fil?'Tapusin ang gawain':'Finish activity',()=>perform({action:'finish'}),true);return;}
     const kind=a.interaction_type;
@@ -599,7 +600,7 @@
     let fallbackIndex=0;
     const boxCells=a.bigbox_cells||a.rows.map(row=>row.filter(Boolean).map(()=>[`item-${++fallbackIndex}`]));
     builder=state.draft.builder||[];
-    content.className=`wb-l22-builder ${qBuilder?'wb-q-builder':''}`;
+    content.className=`wb-l22-builder ${qBuilder?'wb-q-builder '+(readDone?'wb-g6-building':'wb-g6-reading'):''}`;
     const current=Math.min(Number(state.index||0),a.items.length-1), phase=state.reading_phase||'read';
     content.innerHTML=`${l22G1?'':`<div class="wb-l22-banner"><span class="wb-speaker-icon" aria-hidden="true">🔊</span><strong>${instructionText}</strong><button type="button" id="wb-l22-instruction-replay" aria-label="Pakinggan muli ang panuto">Pakinggan muli</button></div>`}<section class="wb-bigbox"><h2>BIG BOX</h2><p class="wb-box-help">Sundan ang dilaw na highlight.</p><div class="wb-bigbox-grid">${boxCells.map(row=>`<div class="wb-bigbox-row">${row.map(()=>'<div class="wb-bigbox-cell"></div>').join('')}</div>`).join('')}</div></section><section class="wb-reading-panel"><h2>BASAHIN</h2><p class="wb-phase-status" role="status">${readDone?'Magaling!':state.last_feedback==='Tama!'?'Tama!':'Handa ka na?'}</p><div id="wb-l22-reading-action"></div><p class="wb-reading-tip"><span aria-hidden="true">💡</span><span> pindutin ang button kapag handa ka nang magbasa.</span></p></section><section class="wb-word-panel ${readDone?'':'is-locked'}" aria-disabled="${!readDone}"><h2>BUMUO NG SALITA</h2>${readDone?`<p>Piliin ang mga pantig sa Big Box.</p><div class="wb-selected-parts" id="wb-selected-parts" aria-live="polite"></div><div class="wb-tools"><button type="button" id="wb-erase">Bura</button><button type="button" id="wb-retry">Ulitin</button></div><p class="wb-builder-feedback" aria-live="polite">${esc(state.last_feedback||'')}</p>${state.found_words?.length?`<div class="wb-builder-words"><strong>Nabuo mo na:</strong><ul>${state.found_words.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:''}`:'<p class="wb-locked-note"><span class="wb-lock-icon" aria-hidden="true">🔒</span><span>Basahin muna ang lahat ng pantig.</span></p>'}</section>`;
     const replay=document.getElementById('wb-l22-instruction-replay');
@@ -608,7 +609,7 @@
     const readingPanel=content.querySelector('.wb-reading-panel');
     const phaseStatus=readingPanel.querySelector('.wb-phase-status');
     phaseStatus.textContent=readDone?'Magaling! Nabasa mo nang tama ang lahat ng pantig.':state.last_feedback||'Basahin muna ang mga pantig sa Big Box.';
-    phaseStatus.insertAdjacentHTML('beforebegin',`<p class="wb-reading-target-label">Pantig na babasahin</p><strong class="wb-reading-target">${esc(readDone?'Natapos na ang pagbasa.':a.items[current]?.text||'')}</strong><p class="wb-reading-attempts">Pagsubok: ${readDone?0:Number(state.reading_attempts||0)} / 3</p><div class="wb-transcript" aria-live="polite"><span>NARINIG KO</span><strong>${esc(state.last_transcript||'Hindi ko malinaw na narinig.')}</strong></div>`);
+    phaseStatus.insertAdjacentHTML('beforebegin',`<p class="wb-reading-target-label">Pantig na babasahin</p><strong class="wb-reading-target">${esc(readDone?'Natapos na ang pagbasa.':a.items[current]?.text||'')}</strong><p class="wb-reading-attempts">Pagsubok: ${readDone?0:Number(state.reading_attempts||0)} / 3</p><div class="wb-transcript" aria-live="polite"><span>NARINIG KO</span><strong>${esc(state.last_transcript||'—')}</strong></div>`);
     const itemById=Object.fromEntries(a.items.map(i=>[i.id,i]));
     content.querySelectorAll('.wb-bigbox-row').forEach((row,rowIndex)=>{
       row.querySelectorAll('.wb-bigbox-cell').forEach((cell,cellIndex)=>{
@@ -643,13 +644,13 @@
     }
   }
   async function startCReading(){
-    if(busy)return;stopReadAloud();busy=true;lock();setG1ReadingState('calibrating');let chunks=[],readTimer,recorder;const requestIndex=Number(state.index||0),requestActivity=a.activity_key;
+    if(busy)return;stopReadAloud();busy=true;lock();if(qBuilder){const transcript=content.querySelector('.wb-transcript strong');if(transcript)transcript.textContent='—';}setG1ReadingState('calibrating');let chunks=[],readTimer,recorder;const requestIndex=Number(state.index||0),requestActivity=a.activity_key;
     try{
       await send({action:'reading_started'},null,false);
       if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error('Hindi available ang mikropono sa browser na ito.');
       activeStream=await window.Basahin.openMicrophone({audio:true},{timeoutMs:8000});
-      message('Nakikinig...');
       setG1ReadingState('listening');
+      message('Nakikinig...');
       const audio=await window.Basahin.capture({button:document.getElementById('wb-basahin'),stream:activeStream,onRecorder:value=>{recorder=activeRecorder=value;}});activeStream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
       if(!audio.size)throw new Error('Walang nakuha sa recording. Subukan muli.');
       if(requestActivity!==a.activity_key||requestIndex!==Number(state.index||0))return;
@@ -663,7 +664,9 @@
       activeStream?.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
       const micError=error?.name==='NotAllowedError'||error?.name==='NotFoundError'||error?.name==='NotReadableError'||error?.name==='SecurityError';
       render();
-      pendingSpeech=micError?'Hindi magamit ang mikropono. Subukan muli.':(error?.message||'Hindi nakuha ang iyong boses. Subukan muli.');
+      if(qBuilder){const transcript=content.querySelector('.wb-transcript strong');if(transcript)transcript.textContent='—';}
+      const serviceError=qBuilder&&/Google service account|GOOGLE_|credential|speech service|not configured/i.test(error?.message||'');
+      pendingSpeech=micError?'Hindi magamit ang mikropono. Subukan muli.':serviceError?'Hindi magamit ang mikropono ngayon. Subukan muli mamaya.':(error?.message||'Hindi nakuha ang iyong boses. Subukan muli.');
       message(pendingSpeech,true);
     }finally{clearTimeout(readTimer);const speech=pendingSpeech;pendingSpeech='';if(speech){setG1ReadingState('processing');await playPrescribedAudio(speech).catch(e=>console.error('Lesson 22 feedback audio failed',e));}busy=false;lock();setG1ReadingState('idle');}
   }

@@ -9,7 +9,6 @@
     'aral-l23-g2-n-word-reading': 'g2',
     'aral-l23-g3-j-word-reading': 'g3',
     'aral-l23-g5-j-word-search': 'g5',
-    'aral-l23-g6-q-syllable-builder': 'g6',
     'aral-l23-g7-q-word-reading': 'g7',
   })[key];
   if (!number || data.preview || data.state?.completed) return;
