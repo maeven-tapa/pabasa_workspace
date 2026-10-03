@@ -166,6 +166,17 @@
   let activityStarted = (!session9Activity && !l22G1 && !lesson23Activity && !lesson24Activity) || preview || Boolean(state.completed), instructionPlayback = false;
   const content = document.getElementById('wb-content'), action = document.getElementById('wb-action');
   const status = document.getElementById('wb-status');
+  if (jReading) {
+    const shell = document.querySelector('.wb-shell'), back = document.getElementById('wb-back');
+    if (shell && back && shell.parentNode) {
+      const pageLayout = document.createElement('div');
+      pageLayout.className = 'wb-l23-g3-page-layout';
+      back.classList.add('wb-l23-g3-back');
+      back.textContent = 'Balik sa Aking Aralin';
+      shell.parentNode.insertBefore(pageLayout, shell);
+      pageLayout.append(back, shell);
+    }
+  }
   const fil = a.language === 'Filipino';
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const token = () => document.querySelector('[name=csrfmiddlewaretoken]').value;
