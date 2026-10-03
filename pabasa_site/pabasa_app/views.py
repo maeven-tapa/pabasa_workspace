@@ -14254,8 +14254,26 @@ def prescribed_activity_page(request, activity_key):
         next_url = reverse('prescribed_activity_page', kwargs={'activity_key': next_key}) if next_key in PRESCRIBED_ACTIVITIES else ''
         if activity_key == 'aral-l22-g1-c-syllable-builder':
             audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_22/GAWAIN_1/'
+            audio_files = {
+                'instruction': 'Basahin_ang_mga_pantig_mula_sa_Bid_box_TTS.mp3',
+                'syllables': {
+                    text: f'{text.lower()}_TTS.mp3'
+                    for text in ('cac', 'ce', 'ca', 'bu', 'com', 'pu', 'ga', 'tus', 'ter', 'yan', 'Car', 'do', 'bi', 'net', 'te', 'Ce', 'les')
+                },
+                'feedback': {
+                    'Handa ka na?': 'Handa ka na_TTS.mp3',
+                    'Subukan muli.': 'Subukan muli._TTS.mp3',
+                    'Tama!': 'Tama!_TTS.mp3',
+                },
+                'completion': {
+                    'Magaling! Nabasa mo nang tama ang lahat ng pantig.': 'Magaling! Nabasa mo nang tama ang lahat ng pantig._TTS.mp3',
+                },
+            }
             local_audio = {
-                'instruction': static(audio_root + 'Basahin_ang_mga_pantig_mula_sa_Bid_box_TTS.mp3'),
+                'instruction': static(audio_root + audio_files['instruction']),
+                'syllables': {text: static(audio_root + filename) for text, filename in audio_files['syllables'].items()},
+                'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
+                'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
             }
         else:
             local_audio = {}
