@@ -284,10 +284,22 @@ class PrescribedLesson16ActivityTests(TestCase):
             'matches': {}, 'state': {'phase': 'matching', 'oral_index': 5, 'stt_attempts': {}, 'tts_plays': {}, 'state_version': 2},
         }), content_type='application/json')
         self.assertEqual(oral.status_code, 200)
-        self.assertEqual(oral.json()['progress']['state']['phase'], 'matching')
+        self.assertEqual(oral.json()['progress']['state']['phase'], 'intro')
+        self.assertEqual(oral.json()['progress']['state']['oral_verified_count'], 0)
+        for oral_index in range(1, 6):
+            advanced = self.client.post(progress_url, data=json.dumps({
+                'matches': {},
+                'state': {
+                    'phase': 'matching' if oral_index == 5 else 'oral_reading',
+                    'oral_index': oral_index,
+                    'oral_verified_count': oral_index - 1,
+                    'state_version': 2 + oral_index,
+                },
+            }), content_type='application/json')
+            self.assertEqual(advanced.status_code, 200)
         incorrect = self.client.post(progress_url, data=json.dumps({
             'matches': {}, 'candidate_match': {'target_id': 'picture-1', 'word': 'panga'},
-            'state': {'phase': 'matching', 'oral_index': 5, 'state_version': 3},
+            'state': {'phase': 'matching', 'oral_index': 5, 'oral_verified_count': 5, 'state_version': 8},
         }), content_type='application/json')
         self.assertEqual(incorrect.status_code, 200)
         self.assertFalse(incorrect.json()['accepted'])
@@ -295,7 +307,7 @@ class PrescribedLesson16ActivityTests(TestCase):
 
         correct = self.client.post(progress_url, data=json.dumps({
             'matches': {}, 'candidate_match': {'target_id': 'picture-4', 'word': 'panga'},
-            'state': {'phase': 'matching', 'oral_index': 5, 'match_attempts': 2, 'state_version': 4},
+            'state': {'phase': 'matching', 'oral_index': 5, 'oral_verified_count': 5, 'match_attempts': 2, 'state_version': 9},
         }), content_type='application/json')
         self.assertEqual(correct.status_code, 200)
         self.assertTrue(correct.json()['accepted'])
@@ -327,6 +339,20 @@ class PrescribedLesson16ActivityTests(TestCase):
         page = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': key}))
         self.assertTemplateUsed(page, 'pabasa_app/prescribed_picture_syllable_matching_page.html')
         self.assertEqual(page.context['prescribed_activity_data']['read_aloud_url'], reverse('reading_read_aloud_api'))
+        self.assertContains(page, "phase='oral_reading';try{await save();renderOral()}")
+        stale = StudentActivityProgress.objects.create(
+            student=self.student,
+            activity_key=key,
+            current_index=5,
+            completed_items=0,
+            correct_items=0,
+            total_items=len(activity['items']),
+            activity_completed=False,
+            state={'matches': {}, 'phase': 'matching', 'oral_index': 5, 'state_version': 9},
+        )
+        stale_page = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': key}))
+        self.assertEqual(stale_page.context['prescribed_activity_data']['progress']['state']['phase'], 'intro')
+        stale.delete()
         progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
         blocked = self.client.post(progress_url, data=json.dumps({
             'matches': {}, 'candidate_match': {'target_id': 'robot', 'word': 'ro'},
@@ -337,8 +363,121 @@ class PrescribedLesson16ActivityTests(TestCase):
             'matches': {}, 'state': {'phase': 'matching', 'oral_index': 5, 'stt_attempts': {'0': 2}, 'tts_plays': {}, 'state_version': 2},
         }), content_type='application/json')
         self.assertEqual(resumed.status_code, 200)
-        self.assertEqual(resumed.json()['progress']['state']['oral_index'], 5)
-        self.assertEqual(resumed.json()['progress']['state']['phase'], 'matching')
+        self.assertEqual(resumed.json()['progress']['state']['oral_index'], 0)
+        self.assertEqual(resumed.json()['progress']['state']['phase'], 'intro')
+
+        # Oral progress is earned one item at a time. A client cannot jump
+        # directly from the intro to the matching phase by claiming index 5.
+        for oral_index in range(1, len(activity['items']) + 1):
+            advanced = self.client.post(progress_url, data=json.dumps({
+                'matches': {},
+                'state': {
+                    'phase': 'matching' if oral_index == len(activity['items']) else 'oral_reading',
+                    'oral_index': oral_index,
+                    'oral_verified_count': oral_index - 1,
+                    'state_version': 2 + oral_index,
+                },
+            }), content_type='application/json')
+            self.assertEqual(advanced.status_code, 200)
+            expected_phase = 'matching' if oral_index == len(activity['items']) else 'oral_reading'
+            self.assertEqual(advanced.json()['progress']['state']['oral_index'], oral_index)
+            self.assertEqual(advanced.json()['progress']['state']['phase'], expected_phase)
+
+    def test_remaining_session6_activities_have_full_page_intro_states(self):
+        self.login_student()
+        scenarios = {
+            'lesson-16-gawain-1': ('prescribed_missing_syllable_page.html', 'oral'),
+            'lesson-16-gawain-2': ('prescribed_missing_syllable_page.html', 'oral'),
+            'lesson-16-gawain-3': ('prescribed_picture_word_matching_page.html', 'oral_reading'),
+            'lesson-17-18-gawain-5': ('prescribed_picture_syllable_matching_page.html', 'oral_reading'),
+        }
+        for key, (template, first_phase) in scenarios.items():
+            with self.subTest(activity_key=key):
+                response = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': key}))
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, f'pabasa_app/{template}')
+                payload = response.context['prescribed_activity_data']
+                self.assertTrue(payload['intro_enabled'])
+                self.assertEqual(payload['progress']['state']['phase'], 'intro')
+                self.assertContains(response, 'SIMULAN')
+                self.assertContains(response, 'session6_intro_modal.js')
+                self.assertContains(response, 'session6-modal-handoff-1')
+                self.assertContains(response, 'lesson-start-ready')
+                if key == 'lesson-16-gawain-1':
+                    self.assertContains(response, '04_item_01_gumamela_missing_syllable_prompt.mp3')
+                elif key == 'lesson-16-gawain-2':
+                    self.assertContains(response, '04_item_01_gumamela_missing_syllable_prompt.mp3')
+                elif key == 'lesson-16-gawain-3':
+                    self.assertContains(response, '01_item_01_sanga_match_prompt.mp3')
+
+                progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
+                state = (
+                    {'phase': first_phase, 'state_version': 1}
+                    if first_phase == 'oral' else
+                    {'phase': first_phase, 'oral_index': 0, 'state_version': 1}
+                )
+                body = {'state': state}
+                if first_phase == 'oral':
+                    body['answers'] = []
+                else:
+                    body['matches'] = {}
+                started = self.client.post(progress_url, data=json.dumps(body), content_type='application/json')
+                self.assertEqual(started.status_code, 200)
+                self.assertEqual(started.json()['progress']['state']['phase'], first_phase)
+
+    def test_remaining_session6_intro_resumes_reset_and_stays_out_of_completed_state(self):
+        self.login_student()
+        keys = (
+            'lesson-16-gawain-1', 'lesson-16-gawain-2',
+            'lesson-16-gawain-3', 'lesson-17-18-gawain-5',
+        )
+        for key in keys:
+            with self.subTest(activity_key=key):
+                activity = prescribed_activity(key)
+                is_matching = activity['interaction'] in {'picture_word_match', 'picture_syllable_match'}
+                if is_matching:
+                    state = {'phase': 'oral_reading', 'oral_index': 1, 'state_version': 2}
+                    saved = {'matches': {}, **state}
+                else:
+                    state = {'phase': 'oral', 'state_version': 2}
+                    saved = {'answers': [], **state}
+                StudentActivityProgress.objects.update_or_create(
+                    student=self.student, activity_key=key,
+                    defaults={'current_index': 1, 'completed_items': 0, 'correct_items': 0,
+                              'total_items': len(activity['items']), 'activity_completed': False,
+                              'state': saved},
+                )
+                resumed = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': key}))
+                self.assertNotEqual(resumed.context['prescribed_activity_data']['progress']['state']['phase'], 'intro')
+
+                progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
+                reset = self.client.post(progress_url, data=json.dumps({'reset': True}), content_type='application/json')
+                self.assertEqual(reset.status_code, 200)
+                self.assertEqual(reset.json()['progress']['state']['phase'], 'intro')
+                self.assertFalse(StudentActivityProgress.objects.filter(student=self.student, activity_key=key).exists())
+
+                if is_matching:
+                    completed_state = {
+                        'matches': {item['id']: item['word'] for item in activity['items']},
+                        'phase': 'matching', 'oral_index': len(activity['items']),
+                        'oral_verified_count': len(activity['items']), 'state_version': 3,
+                    }
+                    completed_items = len(activity['items'])
+                else:
+                    completed_state = {
+                        'answers': [item['answer'] for item in activity['items']],
+                        'phase': 'oral', 'state_version': 3,
+                    }
+                    completed_items = len(activity['items'])
+                StudentActivityProgress.objects.create(
+                    student=self.student, activity_key=key, current_index=completed_items,
+                    completed_items=completed_items, correct_items=completed_items,
+                    total_items=completed_items, activity_completed=True, state=completed_state,
+                )
+                completed = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': key}))
+                payload = completed.context['prescribed_activity_data']
+                self.assertTrue(payload['progress']['activity_completed'])
+                self.assertNotEqual(payload['progress']['state']['phase'], 'intro')
 
     @patch('pabasa_app.views.synthesize_read_aloud_audio', return_value='encoded-audio')
     def test_session_6_activities_use_the_prescribed_filipino_google_voice(self, synthesize):

@@ -132,25 +132,23 @@
 
   const key = String(data.activity_key);
   const safeKey = key.replace(/[^a-z0-9_-]/gi, '-');
-  // These activities own their first narration on the activity page. Playing
-  // their prompt here makes the modal skip the activity intro and repeats the
-  // same narration when the first word is rendered.
+  // These activities own their first narration on the activity page. The modal
+  // must close immediately for them so it never waits on a first-word clip and
+  // the page can play either its full-page intro instruction or continuation
+  // prompt after the lesson-start-ready handoff.
   const activityIntroAudioKeys = new Set([
+    'lesson-16-gawain-1',
+    'lesson-16-gawain-2',
+    'lesson-16-gawain-3',
     'session-6-lesson-16-gawain-4',
     'lesson-17-18-gawain-6',
     'lesson-17-18-gawain-7',
     'lesson-17-18-gawain-8',
     'lesson-17-18-gawain-9',
+    'lesson-17-18-gawain-5',
   ]);
   const openingAudio = {
-    'lesson-16-gawain-1': ['/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/04_item_01_gumamela_missing_syllable_prompt.mp3'],
-    'lesson-16-gawain-2': ['/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_2/04_item_01_gumamela_missing_syllable_prompt.mp3'],
-    'lesson-16-gawain-3': ['/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/01_item_01_sanga_match_prompt.mp3'],
     'session-6-lesson-16-gawain-4': ['/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_4/01_activity_intro.mp3'],
-    'lesson-17-18-gawain-5': [
-      '/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_5/01_activity_intro.mp3',
-      '/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_5/02_item_01_robot_read_prompt.mp3',
-    ],
     'lesson-17-18-gawain-6': [
       '/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_6/panuto_basahin_tts.mp3',
       '/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_6/babasahin_pusa_tts.mp3',

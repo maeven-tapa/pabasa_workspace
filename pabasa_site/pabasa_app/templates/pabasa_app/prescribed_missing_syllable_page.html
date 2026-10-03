@@ -19,6 +19,7 @@
     .lesson-16-gawain-page .prompt{margin:0 0 12px;font-size:clamp(1.5rem,3.2vw,2.45rem);line-height:1.15}.lesson-16-gawain-page .blank{border-color:#277f82}.lesson-16-gawain-page .choices{gap:14px;max-width:650px}.lesson-16-gawain-page .choice{min-height:68px;border:4px solid #94d9d6;border-radius:999px;background:#fffffff0;color:#187b7a;font-size:clamp(1.18rem,2vw,1.55rem);box-shadow:0 4px 0 #b7d6dc}.lesson-16-gawain-page .choice:hover,.lesson-16-gawain-page .choice:focus-visible{border-color:#e7af45;background:#fff8e7;outline:0;transform:translateY(-2px)}.lesson-16-gawain-page .write-form{align-items:center;max-width:610px}.lesson-16-gawain-page .write-form input{min-height:62px;border:4px solid #94d9d6;border-radius:999px;background:#fffffff0;color:#187b7a;font-size:clamp(1.15rem,2vw,1.45rem);box-shadow:inset 0 1px 0 #fff}.lesson-16-gawain-page .write-form input:focus{border-color:#e7af45;outline:4px solid #f5d47c55}.lesson-16-gawain-page .hint{min-height:1.2em;margin:10px 0 0;color:#456876;font-size:.94rem}.lesson-16-gawain-page .complete{padding:0}.lesson-16-gawain-page .complete .star{font-size:clamp(2.5rem,6vh,4rem)}.lesson-16-gawain-page .score{margin:12px auto;padding:11px 16px;border-color:#a9ded1;border-radius:999px;background:#effbf3}
     @media(max-width:680px){.lesson-16-gawain-page .page{width:calc(100% - 20px);padding:10px 0}.lesson-16-gawain-page .back{top:10px;min-height:50px;padding:9px 18px;font-size:.9rem}.lesson-16-gawain-page .card{max-height:calc(100dvh - 76px);margin:22px 0 0;padding:16px 14px;border-radius:28px}.lesson-16-gawain-page .eyebrow{margin-bottom:7px;padding:6px 13px}.lesson-16-gawain-page .instruction{font-size:.88rem}.lesson-16-gawain-page .image{height:clamp(112px,22vh,165px);margin-bottom:7px;border-width:3px;border-radius:20px}.lesson-16-gawain-page .choices{gap:8px}.lesson-16-gawain-page .choice{min-height:52px;border-width:3px;font-size:1.1rem}.lesson-16-gawain-page .write-form{gap:8px}.lesson-16-gawain-page .write-form input{min-height:50px;border-width:3px}.lesson-16-gawain-page .button{min-height:50px;padding:10px 21px}.lesson-16-gawain-page .hint{margin-top:7px;font-size:.82rem}}
     @media(max-height:620px){.lesson-16-gawain-page .back{min-height:44px;padding:7px 16px}.lesson-16-gawain-page .card{max-height:calc(100dvh - 60px);margin-top:17px;padding:10px 14px}.lesson-16-gawain-page .eyebrow{margin-bottom:4px;padding:4px 12px}.lesson-16-gawain-page .card h1{font-size:1.5rem}.lesson-16-gawain-page .instruction{font-size:.8rem}.lesson-16-gawain-page .track{margin:5px auto 7px}.lesson-16-gawain-page .image{height:105px}.lesson-16-gawain-page .oral{font-size:.88rem}.lesson-16-gawain-page .button{min-height:44px}.lesson-16-gawain-page .choice{min-height:46px}.lesson-16-gawain-page .write-form input{min-height:44px}.lesson-16-gawain-page .hint{font-size:.75rem}}
+    .activity-intro{display:flex;flex-direction:column;align-items:center;gap:12px}.activity-intro h1{margin:0}.activity-intro .instruction{margin:0}.intro-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:min(760px,100%);margin:4px auto 2px;padding:0;list-style:none}.intro-steps li{padding:12px 10px;border:2px solid #94d9d6;border-radius:18px;background:#ffffffe8;color:#456876;font-weight:900}.intro-steps li::before{display:block;margin-bottom:4px;color:#e7af45;font-size:1.35rem;content:counter(intro-step)}.intro-steps{counter-reset:intro-step}.intro-steps li{counter-increment:intro-step}.intro-preview{display:flex;justify-content:center;gap:10px;width:100%;margin:2px 0}.intro-preview-item{display:grid;place-items:center;gap:4px;width:92px;padding:7px;border:3px solid #94d9d6;border-radius:18px;background:#ffffffe8;color:#187b7a;font-weight:900}.intro-preview-item img{width:64px;height:52px;object-fit:contain}.intro-error{min-height:1.2em;margin:0;color:#9a3434;font-weight:900}@media(max-width:680px){.intro-steps{grid-template-columns:1fr;gap:6px}.intro-steps li{padding:8px}.intro-steps li::before{display:inline;margin-right:6px}.intro-preview-item{width:76px;padding:5px}.intro-preview-item img{width:52px;height:42px}}
   </style>
 </head>
 <body{% if prescribed_activity_data.activity_key == 'lesson-16-gawain-1' or prescribed_activity_data.activity_key == 'lesson-16-gawain-2' %} class="lesson-16-gawain-page"{% endif %}>
@@ -36,13 +37,14 @@
     const restored = data.progress?.state && typeof data.progress.state === 'object' ? data.progress.state : {};
     let answers = Array.isArray(data.progress?.answers) ? data.progress.answers.slice(0, items.length) : [];
     let index = Math.min(answers.length, items.length);
-    let phase = restored.phase === 'written' ? 'written' : 'oral';
+    const introEnabled = Boolean(data.intro_enabled);
+    let phase = introEnabled && restored.phase === 'intro' && index === 0 && answers.length === 0 ? 'intro' : restored.phase === 'written' ? 'written' : 'oral';
     let oralMode = restored.oral_mode === 'aloud' ? 'aloud' : 'read';
     let readingAttempts = Math.min(3, Math.max(0, Number(restored.reading_attempts) || 0));
     let aloudAttempts = Math.min(3, Math.max(0, Number(restored.aloud_attempts) || 0));
     let writtenAttempts = Math.min(3, Math.max(0, Number(restored.written_attempts) || 0));
     let stateVersion = Math.max(0, Number(restored.state_version) || 0);
-    let requestVersion = 0, attemptVersion = 0, activeAttemptController = null, activeRecordingButton = null, activeRecordingLabel = '', busy = false, startedAt = Date.now(), activeNarration = null, narratedKey = '', narrationQueue = Promise.resolve();
+    let requestVersion = 0, attemptVersion = 0, activeAttemptController = null, activeRecordingButton = null, activeRecordingLabel = '', busy = false, startedAt = Date.now(), activeNarration = null, narratedKey = '', introInstructionPlayed = false, narrationQueue = Promise.resolve();
     const isLesson16Gawain = ['lesson-16-gawain-1', 'lesson-16-gawain-2'].includes(data.activity_key);
     const isLesson16Gawain1 = data.activity_key === 'lesson-16-gawain-1';
     const isLesson16Gawain2 = data.activity_key === 'lesson-16-gawain-2';
@@ -95,11 +97,27 @@
     const mappedLesson16Audio = isLesson16Gawain1 ? lesson16Gawain1Audio : isLesson16Gawain2 ? lesson16Gawain2Audio : {};
     const session6SubukanAudio = "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_7/subukan_mong_basahin_salita_tts.mp3' %}";
     const mappedLesson16ItemAudio = isLesson16Gawain1 ? lesson16Gawain1ItemAudio : isLesson16Gawain2 ? lesson16Gawain2ItemAudio : [];
+    // The first local reading prompt is the activity-owned intro clip. It is
+    // played once after the lesson modal closes, while the activity intro page
+    // is still visible; the oral item renderer then owns the remaining clips.
+    const lesson16IntroAudio = mappedLesson16ItemAudio[0]?.prompt || '';
 
     const state = () => ({phase, oral_mode: oralMode, reading_attempts: readingAttempts, aloud_attempts: aloudAttempts, written_attempts: writtenAttempts, state_version: ++stateVersion});
     const heading = () => `<p class="eyebrow">Session 6 · Lesson ${data.lesson_number} · Gawain ${data.gawain_number}</p><h1>${escape(data.title)}</h1><p class="instruction">${escape(data.instruction)}</p><div class="count">${Math.min(index + 1, items.length)} / ${items.length}</div><div class="track" aria-hidden="true"><i style="width:${items.length ? index / items.length * 100 : 0}%"></i></div>`;
     const picture = item => `<img class="image" src="${escape(item.image_url)}" alt="Larawan ng ${escape(item.word)}">`;
     const resetOral = () => { phase = 'oral'; oralMode = 'read'; readingAttempts = 0; aloudAttempts = 0; writtenAttempts = 0; };
+    function renderIntro() {
+      const steps = (data.intro_steps || []).map(step => `<li>${escape(step)}</li>`).join('');
+      const preview = items.slice(0, 3).map(item => `<div class="intro-preview-item"><img src="${escape(item.image_url)}" alt="Larawan ng ${escape(item.word)}"><span>___${escape(item.stem || '')}</span></div>`).join('');
+      app.innerHTML = `<div class="activity-intro"><p class="eyebrow">Session 6 · Lesson ${escape(data.lesson_number)} · Gawain ${escape(data.gawain_number)}</p><h1>${escape(data.title)}</h1><p class="instruction">${escape(data.instruction)}</p><div class="intro-preview" aria-label="Mga halimbawa ng gawain">${preview}</div><ol class="intro-steps">${steps}</ol><p class="intro-error" id="introError"></p><button class="button" id="activityStart" type="button">SIMULAN</button></div>`;
+      document.getElementById('activityStart').onclick = async () => {
+        if (busy) return;
+        busy = true; phase = 'oral';
+        try { await save(); render(); }
+        catch (error) { phase = 'intro'; const status = document.getElementById('introError'); if (status) status.textContent = error.message; }
+        finally { busy = false; }
+      };
+    }
 
     async function request(url, body, signal) {
       const response = await fetch(url, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf()}, body: JSON.stringify(body), ...(signal ? {signal} : {})});
@@ -148,9 +166,29 @@
       if (hasMappedLesson16Audio) { playMappedAudio(mappedAudioKey); return; }
       playPrescribedReadAloud(text).catch(() => {});
     }
+    async function playIntroInstruction() {
+      if (!introEnabled || introInstructionPlayed || !lesson16IntroAudio) return;
+      introInstructionPlayed = true;
+      narratedKey = 'missing-syllable-prompt-0';
+      await playMappedAudio(lesson16IntroAudio);
+    }
+    function resumeAfterIntroModal() {
+      if (!introEnabled) return;
+      if (phase === 'intro' && index === 0 && answers.length === 0) { void playIntroInstruction(); return; }
+      narratedKey = '';
+      render();
+      if (phase === 'written' && hasMappedLesson16Audio) void playMappedAudio(mappedLesson16Audio.readingSuccess);
+      if (phase === 'oral' && hasMappedLesson16Audio && (readingAttempts > 0 || aloudAttempts > 0)) {
+        const itemAudio = mappedLesson16ItemAudio[index];
+        const audioKey = oralMode === 'aloud' ? itemAudio?.word : itemAudio?.prompt;
+        if (audioKey) void playMappedAudio(mappedLesson16Audio[audioKey]);
+      }
+    }
+    addEventListener('lesson-start-ready', resumeAfterIntroModal);
     function render() {
       if (!items.length) { app.innerHTML = '<p class="error">Walang laman ang gawaing ito.</p>'; return; }
       if (data.progress?.activity_completed || index >= items.length) { complete(); return; }
+      if (introEnabled && phase === 'intro' && index === 0 && answers.length === 0) { renderIntro(); return; }
       const item = items[index];
       if (phase === 'oral') {
         const listen = oralMode === 'aloud';
@@ -161,7 +199,6 @@
         if (hasMappedLesson16Audio && readingAttempts === 0 && aloudAttempts === 0) {
           narrate('', `missing-syllable-prompt-${index}`, mappedLesson16ItemAudio[index]?.prompt);
         }
-        if (!isLesson16Gawain1 && index === 0 && readingAttempts === 0 && aloudAttempts === 0) narrate(`${data.instruction} Basahin nang malakas ang ${item.word}.`, 'lesson-16-instruction');
         return;
       }
       const prompt = `<span class="blank">${'_'.repeat(Number(item.blank_length) || 2)}</span>${escape(item.stem)}`;
