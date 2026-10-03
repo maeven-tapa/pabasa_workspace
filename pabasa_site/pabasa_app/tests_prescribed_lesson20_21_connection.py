@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .models import School, StudentActivityProgress, User
+from .prescribed_test_fixtures import prescribed_term_fixture
 from .prescribed_activity_catalog import prescribed_activity
 
 
@@ -26,6 +27,7 @@ class PrescribedLesson2021ConnectionTests(TestCase):
         self.student.active_session_key = session.session_key
         self.student.last_activity = timezone.now()
         self.student.save(update_fields=['active_session_key', 'last_activity', 'updated_at'])
+        prescribed_term_fixture(self.student)
         self.progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': self.key})
         self.complete_url = reverse('prescribed_activity_complete', kwargs={'activity_key': self.key})
 

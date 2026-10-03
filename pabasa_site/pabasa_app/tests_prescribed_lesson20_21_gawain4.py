@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from .models import School, StudentActivityProgress, User
 from .prescribed_activity_catalog import prescribed_activity
+from .prescribed_test_fixtures import prescribed_term_fixture
 
 
 class PrescribedLesson2021Gawain4Tests(TestCase):
@@ -28,6 +29,7 @@ class PrescribedLesson2021Gawain4Tests(TestCase):
         )
 
     def login_student(self):
+        prescribed_term_fixture(self.student, teacher=self.teacher)
         session = self.client.session
         session.update({'user_id': self.student.id, 'user_role': 'student', 'email': self.student.email})
         session.save()

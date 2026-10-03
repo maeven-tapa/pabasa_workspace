@@ -6,19 +6,31 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Assessment, AssessmentRequest, CalendarEvent, LiveAssessmentSession, Material, School, SchoolCalendar, Section, User
+from .models import Assessment, AssessmentRequest, CalendarEvent, LiveAssessmentSession, Material, School, SchoolCalendar, Section, SupplementaryMaterialPublication, User
 
 
 class AssessmentWeekTests(TestCase):
     def setUp(self):
         self.school = School.objects.create(name='Assessment Week School', code='AWS')
         self.calendar = SchoolCalendar.objects.create(
-            school_year='Assessment Week Test Year', current_term=1, is_active=True,
+            school_year='2026-2027', current_term=1, is_active=True,
         )
         CalendarEvent.objects.create(
             school_calendar=self.calendar, scope=CalendarEvent.SCOPE_SCHOOL,
             school=self.school, term=1, title='Assessment Week',
             event_type='pre_assessment', start_date=date.today(), end_date=date.today(),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=self.calendar, scope=CalendarEvent.SCOPE_SCHOOL,
+            school=self.school, term=1, title='Term 1 opening',
+            event_type='school_opening', start_date=date.today() - timedelta(days=2),
+            end_date=date.today() - timedelta(days=2),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=self.calendar, scope=CalendarEvent.SCOPE_SCHOOL,
+            school=self.school, term=1, title='Term 1 closing',
+            event_type='school_closing', start_date=date.today() + timedelta(days=20),
+            end_date=date.today() + timedelta(days=20),
         )
         self.teacher_a = self._user('teacher-a', 'teacher')
         self.teacher_b = self._user('teacher-b', 'teacher')
@@ -47,11 +59,17 @@ class AssessmentWeekTests(TestCase):
         )
 
     def _material(self, section, title, usage_type):
-        return Material.objects.create(
+        material = Material.objects.create(
             section=section, teacher=section.teacher, title=title,
             item_type='word', type=usage_type, status='published',
             content_text='sample content', student_access=True,
         )
+        if usage_type == 'assessment':
+            SupplementaryMaterialPublication.objects.create(
+                material=material, school_calendar=self.calendar, term=self.calendar.current_term,
+                section=section, is_active=True,
+            )
+        return material
 
     def _login(self, user):
         session = self.client.session
@@ -70,22 +88,60 @@ class AssessmentWeekTests(TestCase):
             content_type='application/json',
         )
 
+    def _configure_current_term_week(self, term):
+        """Move the fixture into a non-overlapping active CRLA week."""
+        CalendarEvent.objects.filter(
+            school_calendar=self.calendar, event_type='school_closing', term__lt=term,
+        ).update(start_date=date.today() - timedelta(days=1), end_date=date.today() - timedelta(days=1))
+        self.calendar.current_term = term
+        self.calendar.save(update_fields=['current_term'])
+        CalendarEvent.objects.create(
+            school_calendar=self.calendar, scope=CalendarEvent.SCOPE_SCHOOL,
+            school=self.school, term=term, title=f'Term {term} opening',
+            event_type='school_opening', start_date=date.today() - timedelta(days=2),
+            end_date=date.today() + timedelta(days=2),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=self.calendar, scope=CalendarEvent.SCOPE_SCHOOL,
+            school=self.school, term=term, title=f'Term {term} closing',
+            event_type='school_closing', start_date=date.today() + timedelta(days=20),
+            end_date=date.today() + timedelta(days=20),
+        )
+        event_type = {1: 'pre_assessment', 2: 'midline_assessment', 3: 'post_assessment'}[term]
+        CalendarEvent.objects.create(
+            school_calendar=self.calendar, scope=CalendarEvent.SCOPE_SCHOOL,
+            school=self.school, term=term, title=f'Term {term} CRLA',
+            event_type=event_type, start_date=date.today(), end_date=date.today(),
+        )
+
     def _make_completed_aral_student(self):
         official_root = Assessment.objects.create(
             teacher=self.teacher_a, title='Official CRLA', code='AWS-CRLA-ARAL',
             assessment_type='paragraph', system_assessment_key='bosy_crla_pretest',
         )
-        official_material = Material.objects.create(
-            teacher=self.teacher_a, section=self.section_a, assessment=official_root,
-            title='Official CRLA', code='AWS-CRLA-ARAL-MATERIAL', item_type='paragraph',
-            type='assessment', status='published', assessment_kind='crla',
-            is_official_reading=True, is_system_owned=True,
+        official_material, _ = Material.objects.get_or_create(
+            system_assessment_key='bosy_crla_pretest',
+            defaults={
+                'teacher': self.teacher_a, 'section': self.section_a,
+                'assessment': official_root, 'title': 'Official CRLA',
+                'code': 'AWS-CRLA-ARAL-MATERIAL', 'item_type': 'paragraph',
+                'type': 'assessment', 'status': 'published', 'assessment_kind': 'crla',
+                'is_official_reading': True, 'is_system_owned': True,
+                'system_assessment_phase': 'pretest', 'official_term': 1,
+            },
         )
+        official_material.system_assessment_phase = 'pretest'
+        official_material.official_term = 1
+        official_material.is_official_reading = True
+        official_material.is_system_owned = True
+        official_material.save(update_fields=['system_assessment_phase', 'official_term', 'is_official_reading', 'is_system_owned'])
         Assessment.objects.create(
             teacher=self.teacher_a, student=self.student_a, material=official_material,
             source_assessment=official_root, title='Completed CRLA', code='AWS-CRLA-ARAL-RESULT',
             assessment_type='paragraph', attempt_status='completed',
             completed_at=timezone.now(), crla_classification='Transitioning Reader',
+            enrollment=self.student_a.enrollments.get(section=self.section_a),
+            section=self.section_a,
         )
         self.student_a.preference = {
             'reading_assessment_state': {
@@ -162,12 +218,14 @@ class AssessmentWeekTests(TestCase):
         official_root = Assessment.objects.create(
             teacher=self.teacher_a, title='Official CRLA', code='AWS-CRLA-ROOT',
             assessment_type='paragraph', system_assessment_key='bosy_crla_pretest',
+            system_assessment_phase='pretest', official_term=1,
         )
         official_material = Material.objects.create(
             teacher=self.teacher_a, section=self.section_a, assessment=official_root,
             title='Official CRLA', code='AWS-CRLA-MATERIAL', item_type='paragraph',
             type='assessment', status='published', assessment_kind='crla',
             is_official_reading=True, is_system_owned=True,
+            system_assessment_phase='pretest', official_term=1,
         )
         Assessment.objects.create(
             teacher=self.teacher_a, student=self.student_a, material=official_material,
@@ -215,12 +273,14 @@ class AssessmentWeekTests(TestCase):
         official_root = Assessment.objects.create(
             teacher=self.teacher_a, title='Official CRLA', code='AWS-CRLA-PROGRESS',
             assessment_type='paragraph', system_assessment_key='bosy_crla_pretest',
+            system_assessment_phase='pretest', official_term=1,
         )
         official_material = Material.objects.create(
             teacher=self.teacher_a, section=self.section_a, assessment=official_root,
             title='Official CRLA', code='AWS-CRLA-PROGRESS-MATERIAL', item_type='paragraph',
             type='assessment', status='published', assessment_kind='crla',
             is_official_reading=True, is_system_owned=True,
+            system_assessment_phase='pretest', official_term=1,
         )
         Assessment.objects.create(
             teacher=self.teacher_a, student=self.student_a, material=official_material,
@@ -326,6 +386,7 @@ class AssessmentWeekTests(TestCase):
         self._make_completed_aral_student()
         week_one = self._aral_materials(1, 2)
         self._aral_materials(2, 1)
+        self._login(self.student_a)
         response = self.client.get(
             reverse('assessment'),
             {'section_id': self.section_a.id, 'week': 1},
@@ -346,6 +407,7 @@ class AssessmentWeekTests(TestCase):
     def test_aral_week_route_does_not_expose_unassigned_week_materials(self):
         self._make_completed_aral_student()
         self._aral_materials(1, 2)
+        self._login(self.student_a)
         response = self.client.get(
             reverse('assessment'),
             {'section_id': self.section_a.id, 'week': 2},
@@ -359,6 +421,7 @@ class AssessmentWeekTests(TestCase):
     def test_invalid_aral_week_does_not_expose_activities(self):
         self._make_completed_aral_student()
         self._aral_materials(1, 2)
+        self._login(self.student_a)
         response = self.client.get(
             reverse('assessment'),
             {'section_id': self.section_a.id, 'week': 'not-a-week'},
@@ -370,6 +433,7 @@ class AssessmentWeekTests(TestCase):
         self.assertEqual(response.context['student_assessment_materials'], [])
 
     def test_direct_normal_material_request_is_denied_during_assessment_week(self):
+        self._configure_current_term_week(1)
         self.section_a.assessment_week_enabled = True
         self.section_a.save(update_fields=['assessment_week_enabled'])
         self._login(self.student_a)
@@ -424,6 +488,10 @@ class AssessmentWeekTests(TestCase):
         assessment_request = AssessmentRequest.objects.create(
             student=self.student_a,
             section=self.section_a,
+            school_calendar=self.calendar,
+            term=1,
+            official_phase='pretest',
+            official_material=official_material,
             status='approved',
             reviewed_by=self.teacher_a,
             reviewed_at=timezone.now(),
@@ -468,8 +536,8 @@ class AssessmentWeekTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_stale_assessment_week_switch_does_not_block_teacher_materials_after_window(self):
-        """An expired calendar window releases materials and turns its switch off."""
-        CalendarEvent.objects.filter(school_calendar=self.calendar).update(
+        """An expired calendar window releases materials without changing the toggle."""
+        CalendarEvent.objects.filter(school_calendar=self.calendar, event_type='pre_assessment').update(
             end_date=date.today() - timedelta(days=1)
         )
         self.section_a.assessment_week_enabled = True
@@ -481,11 +549,11 @@ class AssessmentWeekTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.section_a.refresh_from_db()
-        self.assertFalse(self.section_a.assessment_week_enabled)
+        self.assertTrue(self.section_a.assessment_week_enabled)
 
     def test_expired_window_allows_teacher_assessment_materials(self):
         """Teacher activities marked as assessments are not official CRLA gates."""
-        CalendarEvent.objects.filter(school_calendar=self.calendar).update(
+        CalendarEvent.objects.filter(school_calendar=self.calendar, event_type='pre_assessment').update(
             end_date=date.today() - timedelta(days=1)
         )
         self.section_a.assessment_week_enabled = True
@@ -497,7 +565,7 @@ class AssessmentWeekTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.section_a.refresh_from_db()
-        self.assertFalse(self.section_a.assessment_week_enabled)
+        self.assertTrue(self.section_a.assessment_week_enabled)
 
     def test_multiple_enabled_sections_are_independently_restricted(self):
         Section.objects.filter(id__in=[self.section_a.id, self.section_b.id]).update(
@@ -527,16 +595,22 @@ class AssessmentWeekTests(TestCase):
             system_assessment_key='bosy_crla_pretest', system_assessment_phase='pretest',
             official_term=1,
         )
-        material = Material.objects.create(
-            teacher=self.teacher_a, section=self.section_a, assessment=root,
-            title='Current CRLA', code=f'AWS-CRLA-MATERIAL-{suffix}', item_type='paragraph',
-            type='assessment', status='published', assessment_kind='crla',
-            is_official_reading=True, is_system_owned=True,
-            system_assessment_phase='pretest',
+        material, _ = Material.objects.get_or_create(
+            system_assessment_key='bosy_crla_pretest',
+            defaults={
+                'teacher': self.teacher_a, 'section': self.section_a, 'assessment': root,
+                'title': 'Current CRLA', 'code': f'AWS-CRLA-MATERIAL-{suffix}',
+                'item_type': 'paragraph', 'type': 'assessment', 'status': 'published',
+                'assessment_kind': 'crla', 'is_official_reading': True,
+                'is_system_owned': True, 'system_assessment_phase': 'pretest',
+                'official_term': 1,
+            },
         )
         return root, material
 
     def _record_current_week_crla_result(self, student, suffix):
+        if student == self.student_b and not student.enrollments.filter(section=self.section_a).exists():
+            self.section_a.add_student(student)
         root, material = self._current_week_crla_material(suffix)
         return Assessment.objects.create(
             teacher=self.teacher_a, student=student, enrollment=student.enrollments.get(section=self.section_a),
@@ -641,3 +715,113 @@ class AssessmentWeekTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.section_a.refresh_from_db()
         self.assertFalse(self.section_a.assessment_week_enabled)
+
+    def test_term_one_result_does_not_block_term_two_toggle(self):
+        self._configure_current_term_week(2)
+        self.section_a.assessment_week_enabled = True
+        self.section_a.save(update_fields=['assessment_week_enabled'])
+        self._record_current_week_crla_result(self.student_a, 'TERM-ONE-HISTORY')
+
+        self._login(self.teacher_a)
+        response = self._toggle(self.section_a.id, False)
+
+        self.assertEqual(response.status_code, 200)
+        self.section_a.refresh_from_db()
+        self.assertFalse(self.section_a.assessment_week_enabled)
+
+    def test_current_term_midline_result_blocks_term_two_toggle(self):
+        self._configure_current_term_week(2)
+        self.section_a.assessment_week_enabled = True
+        self.section_a.save(update_fields=['assessment_week_enabled'])
+        root = Assessment.objects.create(
+            teacher=self.teacher_a, section=self.section_a, title='Midline CRLA',
+            code='AWS-MID-ROOT', assessment_type='paragraph',
+            system_assessment_key='midline_crla_midtest', system_assessment_phase='midtest',
+            official_term=2,
+        )
+        material = Material.objects.create(
+            teacher=self.teacher_a, section=self.section_a, assessment=root,
+            title='Midline CRLA', code='AWS-MID-MATERIAL', item_type='paragraph',
+            type='assessment', status='published', assessment_kind='crla',
+            is_official_reading=True, is_system_owned=True,
+            system_assessment_key='midline_crla_midtest', system_assessment_phase='midtest',
+            official_term=2,
+        )
+        Assessment.objects.create(
+            teacher=self.teacher_a, student=self.student_a, section=self.section_a,
+            enrollment=self.student_a.enrollments.get(section=self.section_a), material=material,
+            source_assessment=root, title='Completed Midline', code='AWS-MID-RESULT',
+            assessment_type='paragraph', system_assessment_key='midline_crla_midtest',
+            system_assessment_phase='midtest', official_term=2,
+            attempt_status='completed', completed_at=timezone.now(),
+            crla_classification='Transitioning Readers',
+        )
+
+        self._login(self.teacher_a)
+        response = self._toggle(self.section_a.id, False)
+
+        self.assertEqual(response.status_code, 409)
+        self.section_a.refresh_from_db()
+        self.assertTrue(self.section_a.assessment_week_enabled)
+
+    def _record_term_result(self, term, suffix):
+        phase, key = {
+            1: ('pretest', 'bosy_crla_pretest'),
+            2: ('midtest', 'midline_crla_midtest'),
+            3: ('posttest', 'eosy_crla_posttest'),
+        }[term]
+        root = Assessment.objects.create(
+            teacher=self.teacher_a, section=self.section_a, title=f'Term {term} CRLA',
+            code=f'AWS-TERM-{term}-ROOT-{suffix}', assessment_type='paragraph',
+            system_assessment_key=key, system_assessment_phase=phase,
+            official_term=term,
+        )
+        material, _ = Material.objects.get_or_create(
+            system_assessment_key=key,
+            defaults={
+                'teacher': self.teacher_a, 'section': self.section_a, 'assessment': root,
+                'title': f'Term {term} CRLA',
+                'code': f'AWS-TERM-{term}-MATERIAL-{suffix}',
+                'item_type': 'paragraph', 'type': 'assessment', 'status': 'published',
+                'assessment_kind': 'crla', 'is_official_reading': True,
+                'is_system_owned': True, 'system_assessment_phase': phase,
+                'official_term': term,
+            },
+        )
+        return Assessment.objects.create(
+            teacher=self.teacher_a, student=self.student_a, section=self.section_a,
+            enrollment=self.student_a.enrollments.get(section=self.section_a),
+            material=material, source_assessment=root,
+            title=f'Completed Term {term} CRLA', code=f'AWS-TERM-{term}-RESULT-{suffix}',
+            assessment_type='paragraph', system_assessment_key=key,
+            system_assessment_phase=phase, official_term=term,
+            attempt_status='completed', completed_at=timezone.now(),
+            crla_classification='Transitioning Readers',
+        )
+
+    def test_term_two_result_does_not_block_term_three_toggle(self):
+        self._configure_current_term_week(3)
+        self.section_a.assessment_week_enabled = True
+        self.section_a.save(update_fields=['assessment_week_enabled'])
+        self._record_term_result(2, 'HISTORY')
+
+        self._login(self.teacher_a)
+        response = self._toggle(self.section_a.id, False)
+
+        self.assertEqual(response.status_code, 200)
+        self.section_a.refresh_from_db()
+        self.assertFalse(self.section_a.assessment_week_enabled)
+
+    def test_current_term_post_result_blocks_term_three_toggle(self):
+        self._configure_current_term_week(3)
+        self.section_a.assessment_week_enabled = True
+        self.section_a.save(update_fields=['assessment_week_enabled'])
+        self._record_term_result(3, 'CURRENT')
+
+        self._login(self.teacher_a)
+        response = self._toggle(self.section_a.id, False)
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()['code'], 'assessment_week_results_recorded')
+        self.section_a.refresh_from_db()
+        self.assertTrue(self.section_a.assessment_week_enabled)

@@ -7,7 +7,7 @@ from django.db import models, transaction
 from django.db.models.functions import Lower
 from django.utils import timezone
 from datetime import datetime
-from .system_clock import now as system_now, real_now
+from .system_clock import now as system_now, real_now, today as system_today
 
 
 def _configured_term_for_date(value, phase=''):
@@ -683,6 +683,10 @@ class Assessment(models.Model):
     system_assessment_period = models.CharField(max_length=10, blank=True, default="")
     system_assessment_phase = models.CharField(max_length=10, blank=True, default="")
     official_term = models.PositiveSmallIntegerField(null=True, blank=True)
+    # Supplementary attempts use these nullable ownership fields.  They are
+    # deliberately separate from official_term, which remains CRLA metadata.
+    supplementary_school_calendar = models.ForeignKey("SchoolCalendar", null=True, blank=True, on_delete=models.PROTECT, related_name="supplementary_assessment_results")
+    supplementary_term = models.PositiveSmallIntegerField(null=True, blank=True, choices=[(1, "Term 1"), (2, "Term 2"), (3, "Term 3")])
     assessment_type = models.CharField(max_length=20, choices=ASSESSMENT_TYPE_CHOICES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
     scheduled_at = models.DateTimeField(null=True, blank=True)  # When assessment becomes published
@@ -1054,6 +1058,10 @@ class AssessmentRequest(models.Model):
     requested_at = models.DateTimeField(auto_now_add=True)
     reviewed_at = models.DateTimeField(null=True, blank=True)
     reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="reviewed_assessment_requests")
+    school_calendar = models.ForeignKey("SchoolCalendar", on_delete=models.SET_NULL, null=True, blank=True, related_name="assessment_requests")
+    term = models.PositiveSmallIntegerField(null=True, blank=True)
+    official_phase = models.CharField(max_length=20, null=True, blank=True)
+    official_material = models.ForeignKey("Material", on_delete=models.SET_NULL, null=True, blank=True, related_name="assessment_requests")
 
     class Meta:
         db_table = "assessment_requests"
@@ -1650,6 +1658,26 @@ class MaterialStudentAssignment(models.Model):
         ]
 
 
+class SupplementaryMaterialPublication(models.Model):
+    """Term-owned publication of reusable Supplementary material."""
+
+    material = models.ForeignKey(Material, on_delete=models.CASCADE, related_name="supplementary_publications")
+    school_calendar = models.ForeignKey("SchoolCalendar", on_delete=models.PROTECT, related_name="supplementary_publications")
+    term = models.PositiveSmallIntegerField(choices=[(1, "Term 1"), (2, "Term 2"), (3, "Term 3")])
+    section = models.ForeignKey("Section", on_delete=models.CASCADE, related_name="supplementary_publications")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "supplementary_material_publications"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["material", "school_calendar", "term", "section"],
+                name="uniq_supplementary_material_term_publication",
+            ),
+        ]
+
+
 class ClassCrlaFinalization(models.Model):
     """One teacher-close event for an official CRLA material in a section."""
     section = models.ForeignKey("Section", on_delete=models.CASCADE, related_name="crla_finalizations")
@@ -1670,6 +1698,10 @@ class StoryReadingProgress(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="story_reading_progress")
     material = models.ForeignKey("Material", on_delete=models.CASCADE, related_name="story_reading_progress")
     enrollment = models.ForeignKey("Enrollment", null=True, blank=True, on_delete=models.SET_NULL, related_name="story_reading_progress")
+    # Nullable for legacy rows whose school-year/term ownership cannot be
+    # proven.  New student-facing rows are always explicitly scoped.
+    school_calendar = models.ForeignKey("SchoolCalendar", null=True, blank=True, on_delete=models.PROTECT, related_name="story_reading_progress")
+    term = models.PositiveSmallIntegerField(null=True, blank=True, choices=[(1, "Term 1"), (2, "Term 2"), (3, "Term 3")])
     story_title = models.CharField(max_length=150, blank=True, default="")
     story_key = models.CharField(max_length=100, blank=True, default="")
     total_words = models.PositiveIntegerField(default=0)
@@ -1695,13 +1727,13 @@ class StoryReadingProgress(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["student", "material"],
-                condition=models.Q(enrollment__isnull=True),
+                condition=models.Q(enrollment__isnull=True, school_calendar__isnull=True, term__isnull=True),
                 name="unique_legacy_story_reading_progress",
             ),
             models.UniqueConstraint(
-                fields=["enrollment", "material"],
-                condition=models.Q(enrollment__isnull=False),
-                name="unique_enrollment_story_reading_progress",
+                fields=["enrollment", "school_calendar", "term", "material"],
+                condition=models.Q(enrollment__isnull=False, school_calendar__isnull=False, term__isnull=False),
+                name="unique_scoped_story_reading_progress",
             ),
         ]
 
@@ -1715,6 +1747,10 @@ class StoryResponseSubmission(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="story_response_submissions")
     material = models.ForeignKey("Material", on_delete=models.CASCADE, related_name="story_response_submissions")
     enrollment = models.ForeignKey("Enrollment", null=True, blank=True, on_delete=models.SET_NULL, related_name="story_response_submissions")
+    # Nullable for historical submissions created before term ownership was
+    # introduced.  Current submissions are explicitly school-year scoped.
+    school_calendar = models.ForeignKey("SchoolCalendar", null=True, blank=True, on_delete=models.PROTECT, related_name="story_response_submissions")
+    term = models.PositiveSmallIntegerField(null=True, blank=True, choices=[(1, "Term 1"), (2, "Term 2"), (3, "Term 3")])
     story_material = models.ForeignKey("Material", null=True, blank=True, on_delete=models.SET_NULL, related_name="story_response_source_submissions")
     prompt = models.TextField(blank=True, default="")
     response_text = models.TextField(blank=True, default="")
@@ -1730,7 +1766,16 @@ class StoryResponseSubmission(models.Model):
     class Meta:
         db_table = "story_response_submissions"
         constraints = [
-            models.UniqueConstraint(fields=["student", "material"], name="unique_story_response_student_material"),
+            models.UniqueConstraint(
+                fields=["student", "material"],
+                condition=models.Q(school_calendar__isnull=True, term__isnull=True),
+                name="unique_legacy_story_response_student_material",
+            ),
+            models.UniqueConstraint(
+                fields=["student", "material", "school_calendar", "term"],
+                condition=models.Q(school_calendar__isnull=False, term__isnull=False),
+                name="unique_scoped_story_response_student_material",
+            ),
         ]
 
 
@@ -2046,10 +2091,62 @@ class PrescribedActivityAccessSettings(models.Model):
         db_table = "prescribed_activity_access_settings"
 
 
+class TermScopedActivityProgressManager(models.Manager):
+    def _scope_kwargs(self, kwargs):
+        if kwargs.get('school_calendar') or kwargs.get('school_calendar_id') or kwargs.get('term'):
+            return kwargs
+        student = kwargs.get('student')
+        student_id = kwargs.get('student_id')
+        if student is None and student_id:
+            student = User.objects.filter(pk=student_id).select_related('school_calendar').first()
+        calendar = getattr(student, 'school_calendar', None) if student else None
+        if not calendar:
+            return kwargs
+        today = system_today()
+        opening = CalendarEvent.objects.filter(
+            school_calendar=calendar, term__in=(1, 2, 3), event_type='school_opening',
+            start_date__lte=today,
+        ).order_by('-start_date').first()
+        if not opening:
+            return kwargs
+        if CalendarEvent.objects.filter(
+            school_calendar=calendar, term=opening.term, event_type='school_closing',
+            end_date__gte=today,
+        ).exists():
+            kwargs = dict(kwargs)
+            kwargs.update(school_calendar=calendar, term=opening.term)
+        return kwargs
+
+    def update_or_create(self, defaults=None, **kwargs):
+        return super().update_or_create(defaults=defaults, **self._scope_kwargs(kwargs))
+
+    def get_or_create(self, defaults=None, **kwargs):
+        return super().get_or_create(defaults=defaults, **self._scope_kwargs(kwargs))
+
+    def filter(self, *args, **kwargs):
+        # Current-activity reads from legacy callers must not accidentally
+        # select an older term row. Unscoped bulk/history queries are kept
+        # unchanged for reporting and migration use.
+        if ('student' in kwargs or 'student_id' in kwargs) and (
+            'activity_key' in kwargs or 'activity_key__in' in kwargs
+        ) and 'school_calendar' not in kwargs and 'term' not in kwargs:
+            kwargs = self._scope_kwargs(kwargs)
+        return super().filter(*args, **kwargs)
+
+
 class StudentActivityProgress(models.Model):
     """Resumable state for standalone student activities without a Material."""
 
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="activity_progress")
+    # Nullable for legacy rows created before prescribed progress was
+    # term-scoped. New application-created rows always populate both fields.
+    school_calendar = models.ForeignKey(
+        "SchoolCalendar", on_delete=models.PROTECT, related_name="activity_progress",
+        null=True, blank=True,
+    )
+    term = models.PositiveSmallIntegerField(
+        choices=SchoolCalendar.TERM_CHOICES, null=True, blank=True,
+    )
     activity_key = models.CharField(max_length=100)
     current_index = models.PositiveIntegerField(default=0)
     completed_items = models.PositiveIntegerField(default=0)
@@ -2059,10 +2156,46 @@ class StudentActivityProgress(models.Model):
     state = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    objects = TermScopedActivityProgressManager()
+
+    def _populate_current_scope(self):
+        """Scope newly written rows without requiring every legacy caller to change at once."""
+        if self.school_calendar_id and self.term:
+            return
+        student = getattr(self, 'student', None)
+        calendar = getattr(student, 'school_calendar', None) if student else None
+        if not calendar:
+            return
+        today = system_today()
+        block = CalendarEvent.objects.filter(
+            school_calendar=calendar, term__in=(1, 2, 3),
+            event_type='school_opening', start_date__lte=today,
+        ).filter(
+            school_calendar__is_active=True,
+        ).order_by('-start_date').first()
+        if not block:
+            return
+        closing = CalendarEvent.objects.filter(
+            school_calendar=calendar, term=block.term,
+            event_type='school_closing', end_date__gte=today,
+        ).order_by('start_date').first()
+        if closing:
+            self.school_calendar = calendar
+            self.term = block.term
+
+    def save(self, *args, **kwargs):
+        self._populate_current_scope()
+        return super().save(*args, **kwargs)
 
     class Meta:
         db_table = "student_activity_progress"
-        constraints = [models.UniqueConstraint(fields=("student", "activity_key"), name="unique_student_activity_progress")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("student", "school_calendar", "term", "activity_key"),
+                condition=models.Q(school_calendar__isnull=False, term__isnull=False),
+                name="unique_student_calendar_term_activity_progress",
+            ),
+        ]
 
 
 

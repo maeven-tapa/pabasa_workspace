@@ -65,7 +65,7 @@ from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_
 from django.db import transaction
 import re
 import traceback
-from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, MaterialStudentAssignment, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization, StudentActivityProgress, StudentActivityRecordingSubmission, PrescribedActivityAccessSettings
+from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, MaterialStudentAssignment, SupplementaryMaterialPublication, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization, StudentActivityProgress, StudentActivityRecordingSubmission, PrescribedActivityAccessSettings
 from .system_clock import invalidate_override_cache, now as system_now, real_now, today as system_today
 from .models import PracticeDebugSettings
 from .section_configuration import ensure_salawag_grade_two_sections
@@ -177,13 +177,196 @@ def _prescribed_access_settings():
     return PrescribedActivityAccessSettings.objects.get_or_create(pk=1)[0]
 
 
-def _unlocked_prescribed_activity_keys(student):
+def _current_learning_context(student, on_date=None):
+    """Resolve the one current school-year/term context used by prescribed work."""
+    check_date = on_date or system_today()
+    calendar = _school_calendar_for_user(student) or _active_school_calendar(check_date)
+    result = {
+        'state': 'BEFORE_TERM', 'school_calendar': calendar,
+        'school_year': getattr(calendar, 'school_year', None) if calendar else None,
+        'term': None, 'term_start': None, 'term_end': None,
+        'crla_completed': False, 'assessment': None, 'classification': None,
+        'aral_eligible': False, 'reading_at_grade_level': False,
+    }
+    if not calendar:
+        return result
+    blocks = _calendar_term_blocks(calendar)
+    active_term = _calendar_current_term(calendar, on_date=check_date)
+    if active_term in (1, 2, 3):
+        block = blocks.get(active_term) or {}
+        result.update(term=active_term,
+                      term_start=getattr(block.get('opening'), 'start_date', None),
+                      term_end=getattr(block.get('closing'), 'end_date', None))
+    else:
+        configured = [
+            (term, blocks.get(term) or {}) for term in (1, 2, 3)
+        ]
+        if any(b.get('closing') and b['closing'].end_date < check_date for _t, b in configured):
+            result['state'] = 'BETWEEN_TERMS'
+        return result
+
+    crla = _current_term_crla_result(student, calendar, active_term)
+    result.update(crla)
+    if result['term_end'] and check_date > result['term_end']:
+        result['state'] = 'TERM_CLOSED'
+    elif not result['crla_completed']:
+        result['state'] = 'CRLA_PENDING'
+    elif result['reading_at_grade_level']:
+        result['state'] = 'GRADE_LEVEL'
+    elif result['aral_eligible']:
+        result['state'] = 'ARAL_ACTIVE'
+    else:
+        result['state'] = 'CRLA_PENDING'
+    return result
+
+
+def _current_term_crla_result(student, school_calendar, term):
+    """Return only a finalized CRLA result belonging to this calendar and term."""
+    phase = {1: 'pretest', 2: 'midtest', 3: 'posttest'}.get(term)
+    keys = {1: 'bosy_crla_pretest', 2: 'midline_crla_midtest', 3: 'eosy_crla_posttest'}
+    payload = {'crla_completed': False, 'assessment': None, 'classification': None,
+               'aral_eligible': False, 'reading_at_grade_level': False}
+    if not student or not school_calendar or not phase:
+        return payload
+    enrollment = Enrollment.objects.filter(
+        student=student, school_calendar=school_calendar,
+        status='active', is_active=True,
+    ).order_by('-joined_at', '-id').first()
+    if not enrollment:
+        return payload
+    candidates = Assessment.objects.filter(
+        student=student, enrollment=enrollment,
+        attempt_status='completed', completed_at__isnull=False,
+    ).filter(
+        Q(system_assessment_phase=phase)
+        | Q(system_assessment_key=keys[term])
+        | Q(source_assessment__system_assessment_phase=phase)
+        | Q(source_assessment__system_assessment_key=keys[term])
+        | Q(material__system_assessment_phase=phase)
+        | Q(material__system_assessment_key=keys[term])
+    ).select_related('material', 'source_assessment').order_by('-completed_at', '-updated_at', '-id')
+    for assessment in candidates:
+        classification = str(
+            getattr(assessment, 'crla_classification', '')
+            or getattr(assessment, 'classification', '')
+            or ''
+        ).strip()
+        material = getattr(assessment, 'material', None)
+        source = getattr(assessment, 'source_assessment', None)
+        if not material or not _is_official_crla_material(material):
+            continue
+        completed_date = timezone.localtime(assessment.completed_at).date()
+        opening = (_calendar_term_blocks(school_calendar).get(term) or {}).get('opening')
+        closing = (_calendar_term_blocks(school_calendar).get(term) or {}).get('closing')
+        if not opening or not closing or not opening.start_date <= completed_date <= closing.end_date:
+            continue
+        if assessment.official_term and assessment.official_term != term:
+            continue
+        material_phase = str(getattr(material, 'system_assessment_phase', '') or '').strip().lower()
+        material_key = str(getattr(material, 'system_assessment_key', '') or '').strip().lower()
+        source_phase = str(getattr(source, 'system_assessment_phase', '') or '').strip().lower()
+        source_key = str(getattr(source, 'system_assessment_key', '') or '').strip().lower()
+        if not classification or not (
+            assessment.system_assessment_phase == phase
+            or assessment.system_assessment_key == keys[term]
+            or material_phase == phase or material_key == keys[term]
+            or source_phase == phase or source_key == keys[term]
+        ):
+            continue
+        payload.update(
+            crla_completed=True, assessment=assessment, classification=classification,
+            aral_eligible=_aral_eligible_classification(classification),
+            reading_at_grade_level=_reading_at_grade_level_classification(classification),
+        )
+        return payload
+    return payload
+
+
+def _current_progress_queryset(student, lifecycle=None):
+    lifecycle = lifecycle or _current_learning_context(student)
+    calendar, term = lifecycle.get('school_calendar'), lifecycle.get('term')
+    if not calendar or term not in (1, 2, 3):
+        return StudentActivityProgress.objects.none()
+    return StudentActivityProgress.objects.filter(
+        student=student, school_calendar=calendar, term=term,
+    )
+
+
+def _current_progress_scope(student, lifecycle, activity_key):
+    """Return the explicit ownership tuple for current prescribed progress."""
+    lifecycle = lifecycle or _current_learning_context(student)
+    calendar = lifecycle.get('school_calendar') if lifecycle else None
+    term = lifecycle.get('term') if lifecycle else None
+    if not student or not calendar or term not in (1, 2, 3):
+        raise ValueError('A current school calendar and term are required for prescribed progress.')
+    return {
+        'student': student,
+        'school_calendar': calendar,
+        'term': term,
+        'activity_key': activity_key,
+    }
+
+
+def _current_progress_update_or_create(student, lifecycle, activity_key, *, defaults):
+    """Write current prescribed progress with explicit term ownership."""
+    return StudentActivityProgress.objects.update_or_create(
+        **_current_progress_scope(student, lifecycle, activity_key), defaults=defaults,
+    )
+
+
+def _current_progress_get_or_create(student, lifecycle, activity_key, *, defaults):
+    """Create/read current prescribed progress with explicit term ownership."""
+    return StudentActivityProgress.objects.get_or_create(
+        **_current_progress_scope(student, lifecycle, activity_key), defaults=defaults,
+    )
+
+
+def _current_supplementary_scope(student, material, lifecycle=None, enrollment=None):
+    """Resolve explicit ownership for current student Supplementary state."""
+    lifecycle = lifecycle or _current_learning_context(student)
+    calendar = lifecycle.get('school_calendar') if lifecycle else None
+    term = lifecycle.get('term') if lifecycle else None
+    enrollment = enrollment or _student_current_enrollment(student)
+    if not student or not material or not calendar or term not in (1, 2, 3):
+        raise ValueError('A current school calendar, term, student, and material are required.')
+    if not enrollment or enrollment.school_calendar_id != calendar.id:
+        raise ValueError('A current school-year enrollment is required.')
+    return {
+        'student': student,
+        'material': material,
+        'enrollment': enrollment,
+        'school_calendar': calendar,
+        'term': term,
+    }
+
+
+def _current_supplementary_lifecycle_guard(request, material, *, json_response=False):
+    """Require the canonical ARAL_ACTIVE state for student Supplementary work."""
+    if request.session.get('user_role') not in (None, 'student'):
+        return None
+    student = _current_user(request)
+    lifecycle = _current_learning_context(student) if student else {'state': 'BEFORE_TERM'}
+    if lifecycle.get('state') != 'ARAL_ACTIVE':
+        message = 'Supplementary activities are available only after the current term CRLA is completed for an ARAL-eligible student.'
+        if json_response:
+            return JsonResponse({'success': False, 'error': message}, status=403)
+        return HttpResponseForbidden(message)
+    try:
+        _current_supplementary_scope(student, material, lifecycle)
+    except ValueError as exc:
+        if json_response:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=403)
+        return HttpResponseForbidden(str(exc))
+    return None
+
+
+def _unlocked_prescribed_activity_keys(student, lifecycle=None):
     ordered_keys = _prescribed_activity_order()
     if _prescribed_access_settings().unlock_all_activities:
         return set(ordered_keys)
     if not student:
         return set()
-    completed = set(StudentActivityProgress.objects.filter(student=student, activity_completed=True).values_list('activity_key', flat=True))
+    completed = set(_current_progress_queryset(student, lifecycle).filter(activity_completed=True).values_list('activity_key', flat=True))
     unlocked = set()
     for index, key in enumerate(ordered_keys):
         if index == 0 or ordered_keys[index - 1] in completed:
@@ -193,8 +376,9 @@ def _unlocked_prescribed_activity_keys(student):
     return unlocked
 
 
-def _student_can_open_prescribed_activity(student, activity_key):
-    return activity_key in _unlocked_prescribed_activity_keys(student)
+def _student_can_open_prescribed_activity(student, activity_key, lifecycle=None):
+    lifecycle = lifecycle or _current_learning_context(student)
+    return lifecycle.get('state') == 'ARAL_ACTIVE' and activity_key in _unlocked_prescribed_activity_keys(student, lifecycle)
 
 
 def _enforce_prescribed_activity_sequence(request, activity_key):
@@ -774,6 +958,24 @@ def _finalized_grade_level_crla_result_exists(student):
 def _reader_assessment_state(student):
     state = _get_user_state(student)
     current_enrollment = _student_current_enrollment(student) if isinstance(student, User) else None
+    # The persisted profile is historical/user-facing state.  It must not be
+    # treated as the current term result while this term's CRLA is pending.
+    # Use the canonical lifecycle resolver so the dashboard and assessment
+    # hub do not expose intervention work from an older term.
+    learning_context = _current_learning_context(student) if isinstance(student, User) else {}
+    if learning_context.get('state') == 'CRLA_PENDING' and learning_context.get('term'):
+        active_phase = {1: 'pretest', 2: 'midtest', 3: 'posttest'}.get(learning_context.get('term'))
+        return {
+            'reader_classification': '',
+            'aral_eligible': False,
+            'aral_status': 'pending',
+            'aral_exit_override': False,
+            'reading_at_grade_level_complete': False,
+            'classification_workflow_status': 'pending',
+            'pre_test_completed': False,
+            'post_test_completed': False,
+            'current_phase': active_phase or state.get('current_phase') or 'pretest',
+        }
     active_phase = _official_crla_assessment_phase(student)
     active_material = _official_crla_material_for_student(student, active_phase)
     active_result = (
@@ -932,6 +1134,43 @@ def _official_crla_phase_to_key(assessment_type):
     return ''
 
 
+def _current_term_missed_crla_context(student, on_date=None):
+    """Resolve an ended official CRLA window for missed-assessment recovery."""
+    if not student or getattr(student, 'role', '') != 'student':
+        return None
+    check_date = on_date or system_today()
+    calendar = _school_calendar_for_user(student) or _active_school_calendar(check_date)
+    term = _calendar_current_term(calendar, on_date=check_date) if calendar else None
+    if term not in {1, 2, 3}:
+        return None
+    phase_map = {
+        1: ('pretest', 'pre_assessment'),
+        2: ('midtest', 'midline_assessment'),
+        3: ('posttest', 'post_assessment'),
+    }
+    phase, event_type = phase_map[term]
+    event = next(
+        (
+            candidate for candidate in _calendar_events_for_school_calendar(calendar)
+            if candidate.term == term and candidate.event_type == event_type
+        ),
+        None,
+    )
+    if not event or not event.end_date or event.end_date >= check_date:
+        return None
+    material = _official_crla_material_for_student(student, phase)
+    if not material:
+        return None
+    return {
+        'school_calendar': calendar,
+        'term': term,
+        'official_phase': phase,
+        'official_material': material,
+        'window_start': event.start_date,
+        'window_end': event.end_date,
+    }
+
+
 def _student_is_eosy_crla_eligible(student):
     state = _reader_assessment_state(student)
     return bool(state.get('crla_pretest_completed')) and bool(state.get('aral_eligible'))
@@ -1079,7 +1318,51 @@ def _assessment_materials_for_student(student=None):
     queryset = queryset.exclude(
         Q(assessment_kind='crla') & ~Q(is_official_reading=True, is_system_owned=True)
     )
+    if student is not None:
+        enrollment = Enrollment.objects.filter(
+            student=student, is_active=True,
+        ).select_related('section', 'school_calendar').order_by('-joined_at', '-id').first()
+        calendar = getattr(enrollment, 'school_calendar', None) if enrollment else None
+        section = getattr(enrollment, 'section', None) if enrollment else None
+        current_term = _calendar_current_term(calendar, on_date=system_today()) if calendar else None
+        if calendar and section and current_term in {1, 2, 3}:
+            queryset = queryset.filter(
+                Q(is_official_reading=True, is_system_owned=True)
+                | Q(supplementary_publications__school_calendar=calendar,
+                    supplementary_publications__term=current_term,
+                    supplementary_publications__section=section,
+                    supplementary_publications__is_active=True)
+            ).distinct()
+        else:
+            queryset = queryset.filter(is_official_reading=True, is_system_owned=True)
     return queryset.order_by('created_at', 'id')
+
+
+def _current_supplementary_materials_for_student(student, section=None):
+    """Return only explicitly published Supplementary materials for current scope."""
+    enrollment = Enrollment.objects.filter(
+        student=student, is_active=True,
+    ).select_related('section', 'school_calendar').order_by('-joined_at', '-id').first()
+    if not enrollment:
+        return Material.objects.none()
+    section = section or enrollment.section
+    calendar = enrollment.school_calendar
+    term = _calendar_current_term(calendar, on_date=system_today()) if calendar else None
+    if not calendar or not section or term not in {1, 2, 3}:
+        return Material.objects.none()
+    return Material.objects.filter(
+        Q(section=section) | Q(assigned_sections=section),
+        is_active=True,
+        student_access=True,
+        type__in=('assessment', 'both'),
+        status__in=('published', '', None),
+        supplementary_publications__school_calendar=calendar,
+        supplementary_publications__term=term,
+        supplementary_publications__section=section,
+        supplementary_publications__is_active=True,
+    ).exclude(
+        Q(assessment_kind='crla') | Q(is_official_reading=True) | Q(is_system_owned=True)
+    ).distinct()
 
 
 def _material_week_values(material):
@@ -5524,6 +5807,10 @@ def _dashboard_context(request, nav_role=None, extra=None):
                 'completed': completed,
                 'percent': round((completed / total) * 100) if total else 0,
             })
+        # Do not expose historical/session summaries as current intervention
+        # work before this term's CRLA has unlocked ARAL participation.
+        if _current_learning_context(student_user).get('state') != 'ARAL_ACTIVE':
+            student_session_progress = []
         perf_log('joined_classes_built', 'joined_classes_start', {
             'joined_classes_count': len(joined_classes),
         })
@@ -5562,11 +5849,17 @@ def _dashboard_context(request, nav_role=None, extra=None):
     if user and user.role == 'student':
         avatar_slug = user.animal_avatar if user.animal_avatar in STUDENT_AVATAR_BY_SLUG else 'owl'
         context['sidebar_selected_avatar'] = STUDENT_AVATAR_BY_SLUG[avatar_slug]
+        learning_context = _current_learning_context(user)
+        context['student_learning_state'] = learning_context.get('state')
+        context['student_prescribed_visible'] = learning_context.get('state') == 'ARAL_ACTIVE'
+        context['student_supplementary_visible'] = learning_context.get('state') == 'ARAL_ACTIVE'
+        # Do not display a historical profile classification as the current
+        # term's result while CRLA is pending.  Historical data is untouched.
         context['student_reading_level'] = (
-            _reader_assessment_state(user).get('reader_classification')
-            or getattr(user, 'reading_level', '')
-            or 'Pending'
-        )
+            learning_context.get('classification')
+            if learning_context.get('state') in {'ARAL_ACTIVE', 'GRADE_LEVEL'}
+            else 'Pending'
+        ) or 'Pending'
     perf_mark('teacher_courses_start')
     # Classes are the source of truth for personal Courses. Each active class
     # is represented as a course card without requiring a legacy Course row.
@@ -5722,6 +6015,8 @@ def _dashboard_context(request, nav_role=None, extra=None):
         print("CONTEXT_KEY_DONE", "month_year_label")
         context['today'] = calendar_widget.get('today')
         print("CONTEXT_KEY_DONE", "today")
+        context['student_calendar_today'] = system_today().isoformat()
+        print("CONTEXT_KEY_DONE", "student_calendar_today")
         context['month_weeks'] = calendar_widget.get('month_weeks')
         context['calendar_weekday_labels'] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
         print("CONTEXT_KEY_DONE", "month_weeks")
@@ -8515,9 +8810,17 @@ def _section_assessment_week_status(section, on_date=None):
     if not calendar:
         return 'none'
     check_date = on_date or system_today()
+    # Assessment-week status is a current-term question.  Looking at every
+    # assessment event in the calendar makes a prior term's closed window
+    # incorrectly mark the next term as ``after`` while its own CRLA window
+    # is still upcoming.
+    current_term = _calendar_current_term(calendar, on_date=check_date)
+    if current_term not in {1, 2, 3}:
+        return 'none'
     events = CalendarEvent.objects.filter(
         school_calendar=calendar,
         event_type__in={'pre_assessment', 'midline_assessment', 'post_assessment'},
+        term=current_term,
     ).filter(
         Q(scope=CalendarEvent.SCOPE_GLOBAL, school__isnull=True)
         | Q(scope=CalendarEvent.SCOPE_SCHOOL, school=section.school)
@@ -8544,9 +8847,16 @@ def _section_assessment_week_has_recorded_crla_result(section, on_date=None):
         return False
 
     check_date = on_date or system_today()
+    current_term = (
+        _calendar_current_term(section.school_calendar, on_date=check_date)
+        or getattr(section.school_calendar, 'current_term', None)
+    )
+    if current_term not in {1, 2, 3}:
+        return False
     active_event = CalendarEvent.objects.filter(
         school_calendar_id=section.school_calendar_id,
         event_type__in={'pre_assessment', 'midline_assessment', 'post_assessment'},
+        term=current_term,
         start_date__lte=check_date,
         end_date__gte=check_date,
     ).filter(
@@ -8561,6 +8871,7 @@ def _section_assessment_week_has_recorded_crla_result(section, on_date=None):
         'midline_assessment': 'midtest',
         'post_assessment': 'posttest',
     }[active_event.event_type]
+    expected_key = _official_crla_phase_to_key(expected_phase)
     # Enrollment is the normal authoritative section/school-year context. The
     # remaining paths retain support for correctly scoped legacy result rows.
     enrolled_section_context = Q(
@@ -8593,13 +8904,21 @@ def _section_assessment_week_has_recorded_crla_result(section, on_date=None):
         # New rows persist the completion term; never let another term lock the
         # active assessment event. Empty terms are legacy rows and remain
         # safely narrowed by the section context above.
-        if result.official_term and result.official_term != active_event.term:
+        if result.official_term and result.official_term != current_term:
             continue
         is_official, result_phase, _result_term = _crla_attempt_phase_and_term(
             result,
             completed_on=timezone.localtime(result.completed_at).date() if result.completed_at else None,
         )
         if not is_official or result_phase != expected_phase:
+            continue
+        result_key = str(
+            getattr(result, 'system_assessment_key', '')
+            or getattr(getattr(result, 'source_assessment', None), 'system_assessment_key', '')
+            or getattr(getattr(result, 'material', None), 'system_assessment_key', '')
+            or ''
+        ).strip().lower()
+        if result_key != expected_key:
             continue
         # Legacy rows lack an enrollment, which is the authoritative
         # school-year link. Retain them only when their saved result timestamp
@@ -8671,8 +8990,44 @@ def _student_completed_section_assessment(student, section):
         student=student, attempt_status='completed', completed_at__isnull=False,
     ).exists()
 
+def _current_crla_assessment_request(student, section, statuses=None):
+    """Return the current-term scoped CRLA request for this student/section."""
+    if not student or not section:
+        return None
+    scope = _current_crla_request_scope(student)
+    calendar = scope.get('school_calendar')
+    phase = scope.get('official_phase')
+    material = scope.get('official_material')
+    if not calendar or scope.get('term') not in {1, 2, 3} or not material:
+        return None
+    query = AssessmentRequest.objects.filter(
+        student=student, section=section,
+        school_calendar=calendar, term=scope.get('term'),
+        official_phase=phase, official_material=material,
+    )
+    if statuses is not None:
+        query = query.filter(status__in=tuple(statuses))
+    return query.order_by('-requested_at', '-id').first()
+
+
 def _student_has_approved_assessment_request(student, section):
-    return bool(student and section and AssessmentRequest.objects.filter(student=student, section=section, status='approved').exists())
+    return bool(_current_crla_assessment_request(student, section, {'approved'}))
+
+
+def _current_crla_request_scope(student):
+    """Return the current official CRLA ownership for request matching."""
+    lifecycle = _current_learning_context(student)
+    missed_context = _current_term_missed_crla_context(student)
+    if missed_context:
+        return missed_context
+    phase = _official_crla_assessment_phase(student)
+    material = _official_crla_material_for_student(student, phase)
+    return {
+        'school_calendar': lifecycle.get('school_calendar'),
+        'term': lifecycle.get('term'),
+        'official_phase': phase,
+        'official_material': material,
+    }
 
 
 def _student_has_active_live_assessment(student, section):
@@ -11490,7 +11845,22 @@ def request_assessment_access(request):
     section = Section.objects.filter(id=section_id, is_active=True).first()
     if not student or not section or not section.has_student(student, active_only=True):
         return JsonResponse({'success': False, 'error': 'Active section enrollment required.'}, status=400)
-    item, created = AssessmentRequest.objects.get_or_create(student=student, section=section, status='pending')
+    lifecycle = _current_learning_context(student)
+    missed_context = _current_term_missed_crla_context(student)
+    if not missed_context:
+        return JsonResponse({'success': False, 'error': 'A current-term missed CRLA request is not available.'}, status=409)
+    calendar = missed_context['school_calendar']
+    term = missed_context['term']
+    phase = missed_context['official_phase']
+    material = missed_context['official_material']
+    current_result = _current_term_crla_result(student, calendar, term)
+    if current_result.get('crla_completed'):
+        return JsonResponse({'success': False, 'error': 'The current-term CRLA is already completed.'}, status=409)
+    item, created = AssessmentRequest.objects.get_or_create(
+        student=student, section=section, status='pending',
+        school_calendar=calendar, term=term, official_phase=phase,
+        official_material=material,
+    )
     return JsonResponse({'success': True, 'pending': True, 'created': created})
 
 
@@ -11530,9 +11900,10 @@ def teacher_assessment_requests(request):
     return JsonResponse({'success': True, 'requests': [{'id': r.id, 'student_name': f'{r.student.first_name} {r.student.last_name}'.strip(), 'pabasa_id': r.student.custom_id, 'section': r.section.class_name, 'requested_at': r.requested_at.isoformat(), 'assessment_status': 'Assessment Not Taken'} for r in rows]})
 
 def _ensure_assessment_request_live_session(teacher, section, student):
-    """Connect an approved request to the existing Live Assessment session."""
-    phase = _official_crla_assessment_phase(student)
-    material = _official_crla_material_for_student(student, phase) or _official_reading_active_materials_queryset().first()
+    """Join an approved recovery student to the normal pre-start CRLA session."""
+    scope = _current_crla_request_scope(student)
+    phase = scope.get('official_phase')
+    material = scope.get('official_material')
     if not material or not _is_live_crla_material(material):
         raise ValidationError('The official CRLA assessment is not available.')
     session = LiveAssessmentSession.objects.filter(teacher=teacher, section=section, material=material, status='waiting').order_by('-created_at').first()
@@ -11555,9 +11926,24 @@ def _ensure_assessment_request_live_session(teacher, section, student):
 @require_http_methods(["POST"])
 def approve_assessment_request(request, request_id):
     teacher = User.objects.filter(id=request.session.get('user_id'), role='teacher', is_archived=False).first()
-    item = AssessmentRequest.objects.filter(id=request_id, section__teacher=teacher, status='pending').first()
+    item = AssessmentRequest.objects.filter(id=request_id, section__teacher=teacher, status='pending').select_related('school_calendar', 'official_material').first()
     if not item:
         return JsonResponse({'success': False, 'error': 'Request not found.'}, status=404)
+    lifecycle = _current_learning_context(item.student)
+    current_scope = _current_crla_request_scope(item.student)
+    current_phase = current_scope.get('official_phase')
+    current_material = current_scope.get('official_material')
+    if (
+        lifecycle.get('state') != 'CRLA_PENDING'
+        or not lifecycle.get('school_calendar')
+        or not current_scope.get('school_calendar')
+        or not current_scope.get('official_material')
+        or item.school_calendar_id != current_scope.get('school_calendar').id
+        or item.term != current_scope.get('term')
+        or item.official_phase != current_phase
+        or item.official_material_id != getattr(current_material, 'id', None)
+    ):
+        return JsonResponse({'success': False, 'error': 'This request is no longer for the current official CRLA.'}, status=409)
     try:
         with transaction.atomic():
             item.status = 'approved'
@@ -11568,7 +11954,12 @@ def approve_assessment_request(request, request_id):
     except ValidationError as exc:
         item.status, item.reviewed_by, item.reviewed_at = 'pending', None, None
         return JsonResponse({'success': False, 'error': str(exc)}, status=409)
-    return JsonResponse({'success': True, 'session_id': session.id, 'control_url': _build_live_assessment_control_url(session.id), 'waiting_url': _build_live_assessment_waiting_url(session.id)})
+    return JsonResponse({
+        'success': True,
+        'session_id': session.id,
+        'control_url': _build_live_assessment_control_url(session.id),
+        'waiting_url': _build_live_assessment_waiting_url(session.id),
+    })
 
 def _prescribed_activity_thumbnail_path(activity):
     for collection_name in ('items', 'choices'):
@@ -11583,6 +11974,7 @@ def assessment(request):
     if not _check_auth(request):
         return redirect('auth')
     user = User.objects.filter(id=request.session.get('user_id')).first()
+    learning_context = _current_learning_context(user) if user and getattr(user, 'role', '') == 'student' else {}
     workflow = _assessment_workflow_context(user)
     student_profile = _get_profile_dict(user, 'student_profile') or {}
     if not isinstance(student_profile, dict):
@@ -11664,6 +12056,7 @@ def assessment(request):
         # section-wide CRLA assessment-week branches below.
         assessment_week_section = None
     section_week_status = _section_assessment_week_status(selected_section) if selected_section else 'none'
+    current_term_crla_completed = bool(learning_context.get('crla_completed'))
     assessment_week_live = bool(
         selected_section
         and selected_section.assessment_week_enabled
@@ -11690,13 +12083,14 @@ def assessment(request):
         assessment_week_section = None
     if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status == 'after' and not aral_week_mode:
         if (
-            not section_assessment_completed
-            and not has_completed_official_crla
-            and not _student_has_approved_assessment_request(user, selected_section)
+            not current_term_crla_completed
+            and not approved_assessment_request
             and not (returning_to_reading_assessment and has_reading_assessment_access)
         ):
             context = _dashboard_context(request, 'student')
-            pending_request = AssessmentRequest.objects.filter(student=user, section=selected_section, status='pending').first()
+            pending_request = _current_crla_assessment_request(
+                user, selected_section, {'pending'},
+            )
             context.update({
                 'stage': 'assessment_not_taken',
                 'workflow_title': 'Assessment Not Taken',
@@ -11715,7 +12109,7 @@ def assessment(request):
                 'workflow_message': 'Keep up the great work. You can continue practicing whenever you like.',
             })
             return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
-    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status in {'before', 'during'} and (not selected_section.assessment_week_enabled or not assessment_week_live or not student_live_assessment) and not section_assessment_completed and not has_completed_official_crla and not aral_week_mode:
+    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status in {'before', 'during'} and selected_section.assessment_week_enabled and (not assessment_week_live or not student_live_assessment) and not section_assessment_completed and not has_completed_official_crla and not aral_week_mode:
         context = _dashboard_context(request, 'student')
         context.update({
             'stage': 'assessment_week_locked',
@@ -11900,6 +12294,85 @@ def assessment(request):
     else:
         stage = 'complete'
         routing_reason = 'fallback_complete'
+
+    # The assessment hub must not fall through to the intervention/session
+    # renderer because an old saved classification says ARAL is active.
+    # CRLA_PENDING still reaches the assessment workflow when its official
+    # material is available; it never reaches the Prescribed/Supplementary hub.
+    if learning_context.get('state') == 'CRLA_PENDING':
+        if (
+            selected_section
+            and not selected_section.assessment_week_enabled
+            and section_week_status in {'before', 'during'}
+        ):
+            # A configured CRLA material is not launchable until the teacher
+            # opens Assessment Week.  Keep the existing unavailable card;
+            # after the window closes, the earlier missed-assessment branch
+            # returns the Request to Take flow instead.
+            stage = 'unavailable'
+            routing_reason = 'assessment_week_toggle_off'
+        else:
+            stage = 'assessment' if official_crla_material else 'unavailable'
+            routing_reason = 'current_term_crla_pending'
+    elif learning_context.get('state') == 'GRADE_LEVEL':
+        stage = 'grade_level_complete'
+        routing_reason = 'current_term_grade_level'
+    elif learning_context.get('state') in {'BEFORE_TERM', 'BETWEEN_TERMS', 'TERM_CLOSED'}:
+        stage = 'unavailable'
+        routing_reason = f"current_term_{str(learning_context.get('state')).lower()}"
+
+    # This is the final server-side Assessment Week gate.  It must run after
+    # the legacy workflow routing above because that routing can derive an
+    # assessment stage from saved/account-level eligibility state.  The
+    # teacher's section toggle is authoritative while the current official
+    # CRLA window is before/during: an incomplete current-term CRLA must not
+    # receive an active launch card while the toggle is off.
+    if (
+        user
+        and getattr(user, 'role', '') == 'student'
+        and selected_section
+        and not selected_section.assessment_week_enabled
+        and section_week_status in {'before', 'during'}
+        and not current_term_crla_completed
+        and not aral_week_mode
+    ):
+        stage = 'unavailable'
+        routing_reason = 'assessment_week_toggle_off_final_guard'
+
+    # Official CRLA is teacher-launched.  Keep the existing waiting card as
+    # the final stage whenever the current official window is active, the
+    # section switch is on, and no teacher live session has started.  This
+    # runs after legacy routing so an old saved eligibility value cannot
+    # expose the self-start assessment card.
+    if (
+        user
+        and getattr(user, 'role', '') == 'student'
+        and selected_section
+        and selected_section.assessment_week_enabled
+        and section_week_status == 'during'
+        and official_crla_material
+        and not current_term_crla_completed
+        and not has_active_teacher_live_crla
+        and not has_terminal_unfinished_live_crla
+        and not aral_week_mode
+    ):
+        stage = 'assessment_week_locked'
+        routing_reason = 'official_crla_waiting_for_teacher'
+
+    # An approved missed-assessment request is already authorized for the
+    # current official CRLA, but approval deliberately creates no live
+    # session.  Keep the student in the same teacher-waiting card until the
+    # normal teacher-controlled session is started; do not let the generic
+    # CRLA_PENDING/unavailable fallback replace it.
+    if (
+        approved_assessment_request
+        and not current_term_crla_completed
+        and not student_live_assessment
+        and not section_assessment_completed
+        and not aral_week_mode
+    ):
+        stage = 'assessment_week_locked'
+        routing_reason = 'approved_missed_crla_waiting_for_teacher'
 
     try:
         logger.warning(
@@ -12123,6 +12596,18 @@ def assessment(request):
         'student_section_ids': [section.id for section in joined_sections],
         'active_school_calendar': official_calendar,
     })
+    if (
+        stage == 'assessment_week_locked'
+        and selected_section
+        and (selected_section.assessment_week_enabled or approved_assessment_request)
+    ):
+        context.update({
+            'assessment_week_enabled': True,
+            'assessment_week_section': selected_section,
+            'workflow_title': 'Assessment Week is ON',
+            'workflow_subtitle': selected_section.class_name,
+            'workflow_message': 'Your teacher has turned on Assessment Week for your section. Please wait for your teacher to start the live assessment.',
+        })
     try:
         logger.warning(
             "PABASA_OFFICIAL_TRACE assessment_page_context %s",
@@ -13634,6 +14119,7 @@ def _active_prescribed_student(request):
 @ensure_csrf_cookie
 def prescribed_activity_page(request, activity_key):
     activity = prescribed_activity(activity_key)
+    lifecycle = None
     if not activity:
         return redirect('assessment')
     if request.GET.get('preview') != '1' and request.session.get('user_role') == 'student':
@@ -13641,9 +14127,8 @@ def prescribed_activity_page(request, activity_key):
         if not student or not _student_can_open_prescribed_activity(student, activity_key):
             return redirect('assessment')
         if activity_key == 'lesson9-gawain3':
-            progress = StudentActivityProgress.objects.filter(
-                student=student, activity_key=activity_key,
-            ).first()
+            lifecycle = _current_learning_context(student)
+            progress = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             total = len(activity.get('items') or [])
             saved_state = progress.state if progress and isinstance(progress.state, dict) else {}
             saved_current_item = int(saved_state.get('current_item', 0) or 0) if progress else 0
@@ -13680,7 +14165,8 @@ def prescribed_activity_page(request, activity_key):
             student = _active_prescribed_student(request)
             if not student:
                 return redirect('assessment')
-        progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first() if student else None
+        lifecycle = _current_learning_context(student) if student else None
+        progress = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first() if student else None
         state = progress.state if progress and isinstance(progress.state, dict) else (
             initial_l22_g2_state() if activity_key == 'aral-l22-g2-c-word-reading' else
             initial_l24_g2_state() if activity_key == 'aral-l24-g2-v-word-reading' else
@@ -14639,7 +15125,8 @@ def prescribed_activity_page(request, activity_key):
     student = _active_prescribed_student(request)
     if not student:
         return redirect('assessment')
-    progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+    lifecycle = _current_learning_context(student)
+    progress = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
     raw_state = progress.state if progress and isinstance(progress.state, dict) else {}
     if activity_key == 'session-2-lesson-4-gawain-2':
         context = _dashboard_context(request)
@@ -14856,7 +15343,7 @@ def prescribed_activity_page(request, activity_key):
                          'recorded_items': [], 'started_at': timezone.now().isoformat(),
                          'elapsed_seconds': 0, 'state_version': 0}
             progress = StudentActivityProgress.objects.create(
-                student=_active_prescribed_student(request), activity_key=activity_key,
+                student=_active_prescribed_student(request), school_calendar=lifecycle['school_calendar'], term=lifecycle['term'], activity_key=activity_key,
                 current_index=0, completed_items=0, correct_items=0,
                 total_items=len(activity['items']), activity_completed=False,
                 state=raw_state,
@@ -15804,11 +16291,14 @@ def lesson29_trace_say_progress(request):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    lifecycle = _current_learning_context(student)
+    if not _student_can_open_prescribed_activity(student, activity_key, lifecycle):
+        return JsonResponse({'success': False, 'error': 'Prescribed activities are not currently available.'}, status=403)
     try:
         data = json.loads(request.body or '{}')
         if not isinstance(data, dict):
             raise ValueError('Invalid activity data.')
-        query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+        query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
         existing = query.first()
         old = existing.state if existing and isinstance(existing.state, dict) else {}
         if data.get('reset') is True:
@@ -15905,7 +16395,7 @@ def lesson29_trace_say_progress(request):
                    'state_version': int(old.get('state_version', 0) or 0) + 1}
         completed = min(total, index)
         progress, _ = StudentActivityProgress.objects.update_or_create(
-            student=student, activity_key=activity_key,
+            student=student, school_calendar=lifecycle['school_calendar'], term=lifecycle['term'], activity_key=activity_key,
             defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed,
                       'total_items': total, 'activity_completed': False, 'state': payload})
         return JsonResponse({'success': True, 'accepted': True,
@@ -15928,7 +16418,10 @@ def lesson29_trace_say_complete(request):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
-    existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+    lifecycle = _current_learning_context(student)
+    if not _student_can_open_prescribed_activity(student, activity_key, lifecycle):
+        return JsonResponse({'success': False, 'error': 'Prescribed activities are not currently available.'}, status=403)
+    existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
     state = existing.state if existing and isinstance(existing.state, dict) else {}
     total = len(activity['items'])
     traces = state.get('traces') if isinstance(state.get('traces'), list) else []
@@ -15952,6 +16445,8 @@ def lesson29_trace_say_recording(request):
     """Store one replaceable English letter-sound recording per Activity 3 item."""
     activity_key = 'lesson-29-gawain-3'
     student = _active_prescribed_student(request)
+    if not student or not _student_can_open_prescribed_activity(student, activity_key, _current_learning_context(student)):
+        return JsonResponse({'success': False, 'error': 'Prescribed activities are not currently available.'}, status=403)
     audio = request.FILES.get('audio')
     try:
         item_index = int(request.POST.get('item_index'))
@@ -15981,6 +16476,8 @@ def lesson29_trace_say_recording(request):
 def lesson29_trace_say_submit(request):
     activity_key = 'lesson-29-gawain-3'
     student = _active_prescribed_student(request)
+    if not student or not _student_can_open_prescribed_activity(student, activity_key, _current_learning_context(student)):
+        return JsonResponse({'success': False, 'error': 'Prescribed activities are not currently available.'}, status=403)
     activity = prescribed_activity(activity_key)
     total = len(activity.get('items') or []) if activity else 0
     if not student or not total:
@@ -16035,16 +16532,19 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    lifecycle = _current_learning_context(student)
+    if lifecycle.get('state') != 'ARAL_ACTIVE':
+        return JsonResponse({'success': False, 'error': 'Prescribed activities are not currently available.'}, status=403)
     if not _student_can_open_prescribed_activity(student, activity_key):
         return JsonResponse({'success': False, 'error': 'Complete the previous activity first.'}, status=403)
     if activity_key == 'session-4-gawain-5':
         try:
             data = json.loads(request.body or '{}')
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             if data.get('reset') is True:
                 payload = {'current_item': 0, 'traces': [], 'phase': 'trace', 'state_version': 0}
-                progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': len(activity['items']), 'activity_completed': False, 'state': payload})
+                progress, _ = StudentActivityProgress.objects.update_or_create(student=student, school_calendar=lifecycle['school_calendar'], term=lifecycle['term'], activity_key=activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': len(activity['items']), 'activity_completed': False, 'state': payload})
                 return JsonResponse({'success': True, 'progress': {'state': payload, 'current_index': 0, 'completed_items': 0, 'activity_completed': False}})
             total = len(activity['items'])
             index = max(0, min(total, int(old.get('current_item', existing.current_index if existing else 0) or 0)))
@@ -16123,7 +16623,7 @@ def prescribed_activity_progress(request, activity_key):
             index += 1
             phase = 'complete' if index >= total else 'trace'
             payload = {'current_item': index, 'traces': traces, 'phase': phase, 'state_version': int(old.get('state_version', 0) or 0) + 1}
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index, 'total_items': total, 'activity_completed': False, 'state': payload})
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index, 'total_items': total, 'activity_completed': False, 'state': payload})
             return JsonResponse({'success': True, 'accepted': True, 'progress': {'state': payload, 'current_index': index, 'completed_items': index, 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
@@ -16131,7 +16631,7 @@ def prescribed_activity_progress(request, activity_key):
         try:
             data = json.loads(request.body or '{}')
             total = len(activity.get('items') or [])
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             now = timezone.now()
             started_at = old.get('started_at') or now.isoformat()
@@ -16139,9 +16639,7 @@ def prescribed_activity_progress(request, activity_key):
             if data.get('reset') is True:
                 state = {'current_item': 0, 'strokes': [], 'phase': 'trace', 'state_version': 0,
                          'started_at': now.isoformat(), 'elapsed_seconds': 0}
-                progress, _ = StudentActivityProgress.objects.update_or_create(
-                    student=student, activity_key=activity_key,
-                    defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
                               'total_items': total, 'activity_completed': False, 'state': state})
                 return JsonResponse({'success': True, 'progress': {'state': state, 'current_index': 0,
                     'completed_items': 0, 'activity_completed': False}})
@@ -16220,9 +16718,7 @@ def prescribed_activity_progress(request, activity_key):
             state = {'current_item': next_index, 'traces': traces, 'strokes': [], 'phase': 'complete' if completed else 'trace',
                      'state_version': int(old.get('state_version', 0) or 0) + 1, 'started_at': started_at,
                      'elapsed_seconds': elapsed_seconds, **({'completed_at': now.isoformat()} if completed else {})}
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': next_index, 'completed_items': next_index, 'correct_items': next_index,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': next_index, 'completed_items': next_index, 'correct_items': next_index,
                           'total_items': total, 'activity_completed': completed, 'state': state})
             return JsonResponse({'success': True, 'accepted': True, 'progress': {'state': state,
                 'current_index': next_index, 'completed_items': next_index, 'total_items': total,
@@ -16234,14 +16730,12 @@ def prescribed_activity_progress(request, activity_key):
             data = json.loads(request.body or '{}')
             incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
             total = len(activity.get('items') or [])
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             old_state = existing.state if existing and isinstance(existing.state, dict) else {}
             current_item = max(0, min(total, int(incoming.get('current_item', old_state.get('current_item', existing.current_index if existing else 0)))))
             completed = current_item >= total and total > 0
             state = {**old_state, **incoming, 'current_item': current_item}
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': current_item, 'completed_items': total if completed else current_item,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': current_item, 'completed_items': total if completed else current_item,
                           'correct_items': total if completed else 0, 'total_items': total,
                           'activity_completed': completed, 'state': state},
             )
@@ -16266,10 +16760,7 @@ def prescribed_activity_progress(request, activity_key):
                     'statuses': {},
                     'state_version': 1,
                 }
-                progress, _ = StudentActivityProgress.objects.update_or_create(
-                    student=student,
-                    activity_key=activity_key,
-                    defaults={
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
                         'current_index': 0,
                         'completed_items': 0,
                         'correct_items': 0,
@@ -16288,7 +16779,7 @@ def prescribed_activity_progress(request, activity_key):
                     'state': progress.state,
                 }})
             incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
-            query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
             existing = query.first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             if existing and existing.activity_completed:
@@ -16328,10 +16819,7 @@ def prescribed_activity_progress(request, activity_key):
                     if isinstance(incoming.get('statuses', old.get('statuses', {})), dict) else {},
                 'state_version': state_version,
             }
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student,
-                activity_key=activity_key,
-                defaults={
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
                     'current_index': current_index,
                     'completed_items': len(completed),
                     'correct_items': 0,
@@ -16362,9 +16850,7 @@ def prescribed_activity_progress(request, activity_key):
         except json.JSONDecodeError:
             reset_payload = {}
         if isinstance(reset_payload, dict) and reset_payload.get('reset') is True:
-            StudentActivityProgress.objects.filter(
-                student=student, activity_key=activity_key,
-            ).delete()
+            _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).delete()
             reset_state = {}
             if activity_key in {'lesson-16-gawain-1', 'lesson-16-gawain-2'}:
                 reset_state = _normalized_prescribed_state(
@@ -16388,9 +16874,7 @@ def prescribed_activity_progress(request, activity_key):
             state = {'part': 1, 'current_index': 0, 'completed_items': 0,
                      'correct_items': 0, 'total_items': len(activity['items']),
                      'activity_completed': False, 'state_version': 0}
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
                           'total_items': len(activity['items']), 'activity_completed': False,
                           'state': state},
             )
@@ -16413,9 +16897,7 @@ def prescribed_activity_progress(request, activity_key):
                      completed_items=completed_items, correct_items=correct_items,
                      total_items=total, activity_completed=False,
                      state_version=state_version)
-        progress, _ = StudentActivityProgress.objects.update_or_create(
-            student=student, activity_key=activity_key,
-            defaults={'current_index': current_index, 'completed_items': completed_items,
+        progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': current_index, 'completed_items': completed_items,
                       'correct_items': correct_items, 'total_items': total,
                       'activity_completed': False, 'state': state},
         )
@@ -16430,15 +16912,13 @@ def prescribed_activity_progress(request, activity_key):
             incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
             is_reset = data.get('reset') is True
             total = len(activity['items'])
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             if is_reset:
                 state = {'current_index': 0, 'completed_items': 0, 'correct_items': 0,
                          'total_items': total, 'activity_completed': False, 'phase': 'initial',
                          'state_version': 0}
-                progress, _ = StudentActivityProgress.objects.update_or_create(
-                    student=student, activity_key=activity_key,
-                    defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
                               'total_items': total, 'activity_completed': False, 'state': state})
             else:
                 def bounded_g2(value, fallback, upper):
@@ -16461,9 +16941,7 @@ def prescribed_activity_progress(request, activity_key):
                               'activity_completed': False,
                               'phase': str(incoming.get('phase') or old.get('phase') or 'active'),
                               'state_version': int(old.get('state_version') or 0) + 1})
-                progress, _ = StudentActivityProgress.objects.update_or_create(
-                    student=student, activity_key=activity_key,
-                    defaults={'current_index': current_index, 'completed_items': completed_items,
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': current_index, 'completed_items': completed_items,
                               'correct_items': correct_items, 'total_items': total,
                               'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'progress': {
@@ -16478,14 +16956,12 @@ def prescribed_activity_progress(request, activity_key):
             incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
             is_reset = data.get('reset') is True
             total = 9
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             if is_reset:
                 state = {'current_index': 0, 'completed_items': 0, 'correct_items': 0,
                          'total_items': total, 'activity_completed': False, 'state_version': 0}
-                progress, _ = StudentActivityProgress.objects.update_or_create(
-                    student=student, activity_key=activity_key,
-                    defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
                               'total_items': total, 'activity_completed': False, 'state': state})
             else:
                 def bounded(value, fallback, upper=total):
@@ -16514,9 +16990,7 @@ def prescribed_activity_progress(request, activity_key):
                               'correct_items': correct_items, 'total_items': total,
                               'activity_completed': activity_completed,
                               'state_version': int(old.get('state_version') or 0) + 1})
-                progress, _ = StudentActivityProgress.objects.update_or_create(
-                    student=student, activity_key=activity_key,
-                    defaults={'current_index': current_index, 'completed_items': completed_items,
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': current_index, 'completed_items': completed_items,
                               'correct_items': correct_items, 'total_items': total,
                               'activity_completed': activity_completed, 'state': state})
             return JsonResponse({'success': True, 'progress': {
@@ -16531,14 +17005,12 @@ def prescribed_activity_progress(request, activity_key):
             incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
             is_reset = data.get('reset') is True
             total = 4
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             if is_reset:
                 state = {'current_index': 0, 'completed_items': 0, 'correct_items': 0,
                          'total_items': total, 'activity_completed': False, 'phase': 'initial', 'state_version': 0}
-                progress, _ = StudentActivityProgress.objects.update_or_create(
-                    student=student, activity_key=activity_key,
-                    defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
                               'total_items': total, 'activity_completed': False, 'state': state})
             else:
                 def bounded_g4(value, fallback, upper=total):
@@ -16566,9 +17038,7 @@ def prescribed_activity_progress(request, activity_key):
                               'correct_items': correct_items, 'total_items': total,
                               'activity_completed': False,
                               'state_version': int(old.get('state_version') or 0) + 1})
-                progress, _ = StudentActivityProgress.objects.update_or_create(
-                    student=student, activity_key=activity_key,
-                    defaults={'current_index': current_index, 'completed_items': completed_items,
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': current_index, 'completed_items': completed_items,
                               'correct_items': correct_items, 'total_items': total,
                               'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'progress': {
@@ -16578,7 +17048,7 @@ def prescribed_activity_progress(request, activity_key):
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity_key == 'session-4-gawain-5':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['items'])
         if not existing or state.get('phase') != 'complete' or len(state.get('traces', [])) != total * 3:
@@ -16592,7 +17062,7 @@ def prescribed_activity_progress(request, activity_key):
             data = json.loads(request.body or '{}')
             incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
             is_reset = data.get('reset') is True
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             total = len(activity['items'])
             if is_reset:
@@ -16619,7 +17089,7 @@ def prescribed_activity_progress(request, activity_key):
             state = dict(old)
             state.update(incoming)
             state.update({'current_index': item_index, 'current_substep': substep, 'completed_items': completed_items, 'phase': 'initial' if is_reset else str(incoming.get('phase') or old.get('phase') or 'initial'), 'state_version': int(old.get('state_version') or 0) + 1})
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': item_index, 'completed_items': completed_items, 'correct_items': 0 if is_reset else completed_items, 'total_items': total, 'activity_completed': False, 'state': state})
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': item_index, 'completed_items': completed_items, 'correct_items': 0 if is_reset else completed_items, 'total_items': total, 'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'progress': {'current_index': progress.current_index, 'completed_items': progress.completed_items, 'correct_items': progress.correct_items, 'total_items': progress.total_items, 'activity_completed': False, 'state': state}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
@@ -16628,7 +17098,7 @@ def prescribed_activity_progress(request, activity_key):
             data = json.loads(request.body or '{}')
             incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
             is_reset = data.get('reset') is True
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             total = len(activity['items'])
             if is_reset:
@@ -16656,9 +17126,7 @@ def prescribed_activity_progress(request, activity_key):
                                   'correct_items': 0, 'phase': 'initial',
                                   'recorded_items': [],
                                   'state_version': int(old.get('state_version') or 0) + 1})
-                    progress, _ = StudentActivityProgress.objects.update_or_create(
-                        student=student, activity_key=activity_key,
-                        defaults={'current_index': 0, 'completed_items': 0,
+                    progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0,
                                   'correct_items': 0, 'total_items': total,
                                   'activity_completed': False, 'state': state})
                 return JsonResponse({'success': True, 'progress': {
@@ -16682,9 +17150,7 @@ def prescribed_activity_progress(request, activity_key):
             state.update({'current_index': current_index, 'completed_items': completed_items,
                           'phase': str(incoming.get('phase') or old.get('phase') or 'initial'),
                           'state_version': int(old.get('state_version') or 0) + 1})
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': current_index, 'completed_items': completed_items,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': current_index, 'completed_items': completed_items,
                           'correct_items': correct_items, 'total_items': total,
                           'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'progress': {
@@ -16695,18 +17161,16 @@ def prescribed_activity_progress(request, activity_key):
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity.get('interaction') == 'prescribed_workbook':
-        return _prescribed_workbook_activity_progress(request, activity_key, activity, student)
+        return _prescribed_workbook_activity_progress(request, activity_key, activity, student, lifecycle)
     if activity_key == 'session-2-lesson-4-gawain-2':
         try:
             data = json.loads(request.body or '{}')
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             total = len(activity['items'])
             if data.get('reset') is True:
                 state = {'current_item': 0, 'phase': 'say', 'oral_attempts': 0, 'sound_attempts': 0, 'state_version': 0}
-                progress, _ = StudentActivityProgress.objects.update_or_create(
-                    student=student, activity_key=activity_key,
-                    defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
                               'total_items': total, 'activity_completed': False, 'state': state})
                 return JsonResponse({'success': True, 'progress': {
                     'current_index': progress.current_index, 'completed_items': progress.completed_items,
@@ -16737,14 +17201,14 @@ def prescribed_activity_progress(request, activity_key):
                     index += 1; phase = 'complete' if index >= total else 'say'; oral_attempts = sound_attempts = 0
             else: raise ValueError('Invalid activity action.')
             state = {'current_item': index, 'phase': phase, 'oral_attempts': oral_attempts, 'sound_attempts': sound_attempts, 'state_version': int(old.get('state_version') or 0) + 1}
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index, 'total_items': total, 'activity_completed': index >= total, 'state': state})
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index, 'total_items': total, 'activity_completed': index >= total, 'state': state})
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {'completed_items': index, 'activity_completed': index >= total, 'state': state}})
         except (TypeError, ValueError, KeyError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity_key == 'session-5-lesson-14-gawain-4':
         try:
             data = json.loads(request.body or '{}')
-            query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
             if data.get('reset'):
                 reset_state = {'part': 1, 'current_index': 0, 'attempts': 0, 'plays': 0,
                                'recording': False, 'selected_answers': {}, 'state_version': 0}
@@ -16775,9 +17239,7 @@ def prescribed_activity_progress(request, activity_key):
                      'reading_attempts': attempts, 'transcripts': transcripts,
                      'reading_matches': matches, 'statuses': statuses,
                      'state_version': max(int(incoming.get('state_version') or 0), int(old.get('state_version') or 0) + 1)}
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': index, 'completed_items': len(completed), 'correct_items': 0,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': len(completed), 'correct_items': 0,
                           'total_items': total, 'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': len(completed), 'correct_items': 0, 'total_items': total, 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
@@ -16785,7 +17247,7 @@ def prescribed_activity_progress(request, activity_key):
     if activity_key == 'lesson-14-gawain-3':
         try:
             data = json.loads(request.body or '{}')
-            query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
             if data.get('reset'):
                 query.delete()
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
@@ -16804,9 +17266,7 @@ def prescribed_activity_progress(request, activity_key):
             state = dict(incoming, current_index=index, answers=answers, reading_attempts=reading_attempts, listening_attempts=listening_attempts,
                          state_version=max(int(incoming.get('state_version') or 0), int(old.get('state_version') or 0) + 1))
             completed = len([item for item in activity['items'][:index] if not item.get('unresolved') and str(item['id']) in answers])
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': index, 'completed_items': completed,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': completed,
                           'correct_items': 0, 'total_items': total, 'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': completed,
                 'correct_items': 0, 'total_items': total, 'activity_completed': False}})
@@ -16815,7 +17275,7 @@ def prescribed_activity_progress(request, activity_key):
     if activity_key == 'lesson-15-gawain-1':
         try:
             data = json.loads(request.body or '{}')
-            query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
             if data.get('reset'):
                 query.delete()
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
@@ -16825,21 +17285,19 @@ def prescribed_activity_progress(request, activity_key):
             selected = {str(k): str(v)[:80] for k, v in selected.items() if str(k) in {str(i['id']) for i in activity['items']}}
             state = dict(incoming, selected_answers=selected, state_version=max(int(incoming.get('state_version') or 0), int(old.get('state_version') or 0) + 1))
             index = max(0, min(len(activity['items']), int(state.get('current_index', 0))))
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': index, 'completed_items': len(selected), 'correct_items': 0, 'total_items': len(activity['items']), 'activity_completed': False, 'state': state})
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': len(selected), 'correct_items': 0, 'total_items': len(activity['items']), 'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': len(selected), 'total_items': len(activity['items']), 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity['interaction'] == 'session7_oral_cluster_word_circle':
         try:
             data = json.loads(request.body or '{}')
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             if data.get('reset') is True:
                 # Restart must be handled before stale-state protection so
                 # the control button always returns to the activity intro.
                 state = _normalized_session7_oral_cluster_word_circle_state(activity, {'phase': 'intro'})
-                progress, _ = StudentActivityProgress.objects.update_or_create(
-                    student=student, activity_key=activity_key,
-                    defaults={'current_index': 0, 'completed_items': 0,
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0,
                               'correct_items': 0, 'total_items': len(activity['items']),
                               'activity_completed': False, 'state': state},
                 )
@@ -16884,7 +17342,7 @@ def prescribed_activity_progress(request, activity_key):
                           'current_reading_index': 4 if completed == total else len(state['orally_completed_words'].get(str(completed), [])),
                           'completed_rows': completed, 'correct_answer_count': completed,
                           'state_version': old['state_version'] + 1})
-            StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+            _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
                 'current_index': completed, 'completed_items': completed, 'correct_items': completed,
                 'total_items': total, 'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {'state': state,
@@ -16894,14 +17352,12 @@ def prescribed_activity_progress(request, activity_key):
     if activity['interaction'] == 'session7_oral_circle_word':
         try:
             data = json.loads(request.body or '{}')
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             if data.get('reset') is True:
                 # Restart must be handled before stale-state protection so
                 # the control button always returns to the activity intro.
                 state = _normalized_session7_oral_circle_word_state(activity, {'phase': 'intro'})
-                progress, _ = StudentActivityProgress.objects.update_or_create(
-                    student=student, activity_key=activity_key,
-                    defaults={'current_index': 0, 'completed_items': 0,
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0,
                               'correct_items': 0, 'total_items': len(activity['items']),
                               'activity_completed': False, 'state': state},
                 )
@@ -16941,21 +17397,19 @@ def prescribed_activity_progress(request, activity_key):
                 state['phase'] = ('intro' if not current and not oral_count and incoming['phase'] == 'intro' else ('word_selection' if oral_count == 3 else 'oral_reading'))
             completed = len(state['completed_correct_answers'])
             state.update({'current_item_index': completed, 'current_oral_word_index': 3 if completed == total else len(state['orally_completed_words'].get(str(completed), [])), 'completed_item_count': completed, 'correct_answer_count': completed, 'state_version': old['state_version'] + 1})
-            StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': total, 'activity_completed': False, 'state': state})
+            _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': total, 'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {'state': state, 'completed_items': completed, 'correct_items': completed, 'total_items': total, 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity['interaction'] == 'session7_oral_letter_ordering':
         try:
             data = json.loads(request.body or '{}')
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             if data.get('reset') is True:
                 # Restart must be handled before stale-state protection so
                 # the control button always returns to the activity intro.
                 state = _normalized_session7_letter_ordering_state(activity, {'phase': 'intro'})
-                progress, _ = StudentActivityProgress.objects.update_or_create(
-                    student=student, activity_key=activity_key,
-                    defaults={'current_index': 0, 'completed_items': 0,
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0,
                               'correct_items': 0, 'total_items': len(activity['items']),
                               'activity_completed': False, 'state': state},
                 )
@@ -16997,7 +17451,7 @@ def prescribed_activity_progress(request, activity_key):
             completed = len(state['completed_correct_words'])
             state.update({'current_item_index': completed, 'completed_item_count': completed,
                           'correct_answer_count': completed, 'state_version': old['state_version'] + 1})
-            StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+            _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
                 'current_index': completed, 'completed_items': completed, 'correct_items': completed,
                 'total_items': total, 'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {'state': state,
@@ -17008,7 +17462,7 @@ def prescribed_activity_progress(request, activity_key):
         try:
             data = json.loads(request.body or '{}')
             incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
-            query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
             existing = query.first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             if data.get('reset'):
@@ -17042,9 +17496,7 @@ def prescribed_activity_progress(request, activity_key):
             state['connected_count'] = len(connections)
             state['state_version'] = max(version, int(old.get('state_version') or 0) + 1)
             completed = min(len(activity['items']), len(connections))
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': completed, 'completed_items': completed,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': completed, 'completed_items': completed,
                           'correct_items': 0, 'total_items': len(activity['items']),
                           'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': completed,
@@ -17054,15 +17506,13 @@ def prescribed_activity_progress(request, activity_key):
     if activity['interaction'] == 'session7_oral_cluster_syllabification':
         try:
             data = json.loads(request.body or '{}')
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             if data.get('reset') is True:
                 # Restart must be handled before stale-state protection so
                 # the control button returns to the workbook introduction,
                 # including the worked-example row at displayed index 0.
                 state = _normalized_session7_cluster_syllabification_state(activity, {'phase': 'intro'})
-                progress, _ = StudentActivityProgress.objects.update_or_create(
-                    student=student, activity_key=activity_key,
-                    defaults={'current_index': 0, 'completed_items': 0,
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0,
                               'correct_items': 0,
                               'total_items': len([item for item in activity['items'] if not item.get('worked_example')]),
                               'activity_completed': False, 'state': state},
@@ -17102,7 +17552,7 @@ def prescribed_activity_progress(request, activity_key):
             state.update({'current_scored_index': completed, 'current_item_index': min(len(activity['items']), completed + 1),
                           'completed_oral_reads': oral, 'completed_item_count': completed,
                           'correct_answer_count': completed, 'state_version': old['state_version'] + 1})
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
                 'current_index': completed, 'completed_items': completed, 'correct_items': completed,
                 'total_items': total, 'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
@@ -17113,16 +17563,14 @@ def prescribed_activity_progress(request, activity_key):
     if activity['interaction'] == 'session7_oral_picture_word_connection':
         try:
             data = json.loads(request.body or '{}')
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             if data.get('reset') is True:
                 # Restart must be handled before stale-state protection so
                 # the control button always returns this activity to its
                 # introduction, including after completion.
                 state = _normalized_session7_picture_word_connection_state(activity, {'phase': 'intro'})
                 scored = [item for item in activity['items'] if not item.get('worked_example')]
-                progress, _ = StudentActivityProgress.objects.update_or_create(
-                    student=student, activity_key=activity_key,
-                    defaults={'current_index': 0, 'completed_items': 0,
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0,
                               'correct_items': 0, 'total_items': len(scored),
                               'activity_completed': False, 'state': state},
                 )
@@ -17164,7 +17612,7 @@ def prescribed_activity_progress(request, activity_key):
             completed = len(state['connected_answers'])
             state.update({'current_item_index': completed, 'completed_oral_reads': oral, 'completed_item_count': completed,
                           'correct_answer_count': completed, 'state_version': old['state_version'] + 1})
-            StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+            _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
                 'current_index': completed, 'completed_items': completed, 'correct_items': completed,
                 'total_items': total, 'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {'state': state,
@@ -17174,14 +17622,12 @@ def prescribed_activity_progress(request, activity_key):
     if activity['interaction'] == 'session7_oral_missing_syllable':
         try:
             data = json.loads(request.body or '{}')
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             if data.get('reset') is True:
                 # Handle the control-button restart before stale-state
                 # protection so the activity always returns to its intro.
                 state = _normalized_session7_missing_syllable_state(activity, {'phase': 'intro'})
-                progress, _ = StudentActivityProgress.objects.update_or_create(
-                    student=student, activity_key=activity_key,
-                    defaults={'current_index': 0, 'completed_items': 0,
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0,
                               'correct_items': 0, 'total_items': len(activity['items']),
                               'activity_completed': False, 'state': state},
                 )
@@ -17211,23 +17657,21 @@ def prescribed_activity_progress(request, activity_key):
                 state['phase'] = 'intro' if not oral and not old['written_answers'] and incoming['phase'] == 'intro' else ('written_answer' if current in oral else 'oral_reading')
             completed = len(state['written_answers'])
             state.update({'completed_oral_reads': oral, 'current_item_index': completed, 'completed_item_count': completed, 'correct_answer_count': completed, 'state_version': old['state_version'] + 1})
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': len(activity['items']), 'activity_completed': False, 'state': state})
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': len(activity['items']), 'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {'state': state, 'completed_items': completed, 'correct_items': completed, 'total_items': len(activity['items']), 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity['interaction'] == 'oral_then_starting_syllable':
         try:
             data = json.loads(request.body or '{}')
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             if data.get('reset') is True:
                 # Restart must clear both the durable progress row and the
                 # completion flag.  This has to happen before the normal
                 # stale-state guard below, otherwise an empty reset payload
                 # is treated as an older state and the activity resumes.
                 state = _normalized_starting_syllable_state(activity, {'phase': 'intro'})
-                progress, _ = StudentActivityProgress.objects.update_or_create(
-                    student=student, activity_key=activity_key,
-                    defaults={'current_index': 0, 'completed_items': 0,
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0,
                               'correct_items': 0, 'total_items': len(activity['items']),
                               'activity_completed': False, 'state': state},
                 )
@@ -17260,14 +17704,14 @@ def prescribed_activity_progress(request, activity_key):
                 state['phase'] = 'intro' if not oral and not old['correct_answers'] and incoming['phase'] == 'intro' else ('syllable_selection' if current in oral else 'oral_reading')
             completed = len(state['correct_answers'])
             state.update({'current_item_index': completed, 'completed_item_count': completed, 'correct_answer_count': completed, 'state_version': old['state_version'] + 1})
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': len(activity['items']), 'activity_completed': False, 'state': state})
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': len(activity['items']), 'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {'state': state, 'completed_items': completed, 'correct_items': completed, 'total_items': len(activity['items']), 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity['interaction'] == 'oral_then_picture_word_write':
         try:
             data = json.loads(request.body or '{}')
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             old = _normalized_oral_picture_write_state(activity, existing.state if existing else {})
             incoming = _normalized_oral_picture_write_state(activity, data.get('state'))
             if incoming['state_version'] < old['state_version'] or (existing and existing.activity_completed):
@@ -17290,14 +17734,14 @@ def prescribed_activity_progress(request, activity_key):
                 state['phase'] = 'intro' if not oral and not old['answers'] and incoming['phase'] == 'intro' else ('written_answer' if current in oral else 'oral_reading')
             completed = len(state['answers'])
             state.update({'completed_oral_reads': oral, 'current_item_index': completed, 'completed_item_count': completed, 'correct_answer_count': completed, 'state_version': old['state_version'] + 1})
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': len(activity['items']), 'activity_completed': False, 'state': state})
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': len(activity['items']), 'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {'state': state, 'completed_items': completed, 'correct_items': completed, 'total_items': len(activity['items']), 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity['interaction'] == 'oral_picture_box':
         try:
             data = json.loads(request.body or '{}')
-            query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
             if data.get('reset'):
                 query.delete()
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
@@ -17340,9 +17784,7 @@ def prescribed_activity_progress(request, activity_key):
             saved = {'activity_key': activity_key, 'current_item': index, 'attempts': attempts,
                      'completed_items': index, 'phase': 'complete' if finished else phase,
                      'state_version': int(old.get('state_version') or 0) + 1}
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
                           'total_items': total, 'activity_completed': finished, 'state': saved})
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
                 'current_index': progress.current_index, 'completed_items': progress.completed_items,
@@ -17352,7 +17794,7 @@ def prescribed_activity_progress(request, activity_key):
     if activity['interaction'] == 'oral_jumbled_sentence':
         try:
             data = json.loads(request.body or '{}')
-            query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
             if data.get('reset'):
                 query.delete()
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
@@ -17428,9 +17870,7 @@ def prescribed_activity_progress(request, activity_key):
                      'placements': placements, 'attempts': attempts, 'completed_items': index,
                      'phase': 'complete' if finished else phase,
                      'state_version': int(old.get('state_version') or 0) + 1}
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
                           'total_items': total, 'activity_completed': finished, 'state': saved})
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
                 'current_index': progress.current_index, 'completed_items': progress.completed_items,
@@ -17440,7 +17880,7 @@ def prescribed_activity_progress(request, activity_key):
     if activity['interaction'] == 'oral_drag_sentence':
         try:
             data = json.loads(request.body or '{}')
-            query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
             if data.get('reset'):
                 query.delete()
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
@@ -17500,7 +17940,7 @@ def prescribed_activity_progress(request, activity_key):
                      'placed_word': placed_word, 'completed_items': index,
                      'phase': 'complete' if finished else phase,
                      'state_version': int(old.get('state_version') or 0) + 1}
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
                 'current_index': index, 'completed_items': index, 'correct_items': index,
                 'total_items': total, 'activity_completed': finished, 'state': saved})
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
@@ -17512,9 +17952,9 @@ def prescribed_activity_progress(request, activity_key):
         try:
             data = json.loads(request.body or '{}')
             if activity_key == 'lesson-30-gawain-1' and data.get('reset') is True:
-                StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).delete()
+                _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).delete()
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             old = _normalized_oral_picture_match_state(activity, existing.state if existing else {})
             incoming = _normalized_oral_picture_match_state(activity, data.get('state'))
             if incoming['state_version'] < old['state_version'] or (existing and existing.activity_completed):
@@ -17546,7 +17986,7 @@ def prescribed_activity_progress(request, activity_key):
                 state['state_version'] = old['state_version'] + 1
                 completed = len(matches)
                 total = len(activity['items'])
-                progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
                     'current_index': completed, 'completed_items': completed, 'correct_items': completed,
                     'total_items': total, 'activity_completed': False, 'state': state})
                 return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': completed,
@@ -17567,7 +18007,7 @@ def prescribed_activity_progress(request, activity_key):
             state['phase'] = 'matching' if len(proposed) == 5 else ('intro' if not proposed and incoming['phase'] == 'intro' else 'oral_reading')
             state['state_version'] = old['state_version'] + 1
             completed = len(proposed) + len(matches)
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
                 'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': 10,
                 'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': completed, 'correct_items': completed, 'total_items': 10, 'activity_completed': False}})
@@ -17576,7 +18016,7 @@ def prescribed_activity_progress(request, activity_key):
     if activity['interaction'] == 'oral_then_odd_word':
         try:
             data = json.loads(request.body or '{}')
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             old = _normalized_odd_word_state(activity, existing.state if existing else {})
             incoming = _normalized_odd_word_state(activity, data.get('state'))
             if incoming['state_version'] < old['state_version'] or (existing and existing.activity_completed):
@@ -17597,7 +18037,7 @@ def prescribed_activity_progress(request, activity_key):
             state['phase'] = 'written_selection' if group < len(activity['items']) and state['current_oral_word_index'] == 3 else ('completion' if group == len(activity['items']) else ('intro' if not group and state['current_oral_word_index'] == 0 and incoming['phase'] == 'intro' else 'oral_reading'))
             state['state_version'] = old['state_version'] + 1
             completed = group * 4 + state['current_oral_word_index']
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': 20, 'activity_completed': False, 'state': state})
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': 20, 'activity_completed': False, 'state': state})
             return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': completed, 'correct_items': completed, 'total_items': 20, 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
@@ -17605,30 +18045,28 @@ def prescribed_activity_progress(request, activity_key):
         data = json.loads(request.body or '{}')
         if data.get('reset') is True:
             payload = {'phase': 'oral', 'oral_index': 0, 'selections': {}, 'answers': {}, 'state_version': 0}
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': 15, 'activity_completed': False, 'state': payload})
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': 15, 'activity_completed': False, 'state': payload})
             return JsonResponse({'success': True, 'progress': {'state': payload, 'completed_items': 0, 'activity_completed': False}})
         state = data.get('state') or {}
         state['phase'] = state.get('phase') if state.get('phase') in {'oral','selection','complete'} else 'oral'
-        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': int(state.get('oral_index',0) or 0), 'completed_items': int(state.get('oral_index',0) or 0), 'correct_items': int(state.get('oral_index',0) or 0), 'total_items': 15, 'activity_completed': False, 'state': state})
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': int(state.get('oral_index',0) or 0), 'completed_items': int(state.get('oral_index',0) or 0), 'correct_items': int(state.get('oral_index',0) or 0), 'total_items': 15, 'activity_completed': False, 'state': state})
         return JsonResponse({'success': True, 'progress': {'state': state}})
     if activity_key == 'lesson9-gawain3':
         try:
             data = json.loads(request.body or '{}')
             if data.get('reset') is True:
                 payload = {'activity_key': activity_key, 'session_key': 'session-3', 'current_item': 0, 'attempts': 0, 'completed_items': [], 'state_version': 0}
-                progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': len(activity['items']), 'activity_completed': False, 'state': payload})
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': len(activity['items']), 'activity_completed': False, 'state': payload})
                 return JsonResponse({'success': True, 'progress': {'state': payload, 'completed_items': 0, 'activity_completed': False}})
             incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             total = len(activity['items'])
             current_item = max(0, min(total, int(incoming.get('current_item', old.get('current_item', 0)) or 0)))
             attempts = max(0, min(3, int(incoming.get('attempts', old.get('attempts', 0)) or 0)))
             completed = list(range(current_item))
             payload = {'activity_key': activity_key, 'session_key': 'session-3', 'current_item': current_item, 'attempts': attempts, 'completed_items': completed, 'state_version': int(old.get('state_version') or 0) + 1}
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': current_item, 'completed_items': current_item, 'correct_items': current_item, 'total_items': total, 'activity_completed': False, 'state': payload},
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': current_item, 'completed_items': current_item, 'correct_items': current_item, 'total_items': total, 'activity_completed': False, 'state': payload},
             )
             return JsonResponse({'success': True, 'progress': {'state': payload, 'completed_items': progress.completed_items, 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError):
@@ -17649,10 +18087,7 @@ def prescribed_activity_progress(request, activity_key):
                     'completed_items': [],
                     'state_version': 0,
                 }
-                progress, _ = StudentActivityProgress.objects.update_or_create(
-                    student=student,
-                    activity_key=activity_key,
-                    defaults={
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
                         'current_index': 0,
                         'completed_items': 0,
                         'correct_items': 0,
@@ -17667,7 +18102,7 @@ def prescribed_activity_progress(request, activity_key):
                     'activity_completed': False,
                 }})
             incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             total = len(activity['items'])
             current_item = max(0, min(total - 1, int(incoming.get('current_item', old.get('current_item', 0)) or 0)))
@@ -17676,14 +18111,14 @@ def prescribed_activity_progress(request, activity_key):
             selected = [int(x) for x in incoming.get('selected_syllables', old.get('selected_syllables', [])) if str(x).isdigit() and int(x) in (0, 1)][:2]
             completed = sorted(set(int(x) for x in incoming.get('completed_items', old.get('completed_items', [])) if str(x).isdigit() and 0 <= int(x) < total))
             payload = {'activity_key': activity_key, 'session_key': 'session-3', 'current_item': current_item, 'phase': phase, 'phase1_completed': bool(incoming.get('phase1_completed', old.get('phase1_completed', False))), 'selected_syllables': selected, 'phase2_completed': bool(incoming.get('phase2_completed', old.get('phase2_completed', False))), 'phase3_completed': bool(incoming.get('phase3_completed', old.get('phase3_completed', False))), 'completed_items': completed, 'state_version': int(old.get('state_version') or 0) + 1}
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': len(completed), 'completed_items': len(completed), 'correct_items': len(completed), 'total_items': total, 'activity_completed': False, 'state': payload})
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': len(completed), 'completed_items': len(completed), 'correct_items': len(completed), 'total_items': total, 'activity_completed': False, 'state': payload})
             return JsonResponse({'success': True, 'progress': {'state': payload, 'completed_items': len(completed), 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError):
             return JsonResponse({'success': False, 'error': 'Invalid Lesson 9 progress.'}, status=400)
     if activity['interaction'] == 'oral_choice_picture':
         try:
             data = json.loads(request.body or '{}')
-            progress_query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            progress_query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
             if data.get('reset') is True:
                 progress_query.delete()
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
@@ -17733,9 +18168,7 @@ def prescribed_activity_progress(request, activity_key):
                      'attempts': attempts, 'completed_items': index,
                      'phase': 'complete' if finished else phase,
                      'state_version': int(old.get('state_version') or 0) + 1}
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
                           'total_items': total, 'activity_completed': finished, 'state': saved},
             )
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
@@ -17747,7 +18180,7 @@ def prescribed_activity_progress(request, activity_key):
     if activity['interaction'] == 'oral_comprehension_choice':
         try:
             data = json.loads(request.body or '{}')
-            progress_query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            progress_query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
             if activity_key == 'lesson-30-gawain-3' and data.get('reset') is True:
                 progress_query.delete()
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
@@ -17773,9 +18206,7 @@ def prescribed_activity_progress(request, activity_key):
             saved = {'activity_key': activity_key, 'current_item': index, 'attempts': attempts,
                      'completed_items': index, 'phase': 'complete' if finished else 'answering',
                      'state_version': int(old.get('state_version') or 0) + 1}
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
                           'total_items': total, 'activity_completed': finished, 'state': saved},
             )
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
@@ -17787,7 +18218,7 @@ def prescribed_activity_progress(request, activity_key):
     if activity['interaction'] == 'oral_story_line':
         try:
             data = json.loads(request.body or '{}')
-            progress_query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            progress_query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
             if activity_key == 'lesson-30-gawain-2' and data.get('reset') is True:
                 progress_query.delete()
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
@@ -17810,9 +18241,7 @@ def prescribed_activity_progress(request, activity_key):
             saved = {'activity_key': activity_key, 'current_line': index, 'attempts': attempts,
                      'completed_items': index, 'phase': 'complete' if finished else 'reading',
                      'state_version': int(old.get('state_version') or 0) + 1}
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
                           'total_items': total, 'activity_completed': finished, 'state': saved},
             )
             return JsonResponse({'success': True, 'accepted': success, 'progress': {
@@ -17824,7 +18253,7 @@ def prescribed_activity_progress(request, activity_key):
     if activity['interaction'] == 'oral_sentence_blank':
         try:
             data = json.loads(request.body or '{}')
-            progress_query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            progress_query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
             if activity_key == 'lesson-29-gawain-1' and data.get('reset') is True:
                 progress_query.delete()
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
@@ -17887,9 +18316,7 @@ def prescribed_activity_progress(request, activity_key):
                      'sentence_attempts': sentence_attempts,
                      'completed_items': index, 'phase': 'complete' if finished else phase,
                      'state_version': int(old.get('state_version') or 0) + 1}
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
                           'total_items': total, 'activity_completed': finished, 'state': saved},
             )
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
@@ -17902,7 +18329,7 @@ def prescribed_activity_progress(request, activity_key):
         try:
             data = json.loads(request.body or '{}')
             action = data.get('action')
-            progress_query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            progress_query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
             if activity_key == 'lesson-29-gawain-2' and data.get('reset') is True:
                 progress_query.delete()
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
@@ -17945,9 +18372,7 @@ def prescribed_activity_progress(request, activity_key):
                      'selected_words': selected, 'wrong_word': wrong_word,
                      'completed_items': index, 'phase': 'complete' if finished else 'spotting',
                      'state_version': int(old.get('state_version') or 0) + 1}
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
                           'total_items': total, 'activity_completed': finished, 'state': saved},
             )
             return JsonResponse({'success': True, 'accepted': accepted, 'target_word': target,
@@ -17962,7 +18387,7 @@ def prescribed_activity_progress(request, activity_key):
         try:
             data = json.loads(request.body or '{}')
             action = data.get('action')
-            progress_query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            progress_query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
             if activity_key == 'lesson-28-gawain-2' and data.get('reset') is True:
                 progress_query.delete()
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
@@ -17998,9 +18423,7 @@ def prescribed_activity_progress(request, activity_key):
                      'attempts': attempts, 'completed_items': index,
                      'phase': 'complete' if finished else 'listening',
                      'state_version': int(old.get('state_version') or 0) + 1}
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
                           'total_items': total, 'activity_completed': finished, 'state': saved},
             )
             return JsonResponse({'success': True, 'accepted': _prescribed_spoken_word_matches(old.get('target_word'), heard_words) if action == 'answer' else None,
@@ -18014,7 +18437,7 @@ def prescribed_activity_progress(request, activity_key):
     if activity['interaction'] == 'missing_letter_image_oral':
         try:
             data = json.loads(request.body or '{}'); action = data.get('action')
-            progress_query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            progress_query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
             if activity_key == 'lesson-28-gawain-1' and data.get('reset') is True:
                 progress_query.delete()
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
@@ -18045,9 +18468,7 @@ def prescribed_activity_progress(request, activity_key):
                      'reading_attempts': attempts, 'help_visible': help_visible,
                      'completed_items': index, 'state_version': int(old.get('state_version') or 0) + 1}
             finished = phase == 'complete'
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
                           'total_items': total, 'activity_completed': finished, 'state': saved},
             )
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
@@ -18059,7 +18480,7 @@ def prescribed_activity_progress(request, activity_key):
     if activity['interaction'] == 'rhyming_verses':
         try:
             data = json.loads(request.body or '{}'); action = data.get('action')
-            progress_query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            progress_query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
             if activity_key == 'lesson-27-gawain-1' and isinstance(data, dict) and data.get('reset') is True:
                 progress_query.delete()
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
@@ -18092,7 +18513,7 @@ def prescribed_activity_progress(request, activity_key):
             else: raise ValueError('Invalid activity action.')
             saved = {'activity_key': activity_key, 'phase': phase, 'item_index': item_index, 'verse_index': verse_index, 'attempts': attempts, 'help_visible': help_visible, 'selected': selected, 'completed_items': completed_items, 'state_version': int(old.get('state_version') or 0) + 1}
             finished = phase == 'complete'
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': completed_items, 'completed_items': completed_items, 'correct_items': completed_items, 'total_items': len(activity['items']), 'activity_completed': finished, 'state': saved})
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': completed_items, 'completed_items': completed_items, 'correct_items': completed_items, 'total_items': len(activity['items']), 'activity_completed': finished, 'state': saved})
             return JsonResponse({'success': True, 'accepted': locals().get('accepted'), 'progress': {'completed_items': completed_items, 'total_items': len(activity['items']), 'activity_completed': finished, 'state': saved}})
         except (TypeError, ValueError, KeyError, IndexError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
@@ -18101,7 +18522,7 @@ def prescribed_activity_progress(request, activity_key):
             data = json.loads(request.body or '{}')
             if not isinstance(data, dict):
                 raise ValueError('Invalid activity data.')
-            progress_query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            progress_query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
             if activity_key == 'lesson-26-gawain-2' and data.get('reset') is True:
                 progress_query.delete()
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
@@ -18156,9 +18577,7 @@ def prescribed_activity_progress(request, activity_key):
                      'choice_help': choice_help, 'current_item': current_item, 'sentence_read': sentence_read,
                      'placements': placements, 'sentence_attempts': sentence_attempts, 'sentence_help': sentence_help,
                      'completed_items': completed_items, 'state_version': int(old.get('state_version') or 0) + 1}
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': completed_items, 'completed_items': completed_items, 'correct_items': completed_items,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': completed_items, 'completed_items': completed_items, 'correct_items': completed_items,
                           'total_items': len(activity['items']), 'activity_completed': False, 'state': saved},
             )
             return JsonResponse({'success': True, 'accepted': locals().get('accepted'), 'sentence_complete': locals().get('saved_item_complete', False),
@@ -18168,7 +18587,7 @@ def prescribed_activity_progress(request, activity_key):
     if activity['interaction'] == 'word_search':
         try:
             data = json.loads(request.body or '{}'); state = data.get('state') if isinstance(data.get('state'), dict) else {}
-            progress_query = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key)
+            progress_query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
             if data.get('reset') is True:
                 progress_query.delete()
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'matches': {}, 'state': {}}})
@@ -18187,14 +18606,14 @@ def prescribed_activity_progress(request, activity_key):
                 accepted = letters == activity['words'][idx]
                 if accepted: matches[str(idx)] = {'start': [sr, sc], 'end': [er, ec]}
             saved = {'activity_key': activity_key, 'matches': matches, 'reading': reading, 'attempts': attempts, 'state_version': int(old.get('state_version') or 0) + 1, **{k:v for k,v in state.items() if k == 'current_index'}}
-            completed = len(matches); progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': len(activity['words']), 'activity_completed': False, 'state': saved})
+            completed = len(matches); progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': len(activity['words']), 'activity_completed': False, 'state': saved})
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {'completed_items': completed, 'total_items': len(activity['words']), 'activity_completed': False, 'matches': matches, 'state': saved}})
         except (TypeError, ValueError, KeyError, IndexError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity_key == 'lesson-13-gawain-3':
         data = json.loads(request.body or '{}')
         state = data.get('state') if isinstance(data.get('state'), dict) else {}
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         old = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['items'])
         completed_items = max(0, min(total, int(state.get('completed_items', old.get('completed_items', 0)) or 0)))
@@ -18209,9 +18628,7 @@ def prescribed_activity_progress(request, activity_key):
             'pakinggan_unlocked': bool(state.get('pakinggan_unlocked', old.get('pakinggan_unlocked', False))),
             'state_version': int(state.get('state_version', old.get('state_version', 0)) or 0) + 1,
         }
-        progress, _ = StudentActivityProgress.objects.update_or_create(
-            student=student, activity_key=activity_key,
-            defaults={'current_index': completed_items, 'completed_items': completed_items,
+        progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': completed_items, 'completed_items': completed_items,
                       'correct_items': completed_items, 'total_items': total,
                       'activity_completed': False, 'state': saved},
         )
@@ -18219,7 +18636,7 @@ def prescribed_activity_progress(request, activity_key):
             'completed_items': completed_items, 'activity_completed': progress.activity_completed}})
     if activity_key == 'lesson-13-gawain-1':
         data = json.loads(request.body or '{}'); state = data.get('state') if isinstance(data.get('state'), dict) else {}
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first(); old = existing.state if existing and isinstance(existing.state, dict) else {}
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first(); old = existing.state if existing and isinstance(existing.state, dict) else {}
         if data.get('reset') is True:
             recordings = list(StudentActivityRecordingSubmission.objects.filter(student=student, activity_key=activity_key, item_index__isnull=False))
             with transaction.atomic():
@@ -18234,9 +18651,7 @@ def prescribed_activity_progress(request, activity_key):
                      'reading_attempts': 0, 'aloud_attempts': 0, 'oral_satisfied': False,
                      'started_at': timezone.now().isoformat(), 'elapsed_seconds': 0,
                      'state_version': 0}
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
                           'total_items': 4, 'activity_completed': False, 'state': saved},
             )
         else:
@@ -18268,9 +18683,7 @@ def prescribed_activity_progress(request, activity_key):
                      'elapsed_seconds': elapsed_seconds,
                      **({'completed_at': timezone.now().isoformat()} if state.get('phase') == 'complete' else ({'completed_at': old.get('completed_at')} if old.get('completed_at') else {})),
                      'state_version': int(old.get('state_version', 0) or 0) + 1}
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': current_index, 'completed_items': completed,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': current_index, 'completed_items': completed,
                           'correct_items': completed, 'total_items': 4,
                           'activity_completed': False, 'state': saved},
             )
@@ -18284,7 +18697,7 @@ def prescribed_activity_progress(request, activity_key):
             return JsonResponse({'success': False, 'error': 'Invalid Session 4 progress.'}, status=400)
         total = int(activity.get('total_items') or 0)
         completed = completed_items >= total and total > 0
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         old = existing.state if existing and isinstance(existing.state, dict) else {}
         saved = {'activity_key': activity_key,
                  'current_item': max(0, min(total, int(incoming.get('current_item', old.get('current_item', completed_items))))),
@@ -18292,9 +18705,7 @@ def prescribed_activity_progress(request, activity_key):
                  'recorded_items': sorted(set(int(value) for value in incoming.get('recorded_items', old.get('recorded_items', [])) if str(value).isdigit() and 0 <= int(value) < total)),
                  'phase': str(incoming.get('phase', old.get('phase', 'ready'))),
                  'state_version': int(old.get('state_version', 0) or 0) + 1}
-        progress, _ = StudentActivityProgress.objects.update_or_create(
-            student=student, activity_key=activity_key,
-            defaults={'current_index': completed_items, 'completed_items': completed_items,
+        progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': completed_items, 'completed_items': completed_items,
                       'correct_items': completed_items, 'total_items': total,
                       'activity_completed': completed, 'state': saved},
         )
@@ -18307,52 +18718,47 @@ def prescribed_activity_progress(request, activity_key):
         data = json.loads(request.body or '{}')
         if data.get('reset') is True:
             payload = {'activity_key': activity_key, 'session_key': 'session-3', 'current_phase': 'oral_reading', 'current_reading_item': 0, 'completed_reading_items': [], 'read_attempts': 0, 'listen_attempts': 0, 'oral_reading_completed': False, 'selections': [], 'correct_count': 0, 'state_version': 0}
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': 6, 'activity_completed': False, 'state': payload})
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': 6, 'activity_completed': False, 'state': payload})
             return JsonResponse({'success': True, 'progress': {'state': payload, 'completed_items': 0, 'activity_completed': False}})
         state = data.get('state') if isinstance(data.get('state'), dict) else {}
-        old = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        old = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         old_state = old.state if old and isinstance(old.state, dict) else {}
         saved = {'activity_key': activity_key, 'current_phase': state.get('current_phase', old_state.get('current_phase', 'oral_reading')), 'current_reading_item': int(state.get('current_reading_item', old_state.get('current_reading_item', 0))), 'completed_reading_items': state.get('completed_reading_items', old_state.get('completed_reading_items', [])), 'read_attempts': int(state.get('read_attempts', old_state.get('read_attempts', 0))), 'listen_attempts': int(state.get('listen_attempts', old_state.get('listen_attempts', 0))), 'oral_reading_completed': bool(state.get('oral_reading_completed', old_state.get('oral_reading_completed', False))), 'selections': state.get('selections', old_state.get('selections', [])), 'correct_count': int(state.get('correct_count', old_state.get('correct_count', 0))), 'state_version': int(state.get('state_version') or 0)}
-        progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': len(saved['selections']), 'completed_items': len(saved['selections']), 'correct_items': saved['correct_count'], 'total_items': 6, 'activity_completed': False, 'state': saved})
+        progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': len(saved['selections']), 'completed_items': len(saved['selections']), 'correct_items': saved['correct_count'], 'total_items': 6, 'activity_completed': False, 'state': saved})
         return JsonResponse({'success': True, 'progress': {'state': saved, 'completed_items': progress.completed_items, 'activity_completed': False}})
     if activity_key == 'lesson8-gawain1a':
         data = json.loads(request.body or '{}')
         if data.get('reset') is True:
             payload = {'activity_key': activity_key, 'session_key': 'session-3', 'phase': 'oral', 'current_reading_item': 0, 'completed_reading_items': [], 'selections': [], 'final_targets': [], 'final_reading_items': []}
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': 9, 'activity_completed': False, 'state': payload},
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': 9, 'activity_completed': False, 'state': payload},
             )
             return JsonResponse({'success': True, 'progress': {'state': payload, 'completed_items': 0, 'activity_completed': False}})
         state = data.get('state') if isinstance(data.get('state'), dict) else {}
-        old = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        old = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         old_state = old.state if old and isinstance(old.state, dict) else {}
         selections = sorted(set(int(x) for x in state.get('selections', old_state.get('selections', [])) if str(x).isdigit() and 0 <= int(x) < 9))
         phase = state.get('phase', old_state.get('phase', 'oral'))
         current_reading_item = max(0, min(8, int(state.get('current_reading_item', old_state.get('current_reading_item', 0)) or 0)))
         reading = sorted(set(int(x) for x in state.get('completed_reading_items', old_state.get('completed_reading_items', [])) if str(x).isdigit() and 0 <= int(x) < 9))
         payload = {'activity_key': activity_key, 'session_key': 'session-3', 'phase': phase, 'current_reading_item': current_reading_item, 'completed_reading_items': reading, 'selections': selections, 'final_targets': state.get('final_targets', old_state.get('final_targets', [])), 'final_reading_items': state.get('final_reading_items', old_state.get('final_reading_items', []))}
-        progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': current_reading_item if phase in {'oral', 'final'} else len(selections), 'completed_items': len(reading) + len(selections), 'correct_items': 0, 'total_items': 9, 'activity_completed': False, 'state': payload})
+        progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': current_reading_item if phase in {'oral', 'final'} else len(selections), 'completed_items': len(reading) + len(selections), 'correct_items': 0, 'total_items': 9, 'activity_completed': False, 'state': payload})
         return JsonResponse({'success': True, 'progress': {'state': payload, 'completed_items': progress.completed_items, 'activity_completed': False}})
     if activity_key == 'lesson7-gawain3':
         data = json.loads(request.body or '{}')
         if data.get('reset') is True:
             payload = {'activity_key': activity_key, 'session_key': 'session-3', 'current_phase': 'oral_reading', 'current_reading_item': 0, 'completed_reading_items': [], 'read_attempts': 0, 'listen_attempts': 0, 'oral_reading_completed': False, 'current_target': 0, 'selections': {}, 'correct_count': 0, 'state_version': 0}
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': 5, 'activity_completed': False, 'state': payload})
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': 5, 'activity_completed': False, 'state': payload})
             return JsonResponse({'success': True, 'progress': {'state': payload, 'completed_items': 0, 'activity_completed': False}})
         state = data.get('state') if isinstance(data.get('state'), dict) else {}
-        old = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first(); old_state = old.state if old and isinstance(old.state, dict) else {}
+        old = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first(); old_state = old.state if old and isinstance(old.state, dict) else {}
         saved = {'activity_key': activity_key, 'current_phase': state.get('current_phase', old_state.get('current_phase', 'oral_reading')), 'current_reading_item': int(state.get('current_reading_item', old_state.get('current_reading_item', 0))), 'completed_reading_items': state.get('completed_reading_items', old_state.get('completed_reading_items', [])), 'read_attempts': int(state.get('read_attempts', old_state.get('read_attempts', 0))), 'listen_attempts': int(state.get('listen_attempts', old_state.get('listen_attempts', 0))), 'oral_reading_completed': bool(state.get('oral_reading_completed', old_state.get('oral_reading_completed', False))), 'current_target': int(state.get('current_target', old_state.get('current_target', 0))), 'selections': state.get('selections', old_state.get('selections', {})), 'correct_count': int(state.get('correct_count', old_state.get('correct_count', 0))), 'state_version': int(state.get('state_version') or 0)}
-        progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': saved['current_target'], 'completed_items': saved['current_target'], 'correct_items': saved['correct_count'], 'total_items': 5, 'activity_completed': False, 'state': saved})
+        progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': saved['current_target'], 'completed_items': saved['current_target'], 'correct_items': saved['correct_count'], 'total_items': 5, 'activity_completed': False, 'state': saved})
         return JsonResponse({'success': True, 'progress': {'state': saved, 'completed_items': progress.completed_items, 'activity_completed': False}})
     if activity_key == 'lesson7-gawain2c':
         try:
             data = json.loads(request.body or '{}')
             if data.get('reset') is True:
-                progress, _ = StudentActivityProgress.objects.update_or_create(
-                    student=student,
-                    activity_key=activity_key,
-                    defaults={
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
                         'current_index': 0,
                         'completed_items': 0,
                         'correct_items': 0,
@@ -18374,7 +18780,7 @@ def prescribed_activity_progress(request, activity_key):
             return JsonResponse({'success': False, 'error': 'Invalid handwriting progress.'}, status=400)
         if row_index not in range(3) or normalize_strokes(strokes) is None or not is_recognizable_ii(strokes):
             return JsonResponse({'success': False, 'error': 'Isulat ang buong Ii: malaking I at maliit na i na may tuldok.'}, status=400)
-        progress, _ = StudentActivityProgress.objects.get_or_create(student=student, activity_key=activity_key, defaults={'total_items': 3, 'state': {'validated_rows': {}}})
+        progress, _ = _current_progress_get_or_create(student, lifecycle, activity_key, defaults={'total_items': 3, 'state': {'validated_rows': {}}})
         state = progress.state if isinstance(progress.state, dict) else {}
         rows = state.get('validated_rows') if isinstance(state.get('validated_rows'), dict) else {}
         rows[str(row_index)] = strokes
@@ -18394,20 +18800,16 @@ def prescribed_activity_progress(request, activity_key):
             is_reset = data.get('reset') is True
         except (TypeError, ValueError, json.JSONDecodeError):
             return JsonResponse({'success': False, 'error': 'Invalid handwriting progress.'}, status=400)
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         if is_reset:
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
                           'total_items': 3, 'activity_completed': False,
                           'state': {'activity_key': activity_key, 'completed_areas': 0}},
             )
         elif existing and (existing.activity_completed or existing.current_index > index):
             progress = existing
         else:
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
                           'total_items': 3, 'activity_completed': False,
                           'state': {'activity_key': activity_key, **state}},
             )
@@ -18418,23 +18820,23 @@ def prescribed_activity_progress(request, activity_key):
         try:
             data = json.loads(request.body or '{}')
             if data.get('reset') is True:
-                progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': 3, 'activity_completed': False, 'state': {'activity_key': activity_key, 'session_key': 'session-3', 'current_index': 0}})
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': 3, 'activity_completed': False, 'state': {'activity_key': activity_key, 'session_key': 'session-3', 'current_index': 0}})
                 return JsonResponse({'success': True, 'progress': {'state': progress.state, 'completed_items': 0, 'activity_completed': False}})
             index = max(0, min(3, int(data.get('current_index') or 0)))
             state = data.get('state') if isinstance(data.get('state'), dict) else {}
         except (TypeError, ValueError, json.JSONDecodeError):
             return JsonResponse({'success': False, 'error': 'Invalid handwriting progress.'}, status=400)
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         if existing and (existing.activity_completed or existing.current_index > index): progress = existing
         else:
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index, 'total_items': 3, 'activity_completed': False, 'state': {'activity_key': activity_key, 'session_key': 'session-3', **state}})
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index, 'total_items': 3, 'activity_completed': False, 'state': {'activity_key': activity_key, 'session_key': 'session-3', **state}})
         return JsonResponse({'success': True, 'progress': {'current_index': progress.current_index, 'completed_items': progress.completed_items, 'total_items': 3, 'activity_completed': progress.activity_completed, 'state': progress.state}})
     if activity_key == 'lesson7-gawain4a':
         try:
             data = json.loads(request.body or '{}')
             if data.get('reset') is True:
                 payload = {'placements': {}, 'state_version': 0}
-                progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': len(activity['cells']), 'activity_completed': False, 'state': payload})
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': len(activity['cells']), 'activity_completed': False, 'state': payload})
                 return JsonResponse({'success': True, 'progress': {'state': payload, 'completed_items': 0, 'activity_completed': False}})
             state = data.get('state') if isinstance(data.get('state'), dict) else {}
             placements = state.get('placements') if isinstance(state.get('placements'), dict) else {}
@@ -18442,15 +18844,12 @@ def prescribed_activity_progress(request, activity_key):
         except (TypeError, ValueError, json.JSONDecodeError):
             return JsonResponse({'success': False, 'error': 'Invalid activity progress.'}, status=400)
         total = len(placements)
-        progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': 0, 'total_items': len(activity['cells']), 'activity_completed': False, 'state': {'placements': placements, 'state_version': int(state.get('state_version') or 0)}})
+        progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': 0, 'total_items': len(activity['cells']), 'activity_completed': False, 'state': {'placements': placements, 'state_version': int(state.get('state_version') or 0)}})
         return JsonResponse({'success': True, 'progress': {'state': progress.state, 'completed_items': total, 'total_items': len(activity['cells']), 'activity_completed': False}})
     if activity_key == 'lesson7-gawain4b':
         data = json.loads(request.body or '{}')
         if data.get('reset') is True:
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student,
-                activity_key=activity_key,
-                defaults={
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
                     'current_index': 0,
                     'completed_items': 0,
                     'correct_items': 0,
@@ -18470,16 +18869,16 @@ def prescribed_activity_progress(request, activity_key):
                 'completed_items': progress.completed_items,
                 'activity_completed': progress.activity_completed,
             }})
-        state=data.get('state') if isinstance(data.get('state'),dict) else {}; old=StudentActivityProgress.objects.filter(student=student,activity_key=activity_key).first(); old_state=old.state if old and isinstance(old.state,dict) else {}; answers=state.get('answers',old_state.get('answers',[None]*6)); answers=(list(answers)+[None]*6)[:6]; reading=sorted(set(int(x) for x in state.get('completed_reading_items',old_state.get('completed_reading_items',[])) if str(x).isdigit() and 0<=int(x)<6)); payload={'phase': 'written' if len(reading)==6 else 'oral', 'current_reading_item': len(reading), 'completed_reading_items': reading, 'answers': answers, 'state_version': int(state.get('state_version') or 0)}; n=sum(x is not None for x in answers); progress,_=StudentActivityProgress.objects.update_or_create(student=student,activity_key=activity_key,defaults={'current_index':n,'completed_items':n,'correct_items':0,'total_items':6,'activity_completed':False,'state':payload}); return JsonResponse({'success':True,'progress':{'state':payload,'completed_items':n,'activity_completed':False}})
+        state=data.get('state') if isinstance(data.get('state'),dict) else {}; old=_current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first(); old_state=old.state if old and isinstance(old.state,dict) else {}; answers=state.get('answers',old_state.get('answers',[None]*6)); answers=(list(answers)+[None]*6)[:6]; reading=sorted(set(int(x) for x in state.get('completed_reading_items',old_state.get('completed_reading_items',[])) if str(x).isdigit() and 0<=int(x)<6)); payload={'phase': 'written' if len(reading)==6 else 'oral', 'current_reading_item': len(reading), 'completed_reading_items': reading, 'answers': answers, 'state_version': int(state.get('state_version') or 0)}; n=sum(x is not None for x in answers); progress,_=_current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index':n,'completed_items':n,'correct_items':0,'total_items':6,'activity_completed':False,'state':payload}); return JsonResponse({'success':True,'progress':{'state':payload,'completed_items':n,'activity_completed':False}})
     if activity_key == 'lesson7-gawain2a':
         try:
             data = json.loads(request.body or '{}')
             if data.get('reset') is True:
                 payload = {'activity_key': activity_key, 'session_key': 'session-3', 'current_phase': 'oral_reading', 'current_reading_item': 0, 'current_main_item': 0, 'completed_reading_items': [], 'oral_reading_completed': False, 'main_activity_completed': False, 'answers': [None] * 6, 'completed_count': 0, 'correct_count': 0, 'state_version': 0}
-                progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': 6, 'activity_completed': False, 'state': payload})
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': 6, 'activity_completed': False, 'state': payload})
                 return JsonResponse({'success': True, 'progress': {'state': payload, 'completed_items': 0, 'activity_completed': False}})
             state = data.get('state') if isinstance(data.get('state'), dict) else {}
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             if int(state.get('state_version') or 0) < int(old.get('state_version') or 0):
                 return JsonResponse({'success': True, 'progress': old})
@@ -18487,7 +18886,7 @@ def prescribed_activity_progress(request, activity_key):
             answers = (answers + [None] * 6)[:6]
             reading = sorted(set(int(x) for x in state.get('completed_reading_items', old.get('completed_reading_items', [])) if str(x).isdigit() and 0 <= int(x) < 6))
             payload = {'activity_key': activity_key, 'session_key': 'session-3', 'current_phase': state.get('current_phase', old.get('current_phase', 'oral_reading')), 'current_reading_item': int(state.get('current_reading_item', old.get('current_reading_item', 0))), 'current_main_item': int(state.get('current_main_item', old.get('current_main_item', 0))), 'completed_reading_items': reading, 'oral_reading_completed': bool(state.get('oral_reading_completed', old.get('oral_reading_completed', False))), 'main_activity_completed': False, 'answers': answers, 'completed_count': sum(a is not None for a in answers), 'correct_count': int(state.get('correct_count', old.get('correct_count', 0))), 'state_version': int(state.get('state_version') or 0)}
-            progress, _ = StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': payload['completed_count'], 'completed_items': payload['completed_count'], 'correct_items': payload['correct_count'], 'total_items': 6, 'activity_completed': False, 'state': payload})
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': payload['completed_count'], 'completed_items': payload['completed_count'], 'correct_items': payload['correct_count'], 'total_items': 6, 'activity_completed': False, 'state': payload})
             return JsonResponse({'success': True, 'progress': {'current_index': progress.current_index, 'completed_items': progress.completed_items, 'correct_items': progress.correct_items, 'total_items': 6, 'activity_completed': False, 'state': payload}})
         except (TypeError, ValueError, json.JSONDecodeError):
             return JsonResponse({'success': False, 'error': 'Invalid activity progress.'}, status=400)
@@ -18497,7 +18896,7 @@ def prescribed_activity_progress(request, activity_key):
             if not isinstance(data, dict):
                 raise ValueError('Invalid activity data.')
             total = len(activity['items'])
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             existing_state = existing.state if existing and isinstance(existing.state, dict) else {}
             old = _normalized_lesson16_gawain4_state(existing_state, total)
             incoming = _normalized_lesson16_gawain4_state(data.get('state'), total)
@@ -18547,9 +18946,7 @@ def prescribed_activity_progress(request, activity_key):
             else:
                 incoming['phase'] = 'written' if current in incoming['completed_oral_reads'] else 'oral_reading'
             incoming['state_version'] = max(old['state_version'], incoming['state_version']) + 1
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': len(answers), 'completed_items': len(answers),
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': len(answers), 'completed_items': len(answers),
                           'correct_items': len(answers), 'total_items': total,
                           'activity_completed': False, 'state': {'answers': answers, **incoming}},
             )
@@ -18565,7 +18962,7 @@ def prescribed_activity_progress(request, activity_key):
             data = json.loads(request.body or '{}')
             if not isinstance(data, dict):
                 raise ValueError('Invalid activity data.')
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             existing_state = existing.state if existing and isinstance(existing.state, dict) else {}
             saved_answers = existing_state.get('answers') if isinstance(existing_state.get('answers'), list) else []
             answers = []
@@ -18611,9 +19008,7 @@ def prescribed_activity_progress(request, activity_key):
                     state['attempts'][str(current)] = state['attempts'].get(str(current), 0) + 1
             state['state_version'] = state['state_version'] + 1
             completed = len(answers)
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed,
                           'total_items': len(activity['items']), 'activity_completed': False,
                           'state': {'answers': answers, **state}},
             )
@@ -18639,7 +19034,7 @@ def prescribed_activity_progress(request, activity_key):
             state = (_normalized_oral_matching_state(
                          activity, raw_state, allow_intro=oral_before_matching)
                      if oral_before_matching else _normalized_prescribed_match_state(data.get('state')))
-            existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+            existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
             existing_state = existing.state if existing and isinstance(existing.state, dict) else {}
             if oral_before_matching:
                 saved_oral = _normalized_oral_matching_state(
@@ -18692,15 +19087,13 @@ def prescribed_activity_progress(request, activity_key):
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
 
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         existing_state = existing.state if existing and isinstance(existing.state, dict) else {}
         existing_version = int(existing_state.get('state_version') or 0)
         if existing and (existing.activity_completed or existing.completed_items > completed or state['state_version'] < existing_version):
             progress, accepted = existing, None
         else:
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student=student, activity_key=activity_key,
-                defaults={
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
                     'current_index': completed, 'completed_items': completed, 'correct_items': completed,
                     'total_items': len(activity['items']), 'activity_completed': False,
                     'state': {'matches': matches, **state},
@@ -18741,15 +19134,13 @@ def prescribed_activity_progress(request, activity_key):
     except (TypeError, ValueError, json.JSONDecodeError) as exc:
         return JsonResponse({'success': False, 'error': str(exc)}, status=400)
 
-    existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+    existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
     existing_state = existing.state if existing and isinstance(existing.state, dict) else {}
     existing_version = int(existing_state.get('state_version') or 0)
     if existing and (existing.activity_completed or existing.completed_items > completed or state['state_version'] < existing_version):
         progress, accepted = existing, None
     else:
-        progress, _ = StudentActivityProgress.objects.update_or_create(
-            student=student, activity_key=activity_key,
-            defaults={
+        progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
                 'current_index': completed, 'completed_items': completed, 'correct_items': completed,
                 'total_items': len(activity['items']), 'activity_completed': False,
                 'state': {'answers': answers, **state},
@@ -18767,7 +19158,7 @@ def prescribed_activity_progress(request, activity_key):
     }})
 
 
-def _prescribed_workbook_activity_progress(request, activity_key, activity, student):
+def _prescribed_workbook_activity_progress(request, activity_key, activity, student, lifecycle=None):
     """Persist Sessions 8–11 workbook state through the shared prescribed route."""
     from copy import deepcopy
     from .prescribed_workbook import (
@@ -18790,7 +19181,7 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
         event = json.loads(request.body or '{}') if request.content_type == 'application/json' else request.POST.dict()
         if not isinstance(event, dict):
             raise ValueError('Invalid event.')
-        row = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        row = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = deepcopy(row.state if row and isinstance(row.state, dict) else (
             initial_l22_g2_state() if activity_key == 'aral-l22-g2-c-word-reading' else
             initial_l24_g2_state() if activity_key == 'aral-l24-g2-v-word-reading' else
@@ -19136,9 +19527,7 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             correct = len(updated.get('completed_words') or [])
         elif activity_key == 'aral-l23-g4-j-syllabication':
             correct = len(updated.get('answers') or {})
-        progress, _ = StudentActivityProgress.objects.update_or_create(
-            student=student, activity_key=activity_key,
-            defaults={'current_index': index, 'completed_items': index, 'correct_items': correct,
+        progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': correct,
                       'total_items': total, 'activity_completed': bool(updated.get('completed')), 'state': updated},
         )
         return JsonResponse({'success': True, **speech_details, 'state': updated, 'progress': {
@@ -19160,10 +19549,13 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    lifecycle = _current_learning_context(student)
+    if lifecycle.get('state') != 'ARAL_ACTIVE':
+        return JsonResponse({'success': False, 'error': 'Prescribed activities are not currently available.'}, status=403)
     if not _student_can_open_prescribed_activity(student, activity_key):
         return JsonResponse({'success': False, 'error': 'Complete the previous activity first.'}, status=403)
     if activity_key == 'lesson-13-gawain-2':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         total = len(activity['items'])
         if not existing or existing.completed_items < total:
             return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang lahat ng salita.'}, status=400)
@@ -19171,14 +19563,12 @@ def prescribed_activity_complete(request, activity_key):
         state.update({'current_index': total, 'completed_items': total, 'correct_items': total,
                       'total_items': total, 'activity_completed': True, 'phase': 'complete',
                       'state_version': 1_000_000_000})
-        StudentActivityProgress.objects.update_or_create(
-            student=student, activity_key=activity_key,
-            defaults={'current_index': total, 'completed_items': total, 'correct_items': total,
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': total,
                       'total_items': total, 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {
             'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity_key == 'lesson-14-gawain-1':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         total = len(activity['items'])
         if not existing or existing.current_index < total or existing.completed_items < total:
             return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang lahat ng larawan.'}, status=400)
@@ -19186,9 +19576,7 @@ def prescribed_activity_complete(request, activity_key):
         state.update({'part': 2, 'current_index': total, 'completed_items': total,
                       'total_items': total, 'activity_completed': True,
                       'state_version': 1_000_000_000})
-        StudentActivityProgress.objects.update_or_create(
-            student=student, activity_key=activity_key,
-            defaults={'current_index': total, 'completed_items': total,
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': total, 'completed_items': total,
                       'correct_items': existing.correct_items, 'total_items': total,
                       'activity_completed': True, 'state': state},
         )
@@ -19196,7 +19584,7 @@ def prescribed_activity_complete(request, activity_key):
             'items_completed': total, 'correct_items': existing.correct_items,
             'accuracy': round(existing.correct_items / total * 100, 2) if total else 0.0}})
     if activity_key == 'session-4-gawain-3':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         total = 9
         completed_items = int(existing.completed_items if existing else 0)
         if not existing or completed_items < total:
@@ -19206,15 +19594,13 @@ def prescribed_activity_complete(request, activity_key):
         state.update({'current_index': total, 'completed_items': total, 'correct_items': correct_items,
                       'total_items': total, 'activity_completed': True, 'phase': 'complete',
                       'state_version': 1_000_000_000})
-        StudentActivityProgress.objects.update_or_create(
-            student=student, activity_key=activity_key,
-            defaults={'current_index': total, 'completed_items': total, 'correct_items': correct_items,
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': correct_items,
                       'total_items': total, 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {
             'items_completed': total, 'correct_items': correct_items,
             'accuracy': round(correct_items / total * 100, 2)}})
     if activity_key == 'session-4-gawain-4':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         total = 4
         completed_items = int(existing.completed_items if existing else 0)
         if not existing or completed_items < total:
@@ -19224,24 +19610,22 @@ def prescribed_activity_complete(request, activity_key):
         state.update({'current_index': total, 'completed_items': total, 'correct_items': correct_items,
                       'total_items': total, 'activity_completed': True, 'phase': 'complete',
                       'state_version': 1_000_000_000})
-        StudentActivityProgress.objects.update_or_create(
-            student=student, activity_key=activity_key,
-            defaults={'current_index': total, 'completed_items': total, 'correct_items': correct_items,
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': correct_items,
                       'total_items': total, 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {
             'items_completed': total, 'correct_items': correct_items,
             'accuracy': round(correct_items / total * 100, 2)}})
     if activity_key == 'session-4-gawain-2':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['items'])
         if not existing or existing.completed_items < total or int(state.get('current_substep', 0) or 0) != 2:
             return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang lahat ng tunog.'}, status=400)
         state = dict(state, phase='complete', completed_items=total, current_index=total - 1, current_substep=2, state_version=1_000_000_000)
-        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': total, 'total_items': total, 'activity_completed': True, 'state': state})
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': total, 'total_items': total, 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity_key == 'session-4-gawain-1':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['items'])
         completed_items = int(existing.completed_items if existing else state.get('completed_items', 0) or 0)
@@ -19249,13 +19633,11 @@ def prescribed_activity_complete(request, activity_key):
             return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang lahat ng letra.'}, status=400)
         correct_items = max(0, min(total, int(existing.correct_items if existing else state.get('correct_items', 0) or 0)))
         state = dict(state, phase='complete', completed_items=total, correct_items=correct_items, state_version=1_000_000_000)
-        StudentActivityProgress.objects.update_or_create(
-            student=student, activity_key=activity_key,
-            defaults={'current_index': total, 'completed_items': total, 'correct_items': correct_items,
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': correct_items,
                       'total_items': total, 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': correct_items, 'accuracy': round(correct_items / total * 100, 2) if total else 0.0}})
     if activity_key == 'lesson-14-gawain-3':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         answers = state.get('answers') if isinstance(state.get('answers'), dict) else {}
         required = {str(item['id']): item for item in activity['items'] if not item.get('unresolved')}
@@ -19270,14 +19652,12 @@ def prescribed_activity_complete(request, activity_key):
                    for item_id, item in required.items()]
         correct = sum(record['correct'] for record in records)
         state = dict(state, answer_records=records, submitted=True, completed=True, phase='complete', state_version=1_000_000_000)
-        StudentActivityProgress.objects.update_or_create(
-            student=student, activity_key=activity_key,
-            defaults={'current_index': len(activity['items']), 'completed_items': len(required),
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': len(activity['items']), 'completed_items': len(required),
                       'correct_items': correct, 'total_items': len(activity['items']), 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'items_completed': len(required), 'correct_items': correct,
             'accuracy': round(correct / len(required) * 100, 2), 'records': records}})
     if activity_key == 'lesson-15-gawain-1':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         selected = state.get('selected_answers') if isinstance(state.get('selected_answers'), dict) else {}
         if set(selected) != {str(i['id']) for i in activity['items']}:
@@ -19285,10 +19665,10 @@ def prescribed_activity_complete(request, activity_key):
         records = [{'item_id': i['id'], 'expected': i['word'], 'selected': selected[str(i['id'])], 'correct': selected[str(i['id'])].casefold() == i['word'].casefold()} for i in activity['items']]
         correct = sum(r['correct'] for r in records)
         state = dict(state, answer_records=records, completed=True, state_version=1_000_000_000)
-        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': len(activity['items']), 'completed_items': len(activity['items']), 'correct_items': correct, 'total_items': len(activity['items']), 'activity_completed': True, 'state': state})
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': len(activity['items']), 'completed_items': len(activity['items']), 'correct_items': correct, 'total_items': len(activity['items']), 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'items_completed': len(records), 'correct_items': correct, 'records': records}})
     if activity_key in ('lesson-14-gawain-2', 'lesson-15-gawain-2-angkop-na-pantig'):
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         connections = state.get('connections') if isinstance(state.get('connections'), dict) else {}
         items = {str(item['id']): item for item in activity['items']}
@@ -19302,97 +19682,95 @@ def prescribed_activity_complete(request, activity_key):
         correct = sum(record['correct'] for record in records)
         state = dict(state, connection_records=records, connected_count=len(records), submitted=True, completed=True,
                      phase='complete', state_version=1_000_000_000)
-        StudentActivityProgress.objects.update_or_create(
-            student=student, activity_key=activity_key,
-            defaults={'current_index': len(items), 'completed_items': len(items), 'correct_items': correct,
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': len(items), 'completed_items': len(items), 'correct_items': correct,
                       'total_items': len(items), 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'items_completed': len(items), 'correct_items': correct,
             'accuracy': round(correct / len(items) * 100, 2), 'records': records}})
     if activity['interaction'] == 'session7_oral_cluster_word_circle':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = _normalized_session7_oral_cluster_word_circle_state(activity, existing.state if existing else {})
         total = len(activity['items'])
         if (len(state['selected_words']) != total
                 or any(len(state['orally_completed_words'].get(str(index), [])) != 4 for index in range(total))):
             return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang pagbasa at pagpili sa lahat ng pangkat.'}, status=400)
         state['phase'], state['state_version'] = 'completion', 1_000_000_000
-        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
             'current_index': total, 'completed_items': total, 'correct_items': total,
             'total_items': total, 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'session7_oral_circle_word':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = _normalized_session7_oral_circle_word_state(activity, existing.state if existing else {})
         total = len(activity['items'])
         if len(state['completed_correct_answers']) != total or any(len(state['orally_completed_words'].get(str(index), [])) != 3 for index in range(total)):
             return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang pagbasa at pagpili sa lahat ng larawan.'}, status=400)
         state['phase'], state['state_version'] = 'completion', 1_000_000_000
-        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': total, 'total_items': total, 'activity_completed': True, 'state': state})
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': total, 'total_items': total, 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'session7_oral_letter_ordering':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = _normalized_session7_letter_ordering_state(activity, existing.state if existing else {})
         total = len(activity['items'])
         if len(state['completed_correct_words']) != total or len(state['completed_oral_reads']) != total:
             return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang pagbasa at pag-aayos sa lahat ng larawan.'}, status=400)
         state['phase'], state['state_version'] = 'completion', 1_000_000_000
-        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
             'current_index': total, 'completed_items': total, 'correct_items': total,
             'total_items': total, 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'session7_oral_cluster_syllabification':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = _normalized_session7_cluster_syllabification_state(activity, existing.state if existing else {})
         total = len([item for item in activity['items'] if not item.get('worked_example')])
         if len(state['submitted_syllable_divisions']) != total or len(state['completed_oral_reads']) != total:
             return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang pagbasa at pagpapantig sa lahat ng salita.'}, status=400)
         state['phase'], state['state_version'] = 'completion', 1_000_000_000
-        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
             'current_index': total, 'completed_items': total, 'correct_items': total,
             'total_items': total, 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'session7_oral_picture_word_connection':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = _normalized_session7_picture_word_connection_state(activity, existing.state if existing else {})
         total = len([item for item in activity['items'] if not item.get('worked_example')])
         if len(state['connected_answers']) != total or len(state['completed_oral_reads']) != total:
             return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang pagbasa at pag-uugnay sa lahat ng larawan.'}, status=400)
         state['phase'], state['state_version'] = 'completion', 1_000_000_000
-        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
             'current_index': total, 'completed_items': total, 'correct_items': total,
             'total_items': total, 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'session7_oral_missing_syllable':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = _normalized_session7_missing_syllable_state(activity, existing.state if existing else {})
         total = len(activity['items'])
         if len(state['written_answers']) != total or len(state['completed_oral_reads']) != total:
             return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang pagbasa at pagsulat sa lahat ng larawan.'}, status=400)
         state['phase'], state['state_version'] = 'completion', 1_000_000_000
-        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': total, 'total_items': total, 'activity_completed': True, 'state': state})
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': total, 'total_items': total, 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'oral_then_starting_syllable':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = _normalized_starting_syllable_state(activity, existing.state if existing else {})
         total = len(activity['items'])
         if len(state['correct_answers']) != total or len(state['completed_oral_reads']) != total:
             return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang pagbasa at pagpili sa lahat ng larawan.'}, status=400)
         state['phase'], state['state_version'] = 'completion', 1_000_000_000
-        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': total, 'total_items': total, 'activity_completed': True, 'state': state})
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': total, 'total_items': total, 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'oral_then_picture_word_write':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = _normalized_oral_picture_write_state(activity, existing.state if existing else {})
         total = len(activity['items'])
         if len(state['answers']) != total or len(state['completed_oral_reads']) != total:
             return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang pagbasa at pagsulat ng lahat ng larawan.'}, status=400)
         state['phase'], state['state_version'] = 'completion', 1_000_000_000
-        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
             'current_index': total, 'completed_items': total, 'correct_items': total, 'total_items': total,
             'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'oral_picture_box':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['items'])
         if not existing or existing.completed_items < total or state.get('phase') != 'complete':
@@ -19402,7 +19780,7 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'oral_jumbled_sentence':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['items'])
         if not existing or existing.completed_items < total or state.get('phase') != 'complete':
@@ -19412,7 +19790,7 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'oral_drag_sentence':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['items'])
         if not existing or existing.completed_items < total or state.get('phase') != 'complete':
@@ -19422,7 +19800,7 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'oral_then_picture_word_match':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = _normalized_oral_picture_match_state(activity, existing.state if existing else {})
         if activity.get('sequence_mode') == 'per_item':
             total = len(activity['items'])
@@ -19430,33 +19808,33 @@ def prescribed_activity_complete(request, activity_key):
                 return JsonResponse({'success': False, 'error': 'Basahin at itugma muna ang lahat ng salita.'}, status=400)
             state['phase'] = 'completion'
             state['state_version'] = min(1_000_000_000, state['state_version'] + 1)
-            StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+            _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
                 'current_index': total, 'completed_items': total, 'correct_items': total,
                 'total_items': total, 'activity_completed': True, 'state': state})
             return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': 100.0}})
         if len(state['unlocked_oral_words']) != 5 or len(state['matches']) != 5:
             return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang pagbasa at lahat ng pares.'}, status=400)
         state['phase'] = 'completion'; state['state_version'] = 1_000_000_000
-        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
             'current_index': 10, 'completed_items': 10, 'correct_items': 10, 'total_items': 10,
             'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'correct_items': 10, 'items_completed': 10, 'accuracy': 100.0}})
     if activity['interaction'] == 'oral_then_odd_word':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = _normalized_odd_word_state(activity, existing.state if existing else {})
         if len(state['completed_answers']) != len(activity['items']):
             return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang lahat ng pangkat.'}, status=400)
         state['phase'] = 'completion'; state['state_version'] = 1_000_000_000
-        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': 20, 'completed_items': 20, 'correct_items': 20, 'total_items': 20, 'activity_completed': True, 'state': state})
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 20, 'completed_items': 20, 'correct_items': 20, 'total_items': 20, 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'correct_items': 20, 'items_completed': 20, 'accuracy': 100.0}})
     if activity_key == 'lesson9-gawain2':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         if not existing or not isinstance(existing.state, dict) or existing.state.get('phase') != 'complete':
             return JsonResponse({'success': False, 'error': 'Complete the activity first.'}, status=400)
         existing.activity_completed = True; existing.completed_items = existing.correct_items = existing.total_items = 15; existing.save(update_fields=['activity_completed','completed_items','correct_items','total_items','updated_at'])
         return JsonResponse({'success': True})
     if activity['interaction'] == 'oral_choice_picture':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['items'])
         if not existing or existing.completed_items < total or state.get('phase') != 'complete':
@@ -19466,7 +19844,7 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'oral_comprehension_choice':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['questions'])
         if not existing or existing.completed_items < total or state.get('phase') != 'complete':
@@ -19476,7 +19854,7 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'oral_story_line':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['lines'])
         if not existing or existing.completed_items < total or state.get('phase') != 'complete':
@@ -19486,7 +19864,7 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'oral_sentence_blank':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['items'])
         if not existing or existing.completed_items < total or state.get('phase') != 'complete':
@@ -19496,7 +19874,7 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'spot_word_oral':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['words'])
         if not existing or existing.completed_items < total or state.get('phase') != 'complete':
@@ -19506,7 +19884,7 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'word_identifying_oral':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['items'])
         if not existing or existing.completed_items < total or state.get('phase') != 'complete':
@@ -19516,7 +19894,7 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'missing_letter_image_oral':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['items'])
         if not existing or existing.completed_items < total or state.get('phase') != 'complete':
@@ -19526,7 +19904,7 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'rhyming_verses':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['items'])
         if not existing or existing.completed_items < total or state.get('phase') != 'complete':
@@ -19535,7 +19913,7 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'fill_blank_sentence':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['items'])
         if not existing or existing.completed_items < total or state.get('phase') != 'complete':
@@ -19544,28 +19922,27 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity.get('interaction') == 'prescribed_workbook':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         found = state.get('found_words') if isinstance(state.get('found_words'), dict) else {}
         total = len(activity.get('items') or [])
         if not existing or len(found) != total or not state.get('completed'):
             return JsonResponse({'success': False, 'error': 'Hanapin muna ang lahat ng salita.'}, status=400)
         state = dict(state, completed=True)
-        StudentActivityProgress.objects.update_or_create(
-            student=student, activity_key=activity_key,
-            defaults={'current_index': total, 'completed_items': total, 'correct_items': total,
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': total,
                       'total_items': total, 'activity_completed': True, 'state': state})
         return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': 100.0}})
     if activity['interaction'] == 'word_search':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         matches = existing.state.get('matches', {}) if existing and isinstance(existing.state, dict) else {}
         total = len(activity['words'])
         if len(matches) != total:
             return JsonResponse({'success': False, 'error': 'Hanapin muna ang lahat ng salita.'}, status=400)
-        StudentActivityProgress.objects.update_or_create(student=student, activity_key=activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': total, 'total_items': total, 'activity_completed': True, 'state': existing.state if existing else {'matches': matches}})
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': total, 'completed_items': total, 'correct_items': total, 'total_items': total, 'activity_completed': True, 'state': existing.state if existing else {'matches': matches}})
         return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': 100.0}})
     if activity_key == 'lesson-13-gawain-3':
-        progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        lifecycle = _current_learning_context(student)
+        progress = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         total = len(activity['items'])
         if not progress or progress.completed_items < total:
             return JsonResponse({'success': False, 'error': 'Complete all sentences first.'}, status=400)
@@ -19574,7 +19951,7 @@ def prescribed_activity_complete(request, activity_key):
         progress.save(update_fields=['current_index', 'completed_items', 'correct_items', 'total_items', 'activity_completed', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity_key == 'lesson-13-gawain-4':
-        progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        progress = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         total = len(activity['items'])
         if not progress or progress.completed_items < total:
             return JsonResponse({'success': False, 'error': 'Complete all four writing items first.'}, status=400)
@@ -19584,7 +19961,7 @@ def prescribed_activity_complete(request, activity_key):
         progress.save(update_fields=['current_index', 'completed_items', 'correct_items', 'total_items', 'activity_completed', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity_key == 'lesson-13-gawain-1':
-        progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        progress = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         if not progress or progress.completed_items < 4:
             return JsonResponse({'success': False, 'error': 'Complete all four letters first.'}, status=400)
         progress.current_index = progress.completed_items = progress.correct_items = progress.total_items = 4; progress.activity_completed = True
@@ -19592,7 +19969,7 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': True, 'result': {'items_completed': 4, 'correct_items': 4, 'accuracy': 100.0}})
     if activity_key.startswith('session-4-gawain-'):
         total = int(activity.get('total_items') or 0)
-        progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        progress = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         if not progress or progress.completed_items < total:
             return JsonResponse({'success': False, 'error': 'Complete the activity before finishing.'}, status=400)
         progress.current_index = progress.completed_items = progress.correct_items = total
@@ -19601,7 +19978,7 @@ def prescribed_activity_complete(request, activity_key):
         progress.save(update_fields=['current_index', 'completed_items', 'correct_items', 'total_items', 'activity_completed', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': None}})
     if activity_key == 'lesson7-gawain2b':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         if not state.get('oral_reading_completed') or sorted(state.get('selections', [])) != [0, 1, 2]:
             return JsonResponse({'success': False, 'error': 'Complete all selections first.'}, status=400)
@@ -19609,7 +19986,7 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': 6, 'accuracy': 100.0}})
     if activity_key == 'lesson9-gawain1':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['items'])
         completed = state.get('completed_items') if isinstance(state.get('completed_items'), list) else []
@@ -19621,7 +19998,7 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity_key == 'lesson9-gawain3':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         total = len(activity['items'])
         if not existing or int(state.get('current_item', 0) or 0) < total:
@@ -19632,20 +20009,20 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'accuracy': 100.0}})
     if activity_key == 'lesson7-gawain3':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first(); state = existing.state if existing and isinstance(existing.state, dict) else {}
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first(); state = existing.state if existing and isinstance(existing.state, dict) else {}
         if not state.get('oral_reading_completed') or state.get('correct_count') != 5:
             return JsonResponse({'success': False, 'error': 'Complete all targets first.'}, status=400)
         existing.activity_completed = True; existing.current_index = existing.completed_items = existing.correct_items = 5
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': 5, 'accuracy': 100.0}})
     if activity_key == 'lesson8-gawain1a':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first(); state = existing.state if existing and isinstance(existing.state, dict) else {}
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first(); state = existing.state if existing and isinstance(existing.state, dict) else {}
         if not existing or sorted(state.get('selections', [])) != [0, 4, 6, 7] or len(state.get('final_reading_items', [])) != 4:
             return JsonResponse({'success': False, 'error': 'Complete all tasks first.'}, status=400)
         existing.activity_completed = True; existing.current_index = existing.completed_items = existing.correct_items = 9; existing.save(update_fields=['activity_completed','current_index','completed_items','correct_items','updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': 9, 'accuracy': 100.0}})
     if activity_key == 'lesson7-gawain2c':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         rows = existing.state.get('validated_rows', {}) if existing and isinstance(existing.state, dict) else {}
         if not existing or set(rows) != {'0', '1', '2'} or not all(is_recognizable_ii(rows[row]) for row in ('0', '1', '2')):
             return JsonResponse({'success': False, 'error': 'Complete all writing areas first.'}, status=400)
@@ -19654,7 +20031,7 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': 3, 'accuracy': 100.0}})
     if activity_key == 'lesson7-gawain4a':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         if state.get('placements') != activity['answer_mapping']:
             return JsonResponse({'success': False, 'error': 'Tingnan muli ang worksheet.'}, status=400)
@@ -19663,11 +20040,11 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'accuracy': 100.0}})
     if activity_key == 'lesson7-gawain4b':
-        existing=StudentActivityProgress.objects.filter(student=student,activity_key=activity_key).first(); state=existing.state if existing and isinstance(existing.state,dict) else {}; answers=state.get('answers',[]); expected=[x['answer'] for x in activity['items']]
+        existing=_current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first(); state=existing.state if existing and isinstance(existing.state,dict) else {}; answers=state.get('answers',[]); expected=[x['answer'] for x in activity['items']]
         if state.get('phase')!='written' or answers!=expected: return JsonResponse({'success':False,'error':'Complete all answers correctly first.'},status=400)
         existing.activity_completed=True; existing.current_index=existing.completed_items=existing.correct_items=6; existing.save(update_fields=['activity_completed','current_index','completed_items','correct_items','updated_at']); return JsonResponse({'success':True,'result':{'items_completed':6,'accuracy':100.0}})
     if activity_key == 'lesson7-gawain4':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         if not existing or existing.completed_items < 3:
             return JsonResponse({'success': False, 'error': 'Complete all writing areas first.'}, status=400)
         existing.activity_completed = True
@@ -19675,14 +20052,14 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': 3, 'accuracy': 100.0}})
     if activity_key == 'lesson8-gawain1':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         if not existing or existing.completed_items < 3:
             return JsonResponse({'success': False, 'error': 'Complete all writing areas first.'}, status=400)
         existing.activity_completed = True; existing.current_index = existing.completed_items = existing.correct_items = 3
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': 3, 'accuracy': 100.0}})
     if activity_key == 'session-5-lesson-14-gawain-4':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         total = len(activity['items'])
         if not existing or int(existing.current_index or 0) < total:
             return JsonResponse({'success': False, 'error': 'Complete all reading items first.'}, status=400)
@@ -19696,7 +20073,7 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['current_index', 'completed_items', 'total_items', 'activity_completed', 'state', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': existing.correct_items, 'accuracy': 100.0}})
     if activity_key == 'lesson7-gawain2a':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         answers = state.get('answers') if isinstance(state.get('answers'), list) else []
         expected = ['i', 'i', 'i', '', '', '']
@@ -19707,7 +20084,7 @@ def prescribed_activity_complete(request, activity_key):
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'state', 'updated_at'])
         return JsonResponse({'success': True, 'result': {'items_completed': 6, 'accuracy': 100.0}})
     if activity['interaction'] == 'picture_word_write':
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
         answers = state.get('answers') if isinstance(state.get('answers'), list) else []
         expected = [item['answer'] for item in activity['items']]
@@ -19734,15 +20111,13 @@ def prescribed_activity_complete(request, activity_key):
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
         total = len(activity['items'])
-        existing = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).first()
+        existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         existing_state = existing.state if existing and isinstance(existing.state, dict) else {}
         if _is_oral_before_matching_activity(activity_key):
             oral_state = _normalized_oral_matching_state(activity, existing_state)
             if oral_state['oral_verified_count'] != total or oral_state['phase'] != 'matching':
                 return JsonResponse({'success': False, 'error': 'Basahin muna ang lahat ng larawan bago tapusin.'}, status=400)
-        StudentActivityProgress.objects.update_or_create(
-            student=student, activity_key=activity_key,
-            defaults={
+        _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
                 'current_index': total, 'completed_items': total, 'correct_items': total,
                 'total_items': total, 'activity_completed': True,
                 'state': ({'matches': matches, **_normalized_oral_matching_state(activity, existing_state),
@@ -19764,9 +20139,7 @@ def prescribed_activity_complete(request, activity_key):
     except (TypeError, ValueError, json.JSONDecodeError) as exc:
         return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     total = len(activity['items'])
-    StudentActivityProgress.objects.update_or_create(
-        student=student, activity_key=activity_key,
-        defaults={
+    _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
             'current_index': total, 'completed_items': total, 'correct_items': total,
             'total_items': total, 'activity_completed': True,
             'state': {'answers': answers, 'phase': 'oral', 'oral_mode': 'read', 'reading_attempts': 0, 'aloud_attempts': 0, 'written_attempts': 0, 'state_version': 1_000_000_000},
@@ -19934,9 +20307,6 @@ def aral_template_activity_page(request, activity_slug):
     if not _is_dedicated_aral_template_material(material, page['activity_key']):
         return redirect('assessment')
 
-    access_response = _enforce_student_access_for_request(request, material=material)
-    if access_response:
-        return access_response
 
     content = dict(material.content_json or {})
     student = User.objects.filter(pk=request.session.get('user_id'), role='student').first()
@@ -19983,9 +20353,9 @@ def aral_template_activity_complete(request, activity_slug):
     material = _aral_request_material(request, activity_slug)
     if not material:
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
-    access_response = _enforce_student_access_for_request(request, material=material, json_response=True)
-    if access_response:
-        return access_response
+    # The canonical Supplementary lifecycle guard above is authoritative for
+    # these student-facing routes; the legacy material-access helper has
+    # incompatible redirect semantics for custom Supplementary materials.
     student = User.objects.filter(pk=request.session.get('user_id'), role='student').first()
     if not _student_can_complete_assessment(student, material=material):
         return JsonResponse({'success': False, 'error': 'You are not authorized to complete this activity.'}, status=403)
@@ -22353,6 +22723,11 @@ def reading_para_page(request):
         student = User.objects.filter(
             id=request.session.get('user_id'), role='student', is_archived=False,
         ).first()
+        supplementary_response = _current_supplementary_lifecycle_guard(request, material)
+        if supplementary_response:
+            return supplementary_response
+        lifecycle = _current_learning_context(student)
+        supplementary_scope = _current_supplementary_scope(student, material, lifecycle)
         completed_result = None
         submission = None
         if student:
@@ -22360,9 +22735,14 @@ def reading_para_page(request):
                 student=student,
                 attempt_status='completed',
                 completed_at__isnull=False,
+                enrollment=supplementary_scope['enrollment'],
+                supplementary_school_calendar=supplementary_scope['school_calendar'],
+                supplementary_term=supplementary_scope['term'],
             ).order_by('-completed_at', '-created_at', '-id').first()
             submission = StoryResponseSubmission.objects.filter(
                 student=student, material=material,
+                school_calendar=supplementary_scope['school_calendar'],
+                term=supplementary_scope['term'],
             ).only(
                 'id', 'audio_file', 'duration_seconds', 'submitted_at',
                 'grade', 'status', 'graded_at',
@@ -22414,6 +22794,9 @@ def story_reading_page(request):
     if not material or not _is_story_reading_material(material):
         return redirect('assessment')
 
+    supplementary_response = _current_supplementary_lifecycle_guard(request, material)
+    if supplementary_response:
+        return supplementary_response
     access_response = _enforce_student_access_for_request(request, material=material)
     if access_response:
         return access_response
@@ -22478,8 +22861,10 @@ def story_reading_page(request):
     else:
         story_payload['text'] = '\n\n'.join(_story_reading_sentences(material))
     current_enrollment = _student_current_enrollment(student)
+    lifecycle = _current_learning_context(student)
     progress = StoryReadingProgress.objects.filter(
         student=student, material=material, enrollment=current_enrollment,
+        school_calendar=lifecycle.get('school_calendar'), term=lifecycle.get('term'),
     ).first() if current_enrollment else None
     if progress and (not story_key or progress.story_key in ('', story_key)):
         story_payload['completion'] = {
@@ -22521,6 +22906,9 @@ def story_reading_complete(request):
     access_response = _enforce_student_access_for_request(request, material=material, json_response=True)
     if access_response:
         return access_response
+    supplementary_response = _current_supplementary_lifecycle_guard(request, material, json_response=True)
+    if supplementary_response:
+        return supplementary_response
 
     try:
         total_words = max(0, int(payload.get('total_words') or 0))
@@ -22552,14 +22940,16 @@ def story_reading_complete(request):
     current_enrollment = _student_current_enrollment(student)
     if not current_enrollment:
         return JsonResponse({'success': False, 'error': 'No active school-year enrollment.'}, status=409)
-    existing_progress = StoryReadingProgress.objects.filter(
-        student=student, material=material, enrollment=current_enrollment,
-    ).first()
+    lifecycle = _current_learning_context(student)
+    scope = _current_supplementary_scope(student, material, lifecycle, current_enrollment)
+    existing_progress = StoryReadingProgress.objects.filter(**scope).first()
     progress, _ = StoryReadingProgress.objects.update_or_create(
-        enrollment=current_enrollment,
+        student=student,
         material=material,
+        enrollment=current_enrollment,
+        school_calendar=scope['school_calendar'],
+        term=scope['term'],
         defaults={
-            'student': student,
             'story_title': str(payload.get('story_title') or material.title or '').strip()[:150],
             'story_key': str(payload.get('story_key') or '').strip()[:100],
             'total_words': total_words,
@@ -24585,6 +24975,11 @@ def _is_live_assessment_session_stale(session):
     if not session or session.status not in LIVE_ASSESSMENT_ACTIVE_STATUSES:
         return False
 
+    # Approval creates a normal waiting session, but the teacher has not
+    # started it yet.  Its age must not begin the stale timer.
+    if session.status == 'waiting' and not session.start_at:
+        return False
+
     now = system_now()
     reference_time = session.start_at or session.created_at or now
     return (now - reference_time) >= timedelta(hours=LIVE_ASSESSMENT_STALE_HOURS)
@@ -24633,6 +25028,12 @@ def _build_live_session_completion_payload(session, student_user, student_state=
         crla_score_data = dict(existing_crla_data) if isinstance(existing_crla_data, dict) else {}
         crla_score_data.update(recovery_state)
         payload['crla_score_data'] = crla_score_data
+        # The official completion path canonicalizes classification from the
+        # top-level score payload. Preserve the authoritative temporary CRLA
+        # result when building the same payload for a live-session recovery.
+        for classification_key in ('crla_classification', 'classification'):
+            if recovery_state.get(classification_key) and not payload.get(classification_key):
+                payload[classification_key] = recovery_state[classification_key]
 
     scores = payload.get('scores') if isinstance(payload.get('scores'), dict) else {}
     if 'scores' not in payload:
@@ -24787,6 +25188,13 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         or practice_obj is not None
         or (material and material.type == 'practice')
     )
+
+    if not is_practice and material and _is_supplementary_material(material) and not assist_context:
+        supplementary_response = _current_supplementary_lifecycle_guard(
+            request, material, json_response=True,
+        ) if request is not None else None
+        if supplementary_response:
+            return supplementary_response
 
     if not assessment and not material and not practice_obj:
         if live_session or data.get('live_session_id'):
@@ -25342,6 +25750,12 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 student=student_user,
                 attempt_status='completed',
             ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
+        if completed_result_row is not None and material and _is_supplementary_material(material) and not is_crla_assessment:
+            lifecycle = _current_learning_context(student_user)
+            scope = _current_supplementary_scope(student_user, material, lifecycle)
+            completed_result_row.supplementary_school_calendar = scope['school_calendar']
+            completed_result_row.supplementary_term = scope['term']
+            completed_result_row.save(update_fields=['supplementary_school_calendar', 'supplementary_term', 'updated_at'])
         if is_crla_assessment and completed_result_row is not None:
             _sync_completed_official_crla_result(
                 student_user,
@@ -26307,6 +26721,17 @@ def _student_can_complete_assessment(student_user, assessment=None, material=Non
     if official:
         if _student_crla_finalized_for_material(student_user, linked_material):
             return False
+        # An approved, current-term missed-CRLA request is the explicit
+        # authorization to complete this official material after the normal
+        # assessment window has ended.  _assessment_week_allows_material()
+        # already validates the same scoped request for material access, but
+        # the completion gate must honor it as well.
+        approved_recovery = any(
+            _current_crla_assessment_request(student_user, section, {'approved'})
+            for section in active_sections
+        )
+        if approved_recovery:
+            return True
         if not _student_has_assessment_week(student_user):
             return False
         availability = _official_assessment_availability_for_student(student_user)
@@ -32096,6 +32521,12 @@ def get_class_materials(request):
         materials_qs = Material.objects.filter(
             Q(section=section) | Q(assigned_sections=section) | Q(courses__sections=section)
         ).distinct()
+        if request_user.role == 'student':
+            current_supplementary = _current_supplementary_materials_for_student(request_user, section)
+            materials_qs = materials_qs.filter(
+                Q(is_official_reading=True, is_system_owned=True)
+                | Q(pk__in=current_supplementary.values('pk'))
+            )
         materials_qs = materials_qs.exclude(
             Q(assessment_kind='crla')
             | Q(is_official_reading=True)
@@ -32242,11 +32673,14 @@ def get_class_materials(request):
                 elif is_requesting_student and request_user and _is_story_reading_material(m):
                     # Story Reading completion is recorded directly against the
                     # material. It is independent of any teacher grading state.
+                    lifecycle = _current_learning_context(request_user)
                     completed_result = m.assessment_results.filter(
                         student=request_user,
                         attempt_status='completed',
                         completed_at__isnull=False,
-                    ).order_by('-completed_at', '-created_at', '-id').first()
+                        supplementary_school_calendar=lifecycle.get('school_calendar'),
+                        supplementary_term=lifecycle.get('term'),
+                    ).order_by('-completed_at', '-created_at', '-id').first() if lifecycle.get('state') == 'ARAL_ACTIVE' else None
                     if completed_result:
                         student_has_completed = True
                         completed_attempt_count = 1
@@ -32259,9 +32693,16 @@ def get_class_materials(request):
                             'total_score': completed_result.total_score,
                         }
                 elif is_requesting_student and request_user and (_is_story_response_material(m) or _is_retell_story_material(m)):
+                    lifecycle = _current_learning_context(request_user)
+                    scope = None
+                    try:
+                        scope = _current_supplementary_scope(request_user, m, lifecycle)
+                    except ValueError:
+                        scope = None
                     story_response_submission = StoryResponseSubmission.objects.filter(
                         student=request_user, material=m,
-                    ).only('id', 'grade', 'status', 'submitted_at').first()
+                        school_calendar=scope['school_calendar'], term=scope['term'],
+                    ).only('id', 'grade', 'status', 'submitted_at').first() if scope else None
                     if story_response_submission:
                         story_response_is_graded = (
                             story_response_submission.status == 'graded'
@@ -32276,7 +32717,9 @@ def get_class_materials(request):
                                 student=request_user,
                                 attempt_status='completed',
                                 completed_at__isnull=False,
-                            ).order_by('-completed_at', '-created_at', '-id').first()
+                                supplementary_school_calendar=scope['school_calendar'],
+                                supplementary_term=scope['term'],
+                            ).order_by('-completed_at', '-created_at', '-id').first() if scope else None
                             student_has_completed = completed_result is not None
                             completed_attempt_count = 1 if student_has_completed else 0
                         else:
@@ -33764,6 +34207,25 @@ def _student_access_block_response(json_response=False, message=None):
     return HttpResponseForbidden(message)
 
 
+def _supplementary_material_currently_published(student, material):
+    """Require an explicit current-calendar/current-term publication."""
+    if not student or not material or _is_official_crla_material(material):
+        return True
+    enrollment = Enrollment.objects.filter(
+        student=student, is_active=True,
+    ).select_related('section', 'school_calendar').order_by('-joined_at', '-id').first()
+    calendar = getattr(enrollment, 'school_calendar', None) if enrollment else None
+    section = getattr(enrollment, 'section', None) if enrollment else None
+    term = _calendar_current_term(calendar, on_date=system_today()) if calendar else None
+    return bool(
+        calendar and section and term in {1, 2, 3}
+        and SupplementaryMaterialPublication.objects.filter(
+            material=material, school_calendar=calendar, term=term,
+            section=section, is_active=True,
+        ).exists()
+    )
+
+
 def _assessment_week_block_response(json_response=False):
     message = 'Assessment Week is enabled for this section. Only assessments are available right now.'
     if json_response:
@@ -33796,10 +34258,21 @@ def _assessment_week_allows_material(student, material):
     # authorization for this student to launch one after Assessment Week.
     # Do not extend this exception to ordinary teacher materials.
     if _is_official_crla_material(material):
+        request_scope = _current_crla_request_scope(student)
+        if (
+            not request_scope['school_calendar']
+            or request_scope['term'] not in {1, 2, 3}
+            or not request_scope['official_material']
+        ):
+            return False
         approved_requests = AssessmentRequest.objects.filter(
             student=student,
             status='approved',
             section__is_active=True,
+            school_calendar=request_scope['school_calendar'],
+            term=request_scope['term'],
+            official_phase=request_scope['official_phase'],
+            official_material=request_scope['official_material'],
         ).select_related('section')
         if any(item.section.has_student(student, active_only=True) for item in approved_requests):
             return True
@@ -33873,6 +34346,12 @@ def _enforce_student_access_for_request(
     material = material or _requested_material_from_request(request)
     if not material:
         return None
+
+    if _is_supplementary_material(material) and not _supplementary_material_currently_published(persisted_user, material):
+        return _student_access_block_response(
+            json_response=json_response,
+            message='This Supplementary activity is not available in the current term.',
+        )
 
     if not _material_is_released(material):
         return _student_access_block_response(
@@ -34326,6 +34805,16 @@ def add_reading_material(request):
             )
             if section is not None:
                 m.assigned_sections.add(section)
+                if assessment_kind != 'crla':
+                    calendar = section.school_calendar
+                    current_term = _calendar_current_term(calendar, on_date=system_today()) if calendar else None
+                    if calendar and current_term in {1, 2, 3}:
+                        SupplementaryMaterialPublication.objects.get_or_create(
+                            material=m,
+                            school_calendar=calendar,
+                            term=current_term,
+                            section=section,
+                        )
             _set_material_student_assignments(m, publication_scope, selected_student_ids)
 
             created_ids = [m.id]
@@ -34603,6 +35092,22 @@ def teacher_update_material(request):
                 material.assigned_sections.set([target_section])
             material.publication_scope = publication_scope
             material.save()
+            publication_section = target_section or material.section
+            if (
+                publication_section
+                and _is_supplementary_material(material)
+                and publication_section.school_calendar_id
+            ):
+                current_term = _calendar_current_term(
+                    publication_section.school_calendar, on_date=system_today()
+                )
+                if current_term in {1, 2, 3}:
+                    SupplementaryMaterialPublication.objects.get_or_create(
+                        material=material,
+                        school_calendar=publication_section.school_calendar,
+                        term=current_term,
+                        section=publication_section,
+                    )
             _set_material_student_assignments(material, publication_scope, selected_student_ids)
         # Return updated overview so clients can sync UI immediately
         try:
@@ -34848,9 +35353,16 @@ def record_assessment_completion(request):
                 blocked = _teacher_access_practice_block(request, json_response=True)
                 if blocked:
                     return blocked
-            access_response = _enforce_student_access_for_request(request, material=material, json_response=True)
-            if access_response:
-                return access_response
+            if material and _is_supplementary_material(material):
+                supplementary_response = _current_supplementary_lifecycle_guard(
+                    request, material, json_response=True,
+                )
+                if supplementary_response:
+                    return supplementary_response
+            else:
+                access_response = _enforce_student_access_for_request(request, material=material, json_response=True)
+                if access_response:
+                    return access_response
             # A browser must not be able to turn temporary Live CRLA work
             # into an official result through the normal completion endpoint.
             # Only _end_live_assessment_session() is authorized to do that.
@@ -36708,6 +37220,20 @@ def _is_retell_story_material(material):
     return content_json.get('activity_type') == 'retell_story'
 
 
+def _is_supplementary_material(material):
+    """Return whether a material uses the ARAL Supplementary lifecycle."""
+    if not material:
+        return False
+    if _is_story_reading_material(material) or _is_story_response_material(material) or _is_retell_story_material(material):
+        return True
+    content_json = material.content_json if isinstance(material.content_json, dict) else {}
+    template_title = str(content_json.get('template_title') or '').strip().lower()
+    activity_type = str(content_json.get('activity_type') or '').strip().lower()
+    return activity_type in {'five_w_story_questions', 'story_questions'} or template_title in {
+        "5w's story questions", '5ws story questions', 'story questions',
+    }
+
+
 def _retell_recording_component(value, fallback):
     """Return a safe single Windows path component for Retell storage."""
     cleaned = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', '-', str(value or '').strip())
@@ -36858,12 +37384,18 @@ def story_response_page(request):
     if not material or (not _is_story_response_material(material) and not is_retell_story):
         return redirect('assessment')
     
-    access_response = _enforce_student_access_for_request(request, material=material)
-    if access_response:
-        return access_response
+    supplementary_response = _current_supplementary_lifecycle_guard(request, material)
+    if supplementary_response:
+        return supplementary_response
     
     student = User.objects.filter(id=request.session.get('user_id'), role='student', is_archived=False).first()
-    if StoryResponseSubmission.objects.filter(student=student, material=material).exists():
+    lifecycle = _current_learning_context(student)
+    supplementary_scope = _current_supplementary_scope(student, material, lifecycle)
+    if StoryResponseSubmission.objects.filter(
+        student=student, material=material,
+        school_calendar=supplementary_scope['school_calendar'],
+        term=supplementary_scope['term'],
+    ).exists():
         return redirect('assessment')
 
     content_json = material.content_json or {}
@@ -36950,19 +37482,32 @@ def story_response_submit(request):
     is_retell_story = _is_retell_story_material(material)
     if not material or (not _is_story_response_material(material) and not is_retell_story):
         return JsonResponse({'success': False, 'error': 'Activity not found.'}, status=404)
-    access_response = _enforce_student_access_for_request(request, material=material)
-    if access_response:
-        return access_response
+    supplementary_response = _current_supplementary_lifecycle_guard(request, material, json_response=True)
+    if supplementary_response:
+        return supplementary_response
+    lifecycle = _current_learning_context(user)
+    current_enrollment = _student_current_enrollment(user)
+    try:
+        supplementary_scope = _current_supplementary_scope(user, material, lifecycle, current_enrollment)
+    except ValueError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=403)
     if is_retell_story and material.assessment_results.filter(
         student=user,
         attempt_status='completed',
         completed_at__isnull=False,
+        enrollment=supplementary_scope['enrollment'],
+        supplementary_school_calendar=supplementary_scope['school_calendar'],
+        supplementary_term=supplementary_scope['term'],
     ).exists():
         return JsonResponse(
             {'success': False, 'error': 'This Retell the Story activity has already been completed.'},
             status=409,
         )
-    if not is_retell_story and StoryResponseSubmission.objects.filter(student=user, material=material).exists():
+    if not is_retell_story and StoryResponseSubmission.objects.filter(
+        student=user, material=material,
+        school_calendar=supplementary_scope['school_calendar'],
+        term=supplementary_scope['term'],
+    ).exists():
         return JsonResponse({'success': False, 'error': 'This Story Response activity is already completed.'}, status=409)
     
     student_section = next((
@@ -36987,8 +37532,10 @@ def story_response_submit(request):
         submission, _ = StoryResponseSubmission.objects.update_or_create(
             student=user,
             material=material,
+            school_calendar=supplementary_scope['school_calendar'],
+            term=supplementary_scope['term'],
             defaults={
-                'enrollment': Enrollment.objects.filter(student=user, section=student_section, status='active', is_active=True).order_by('id').first(),
+                'enrollment': supplementary_scope['enrollment'],
                 'story_material': source_story,
                 'prompt': str((material.content_json or {}).get('response_prompt') or '').strip(),
                 'response_text': str(payload.get('response_text') or '').strip(),
@@ -37027,6 +37574,21 @@ def story_response_submit(request):
             )
             if getattr(completion, 'status_code', 500) >= 400:
                 raise RuntimeError('The recording was saved, but the activity could not be marked complete.')
+            completed_assessment = material.assessment_results.filter(
+                student=user, attempt_status='completed', completed_at__isnull=False,
+            ).order_by('-completed_at', '-created_at', '-id').first()
+            if completed_assessment is None:
+                completed_assessment = Assessment.objects.filter(
+                    student=user,
+                    attempt_status='completed', completed_at__isnull=False,
+                ).exclude(
+                    system_assessment_key__in=('bosy_crla_pretest', 'midline_crla_midtest', 'eosy_crla_posttest'),
+                ).order_by('-created_at', '-id').first()
+            if completed_assessment:
+                completed_assessment.material = material
+                completed_assessment.supplementary_school_calendar = supplementary_scope['school_calendar']
+                completed_assessment.supplementary_term = supplementary_scope['term']
+                completed_assessment.save(update_fields=['material', 'supplementary_school_calendar', 'supplementary_term', 'updated_at'])
     
     return JsonResponse({
         'success': True,

@@ -438,6 +438,8 @@ class PrescribedWorkbookFlowTests(TestCase):
             teacher=self.teacher, is_active=True,
         )
         self.section.add_student(self.student)
+        from .prescribed_test_fixtures import prescribed_term_fixture
+        prescribed_term_fixture(self.student, teacher=self.teacher, section=self.section)
         self.session_student(self.student)
 
     def session_student(self, user):

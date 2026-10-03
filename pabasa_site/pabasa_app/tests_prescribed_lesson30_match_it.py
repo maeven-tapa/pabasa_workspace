@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from .models import School, Section, StudentActivityProgress, User
 from .prescribed_activity_catalog import prescribed_activity
+from .prescribed_test_fixtures import prescribed_term_fixture
 from .views import _local_prescribed_audio_file
 
 
@@ -40,6 +41,7 @@ class PrescribedLesson30MatchItTests(TestCase):
         self.student.active_session_key = session.session_key
         self.student.last_activity = timezone.now()
         self.student.save(update_fields=['active_session_key', 'last_activity', 'updated_at'])
+        prescribed_term_fixture(self.student, teacher=teacher, section=section)
         self.progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': self.activity_key})
         self.complete_url = reverse('prescribed_activity_complete', kwargs={'activity_key': self.activity_key})
 

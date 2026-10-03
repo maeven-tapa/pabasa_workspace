@@ -48,6 +48,8 @@ class PrescribedLesson26WordSearchTests(TestCase):
         self.student.active_session_key = session.session_key
         self.student.last_activity = timezone.now()
         self.student.save(update_fields=['active_session_key', 'last_activity', 'updated_at'])
+        from .prescribed_test_fixtures import prescribed_term_fixture
+        prescribed_term_fixture(self.student)
         self.progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': self.activity_key})
         self.activity2_key = 'lesson-26-gawain-2'
         self.activity2_progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': self.activity2_key})

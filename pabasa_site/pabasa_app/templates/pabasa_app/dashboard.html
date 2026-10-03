@@ -3330,8 +3330,12 @@
             schoolYear: "{{ student_calendar_school_year|default:'Not set'|escapejs }}",
             currentTerm: "{{ student_calendar_current_term|default:'Not set'|escapejs }}",
         };
+        const systemTodayIso = "{{ student_calendar_today|default:''|escapejs }}";
+        const calendarToday = systemTodayIso
+            ? new Date(`${systemTodayIso}T00:00:00`)
+            : new Date();
         const currentMonthDate = (() => {
-            const now = new Date();
+            const now = calendarToday;
             return new Date(now.getFullYear(), now.getMonth(), 1);
         })();
 
@@ -3410,7 +3414,7 @@
                 const day = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), i - first + 1);
                 const adjacent = day.getMonth() !== currentMonthDate.getMonth();
                 const bars = getEventsForDay(day).map(event => '<span class="student-calendar-event '+(event.scope === 'school' ? 'school' : '')+'" style="background:'+(event.scope === 'school' ? '#d97706' : (eventColors[event.event_type]?.swatch || '#6b7280'))+'" title="'+String(event.title || '').replace(/"/g, '&quot;')+'"></span>').join('');
-                html += '<div class="student-calendar-day '+(adjacent ? 'is-adjacent' : '')+(localIsoDate(day) === localIsoDate(new Date()) ? ' is-today' : '')+'"><div class="student-calendar-day-number">'+day.getDate()+'</div>'+bars+'</div>';
+                html += '<div class="student-calendar-day '+(adjacent ? 'is-adjacent' : '')+(localIsoDate(day) === localIsoDate(calendarToday) ? ' is-today' : '')+'"><div class="student-calendar-day-number">'+day.getDate()+'</div>'+bars+'</div>';
             }
             grid.innerHTML = html;
         };
@@ -3458,7 +3462,7 @@
         };
 
         const resetExpandedMonth = () => {
-            const now = new Date();
+            const now = calendarToday;
             currentMonthDate.setFullYear(now.getFullYear(), now.getMonth(), 1);
             renderExpandedCalendar(currentMonthDate);
             renderStudentCompactCalendar();

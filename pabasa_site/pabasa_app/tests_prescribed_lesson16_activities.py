@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from .models import Material, School, Section, StudentActivityProgress, User
 from .prescribed_activity_catalog import prescribed_activity
+from .prescribed_test_fixtures import prescribed_term_fixture
 
 
 class PrescribedLesson16ActivityTests(TestCase):
@@ -31,6 +32,7 @@ class PrescribedLesson16ActivityTests(TestCase):
             description="", teacher=self.teacher, subject="Filipino", is_active=True,
         )
         self.section.add_student(self.student)
+        prescribed_term_fixture(self.student, teacher=self.teacher, section=self.section)
 
     def login_student(self):
         session = self.client.session

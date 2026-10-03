@@ -36,6 +36,8 @@ class PrescribedLesson29OralBlankTests(TestCase):
         self.student.active_session_key = session.session_key
         self.student.last_activity = timezone.now()
         self.student.save(update_fields=['active_session_key', 'last_activity', 'updated_at'])
+        from .prescribed_test_fixtures import prescribed_term_fixture
+        prescribed_term_fixture(self.student)
         self.progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': 'lesson-29-gawain-1'})
         self.complete_url = reverse('prescribed_activity_complete', kwargs={'activity_key': 'lesson-29-gawain-1'})
 

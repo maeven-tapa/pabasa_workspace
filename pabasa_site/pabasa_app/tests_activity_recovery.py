@@ -2,21 +2,29 @@ import json
 
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
-from .models import Material, User
+from .models import Material, School, User
+from .prescribed_test_fixtures import prescribed_term_fixture
 from .syllable_blending import build_activity
 
 
 class ProtectedActivityRecoveryTests(TestCase):
     def setUp(self):
+        school = School.objects.create(name='Activity Recovery School', code='ACT-REC')
         self.student = User.objects.create(
             custom_id='STD-ACTIVITY-RECOVERY', role='student', first_name='Activity', last_name='Learner',
             middle_initial='', suffix='', sex='female', birth_month=1, birth_day=1, birth_year=2015,
             email='activity-recovery@example.com', password_hash='hashed-password',
+            school_record=school,
         )
+        prescribed_term_fixture(self.student)
         session = self.client.session
         session.update({'user_id': self.student.id, 'user_role': 'student', 'email': self.student.email})
         session.save()
+        self.student.active_session_key = session.session_key
+        self.student.last_activity = timezone.now()
+        self.student.save(update_fields=['active_session_key', 'last_activity', 'updated_at'])
 
     def test_picture_word_route_renders_protected_template(self):
         material = Material.objects.create(

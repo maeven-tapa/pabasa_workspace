@@ -6,6 +6,8 @@ from openpyxl import load_workbook
 from django.test import Client
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
+from .prescribed_test_fixtures import prescribed_term_fixture
 
 from .models import Enrollment, Material, School, Section, StoryResponseSubmission, User
 
@@ -17,6 +19,10 @@ class StoryResponseReviewTests(TestCase):
         self.student = User.objects.create(custom_id="S-STORY", role="student", first_name="S", last_name="Student", sex="female", birth_month=1, birth_day=1, birth_year=2018, email="student-story@example.com", password_hash="x")
         self.section = Section.objects.create(school=self.school, class_code="STORY", class_name="Story", teacher=self.teacher, assessment_week_enabled=True)
         Enrollment.objects.create(student=self.student, section=self.section)
+        prescribed_term_fixture(
+            self.student, teacher=self.teacher, section=self.section,
+            classification='Developing Reader',
+        )
         self.story = Material.objects.create(teacher=self.teacher, section=self.section, title="The Story", item_type="paragraph", status="published", content_json={"activity_type": "story_reading", "storyTitle": "The Story", "storyText": "Once."})
         self.material = Material.objects.create(teacher=self.teacher, section=self.section, title="Tell me", item_type="paragraph", type="assessment", status="published", student_access=True, content_json={"activity_type": "story_response", "source_story_reading_material_id": self.story.id, "response_prompt": "What happened?"})
         self.material.assigned_sections.add(self.section)
@@ -25,6 +31,9 @@ class StoryResponseReviewTests(TestCase):
         session = self.client.session
         session.update({"user_id": user.id, "user_role": user.role, "email": user.email})
         session.save()
+        user.active_session_key = session.session_key
+        user.last_activity = timezone.now()
+        user.save(update_fields=['active_session_key', 'last_activity', 'updated_at'])
 
     def test_submission_review_and_grade_are_persisted(self):
         self.login_as(self.student)
@@ -89,7 +98,7 @@ class StoryResponseReviewTests(TestCase):
         session.update({"user_id": self.student.id, "user_role": self.student.role, "email": self.student.email})
         session.save()
 
-        page = client.get(reverse("story_response_page"), {"id": f"material-{self.material.id}"})
+        page = client.get(reverse("story_response_page"), {"id": f"material-{self.material.id}"}, follow=True)
         self.assertEqual(page.status_code, 200)
         csrf_token = client.cookies["csrftoken"].value
         response = client.post(

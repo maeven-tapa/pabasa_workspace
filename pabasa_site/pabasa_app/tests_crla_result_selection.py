@@ -194,10 +194,13 @@ class OfficialCrlaResultSelectionTests(TestCase):
         )
 
     def test_terminal_student_state_creates_the_authoritative_result(self):
-        session = self.client.session
-        session["user_id"] = self.student.id
-        session["user_role"] = "student"
-        session.save()
+        self.student.set_password("test-password")
+        self.student.save(update_fields=["password_hash", "updated_at"])
+        login_response = self.client.post(reverse("login_user"), {
+            "custom_id": self.student.custom_id,
+            "password": "test-password",
+        })
+        self.assertEqual(login_response.status_code, 200)
 
         response = self.client.post(
             reverse("persist_student_end_assessment_state"),
