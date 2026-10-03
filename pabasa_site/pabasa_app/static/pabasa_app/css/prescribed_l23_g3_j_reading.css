@@ -1,0 +1,204 @@
+/* Lesson 23 Gawain 3 only: use the established Lesson 22 prescribed
+   interface language without changing the Jj reading workflow. */
+.wb-page.wb-l23-g3-page{
+  --g3-ink:#183e63;
+  --g3-teal:#299e9a;
+  --g3-teal-dark:#187b7a;
+  min-height:100dvh;
+  height:100dvh;
+  margin:0;
+  padding:16px clamp(12px,4vw,42px) 22px;
+  background:url('../prescribed/PRESCRIBED-BG.jpg') center/cover no-repeat;
+  color:var(--g3-ink);
+  font-family:Fredoka,Nunito,'Segoe UI',sans-serif;
+}
+.wb-l23-g3-page .wb-l23-g3-page-layout{
+  display:flex;
+  flex-direction:column;
+  gap:clamp(22px,3vh,32px);
+  width:min(1250px,100%);
+  height:100%;
+  min-height:0;
+  margin:0 auto;
+}
+.wb-l23-g3-page .wb-l23-g3-page-layout>#wb-back{
+  position:relative;
+  z-index:3;
+  align-self:flex-start;
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  width:280px;
+  min-height:64px;
+  padding:10px 18px;
+  border-radius:999px;
+  background:#fff;
+  color:var(--g3-ink);
+  font-size:1.2rem;
+  font-family:Fredoka,Nunito,'Segoe UI',sans-serif;
+  font-weight:900;
+  line-height:1.15;
+  text-align:center;
+  text-decoration:none;
+  box-shadow:0 8px 17px #145ca744;
+}
+.wb-l23-g3-page .wb-l23-g3-page-layout>#wb-back::before{content:'\2190';font-size:2rem;line-height:1}
+.wb-l23-g3-page .wb-l23-g3-page-layout>.wb-shell{
+  position:relative;
+  flex:1 1 0;
+  width:100%;
+  height:auto;
+  min-height:0;
+  margin:0;
+  padding:clamp(38px,6vh,68px) clamp(18px,6vw,80px) 16px;
+  border:2px solid #ffffffaa;
+  border-radius:42px;
+  background:#ffffff63;
+  box-shadow:0 18px 45px #1e5b7a35;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.wb-l23-g3-page .wb-shell>header{
+  flex:0 0 auto;
+  margin:0 0 7px;
+  padding:0;
+  background:transparent;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  text-align:center;
+}
+.wb-l23-g3-page .wb-shell>header::after{display:none}
+.wb-l23-g3-page .wb-shell>header>#wb-back{display:none}
+.wb-l23-g3-page .wb-shell>header>p:first-of-type,
+.wb-l23-g3-page .wb-shell .wb-lesson-label{
+  width:max-content;
+  max-width:100%;
+  margin:0 auto 10px;
+  padding:9px 24px;
+  border-radius:999px;
+  background:#277f82;
+  color:#fff;
+  font-size:clamp(.78rem,1.3vw,1rem);
+  font-weight:900;
+  letter-spacing:.02em;
+  text-transform:uppercase;
+}
+.wb-l23-g3-page .wb-shell>header h1{
+  margin:0;
+  color:var(--g3-ink);
+  font-size:clamp(1.9rem,3.7vw,3.5rem);
+  line-height:1.08;
+  font-weight:900;
+  text-align:center;
+}
+.wb-l23-g3-page .wb-shell>header .wb-instruction{
+  max-width:900px;
+  margin:8px auto 0;
+  color:var(--g3-ink);
+  font-size:clamp(.95rem,1.5vw,1.2rem);
+  line-height:1.35;
+  text-align:center;
+  font-weight:400;
+}
+.wb-l23-g3-page #wb-instruction-replay{
+  min-height:38px;
+  margin-top:6px;
+  padding:6px 14px;
+  border:3px solid #94d9d6;
+  border-radius:999px;
+  background:#fff;
+  color:var(--g3-teal-dark);
+  font:900 .88rem/1.1 inherit;
+  box-shadow:0 4px 0 #b7d6dc;
+}
+.wb-l23-g3-page #wb-progress-row{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  width:min(420px,70%);
+  max-width:100%;
+  margin:9px auto clamp(8px,2vh,18px);
+  padding:0;
+  border-radius:0;
+  background:transparent;
+  color:var(--g3-teal-dark);
+  font-size:1rem;
+  font-weight:900;
+}
+.wb-l23-g3-page #wb-progress{flex:0 0 auto;margin:0;padding:0;background:transparent;box-shadow:none;white-space:nowrap;line-height:1.1}
+.wb-l23-g3-page #wb-progress-track{flex:1 1 auto;width:auto;min-width:0;height:8px;border-radius:999px;background:#dcecec;overflow:hidden}
+.wb-l23-g3-page #wb-progress-fill{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#f4c866,#299e9a)}
+.wb-l23-g3-page #wb-status,.wb-l23-g3-page>#wb-status{display:none}
+.wb-l23-g3-page #wb-content{flex:1 1 auto;min-height:0;display:flex}
+.wb-l23-g3-page #wb-action{display:none}
+.wb-l23-g3-content{
+  flex:1 1 auto;
+  min-height:0;
+  width:100%;
+  display:grid;
+  grid-template-columns:minmax(0,1.45fr) minmax(220px,.82fr);
+  gap:14px;
+  margin:0;
+  align-items:stretch;
+}
+.wb-l23-g3-panel{
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  min-height:0;
+  margin:0;
+  padding:12px 16px;
+  border:3px solid #94d9d6;
+  border-radius:30px;
+  background:#ffffffe8;
+  box-shadow:0 12px 25px #1e5b7a1c;
+  overflow:hidden;
+}
+.wb-l23-g3-panel h2{flex:0 0 auto;margin:0 0 5px;color:var(--g3-teal-dark);font-size:clamp(1rem,1.9vw,1.55rem);line-height:1.1;text-align:center;letter-spacing:.01em}
+.wb-l23-g3-list-panel .wb-l23-g3-word-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:repeat(3,minmax(67px,1fr));align-content:stretch;gap:10px;flex:1 1 auto;min-height:0;max-height:none;margin:5px auto 0;width:100%;max-width:650px}
+.wb-l23-g3-word{grid-column:span 2;display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;padding:2px 4px;border:2px solid #b9d9df;border-radius:14px;background:#f9fcfb;color:var(--g3-ink);font-family:Fredoka,Nunito,'Segoe UI',sans-serif;font-size:clamp(1rem,2.1vw,1.8rem);font-weight:900;line-height:1.05;letter-spacing:.01em;text-align:center;white-space:nowrap;box-shadow:0 3px 0 rgba(180,218,231,.22)}
+.wb-l23-g3-word:nth-child(7){grid-column:2 / span 2}
+.wb-l23-g3-word:nth-child(8){grid-column:4 / span 2}
+.wb-l23-g3-word.is-current{border-color:#e7af45;background:#fff2be;box-shadow:0 0 0 4px #f4c86655,0 4px 0 #d29f23}
+.wb-l23-g3-word.is-done{border-color:#71ba91;background:#e3f5ea;color:#287b55;box-shadow:0 4px 0 #afd8bd}
+.wb-l23-g3-reading-panel h2{margin-bottom:5px}
+.wb-l23-g3-subtitle{flex:0 0 auto;margin:0;color:#55727e;font-size:.78rem;font-weight:900;letter-spacing:.08em;text-align:center;text-transform:uppercase}
+.wb-l23-g3-attempts{flex:0 0 auto;margin:3px 0 8px;color:#a45d00;font-size:1rem;font-weight:900;text-align:center}
+.wb-l23-g3-target{flex:0 0 auto;display:block;margin:3px 0 5px;color:var(--g3-ink);font-size:clamp(1.8rem,4vw,3rem);font-weight:900;line-height:1.05;text-align:center}
+.wb-l23-g3-controls{display:grid;gap:12px;flex:0 0 auto;margin:4px 0 8px}
+.wb-l23-g3-controls button{width:100%;min-height:52px;padding:8px 12px;border:0;border-radius:999px;background:var(--g3-teal);color:#fff;font-family:Fredoka,Nunito,'Segoe UI',sans-serif;font-size:1rem;font-weight:900;line-height:1.1;box-shadow:0 5px 0 var(--g3-teal-dark)}
+.wb-l23-g3-controls button.wb-l23-g3-secondary{background:#fff;color:var(--g3-teal-dark);border:3px solid #94d9d6;box-shadow:0 4px 0 #b7d6dc}
+.wb-l23-g3-heard{display:grid;gap:3px;flex:0 0 auto;min-height:58px;margin:0 0 8px;padding:8px;border:2px solid #d6e8f2;border-radius:14px;background:#f6fbfe;text-align:center}
+.wb-l23-g3-heard span{color:#557b91;font-family:Fredoka,Nunito,'Segoe UI',sans-serif;font-size:.7rem;font-weight:900;letter-spacing:.12em;line-height:1.1}.wb-l23-g3-heard strong{overflow-wrap:anywhere;color:#16465d;font-family:Fredoka,Nunito,'Segoe UI',sans-serif;font-size:1rem;font-weight:900;line-height:1.1}
+.wb-l23-g3-feedback{flex:0 0 auto;min-height:2.3em;margin:0;color:var(--g3-ink);font-size:clamp(1rem,2.2vw,1.35rem);line-height:1.35;font-weight:900;text-align:center}.wb-l23-g3-feedback.is-error{color:#b23a3a}
+.wb-l23-g3-reset{flex:0 0 auto;align-self:center;min-height:38px;margin-top:auto;padding:7px 14px;border:2px solid #e1b6b6;border-radius:999px;background:#fff;color:#9b4141;font-weight:900}
+@media(max-width:760px){
+  .wb-page.wb-l23-g3-page{padding:12px}.wb-l23-g3-page .wb-l23-g3-page-layout{gap:clamp(18px,3vh,24px)}.wb-l23-g3-page .wb-l23-g3-page-layout>#wb-back{width:230px;min-height:56px;font-size:1rem}.wb-l23-g3-page .wb-l23-g3-page-layout>.wb-shell{padding:clamp(24px,5vh,48px) 10px 10px;border-radius:30px}.wb-l23-g3-page .wb-shell>header{margin-bottom:7px}.wb-l23-g3-page .wb-shell>header>p:first-of-type,.wb-l23-g3-page .wb-shell .wb-lesson-label{margin-bottom:5px;padding:7px 15px}.wb-l23-g3-page .wb-shell>header h1{font-size:clamp(1.5rem,5vw,2.35rem)}.wb-l23-g3-page .wb-shell>header .wb-instruction{font-size:clamp(.78rem,2vw,1rem)}.wb-l23-g3-page #wb-instruction-replay{min-height:37px;margin-top:6px;padding:6px 12px;font-size:.76rem}.wb-l23-g3-page #wb-progress-row{margin-top:5px;padding:4px 10px;font-size:.76rem}.wb-l23-g3-page #wb-progress-track{height:6px}.wb-l23-g3-content{grid-template-columns:minmax(0,1.05fr) minmax(135px,.95fr);gap:8px}.wb-l23-g3-panel{padding:10px 7px;border-radius:24px}.wb-l23-g3-panel h2{font-size:clamp(.85rem,2.6vw,1.15rem)}.wb-l23-g3-list-panel .wb-l23-g3-word-grid{gap:5px;margin:6px auto}.wb-l23-g3-word{padding:3px;border-width:2px;border-radius:11px;font-size:clamp(.72rem,2.6vw,1.25rem);box-shadow:0 3px 0 #b7d6dc}.wb-l23-g3-target{margin:4px 0 2px;font-size:clamp(1.35rem,6vw,2.35rem)}.wb-l23-g3-subtitle,.wb-l23-g3-attempts{font-size:.64rem}.wb-l23-g3-controls{gap:4px;margin:4px 0}.wb-l23-g3-controls button{min-height:38px;padding:7px 8px;font-size:.65rem}.wb-l23-g3-heard{margin-top:4px;padding:5px}.wb-l23-g3-heard span{font-size:.5rem}.wb-l23-g3-heard strong{font-size:.68rem}.wb-l23-g3-feedback{min-height:2em;margin-top:3px;font-size:clamp(.58rem,1.9vw,.78rem)}.wb-l23-g3-reset{min-height:28px;margin-top:auto;padding:4px 6px;font-size:.56rem}
+}
+@media(max-height:560px){.wb-page.wb-l23-g3-page{padding-top:8px;padding-bottom:10px}.wb-l23-g3-page .wb-l23-g3-page-layout>.wb-shell{padding-top:20px;padding-bottom:7px}.wb-l23-g3-page .wb-shell>header{margin-bottom:4px}.wb-l23-g3-page .wb-shell>header>p:first-of-type,.wb-l23-g3-page .wb-shell .wb-lesson-label{padding:5px 12px}.wb-l23-g3-page .wb-shell>header h1{font-size:clamp(1.35rem,4vw,2rem)}.wb-l23-g3-page .wb-shell>header .wb-instruction{margin-top:3px;font-size:.72rem}.wb-l23-g3-page #wb-instruction-replay{min-height:30px;margin-top:3px;padding:3px 8px;font-size:.62rem}.wb-l23-g3-page #wb-progress-row{margin-top:2px;padding:3px 8px;font-size:.62rem}.wb-l23-g3-page #wb-progress-track{height:5px}.wb-l23-g3-content{gap:5px}.wb-l23-g3-panel{padding:6px 5px;border-width:2px;border-radius:22px}.wb-l23-g3-panel h2{font-size:.7rem}.wb-l23-g3-list-panel .wb-l23-g3-word-grid{gap:3px;margin:4px auto}.wb-l23-g3-word{border-width:1px;border-radius:8px;font-size:.72rem;box-shadow:0 2px 0 #b7d6dc}.wb-l23-g3-target{font-size:1.25rem}.wb-l23-g3-subtitle,.wb-l23-g3-attempts{font-size:.52rem}.wb-l23-g3-controls button{min-height:26px;padding:3px 5px;font-size:.52rem}.wb-l23-g3-heard{margin-top:2px;padding:3px}.wb-l23-g3-heard span{font-size:.4rem}.wb-l23-g3-heard strong{font-size:.52rem}.wb-l23-g3-feedback{font-size:.5rem}.wb-l23-g3-reset{min-height:22px;margin-top:auto;font-size:.46rem}.wb-l23-g3-page .wb-l23-g3-page-layout>#wb-back{width:205px;min-height:48px}
+}
+
+@media(max-height:700px) and (min-width:761px){
+  .wb-page.wb-l23-g3-page{padding-top:8px;padding-bottom:10px}
+  .wb-l23-g3-page .wb-l23-g3-page-layout{gap:clamp(18px,3vh,24px)}
+  .wb-l23-g3-page .wb-l23-g3-page-layout>.wb-shell{padding-top:54px;padding-bottom:7px}
+  .wb-l23-g3-page .wb-shell>header{margin-bottom:4px}
+  .wb-l23-g3-page .wb-shell>header>p:first-of-type,.wb-l23-g3-page .wb-shell .wb-lesson-label{padding:5px 12px}
+  .wb-l23-g3-page .wb-shell>header h1{font-size:clamp(1.55rem,3vw,2.35rem)}
+  .wb-l23-g3-page .wb-shell>header .wb-instruction{margin-top:3px;font-size:.72rem}
+  .wb-l23-g3-page #wb-instruction-replay{min-height:30px;margin-top:3px;padding:3px 9px;font-size:.64rem}
+  .wb-l23-g3-page #wb-progress-row{margin-top:2px;margin-bottom:5px}
+  .wb-l23-g3-content{gap:8px}
+  .wb-l23-g3-panel{padding:9px 12px;border-radius:20px}
+  .wb-l23-g3-panel h2{font-size:.9rem}
+  .wb-l23-g3-list-panel .wb-l23-g3-word-grid{grid-template-rows:repeat(3,minmax(58px,1fr));gap:6px;margin-top:4px}
+  .wb-l23-g3-word{font-size:clamp(.85rem,1.8vw,1.35rem);border-radius:11px}
+  .wb-l23-g3-target{font-size:clamp(1.4rem,3vw,2.35rem)}
+  .wb-l23-g3-controls button{min-height:44px;font-size:.82rem}
+  .wb-l23-g3-heard{min-height:50px;padding:7px}
+  .wb-l23-g3-feedback{font-size:clamp(.82rem,1.8vw,1.05rem)}
+}

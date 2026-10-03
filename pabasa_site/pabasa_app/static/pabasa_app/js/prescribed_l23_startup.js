@@ -35,6 +35,7 @@
     document.body.classList.remove('lesson-start-open');
     document.dispatchEvent(new CustomEvent('pabasa:l23-started', {detail: {activityKey: key}}));
     document.querySelectorAll('.wb-bigbox-tile:disabled,#wb-basahin:disabled').forEach(button => {button.disabled = false;});
+    if (key === 'aral-l23-g3-j-word-reading') return;
     audio();
   };
   later.onclick = () => {
