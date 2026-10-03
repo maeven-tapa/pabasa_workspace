@@ -141,13 +141,18 @@
     .aral-modal-criteria { margin:0; color:#526d7c; font-size:.74rem; font-weight:800; }
     .aral-panel-action-badge { display:inline-grid; min-width:1.15rem; height:1.15rem; place-items:center; margin-left:.35rem; padding:0 .25rem; border-radius:50%; background:#2b87b5; color:#fff; font-size:.65rem; font-weight:900; line-height:1; }
     .aral-modal-student-status { display:inline-flex; align-items:center; padding:.28rem .58rem; border-radius:999px; background:#e4f5eb; color:#216b46; font-size:.7rem; font-weight:900; line-height:1.1; white-space:nowrap; }
-    #aralReviewStudentsModal .modal-dialog { max-height:85vh; }
-    #aralReviewStudentsModal .modal-content { display:flex; max-height:85vh; }
-    #aralReviewStudentsModal .modal-header { flex:0 0 auto; }
-    #aralReviewStudentsModal .modal-body { flex:0 1 auto; max-height:none; min-height:0; overflow-y:auto; scrollbar-width:thin; scrollbar-color:#c6d4db transparent; }
-    #aralReviewStudentsModal .modal-body::-webkit-scrollbar { width:6px; }
-    #aralReviewStudentsModal .modal-body::-webkit-scrollbar-track { background:transparent; }
-    #aralReviewStudentsModal .modal-body::-webkit-scrollbar-thumb { border-radius:999px; background:#c6d4db; }
+    #aralReviewStudentsModal .modal-dialog, #aralExitHistoryModal .modal-dialog { max-height:85vh; }
+    #aralReviewStudentsModal .modal-content, #aralExitHistoryModal .modal-content { display:flex; max-height:85vh; }
+    #aralReviewStudentsModal .modal-header, #aralExitHistoryModal .modal-header { flex:0 0 auto; }
+    #aralReviewStudentsModal .modal-body, #aralExitHistoryModal .modal-body { flex:0 1 auto; max-height:none; min-height:0; overflow-y:auto; scrollbar-width:thin; scrollbar-color:#c6d4db transparent; }
+    #aralReviewStudentsModal .modal-body::-webkit-scrollbar, #aralExitHistoryModal .modal-body::-webkit-scrollbar { width:6px; }
+    #aralReviewStudentsModal .modal-body::-webkit-scrollbar-track, #aralExitHistoryModal .modal-body::-webkit-scrollbar-track { background:transparent; }
+    #aralReviewStudentsModal .modal-body::-webkit-scrollbar-thumb, #aralExitHistoryModal .modal-body::-webkit-scrollbar-thumb { border-radius:999px; background:#c6d4db; }
+    .aral-history-student .aral-modal-scores { gap:.5rem .75rem; }
+    .aral-history-student .aral-modal-score { display:block; }
+    .aral-history-student .aral-modal-score dt { color:#718590; font-size:.68rem; font-weight:700; }
+    .aral-history-student .aral-modal-score dd { margin-top:.12rem; color:#24465c; font-size:.78rem; font-weight:800; line-height:1.35; overflow-wrap:anywhere; }
+    .aral-history-student .aral-history-reason { grid-column:1 / -1; }
     .teacher-aral-action-dialog { max-width:28rem; }
     .teacher-aral-action-modal { overflow:hidden; border:0; border-radius:18px; box-shadow:0 20px 55px rgba(15,45,69,.2); }
     .teacher-aral-action-modal .modal-header { align-items:center; padding:1rem 1.15rem; border-bottom:1px solid #e5eef2; background:#f7fbfd; }
@@ -1522,7 +1527,7 @@
     <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
         <div class="modal-header"><div><h2 class="modal-title" id="aralExitHistoryModalTitle">ARAL Exit History</h2><p class="modal-context" id="aralExitHistoryModalContext">{% if assessment_week_section %}{{ assessment_week_section.grade_level }} · {{ assessment_week_section.section|default:assessment_week_section.class_name }} · {% endif %}{{ selected_aral_term_label }}</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
         <div class="modal-body">
-            {% if aral_exit_history %}<div class="aral-modal-list" role="list">{% for student in aral_exit_history %}<div class="aral-modal-student" role="listitem"><div class="aral-modal-student-header"><span class="aral-modal-student-name">{{ student.student_name }}</span><span class="aral-modal-student-status">{{ student.status }}</span></div><dl class="aral-modal-scores"><div class="aral-modal-score"><dt>Grade &amp; Section</dt><dd>{{ student.section_display }}</dd></div><div class="aral-modal-score"><dt>Term</dt><dd>{{ student.term_label }}</dd></div><div class="aral-modal-score"><dt>Exit Date</dt><dd>{{ student.exit_date }}</dd></div><div class="aral-modal-score"><dt>Exit Type</dt><dd>{{ student.exit_type }}</dd></div>{% if student.reason %}<div class="aral-modal-score"><dt>Reason</dt><dd>{{ student.reason }}</dd></div>{% endif %}</dl></div>{% endfor %}</div>{% else %}<div class="aral-empty-state" role="status"><strong>No students have exited ARAL yet</strong><span>Completed ARAL exits will appear here for tracking.</span></div>{% endif %}
+            {% if aral_exit_history %}<div class="aral-modal-list" role="list">{% for student in aral_exit_history %}<div class="aral-modal-student aral-history-student" role="listitem"><div class="aral-modal-student-header"><span class="aral-modal-student-name">{{ student.student_name }}</span><span class="aral-modal-student-status">{{ student.status }}</span></div><dl class="aral-modal-scores"><div class="aral-modal-score"><dt>Grade &amp; Section</dt><dd>{{ student.section_display }}</dd></div><div class="aral-modal-score"><dt>Term</dt><dd>{{ student.term_label }}</dd></div><div class="aral-modal-score"><dt>Exit Date</dt><dd>{{ student.exit_date }}</dd></div><div class="aral-modal-score"><dt>Exit Type</dt><dd>{{ student.exit_type }}</dd></div>{% if student.reason %}<div class="aral-modal-score aral-history-reason"><dt>Reason</dt><dd>{{ student.reason }}</dd></div>{% endif %}</dl></div>{% endfor %}</div>{% else %}<div class="aral-empty-state" role="status"><strong>No students have exited ARAL yet</strong><span>Students who are not automatically ready for exit will appear here.</span></div>{% endif %}
         </div>
     </div></div>
 </div>
