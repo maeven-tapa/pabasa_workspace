@@ -8,7 +8,6 @@
     'aral-l23-g1-n-syllable-builder': 'g1',
     'aral-l23-g2-n-word-reading': 'g2',
     'aral-l23-g3-j-word-reading': 'g3',
-    'aral-l23-g4-j-syllabication': 'g4',
     'aral-l23-g5-j-word-search': 'g5',
     'aral-l23-g6-q-syllable-builder': 'g6',
     'aral-l23-g7-q-word-reading': 'g7',
