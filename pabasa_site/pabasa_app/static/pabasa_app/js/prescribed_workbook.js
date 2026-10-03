@@ -177,6 +177,21 @@
       pageLayout.append(back, shell);
     }
   }
+  if (jSyllables) {
+    const shell = document.querySelector('.wb-shell'), back = document.getElementById('wb-back');
+    if (shell && back && shell.parentNode) {
+      const pageLayout = document.createElement('div');
+      pageLayout.className = 'wb-l23-g4-page-layout';
+      back.classList.add('wb-l23-g4-back');
+      back.textContent = 'Balik sa Aking Aralin';
+      shell.parentNode.insertBefore(pageLayout, shell);
+      pageLayout.append(back, shell);
+      const frame = document.createElement('div');
+      frame.className = 'wb-l23-g4-content-frame';
+      shell.appendChild(frame);
+      frame.append(content, action);
+    }
+  }
   if (l23G3) {
     document.addEventListener('pabasa:l23-started', event => {
       if (event.detail?.activityKey !== a.activity_key) return;
@@ -431,7 +446,7 @@
     if(g7Reading){renderL24G7WordReading();return;}
     if(prescribedWordReading){renderJReading();return;}
     if(pictureReading){renderPictureReading();return;}
-    if(jSyllables){renderJSyllables();return;}
+    if(jSyllables){renderSyllables();return;}
     if(g5Syllables){renderL24G5Syllables();return;}
     if(g6Search){renderL24G6WordSearch();return;}
     if(specializedBuilder&&!preview){renderCBuilder();lock();return;}
@@ -700,6 +715,20 @@
   document.getElementById('wb-instruction-replay')?.addEventListener('click',()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>message(e.message||'Hindi available ang panuto.',true));});
   function written(prompt){content.innerHTML+=`<div class="wb-focus"><p>${esc(prompt)}</p><label for="wb-written">${fil?'Sagot':'Answer'}</label><textarea id="wb-written" ${preview||a.oral_flow&&!oral().passed?'disabled':''}>${esc(preview?'':state.draft.text||'')}</textarea></div>`;document.getElementById('wb-written').oninput=e=>draft({text:e.target.value});}
   function renderSyllables(){
+    if(jSyllables){
+      const current=Number(state.index||0), answers=state.answers||{};
+      const rows=a.items.map((it,n)=>{
+        const done=Object.prototype.hasOwnProperty.call(answers,String(n)), active=n===current&&!state.completed;
+        const value=done?answers[String(n)]:active?(state.draft?.text||''):'—';
+        return `<div class="wb-syllable-row ${done?'is-done':''} ${active?'is-current':''}" ${active?'aria-current="step"':''}><span class="wb-syllable-number">${esc(a.item_labels?.[n]||`${n+1}.`)}</span><strong class="wb-syllable-word">${esc(it.text)}</strong><span class="wb-syllable-equals">=</span>${active?`<input id="wb-written" type="text" inputmode="text" autocomplete="off" aria-label="Sagot para sa ${esc(it.text)}" value="${esc(value)}" placeholder="Halimbawa: jack-et">`:`<span class="wb-syllable-answer">${esc(value)}</span>`}</div>`;
+      }).join('');
+      content.innerHTML=`<div class="wb-g4-panels"><section class="wb-j-syllables wb-g4-table-panel" aria-labelledby="wb-j-syllables-title"><div class="wb-j-syllables-heading"><span class="wb-j-syllables-kicker">PANTIGIN ANG MGA SALITA</span><h2 id="wb-j-syllables-title">Pantigin ang sumusunod na salita.</h2></div><div class="wb-syllable-rows">${rows}</div></section><section class="wb-g4-support-panel" aria-labelledby="wb-g4-support-title"><span class="wb-g4-panel-kicker">GAWAIN 4</span><p class="wb-g4-action-guidance">Isulat ang wastong paghahati ng salita sa mga pantig.</p><p class="wb-j-feedback ${state.last_feedback==='Subukan Muli.'?'is-error':''}" role="status" aria-live="polite">${esc(state.last_feedback||'')}</p><div class="wb-g4-action-slot"></div></section></div>`;
+      const input=document.getElementById('wb-written');
+      if(input&&!preview)input.oninput=()=>draft({text:input.value});
+      document.querySelector('.wb-g4-action-slot')?.append(action);
+      if(!preview&&!state.completed&&input)button('Suriin',()=>perform({action:'answer',answer:{text:input.value}}),true);
+      return;
+    }
     if(a.worked_example)content.innerHTML+=`<p>${esc(a.worked_example)}</p>`;
     if(preview){content.innerHTML+=a.items.map((it,n)=>`<p>${esc(a.item_labels?.[n]||`${n+1}.`)} ${esc(it.text)} = ________________</p>`).join('');}
     else {const it=item();const n=state.index;content.innerHTML+=`<div class="wb-focus wb-syllable-focus"><p>${esc(a.item_labels?.[n]||`${n+1}.`)} ${esc(it.text)} = ________________</p></div>`;}
