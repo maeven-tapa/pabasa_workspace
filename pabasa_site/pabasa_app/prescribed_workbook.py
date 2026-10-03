@@ -687,6 +687,7 @@ def initial_l22_g2_state():
         'index': 0, 'sequence_index': 0, 'completed_words': [],
         'reading_attempts': 0, 'reading_phase': 'read',
         'last_feedback': '', 'last_transcript': '',
+        'last_successful_word': '',
         'completed': False, 'revision': 0,
     }
 
@@ -1579,6 +1580,7 @@ def normalize_l22_g2_state(state):
     state['reading_phase'] = state.get('reading_phase') if state.get('reading_phase') in {'read', 'help'} else 'read'
     state.setdefault('last_feedback', '')
     state.setdefault('last_transcript', '')
+    state['last_successful_word'] = str(state.get('last_successful_word') or '')
     state['completed'] = bool(state.get('completed')) or len(completed) == len(L22_G2_C_WORDS)
     if state['completed']:
         state['sequence_index'] = state['index'] = len(L22_G2_C_WORDS)
@@ -1586,7 +1588,7 @@ def normalize_l22_g2_state(state):
     return state
 
 
-def _apply_l22_g2_reading(state, event, verified_reading):
+def _apply_l22_g2_reading(state, event, verified_reading, canonical_word=''):
     normalize_l22_g2_state(state)
     action = event.get('action')
     if action == 'restart':
@@ -1604,10 +1606,12 @@ def _apply_l22_g2_reading(state, event, verified_reading):
             raise ValueError('Pakinggan muna ang tamang pagbigkas o pindutin ang Subukan Muli.')
         transcript = str(event.get('transcript') or '').strip()
         state['last_transcript'] = transcript
+        state['last_successful_word'] = ''
         if verified_reading is None:
             state['last_feedback'] = 'Hindi ko malinaw na narinig. Subukan muli.'
             return state
         if verified_reading:
+            state['last_successful_word'] = canonical_word
             state['completed_words'].append(state['sequence_index'])
             state['sequence_index'] += 1
             state['index'] = state['sequence_index']
@@ -2185,7 +2189,9 @@ def apply_event(activity, state, event, verified_reading=None):
     if activity['activity_key'] in {'aral-l22-g6-f-word-reading', 'aral-l23-g2-n-word-reading'} and event.get('action') == 'reading':
         event = dict(event, action='reading_attempt')
     if activity['activity_key'] == 'aral-l22-g2-c-word-reading':
-        return _apply_l22_g2_reading(state, event, verified_reading)
+        current_index = max(0, min(int(state.get('sequence_index', 0) or 0), len(activity['items']) - 1))
+        canonical_word = activity['items'][current_index]['text'] if activity['items'] else ''
+        return _apply_l22_g2_reading(state, event, verified_reading, canonical_word)
     if activity['activity_key'] == 'aral-l22-g6-f-word-reading':
         return _apply_l22_g6_reading(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l24-g2-v-word-reading':

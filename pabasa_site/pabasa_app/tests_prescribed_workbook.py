@@ -174,8 +174,35 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertEqual(normalize_l22_g2_speech('  SITA!  '), 'sita')
         self.assertTrue(l22_g2_pronunciation_match('Cita', 'SITA'))
         self.assertTrue(l22_g2_pronunciation_match('Cita', 'cita'))
+        self.assertTrue(l22_g2_pronunciation_match('Celsa', 'selsa'))
+        self.assertTrue(l22_g2_pronunciation_match('Celsa', 'celsa'))
         self.assertFalse(l22_g2_pronunciation_match('Cita', 'camera'))
         self.assertFalse(l22_g2_pronunciation_match('Celso', 'sita'))
+
+    def test_lesson22_gawain2_success_keeps_canonical_word_after_advancement(self):
+        activity = get_activity('aral-l22-g2-c-word-reading')
+        state = initial_l22_g2_state()
+        for index, transcript in ((0, 'computer'), (1, 'cebu'), (2, 'cactus'), (3, 'cita'),
+                                   (4, 'camera'), (5, 'celso'), (6, 'cabinet'), (7, 'vicente'),
+                                   (8, 'caloocan'), (9, 'celeste'), (10, 'coron'), (11, 'selsa')):
+            apply_event(activity, state, {'action': 'reading_started'}, None)
+            apply_event(activity, state, {'action': 'reading_attempt', 'transcript': transcript}, True)
+            self.assertEqual(state['last_successful_word'], L22_G2_C_WORDS[index])
+        self.assertEqual(state['sequence_index'], 12)
+        self.assertEqual(state['last_transcript'], 'selsa')
+        self.assertEqual(state['last_successful_word'], 'Celsa')
+
+    def test_lesson22_gawain2_failure_and_unclear_clear_canonical_display(self):
+        activity = get_activity('aral-l22-g2-c-word-reading')
+        state = initial_l22_g2_state()
+        apply_event(activity, state, {'action': 'reading_attempt', 'transcript': 'computer'}, True)
+        self.assertEqual(state['last_successful_word'], 'computer')
+        apply_event(activity, state, {'action': 'reading_attempt', 'transcript': 'wrong'}, False)
+        self.assertEqual(state['last_transcript'], 'wrong')
+        self.assertEqual(state['last_successful_word'], '')
+        apply_event(activity, state, {'action': 'reading_attempt', 'transcript': ''}, None)
+        self.assertEqual(state['last_transcript'], '')
+        self.assertEqual(state['last_successful_word'], '')
 
     def test_lesson22_gawain2_local_audio_precedence_and_scoped_fallback(self):
         activity = get_activity('aral-l22-g2-c-word-reading')
