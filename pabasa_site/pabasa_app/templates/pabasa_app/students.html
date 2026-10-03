@@ -124,16 +124,35 @@
     .aral-exit-modal .aral-modal-count { margin:0; color:#718590; font-size:.78rem; font-weight:800; }
     .aral-modal-list { display:grid; gap:.5rem; }
     .aral-modal-student { display:grid; gap:.55rem; padding:.8rem .85rem; border:1px solid #e1edf2; border-radius:13px; background:#fff; }
+    .aral-review-student { gap:.45rem; padding:.7rem .8rem; }
     .aral-modal-student-name { color:#24465c; font-size:.86rem; font-weight:900; }
+    .aral-review-student .aral-modal-student-name { font-size:.92rem; font-weight:700; }
     .aral-modal-student-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
     .aral-modal-scores { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.25rem .8rem; margin:0; color:#5f7683; font-size:.74rem; }
+    .aral-review-student .aral-modal-scores { gap:.55rem .75rem; }
     .aral-modal-score { display:flex; justify-content:space-between; gap:.5rem; }
     .aral-modal-score dt, .aral-modal-score dd { margin:0; }
     .aral-modal-score dd { color:#10466e; font-weight:900; }
+    .aral-review-student .aral-modal-score dt { color:#718590; font-size:.68rem; font-weight:700; }
+    .aral-review-student .aral-modal-score dd { font-size:.8rem; }
+    .aral-review-student .aral-modal-score { display:block; }
+    .aral-review-student .aral-modal-score dd { margin-top:.12rem; }
     .aral-modal-total { padding-top:.3rem; border-top:1px solid #edf2f4; color:#24465c; font-weight:900; }
     .aral-modal-criteria { margin:0; color:#526d7c; font-size:.74rem; font-weight:800; }
     .aral-panel-action-badge { display:inline-grid; min-width:1.15rem; height:1.15rem; place-items:center; margin-left:.35rem; padding:0 .25rem; border-radius:50%; background:#2b87b5; color:#fff; font-size:.65rem; font-weight:900; line-height:1; }
     .aral-modal-student-status { display:inline-flex; align-items:center; padding:.28rem .58rem; border-radius:999px; background:#e4f5eb; color:#216b46; font-size:.7rem; font-weight:900; line-height:1.1; white-space:nowrap; }
+    #aralReviewStudentsModal .modal-dialog, #aralExitHistoryModal .modal-dialog { max-height:85vh; }
+    #aralReviewStudentsModal .modal-content, #aralExitHistoryModal .modal-content { display:flex; max-height:85vh; }
+    #aralReviewStudentsModal .modal-header, #aralExitHistoryModal .modal-header { flex:0 0 auto; }
+    #aralReviewStudentsModal .modal-body, #aralExitHistoryModal .modal-body { flex:0 1 auto; max-height:none; min-height:0; overflow-y:auto; scrollbar-width:thin; scrollbar-color:#c6d4db transparent; }
+    #aralReviewStudentsModal .modal-body::-webkit-scrollbar, #aralExitHistoryModal .modal-body::-webkit-scrollbar { width:6px; }
+    #aralReviewStudentsModal .modal-body::-webkit-scrollbar-track, #aralExitHistoryModal .modal-body::-webkit-scrollbar-track { background:transparent; }
+    #aralReviewStudentsModal .modal-body::-webkit-scrollbar-thumb, #aralExitHistoryModal .modal-body::-webkit-scrollbar-thumb { border-radius:999px; background:#c6d4db; }
+    .aral-history-student .aral-modal-scores { gap:.5rem .75rem; }
+    .aral-history-student .aral-modal-score { display:block; }
+    .aral-history-student .aral-modal-score dt { color:#718590; font-size:.68rem; font-weight:700; }
+    .aral-history-student .aral-modal-score dd { margin-top:.12rem; color:#24465c; font-size:.78rem; font-weight:800; line-height:1.35; overflow-wrap:anywhere; }
+    .aral-history-student .aral-history-reason { grid-column:1 / -1; }
     .teacher-aral-action-dialog { max-width:28rem; }
     .teacher-aral-action-modal { overflow:hidden; border:0; border-radius:18px; box-shadow:0 20px 55px rgba(15,45,69,.2); }
     .teacher-aral-action-modal .modal-header { align-items:center; padding:1rem 1.15rem; border-bottom:1px solid #e5eef2; background:#f7fbfd; }
@@ -145,6 +164,20 @@
     .teacher-aral-action-modal .modal-footer .btn { min-width:5.25rem; border-radius:9px; font-size:.78rem; font-weight:800; }
     .teacher-aral-action-modal .modal-footer .btn-danger { background:#c2413b; border-color:#c2413b; }
     .teacher-aral-action-modal .modal-footer .btn-danger:hover { background:#a93631; border-color:#a93631; }
+    .teacher-aral-action-modal .modal-body { max-height:70vh; overflow-y:auto; scrollbar-width:thin; scrollbar-color:#c6d4db transparent; }
+    .teacher-aral-action-modal .modal-body::-webkit-scrollbar { width:6px; }
+    .teacher-aral-action-modal .modal-body::-webkit-scrollbar-track { background:transparent; }
+    .teacher-aral-action-modal .modal-body::-webkit-scrollbar-thumb { border-radius:999px; background:#c6d4db; }
+    .teacher-aral-reasons { display:grid; gap:.4rem; }
+    .teacher-aral-reason-card { display:flex; align-items:flex-start; gap:.65rem; width:100%; padding:.45rem .65rem; border:1px solid #dbe6eb; border-radius:10px; background:#fff; color:#24465c; cursor:pointer; transition:background .15s ease,border-color .15s ease,box-shadow .15s ease; }
+    .teacher-aral-reason-card:hover { background:#f7fbfd; border-color:#9fc7dc; }
+    .teacher-aral-reason-card:has(input:checked) { border-color:#5da5ca; background:#eef8fc; box-shadow:0 0 0 1px rgba(93,165,202,.12); }
+    .teacher-aral-reason-card input { flex:0 0 auto; width:1rem; height:1rem; margin:.15rem 0 0; accent-color:#287ea8; }
+    .teacher-aral-reason-copy { min-width:0; }
+    .teacher-aral-reason-title { display:block; font-size:.82rem; font-weight:900; line-height:1.25; }
+    .teacher-aral-reason-description { display:block; margin-top:.15rem; color:#718590; font-size:.7rem; font-style:normal; line-height:1.35; }
+    .teacher-aral-other-reason { margin-top:.45rem; }
+    @media (max-width:480px) { .teacher-aral-action-modal .modal-body { max-height:65vh; } }
     @media (max-width:767.98px) { .aral-exit-readiness-card { grid-template-columns:1fr; }.aral-performance-panel { border-right:0; border-bottom:1px solid #e3edf2; }.aral-ready-panel { min-height:0; } }
     @media (max-width:480px) { .aral-heading-row { align-items:flex-start; flex-direction:column; gap:.55rem; }.aral-term-control { align-self:stretch; justify-content:space-between; }.aral-term-control select { flex:1 1 auto; } }
     @media (max-width:480px) { .aral-performance-panel, .aral-ready-panel { padding:1.1rem; }.aral-summary { grid-template-columns:1fr; }.aral-chart-wrap { padding-inline:.65rem; }.aral-panel-actions { grid-template-columns:1fr; } }
@@ -1486,7 +1519,7 @@
     <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
         <div class="modal-header"><div><h2 class="modal-title" id="aralReviewStudentsModalTitle">Review Students for Exit</h2><p class="modal-context" id="aralReviewStudentsModalContext">Students who are not currently automatically ready for ARAL exit.</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
         <div class="modal-body">
-            {% if aral_review_students %}<div class="aral-modal-list" role="list">{% for student in aral_review_students %}<div class="aral-modal-student" role="listitem"><div class="aral-modal-student-header"><span class="aral-modal-student-name">{{ student.student_name }}</span><button type="button" class="student-aral-action aral-ready-exit-action" data-student-id="{{ student.student_id }}" data-student-name="{{ student.student_name|escape }}" data-aral-action="manual_exit">Review for Exit</button></div><dl class="aral-modal-scores"><div class="aral-modal-score"><dt>Story Reading</dt><dd>{{ student.scores.story_reading|default:'—' }}/5</dd></div><div class="aral-modal-score"><dt>5W Questions</dt><dd>{{ student.scores.five_w_questions|default:'—' }}/5</dd></div><div class="aral-modal-score"><dt>Story Response</dt><dd>{{ student.scores.story_response|default:'—' }}/5</dd></div><div class="aral-modal-score"><dt>Story Retelling</dt><dd>{{ student.scores.story_retelling|default:'—' }}/5</dd></div></dl></div>{% endfor %}</div>{% else %}<div class="aral-empty-state" role="status"><strong>No students available for manual review</strong><span>Students who are not automatically ready for exit will appear here.</span></div>{% endif %}
+            {% if aral_review_students %}<div class="aral-modal-list" role="list">{% for student in aral_review_students %}<div class="aral-modal-student aral-review-student" role="listitem"><div class="aral-modal-student-header"><span class="aral-modal-student-name">{{ student.student_name }}</span><button type="button" class="student-aral-action aral-ready-exit-action" data-student-id="{{ student.student_id }}" data-student-name="{{ student.student_name|escape }}" data-aral-action="manual_exit">Review for Exit</button></div><dl class="aral-modal-scores"><div class="aral-modal-score"><dt>Story Reading</dt><dd>{% if student.scores.story_reading != None %}{{ student.scores.story_reading|floatformat:'-1' }}/5{% else %}—{% endif %}</dd></div><div class="aral-modal-score"><dt>5W Questions</dt><dd>{% if student.scores.five_w_questions != None %}{{ student.scores.five_w_questions|floatformat:'-1' }}/5{% else %}—{% endif %}</dd></div><div class="aral-modal-score"><dt>Story Response</dt><dd>{% if student.scores.story_response != None %}{{ student.scores.story_response|floatformat:'-1' }}/5{% else %}—{% endif %}</dd></div><div class="aral-modal-score"><dt>Story Retelling</dt><dd>{% if student.scores.story_retelling != None %}{{ student.scores.story_retelling|floatformat:'-1' }}/5{% else %}—{% endif %}</dd></div></dl></div>{% endfor %}</div>{% else %}<div class="aral-empty-state" role="status"><strong>No students available for manual review</strong><span>Students who are not automatically ready for exit will appear here.</span></div>{% endif %}
         </div>
     </div></div>
 </div>
@@ -1494,7 +1527,7 @@
     <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
         <div class="modal-header"><div><h2 class="modal-title" id="aralExitHistoryModalTitle">ARAL Exit History</h2><p class="modal-context" id="aralExitHistoryModalContext">{% if assessment_week_section %}{{ assessment_week_section.grade_level }} · {{ assessment_week_section.section|default:assessment_week_section.class_name }} · {% endif %}{{ selected_aral_term_label }}</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
         <div class="modal-body">
-            {% if aral_exit_history %}<div class="aral-modal-list" role="list">{% for student in aral_exit_history %}<div class="aral-modal-student" role="listitem"><div class="aral-modal-student-header"><span class="aral-modal-student-name">{{ student.student_name }}</span><span class="aral-modal-student-status">{{ student.status }}</span></div><dl class="aral-modal-scores"><div class="aral-modal-score"><dt>Grade &amp; Section</dt><dd>{{ student.section_display }}</dd></div><div class="aral-modal-score"><dt>Term</dt><dd>{{ student.term_label }}</dd></div><div class="aral-modal-score"><dt>Exit Date</dt><dd>{{ student.exit_date }}</dd></div><div class="aral-modal-score"><dt>Exit Type</dt><dd>{{ student.exit_type }}</dd></div>{% if student.reason %}<div class="aral-modal-score"><dt>Reason</dt><dd>{{ student.reason }}</dd></div>{% endif %}</dl></div>{% endfor %}</div>{% else %}<div class="aral-empty-state" role="status"><strong>No students have exited ARAL yet</strong><span>Completed ARAL exits will appear here for tracking.</span></div>{% endif %}
+            {% if aral_exit_history %}<div class="aral-modal-list" role="list">{% for student in aral_exit_history %}<div class="aral-modal-student aral-history-student" role="listitem"><div class="aral-modal-student-header"><span class="aral-modal-student-name">{{ student.student_name }}</span><span class="aral-modal-student-status">{{ student.status }}</span></div><dl class="aral-modal-scores"><div class="aral-modal-score"><dt>Grade &amp; Section</dt><dd>{{ student.section_display }}</dd></div><div class="aral-modal-score"><dt>Term</dt><dd>{{ student.term_label }}</dd></div><div class="aral-modal-score"><dt>Exit Date</dt><dd>{{ student.exit_date }}</dd></div><div class="aral-modal-score"><dt>Exit Type</dt><dd>{{ student.exit_type }}</dd></div>{% if student.reason %}<div class="aral-modal-score aral-history-reason"><dt>Reason</dt><dd>{{ student.reason }}</dd></div>{% endif %}</dl></div>{% endfor %}</div>{% else %}<div class="aral-empty-state" role="status"><strong>No students have exited ARAL yet</strong><span>Students who are not automatically ready for exit will appear here.</span></div>{% endif %}
         </div>
     </div></div>
 </div>
@@ -1773,7 +1806,7 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
 
     <div class="modal fade" id="teacherAralActionModal" tabindex="-1" aria-labelledby="teacherAralActionTitle" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered teacher-aral-action-dialog"><div class="modal-content teacher-aral-action-modal"><div class="modal-header"><h3 class="modal-title h6" id="teacherAralActionTitle">ARAL Program</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p id="teacherAralActionCopy"></p><p class="teacher-aral-action-note" id="teacherAralActionNote" hidden>The student's ARAL status will be updated after confirmation.</p><div id="teacherAralLevelWrap"><label class="form-label" for="teacherAralLevel">Reading Level</label><select class="form-select" id="teacherAralLevel"><option value="">Choose reading level</option><option>Low Emerging Readers</option><option>High Emerging Readers</option><option>Developing Readers</option><option>Transitioning Readers</option></select></div><div id="teacherAralReasonWrap" hidden><label class="form-label" for="teacherAralReason">Reason for manual exit</label><select class="form-select" id="teacherAralReason"><option value="">Choose a reason</option><option value="Teacher Observation">Teacher Observation</option><option value="Others">Others</option></select><div id="teacherAralOtherReasonWrap" hidden><label class="form-label mt-2" for="teacherAralOtherReason">Specify reason</label><textarea class="form-control" id="teacherAralOtherReason" rows="3" maxlength="2000" style="resize:none"></textarea></div></div><div class="text-danger small mt-2" id="teacherAralActionError" hidden></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-danger btn-sm" id="teacherAralActionConfirm">Confirm</button></div></div></div>
+        <div class="modal-dialog modal-dialog-centered teacher-aral-action-dialog"><div class="modal-content teacher-aral-action-modal"><div class="modal-header"><h3 class="modal-title h6" id="teacherAralActionTitle">ARAL Program</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p id="teacherAralActionCopy"></p><p class="teacher-aral-action-note" id="teacherAralActionNote" hidden>The student's ARAL status will be updated after confirmation.</p><div id="teacherAralLevelWrap"><label class="form-label" for="teacherAralLevel">Reading Level</label><select class="form-select" id="teacherAralLevel"><option value="">Choose reading level</option><option>Low Emerging Readers</option><option>High Emerging Readers</option><option>Developing Readers</option><option>Transitioning Readers</option></select></div><div id="teacherAralReasonWrap" hidden><label class="form-label">Reason for manual exit</label><div class="teacher-aral-reasons" role="radiogroup" aria-label="Reason for manual exit"><label class="teacher-aral-reason-card"><input type="radio" name="teacherAralReason" value="Teacher Observation"><span class="teacher-aral-reason-copy"><span class="teacher-aral-reason-title">Teacher Observation</span><span class="teacher-aral-reason-description">Based on the teacher's overall observation of the pupil's readiness and progress.</span></span></label><label class="teacher-aral-reason-card"><input type="radio" name="teacherAralReason" value="Pupil's Academic Performance"><span class="teacher-aral-reason-copy"><span class="teacher-aral-reason-title">Pupil's Academic Performance</span><span class="teacher-aral-reason-description">Based on written performance such as quizzes, assessments, and examinations.</span></span></label><label class="teacher-aral-reason-card"><input type="radio" name="teacherAralReason" value="Communication Fluency"><span class="teacher-aral-reason-copy"><span class="teacher-aral-reason-title">Communication Fluency</span><span class="teacher-aral-reason-description">Responsiveness and ability to express ideas during discussions and oral activities.</span></span></label><label class="teacher-aral-reason-card"><input type="radio" name="teacherAralReason" value="Active Class Participation"><span class="teacher-aral-reason-copy"><span class="teacher-aral-reason-title">Active Class Participation</span><span class="teacher-aral-reason-description">Participation in recitations and class activities, including understanding and responding to lessons.</span></span></label><label class="teacher-aral-reason-card"><input type="radio" name="teacherAralReason" value="Others"><span class="teacher-aral-reason-copy"><span class="teacher-aral-reason-title">Others</span><span class="teacher-aral-reason-description">Other reasons not covered by the choices above.</span></span></label></div><input type="hidden" id="teacherAralReason" value=""><div id="teacherAralOtherReasonWrap" class="teacher-aral-other-reason" hidden><label class="form-label" for="teacherAralOtherReason">Specify reason</label><textarea class="form-control" id="teacherAralOtherReason" rows="2" maxlength="2000" style="resize:none"></textarea></div></div><div class="text-danger small mt-2" id="teacherAralActionError" hidden></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-danger btn-sm" id="teacherAralActionConfirm">Confirm</button></div></div></div>
     </div>
     <div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -2684,6 +2717,7 @@ function bindTeacherAralActions() {
     const level = document.getElementById('teacherAralLevel');
     const reasonWrap = document.getElementById('teacherAralReasonWrap');
     const reason = document.getElementById('teacherAralReason');
+    const reasonOptions = document.querySelectorAll('input[name="teacherAralReason"]');
     const otherReasonWrap = document.getElementById('teacherAralOtherReasonWrap');
     const otherReason = document.getElementById('teacherAralOtherReason');
     const error = document.getElementById('teacherAralActionError');
@@ -2691,6 +2725,12 @@ function bindTeacherAralActions() {
     if (!modalEl || !confirmBtn) return;
     let pending = null;
     let returnToReviewModal = false;
+    const setReason = value => {
+        reason.value = value;
+        reasonOptions.forEach(option => { option.checked = option.value === value; });
+        reason.dispatchEvent(new Event('change', {bubbles: true}));
+    };
+    reasonOptions.forEach(option => option.addEventListener('change', () => setReason(option.value)));
     reason.addEventListener('change', () => {
         const isOther = reason.value === 'Others';
         otherReasonWrap.hidden = !isOther;
@@ -2708,7 +2748,7 @@ function bindTeacherAralActions() {
         note.hidden = move;
         confirmBtn.textContent = move ? 'Confirm' : 'Confirm Exit';
         levelWrap.hidden = !move; level.value = '';
-        reasonWrap.hidden = !manualExit; reason.value = ''; otherReasonWrap.hidden = true; otherReason.value = '';
+        reasonWrap.hidden = !manualExit; setReason(''); otherReasonWrap.hidden = true; otherReason.value = '';
         error.hidden = true;
         const showActionModal = () => bootstrap.Modal.getOrCreateInstance(modalEl).show();
         if (returnToReviewModal && reviewModalEl.classList.contains('show')) {
