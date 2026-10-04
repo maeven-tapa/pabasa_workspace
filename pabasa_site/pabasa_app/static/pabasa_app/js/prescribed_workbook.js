@@ -160,10 +160,11 @@
   let activeRecorder = null, activeStream = null, activeReadAloud = null, activeAudioSource = null, audioController = null;
   let audioRun = 0, instructionSpoken = false, pendingSpeech = '', g6CompletionPromise = null;
   const instructionText = a.instruction;
+  const l22StartupTtsText = 'Letrang C. Handa kana?';
   const session9Activity = s9Family || s9Helping;
   const session9SaveError = 'Could not save your work. Try again.';
   const session9AudioError = 'Audio is not available. Try again.';
-  let activityStarted = (!session9Activity && !l22G1 && !lesson23Activity && !lesson24Activity) || preview || Boolean(state.completed), instructionPlayback = false;
+  let activityStarted = (!session9Activity && !l22G1 && !lesson23Activity && !lesson24Activity) || preview || Boolean(state.completed), instructionPlayback = false, startupNarrationStarted = false;
   const content = document.getElementById('wb-content'), action = document.getElementById('wb-action'), actionHost = action?.parentElement;
   const status = document.getElementById('wb-status');
   if (jReading) {
@@ -268,17 +269,20 @@
   function initializeL22Entry(){
     const modal=document.getElementById('wb-l22-g1-start');
     if(!l22G1||preview||state.completed||!modal)return;
-    const start=document.getElementById('wb-l22-g1-start-button'),later=document.getElementById('wb-l22-g1-later-button');
+    const start=document.getElementById('wb-l22-g1-start-button'),later=document.getElementById('wb-l22-g1-later-button'),retry=document.getElementById('wb-l22-g1-start-audio-retry');
+    const playStartup=()=>{if(!modal.isConnected||activityStarted)return;retry&&(retry.disabled=true);stopReadAloud();playPrescribedAudio(l22StartupTtsText,true).then(()=>{if(retry){retry.hidden=true;retry.disabled=false;}}).catch(error=>{if(retry){retry.disabled=false;retry.hidden=error?.name!=='NotAllowedError';}if(error?.name!=='AbortError'&&error?.name!=='NotAllowedError')console.error('Lesson 22 startup audio failed',error);});};
     document.body.classList.add('lesson-start-open');
+    if(!startupNarrationStarted){startupNarrationStarted=true;playStartup();}
+    retry?.addEventListener('click',playStartup);
     start?.addEventListener('click',()=>{
       if(start.disabled)return;
       start.disabled=true;if(later)later.disabled=true;stopReadAloud();activityStarted=true;modal.remove();document.body.classList.remove('lesson-start-open');render();
-      if(!instructionSpoken){instructionSpoken=true;playPrescribedAudio(instructionText,true).catch(error=>{if(error?.name!=='AbortError')console.error('Lesson 22 instruction audio failed',error);});}
     });
     later?.addEventListener('click',()=>{
       if(later.disabled)return;
       later.disabled=true;if(start)start.disabled=true;stopReadAloud();window.location.href=document.getElementById('wb-back')?.href||'/dashboard/assessment/';
     });
+    window.addEventListener('pagehide',stopReadAloud,{once:true});
   }
   function initializeLesson23Entry(){
     if(!lesson23Activity||preview||state.completed)return;

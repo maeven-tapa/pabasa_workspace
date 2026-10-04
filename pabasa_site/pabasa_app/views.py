@@ -24226,7 +24226,7 @@ def reading_read_aloud_api(request):
                 'voice_name': 'fil-PH-Wavenet-A' if language_code == 'fil-PH' else '',
                 'local_audio': True,
             })
-        if local_audio_key in _LOCAL_PRESCRIBED_AUDIO_PATHS:
+        if local_audio_key in _LOCAL_PRESCRIBED_AUDIO_PATHS and prescribed_key != 'aral-l22-g1-c-syllable-builder':
             return JsonResponse({
                 'success': False,
                 'error': 'Local audio is unavailable for this activity line.',

@@ -50,7 +50,7 @@ class Lesson22Gawain1AudioTests(SimpleTestCase):
         self.assertIn("(localAudio.completion || {})[text]", self.js)
         self.assertIn("new Audio(localUrl)", self.js)
         self.assertIn("aral-l22-g1-c-syllable-builder' %}<script", self.template)
-        self.assertIn('20261004-l22-g1-audio-1', self.template)
+        self.assertIn('20261005-l22-g1-startup-audio-2', self.template)
 
     def test_instruction_recording_hash_is_stable(self):
         digest = hashlib.sha256((self.audio_dir / 'Basahin_ang_mga_pantig_mula_sa_Bid_box_TTS.mp3').read_bytes()).hexdigest()

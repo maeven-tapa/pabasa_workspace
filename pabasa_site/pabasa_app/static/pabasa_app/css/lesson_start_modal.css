@@ -11,3 +11,5 @@
 .lesson-start-actions button:focus-visible,.lesson-13-start-actions button:focus-visible{outline:4px solid #f5d47c;outline-offset:4px}
 body.lesson-start-open{overflow:hidden}
 @media(max-width:600px){.lesson-start-modal,.lesson-13-start-modal{padding:30px 22px 24px}}
+.wb-l22-g1-start .lesson-start-title{margin-bottom:10px}.wb-l22-g1-start-question{margin:0 0 26px;color:#183e63;font-size:clamp(1.1rem,2.4vw,1.35rem);line-height:1.3}
+.wb-l22-g1-start-audio-retry{margin:0 auto 18px;padding:8px 18px;border:2px solid #94d9d6;border-radius:999px;color:#187b7a;background:#fff;font:inherit;font-size:1rem;font-weight:900;cursor:pointer}.wb-l22-g1-start-audio-retry:hover{background:#e9fbfa}.wb-l22-g1-start-audio-retry:focus-visible{outline:4px solid #f5d47c;outline-offset:4px}
