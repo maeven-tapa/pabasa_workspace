@@ -428,7 +428,7 @@
     const totalProgress=cBuilder?a.items.length:(a.progress_total||a.items.length), progressValue=state.completed?totalProgress:Math.min(totalProgress, g6Search?Object.keys(state.found_words||{}).length:g7Reading?Number(state.index||0):qBuilder?Number(state.index||0):cBuilder?Number(state.index||0):Number(state.index||0));
     document.getElementById('wb-progress').textContent=preview?'Preview':(g6Search?`Nahanap: ${Object.keys(state.found_words||{}).length} / ${a.items.length}`:g7Reading?`Nabasa: ${Math.min(a.items.length,Number(state.index||0))} / ${a.items.length}`:l24G4Builder?`Nabuo: ${Number(state.built_words?.length||0)} salita`:g5Syllables?`Nasagot: ${Math.min(a.items.length,Number(state.index||0))} / ${a.items.length}`:cBuilder?`Nabasa: ${Math.min(a.items.length,Number(state.index||0))} / ${a.items.length}`:(a.activity_key==='aral-l23-g1-n-syllable-builder'||l24Builder?`Nabasa: ${Math.min(12,Number(state.index||0))} / 12`:`${progressValue} / ${totalProgress}`));
     const progressFill=document.getElementById('wb-progress-fill');if(progressFill)progressFill.style.width=l24G4Builder?(state.completed?'100%':'0%'):`${preview?0:Math.max(0,Math.min(100,progressValue/totalProgress*100))}%`;
-    document.getElementById('wb-back').hidden=preview;
+    const backLink=document.getElementById('wb-back');if(backLink)backLink.hidden=preview;
     if(qBuilder&&actionHost&&action.parentElement!==actionHost)actionHost.appendChild(action);
     action.replaceChildren();
     if(g6Search&&!state.completed)document.getElementById('wb-g6-completion-modal')?.remove();
@@ -446,6 +446,13 @@
       if(g7Reading){
         content.innerHTML=`<div class="wb-g7-completion-modal" role="dialog" aria-modal="true" aria-labelledby="wb-g7-completion-title"><div class="wb-g7-completion-card"><p class="wb-g7-completion-kicker">GAWAIN 7 · PAGBASA</p><h2 id="wb-g7-completion-title">Magaling! Natapos mo ang Gawain 7!</h2><p>Nabasa mo nang tama ang lahat ng 23 salita.</p><div class="wb-g7-completion-actions"><a class="wb-g7-completion-secondary" href="${esc(document.getElementById('wb-back')?.href||'#')}">Bumalik sa Aking Aralin</a><button type="button" class="wb-g7-completion-secondary" id="wb-g7-complete-reset">Ulitin Mula sa Simula</button></div></div></div>`;
         document.getElementById('wb-g7-complete-reset')?.addEventListener('click',requestG7Restart);
+        return;
+      }
+      if(l23G1){
+        renderCBuilder();
+        if(!document.getElementById('wb-l23-g1-completion-modal')){
+          document.body.insertAdjacentHTML('beforeend',`<div class="wb-l23-g1-completion-modal" id="wb-l23-g1-completion-modal" role="dialog" aria-modal="true" aria-labelledby="wb-l23-g1-completion-title"><div class="wb-l23-g1-completion-card"><p class="wb-l23-g1-completion-kicker">SESSION 8 · LESSON 23 · GAWAIN 1</p><h2 id="wb-l23-g1-completion-title">Magaling!</h2><p>Natapos mo ang Gawain 1.</p><div class="wb-l23-g1-completion-actions">${data.next_url?`<a class="wb-l23-g1-completion-primary" href="${esc(data.next_url)}">SUNOD NA GAWAIN</a>`:''}<a class="wb-l23-g1-completion-secondary" href="${esc(data.back_url||document.getElementById('wb-back')?.href||'#')}">BUMALIK SA AKING ARALIN</a></div></div></div>`);
+        }
         return;
       }
       if(s9Helping){
@@ -618,6 +625,7 @@
     content.className=`wb-l22-builder ${qBuilder?'wb-q-builder '+(readDone?'wb-g6-building':'wb-g6-reading'):''}`;
     const current=Math.min(Number(state.index||0),a.items.length-1), phase=state.reading_phase||'read';
     content.innerHTML=`${l22G1?'':`<div class="wb-l22-banner"><span class="wb-speaker-icon" aria-hidden="true">🔊</span><strong>${instructionText}</strong><button type="button" id="wb-l22-instruction-replay" aria-label="Pakinggan muli ang panuto">Pakinggan muli</button></div>`}<section class="wb-bigbox"><h2>BIG BOX</h2><p class="wb-box-help">Sundan ang dilaw na highlight.</p><div class="wb-bigbox-grid">${boxCells.map(row=>`<div class="wb-bigbox-row">${row.map(()=>'<div class="wb-bigbox-cell"></div>').join('')}</div>`).join('')}</div></section><section class="wb-reading-panel"><h2>BASAHIN</h2><p class="wb-phase-status" role="status">${readDone?'Magaling!':state.last_feedback==='Tama!'?'Tama!':'Handa ka na?'}</p><div id="wb-l22-reading-action"></div><p class="wb-reading-tip"><span aria-hidden="true">💡</span><span> pindutin ang button kapag handa ka nang magbasa.</span></p></section><section class="wb-word-panel ${readDone?'':'is-locked'}" aria-disabled="${!readDone}"><h2>BUMUO NG SALITA</h2>${readDone?`<p>Piliin ang mga pantig sa Big Box.</p><div class="wb-selected-parts" id="wb-selected-parts" aria-live="polite"></div><div class="wb-tools"><button type="button" id="wb-erase">Bura</button><button type="button" id="wb-retry">Ulitin</button></div><p class="wb-builder-feedback" aria-live="polite">${esc(state.last_feedback||'')}</p>${state.found_words?.length?`<div class="wb-builder-words"><strong>Nabuo mo na:</strong><ul>${state.found_words.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:''}`:'<p class="wb-locked-note"><span class="wb-lock-icon" aria-hidden="true">🔒</span><span>Basahin muna ang lahat ng pantig.</span></p>'}</section>`;
+    if(l23G1)content.querySelector('.wb-l22-banner')?.remove();
     const replay=document.getElementById('wb-l22-instruction-replay');
     if(replay)replay.onclick=()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>message(e.message||'Hindi available ang panuto.',true));};
     if(!preview&&activityStarted&&!instructionSpoken){instructionSpoken=true;setTimeout(()=>playPrescribedAudio(instructionText).catch(e=>console.error('Lesson 22 instruction audio failed',e)),0);}
@@ -652,6 +660,7 @@
     }
     if(!preview){
       const restart=button('Ulitin Mula sa Simula',()=>{
+        if(l23G1){requestL23G1Restart();return;}
         if(window.confirm(`Sigurado ka bang gusto mong magsimula muli? Mawawala ang kasalukuyang progreso sa ${qBuilder?'Gawain 6':'Gawain 1'}.`)) perform({action:'restart'});
       },false);
       restart.classList.add('wb-secondary');
