@@ -157,5 +157,14 @@
   window.addEventListener('session13-prescribed-s13l29g1-restart', () => reset(new Event('submit')));
   window.addEventListener('session13-prescribed-s13l29g1-cleanup', () => { cancelSpeechAttempt(); audio?.pause(); });
   window.addEventListener('session13-prescribed-s13l29g1-mute', event => { muted = Boolean(event.detail?.muted); stream?.getTracks().forEach(track => { track.enabled = !muted; }); emitDebug({mic:`${stream ? 'Active' : 'Inactive'} · ${muted ? 'Muted' : 'Unmuted'}`}); });
+  window.__prescribedLeaveAdapters ||= {};
+  window.__prescribedLeaveAdapters['prescribed-s13l29g1'] = {
+    saveCurrentProgress() {
+      return Promise.resolve();
+    },
+    cleanup() {
+      window.dispatchEvent(new Event('session13-prescribed-s13l29g1-cleanup'));
+    },
+  };
   hydrate(); render();
 })();

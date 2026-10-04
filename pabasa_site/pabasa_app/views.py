@@ -16351,6 +16351,29 @@ def lesson8_gawain1_page(request):
     return prescribed_activity_page(request, 'lesson8-gawain1')
 
 
+def _sanitize_trace_strokes(value):
+    """Keep only bounded, normalized canvas points for a resumable trace."""
+    if not isinstance(value, list):
+        return []
+    sanitized = []
+    for stroke in value[:100]:
+        if not isinstance(stroke, list):
+            continue
+        points = []
+        for point in stroke[:1000]:
+            if not isinstance(point, dict):
+                continue
+            try:
+                x, y = float(point.get('x')), float(point.get('y'))
+            except (TypeError, ValueError):
+                continue
+            if 0 <= x <= 1 and 0 <= y <= 1:
+                points.append({'x': x, 'y': y})
+        if len(points) >= 2:
+            sanitized.append(points)
+    return sanitized
+
+
 @login_required(role='student')
 @csrf_protect
 @require_http_methods(['POST'])
@@ -16376,6 +16399,15 @@ def lesson29_trace_say_progress(request):
         if data.get('reset') is True:
             query.delete()
             return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
+        if data.get('action') == 'state_sync':
+            total = len(activity['items'])
+            return JsonResponse({'success': True, 'progress': {
+                'state': old,
+                'current_index': existing.current_index if existing else 0,
+                'completed_items': existing.completed_items if existing else 0,
+                'total_items': total,
+                'activity_completed': bool(existing and existing.activity_completed),
+            }})
         total = len(activity['items'])
         if existing and existing.activity_completed:
             return JsonResponse({'success': True, 'progress': {'state': old, 'completed_items': total, 'activity_completed': True}})
@@ -16383,6 +16415,8 @@ def lesson29_trace_say_progress(request):
         phase = old.get('phase', 'sound')
         traces = old.get('traces') if isinstance(old.get('traces'), list) else []
         traces = traces[:total * 3]
+        draft_strokes = old.get('draft_strokes') if isinstance(old.get('draft_strokes'), list) else []
+        draft_item = int(old.get('draft_item', index) or index)
         action = data.get('action')
         if action == 'read_sound':
             if phase not in {'sound', 'recorded'} or index >= total or int(data.get('item_index', -1)) != index:
@@ -16404,28 +16438,20 @@ def lesson29_trace_say_progress(request):
             index -= 1
             phase = 'sound'
             traces = traces[:index * 3]
+            draft_strokes = []
+            draft_item = index
+        elif action == 'save_draft_trace':
+            if phase != 'trace' or index >= total or int(data.get('item_index', -1)) != index:
+                raise ValueError('Say the letter sound before tracing.')
+            draft_strokes = _sanitize_trace_strokes(data.get('strokes'))
+            draft_item = index
         elif action == 'save_trace':
             if phase != 'trace' or index >= total or int(data.get('item_index', -1)) != index:
                 raise ValueError('Say the letter sound before tracing.')
             stroke_set = data.get('strokes')
             if not isinstance(stroke_set, list) or not stroke_set:
                 raise ValueError('Write the letter before continuing.')
-            sanitized = []
-            for stroke in stroke_set[:100]:
-                if not isinstance(stroke, list):
-                    continue
-                points = []
-                for point in stroke[:1000]:
-                    if not isinstance(point, dict):
-                        continue
-                    try:
-                        x, y = float(point.get('x')), float(point.get('y'))
-                    except (TypeError, ValueError):
-                        continue
-                    if 0 <= x <= 1 and 0 <= y <= 1:
-                        points.append({'x': x, 'y': y})
-                if len(points) >= 2:
-                    sanitized.append(points)
+            sanitized = _sanitize_trace_strokes(stroke_set)
             target_letter = str(activity['items'][index].get('letter', '')).lower()
             if is_scribble_like(sanitized):
                 valid_trace = False
@@ -16461,9 +16487,12 @@ def lesson29_trace_say_progress(request):
             if repetition == 2:
                 index += 1
                 phase = 'sound' if index < total else 'complete'
+            draft_strokes = []
+            draft_item = index
         else:
             raise ValueError('Invalid activity action.')
         payload = {'current_item': index, 'phase': phase, 'traces': traces,
+                   'draft_item': draft_item, 'draft_strokes': draft_strokes,
                    'state_version': int(old.get('state_version', 0) or 0) + 1}
         completed = min(total, index)
         progress, _ = StudentActivityProgress.objects.update_or_create(
@@ -18369,6 +18398,14 @@ def prescribed_activity_progress(request, activity_key):
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
             existing = progress_query.first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
+            if data.get('action') == 'state_sync':
+                return JsonResponse({'success': True, 'progress': {
+                    'current_index': existing.current_index if existing else 0,
+                    'completed_items': existing.completed_items if existing else 0,
+                    'total_items': len(activity['items']),
+                    'activity_completed': bool(existing and existing.activity_completed),
+                    'state': old,
+                }})
             total = len(activity['items'])
             index = max(0, min(total, int(old.get('current_item', 0))))
             action = data.get('action')
@@ -18445,6 +18482,14 @@ def prescribed_activity_progress(request, activity_key):
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
             existing = progress_query.first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
+            if action == 'state_sync':
+                return JsonResponse({'success': True, 'progress': {
+                    'current_index': existing.current_index if existing else 0,
+                    'completed_items': existing.completed_items if existing else 0,
+                    'total_items': len(activity['words']),
+                    'activity_completed': bool(existing and existing.activity_completed),
+                    'state': old,
+                }})
             words = activity['words']
             total = len(words)
             order = old.get('word_order')
@@ -18503,6 +18548,14 @@ def prescribed_activity_progress(request, activity_key):
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
             existing = progress_query.first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
+            if action == 'state_sync':
+                return JsonResponse({'success': True, 'progress': {
+                    'current_index': existing.current_index if existing else 0,
+                    'completed_items': existing.completed_items if existing else 0,
+                    'total_items': len(activity['items']),
+                    'activity_completed': bool(existing and existing.activity_completed),
+                    'state': old,
+                }})
             total = len(activity['items'])
             index = max(0, min(total, int(old.get('current_item', 0))))
             target = old.get('target_word')
@@ -18555,6 +18608,14 @@ def prescribed_activity_progress(request, activity_key):
                 return JsonResponse({'success': True, 'progress': {'completed_items': 0, 'state': {}}})
             existing = progress_query.first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
+            if action == 'state_sync':
+                return JsonResponse({'success': True, 'progress': {
+                    'current_index': existing.current_index if existing else 0,
+                    'completed_items': existing.completed_items if existing else 0,
+                    'total_items': len(activity['items']),
+                    'activity_completed': bool(existing and existing.activity_completed),
+                    'state': old,
+                }})
             total = len(activity['items']); index = max(0, min(total, int(old.get('current_item', 0))))
             phase = old.get('phase', 'reading'); attempts = max(0, int(old.get('reading_attempts', 0)))
             help_visible = bool(old.get('help_visible', False)); accepted = None
@@ -18622,6 +18683,17 @@ def prescribed_activity_progress(request, activity_key):
                 target_count = sum(1 for line in activity['items'][item_index]['verses'] for match in re.finditer(r"[A-Za-z]+", line) if match.group(0).lower().endswith('at'))
                 if len(selected) >= target_count:
                     completed_items += 1; item_index = completed_items; verse_index = 0; phase = 'reading' if completed_items < len(activity['items']) else 'complete'; selected = []
+            elif action == 'state_sync':
+                synced_state = {
+                    'activity_key': activity_key, 'phase': phase, 'item_index': item_index,
+                    'verse_index': verse_index, 'attempts': attempts, 'help_visible': help_visible,
+                    'selected': selected, 'completed_items': completed_items,
+                    'state_version': int(old.get('state_version') or 0),
+                }
+                return JsonResponse({'success': True, 'accepted': None, 'progress': {
+                    'completed_items': completed_items, 'total_items': len(activity['items']),
+                    'activity_completed': phase == 'complete', 'state': synced_state,
+                }})
             else: raise ValueError('Invalid activity action.')
             saved = {'activity_key': activity_key, 'phase': phase, 'item_index': item_index, 'verse_index': verse_index, 'attempts': attempts, 'help_visible': help_visible, 'selected': selected, 'completed_items': completed_items, 'state_version': int(old.get('state_version') or 0) + 1}
             finished = phase == 'complete'

@@ -59,6 +59,15 @@
   window.addEventListener('session13-prescribed-s13l29g2-resume', () => { paused = false; render(); });
   window.addEventListener('session13-prescribed-s13l29g2-restart', () => reset(new Event('submit')));
   window.addEventListener('session13-prescribed-s13l29g2-cleanup', () => audio?.pause());
+  window.__prescribedLeaveAdapters ||= {};
+  window.__prescribedLeaveAdapters['prescribed-s13l29g2'] = {
+    saveCurrentProgress() {
+      return Promise.resolve();
+    },
+    cleanup() {
+      window.dispatchEvent(new Event('session13-prescribed-s13l29g2-cleanup'));
+    },
+  };
   hydrate();
   render();
 })();

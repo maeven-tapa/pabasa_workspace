@@ -124,6 +124,14 @@
     return result;
   }
 
+  window.__prescribedLeaveAdapters ||= {};
+  window.__prescribedLeaveAdapters['prescribed-l26a1'] = {
+    async saveCurrentProgress() {
+      return save({state: {current_index: currentIndex}});
+    },
+    cleanup: cleanupActivity,
+  };
+
   function render(message = '', messageType = '') {
     const next = words.findIndex((_, index) => !matches[String(index)]);
     currentIndex = next < 0 ? words.length : next;

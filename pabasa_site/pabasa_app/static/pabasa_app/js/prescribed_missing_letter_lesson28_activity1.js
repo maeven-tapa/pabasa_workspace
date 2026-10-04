@@ -102,5 +102,16 @@
     initialize();
   }
   initializeStage2BControls();
+  window.__prescribedLeaveAdapters ||= {};
+  window.__prescribedLeaveAdapters['prescribed-l28a1'] = {
+    saveCurrentProgress() {
+      return Promise.resolve();
+    },
+    cleanup() {
+      cancelSpeechAttempt();
+      audio?.pause();
+      stopSampleStream();
+    },
+  };
   window.addEventListener('pagehide', cancelSpeechAttempt);
 })();

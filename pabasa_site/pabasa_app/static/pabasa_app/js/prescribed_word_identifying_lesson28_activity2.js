@@ -203,4 +203,11 @@
       },
     });
   }
+  window.__prescribedLeaveAdapters ||= {};
+  window.__prescribedLeaveAdapters['prescribed-l28a2'] = {
+    saveCurrentProgress() {
+      return Promise.resolve();
+    },
+    cleanup: stopAudio,
+  };
 })();

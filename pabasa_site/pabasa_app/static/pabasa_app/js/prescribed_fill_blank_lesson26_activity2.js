@@ -78,6 +78,15 @@
     hydrate();
     return result;
   }
+  window.__prescribedLeaveAdapters ||= {};
+  window.__prescribedLeaveAdapters['prescribed-l26a2'] = {
+    saveCurrentProgress() {
+      return save({action:'state_sync'});
+    },
+    cleanup() {
+      window.PrescribedLesson26Activity?.cleanup();
+    },
+  };
   function steps() {
     const total = data.items.length;
     const current = state.phase === 'choices' ? Math.min(state.choice_index, total - 1) : state.completed_items;

@@ -154,6 +154,41 @@ class PrescribedLesson26WordSearchTests(TestCase):
         self.assertIn('word-chip:hover:not(:disabled)', response.content.decode())
         self.assertIn('outline:0;border-color:var(--teal)', response.content.decode())
 
+    def test_session10_activities_render_leave_confirmation_and_accept_their_save_adapters(self):
+        word_search = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.activity_key}))
+        fill_blank = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.activity2_key}))
+        for response, prefix in ((word_search, 'prescribed-l26a1'), (fill_blank, 'prescribed-l26a2')):
+            content = response.content.decode()
+            self.assertContains(response, f'data-prescribed-leave-prefix="{prefix}"')
+            self.assertContains(response, f'id="{prefix}-leave-modal"')
+            self.assertContains(response, 'Are you sure you want to leave?')
+            self.assertContains(response, 'You can continue from where you left off.')
+            self.assertContains(response, 'prescribed_leave_confirmation.js')
+
+        word_search_sync = self.client.post(
+            self.progress_url,
+            data=json.dumps({'state': {'current_index': 2}}),
+            content_type='application/json',
+        )
+        self.assertEqual(word_search_sync.status_code, 200)
+        self.assertEqual(word_search_sync.json()['progress']['state']['current_index'], 2)
+
+        fill_blank_sync = self.client.post(
+            self.activity2_progress_url,
+            data=json.dumps({'action': 'state_sync'}),
+            content_type='application/json',
+        )
+        self.assertEqual(fill_blank_sync.status_code, 200)
+        self.assertEqual(fill_blank_sync.json()['progress']['state']['phase'], 'choices')
+
+        coordinator = Path(
+            settings.BASE_DIR,
+            'pabasa_app/static/pabasa_app/js/prescribed_leave_confirmation.js',
+        ).read_text(encoding='utf-8')
+        self.assertIn('await activityAdapter.saveCurrentProgress()', coordinator)
+        self.assertIn('await activityAdapter.cleanup()', coordinator)
+        self.assertIn('window.location.assign(backLink.href)', coordinator)
+
     def test_activity2_back_reset_clears_its_saved_progress(self):
         progress = StudentActivityProgress.objects.create(
             student=self.student, activity_key=self.activity2_key,
@@ -183,6 +218,16 @@ class PrescribedLesson26WordSearchTests(TestCase):
         self.assertIn("window.Basahin.read({target_text:target, language:'English', mode:'sentence'}", script)
         self.assertIn("const correct = result.complete === true;", script)
         self.assertNotIn('speechSynthesis', script)
+        self.assertIn('data-prescribed-leave-prefix="prescribed-l27a1"', template)
+        self.assertIn('id="prescribed-l27a1-leave-modal"', template)
+        self.assertIn('prescribed_leave_confirmation.js', template)
+        leave_sync = self.client.post(
+            self.lesson27_progress_url,
+            data=json.dumps({'action': 'state_sync'}),
+            content_type='application/json',
+        )
+        self.assertEqual(leave_sync.status_code, 200)
+        self.assertEqual(leave_sync.json()['progress']['state']['phase'], 'reading')
 
     def test_lesson27_back_reset_clears_only_its_saved_progress(self):
         progress = StudentActivityProgress.objects.create(
@@ -197,6 +242,21 @@ class PrescribedLesson26WordSearchTests(TestCase):
         self.assertTrue(response.json()['success'])
         self.assertFalse(StudentActivityProgress.objects.filter(pk=progress.pk).exists())
 
+    def test_lesson27_leave_sync_does_not_mutate_saved_progress(self):
+        progress = StudentActivityProgress.objects.create(
+            student=self.student, activity_key=self.lesson27_key,
+            current_index=1, completed_items=1, total_items=4,
+            state={'phase': 'reading', 'item_index': 1, 'verse_index': 2, 'state_version': 7},
+        )
+        response = self.client.post(
+            self.lesson27_progress_url, data=json.dumps({'action': 'state_sync'}), content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+        progress.refresh_from_db()
+        self.assertEqual(progress.state['state_version'], 7)
+        self.assertEqual(progress.current_index, 1)
+
     def test_lesson28_activities_use_their_dedicated_ui_flows(self):
         activity1 = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.lesson28_activity1_key}))
         self.assertEqual(activity1.status_code, 200)
@@ -204,6 +264,7 @@ class PrescribedLesson26WordSearchTests(TestCase):
         self.assertEqual(activity1.context['prescribed_activity_data']['read_aloud_url'], reverse('reading_read_aloud_api'))
         self.assertEqual(activity1.context['prescribed_activity_data']['transcribe_url'], reverse('reading_transcribe_api'))
         self.assertContains(activity1, 'SESSION 12 · LESSON 28 · ACTIVITY 1')
+        self.assertContains(activity1, 'prescribed-l28a1-leave-modal')
         activity2 = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.lesson28_activity2_key}))
         self.assertEqual(activity2.status_code, 200)
         self.assertTemplateUsed(activity2, 'pabasa_app/prescribed_word_identifying_lesson28_activity2_page.html')
@@ -213,6 +274,8 @@ class PrescribedLesson26WordSearchTests(TestCase):
         activity1_script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js', 'prescribed_missing_letter_lesson28_activity1.js').read_text(encoding='utf-8')
         self.assertIn("language:'English'", activity1_script)
         self.assertNotIn('speechSynthesis', activity1_script)
+        self.assertContains(activity1, 'data-prescribed-leave-prefix="prescribed-l28a1"')
+        self.assertContains(activity1, 'prescribed_leave_confirmation.js')
         activity2_script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js', 'prescribed_word_identifying_lesson28_activity2.js').read_text(encoding='utf-8')
         self.assertIn("action: 'choose'", activity2_script)
         self.assertNotIn('Basahin.read', activity2_script)
@@ -296,6 +359,75 @@ class PrescribedLesson26WordSearchTests(TestCase):
         self.assertEqual(second.status_code, 200)
         self.assertTrue(second.json()['accepted'])
         self.assertEqual(second.json()['progress']['completed_items'], 2)
+
+    def test_sessions12_and13_leave_confirmation_adapters_preserve_existing_progress(self):
+        scripts = {
+            'prescribed_missing_letter_lesson28_activity1.js': 'prescribed-l28a1',
+            'prescribed_word_identifying_lesson28_activity2.js': 'prescribed-l28a2',
+            'prescribed_oral_sentence_blank_lesson29_activity1.js': 'prescribed-s13l29g1',
+            'prescribed_spot_word_lesson29_activity2.js': 'prescribed-s13l29g2',
+            'prescribed_trace_say_lesson29_activity3.js': 'prescribed-s13l29g3',
+        }
+        for script_name, prefix in scripts.items():
+            script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js', script_name).read_text(encoding='utf-8')
+            self.assertIn(f"window.__prescribedLeaveAdapters['{prefix}']", script)
+            if prefix != 'prescribed-s13l29g3':
+                self.assertIn('Promise.resolve()', script)
+
+        trace_script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js', 'prescribed_trace_say_lesson29_activity3.js').read_text(encoding='utf-8')
+        self.assertIn("action:'save_draft_trace'", trace_script)
+
+        for url in (
+            self.lesson28_activity1_progress_url,
+            self.lesson28_activity2_progress_url,
+            self.lesson29_activity1_progress_url,
+            self.lesson29_activity2_progress_url,
+            reverse('lesson29_trace_say_progress'),
+        ):
+            response = self.client.post(url, data=json.dumps({'action': 'state_sync'}), content_type='application/json')
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.json()['success'])
+
+        session13_template = Path(settings.BASE_DIR, 'pabasa_app/templates/pabasa_app/session13_prescribed_controls.html').read_text(encoding='utf-8')
+        self.assertIn('prescribed_leave_confirmation.js', session13_template)
+
+    def test_lesson29_activity3_leave_draft_preserves_unfinished_strokes(self):
+        progress_url = reverse('lesson29_trace_say_progress')
+        started = self.client.post(
+            progress_url, data=json.dumps({'action': 'read_sound', 'item_index': 0}), content_type='application/json',
+        )
+        self.assertEqual(started.status_code, 200)
+        draft = [[{'x': 0.2, 'y': 0.2}, {'x': 0.8, 'y': 0.8}]]
+        response = self.client.post(
+            progress_url,
+            data=json.dumps({'action': 'save_draft_trace', 'item_index': 0, 'strokes': draft}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        state = response.json()['progress']['state']
+        self.assertEqual(state['phase'], 'trace')
+        self.assertEqual(state['draft_item'], 0)
+        self.assertEqual(state['draft_strokes'], draft)
+
+    def test_sessions14_and15_activity_pages_include_leave_confirmation(self):
+        for activity_key in (
+            'lesson-30-gawain-1', 'lesson-30-gawain-2', 'lesson-30-gawain-3',
+            'lesson-31-gawain-1', 'lesson-31-gawain-2', 'lesson-31-gawain-3', 'lesson-31-gawain-4',
+        ):
+            response = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': activity_key}))
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, 'prescribed_leave_confirmation.js')
+
+        coordinator = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js/prescribed_leave_confirmation.js').read_text(encoding='utf-8')
+        self.assertIn('window.__prescribedLeaveConfirmationInitialized', coordinator)
+        for prefix in ('lesson30a1', 'lesson30a2', 'lesson30a3', 'lesson31a1', 'lesson31a2', 'lesson31a3', 'lesson31a4'):
+            self.assertIn(prefix, coordinator)
+        self.assertIn('pauseModal?.querySelector(`[id="${prefix}-back"]`)', coordinator)
+
+        for template_name in ('lesson30_prescribed_controls.html', 'session15_prescribed_controls.html'):
+            controls = Path(settings.BASE_DIR, 'pabasa_app/templates/pabasa_app', template_name).read_text(encoding='utf-8')
+            self.assertIn('id="{{ prefix }}-back" type="button"', controls)
+            self.assertNotIn('id="{{ prefix }}-back" href=', controls)
 
     def test_lesson30_story_time_uses_dedicated_line_by_line_speech_flow(self):
         response = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.lesson30_activity2_key}))

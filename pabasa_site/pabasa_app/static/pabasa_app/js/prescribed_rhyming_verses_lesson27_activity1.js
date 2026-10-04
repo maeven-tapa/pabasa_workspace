@@ -87,6 +87,15 @@
     state = {...result.progress.state};
     return result;
   }
+  window.__prescribedLeaveAdapters ||= {};
+  window.__prescribedLeaveAdapters['prescribed-l27a1'] = {
+    saveCurrentProgress() {
+      return save({action:'state_sync'});
+    },
+    cleanup() {
+      window.PrescribedLesson27Activity?.cleanup();
+    },
+  };
   function progressDots() {
     const complete = state.phase === 'complete';
     return `<div class="lesson27-progress" aria-label="Poem progress">${data.items.map((_, index) => `<span class="lesson27-step ${complete || index < state.item_index ? 'done' : ''} ${!complete && index === state.item_index ? 'active' : ''}" ${!complete && index === state.item_index ? 'aria-current="step"' : ''}>${index + 1}</span>`).join('')}</div>`;

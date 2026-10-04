@@ -172,7 +172,6 @@
   restartButton?.addEventListener('click', showRestartConfirmation);
   restartNo?.addEventListener('click', showPause);
   restartYes?.addEventListener('click', async () => { restartYes.disabled = true; window.PrescribedLesson26Debug?.reset?.(); try { await window.PrescribedLesson26Activity?.restart(); } catch (error) { restartYes.disabled = false; window.alert(error.message); } });
-  backButton?.addEventListener('click', () => { window.PrescribedLesson26Activity?.cleanup(); window.location.href = '/dashboard/assessment/'; });
   audioTestButton?.addEventListener('click', showAudio);
   document.addEventListener('keydown', event => { if (event.key === 'Escape') { if (!audioModal.hidden) { stopSampleStream(); showPause(); } else if (!restartModal.hidden) { showPause(); } else if (!pauseModal.hidden) { return; } else { closeAll(); } } });
   window.addEventListener('beforeunload', () => { stopSampleStream(); });
