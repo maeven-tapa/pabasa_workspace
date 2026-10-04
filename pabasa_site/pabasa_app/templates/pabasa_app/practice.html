@@ -13,15 +13,15 @@
     }
 
     .practice-board {
-        /* Center short boards, but safely flow from the top as hub content
-           is added and the board becomes taller than the viewport. */
-        align-content: safe center;
+        /* Keep the practice hub anchored near the top of the dashboard content
+           instead of vertically centering a short board in the viewport. */
+        align-content: start;
         display: grid;
         gap: 1.15rem;
         grid-auto-rows: auto;
         height: auto;
         justify-items: stretch;
-        min-height: calc(100dvh - 4rem);
+        min-height: auto;
         width: 100%;
     }
 
