@@ -7,7 +7,7 @@ from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.cache import never_cache
 from django.core.cache import cache
 from django.core.paginator import Paginator
-from django.core.exceptions import ValidationError
+from django.core.exceptions import DisallowedHost, ValidationError
 from django.core.validators import validate_email
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth.password_validation import validate_password
@@ -93,6 +93,7 @@ from .reading_stt import (
     synthesize_maya_read_aloud_audio,
     transcribe_audio_bytes_with_model,
     google_stt_credentials,
+    google_stt_credentials_available,
     l22_c_pronunciation_match,
     word_numbers_in_transcript,
 )
@@ -23669,6 +23670,16 @@ def lesson_1_gawain_1_transcribe_api(request):
         return JsonResponse({'success': False, 'error': 'Hindi naproseso ang audio. Subukan muli.'}, status=502)
 
 
+def _local_api_key_stt_fallback(request, api_key, credentials_file, selected_model):
+    """Use the existing Google API-key route only for credential-less localhost testing."""
+    if not getattr(settings, 'DEBUG', False) or not api_key or selected_model:
+        return False
+    try:
+        host = request.get_host().split(':', 1)[0].lower()
+    except DisallowedHost:
+        return False
+    return host in {'127.0.0.1', 'localhost'} and not google_stt_credentials_available(credentials_file)
+
 @csrf_protect
 @require_http_methods(["POST"])
 def reading_transcribe_api(request):
@@ -23715,9 +23726,13 @@ def reading_transcribe_api(request):
     credentials_file = str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or '')
 
     knowlez_selected = uses_knowlez_stt(request)
-    if not knowlez_selected and not api_key and stt_model not in {'chirp_2', 'chirp_3'}:
-        return JsonResponse({'success': False, 'error': 'Google Speech is not configured.'}, status=503)
-
+    local_api_key_fallback = (
+        not knowlez_selected
+        and _local_api_key_stt_fallback(request, api_key, credentials_file, selected_model)
+    )
+    if local_api_key_fallback:
+        stt_model = 'latest_short'
+        location = _chirp_location(stt_model)
     words = []
     try:
         if knowlez_selected:

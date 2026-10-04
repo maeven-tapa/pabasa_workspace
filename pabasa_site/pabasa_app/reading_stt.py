@@ -607,6 +607,23 @@ def google_stt_credentials(service_account, credentials_file):
         ) from exc
 
 
+def google_stt_credentials_available(credentials_file=""):
+    """Return whether the current process can resolve Google Cloud credentials."""
+    credentials_path = Path(credentials_file or "")
+    if credentials_path.exists():
+        return True
+    if os.environ.get("GOOGLE_STT_SERVICE_ACCOUNT_JSON_B64", "").strip():
+        return True
+    if os.environ.get("GOOGLE_STT_SERVICE_ACCOUNT_JSON", "").strip():
+        return True
+    try:
+        from google.auth import default
+        default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+        return True
+    except Exception:
+        return False
+
+
 def transcribe_audio_bytes_v1(
     audio_bytes,
     api_key,
