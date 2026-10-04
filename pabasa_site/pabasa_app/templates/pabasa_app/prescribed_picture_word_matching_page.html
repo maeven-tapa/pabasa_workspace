@@ -129,8 +129,10 @@
      function renderOral(message = '', kind = '') {
       const item = items[oralIndex];
       const actionLabel = oralMode === 'aloud' ? '🔊 Pakinggan muna' : oralStatus || '🎙 Basahin ngayon';
-      app.innerHTML = heading() + `<p class="hint">Basahin nang malakas ang salita bago magpatuloy sa pagkakabit. Salita ${oralIndex + 1} sa ${items.length}.</p><img class="oral-image" src="${escape(item.image_url)}" alt="${escape(item.alt_text || item.placeholder_label)}"><div class="oral-word">${escape(item.read_word)}</div><button class="button ${oralMode === 'aloud' ? 'gold' : ''}" id="oral-action" type="button" ${busy ? 'disabled' : ''}>${escape(actionLabel)}</button><p class="oral-status ${kind}">${escape(message)}</p>`;
-      app.querySelector('#oral-action').onclick = oralMode === 'aloud' ? listenCurrentWord : readCurrentWord;
+      app.innerHTML = heading() + `<p class="hint">Basahin nang malakas ang salita bago magpatuloy sa pagkakabit. Salita ${oralIndex + 1} sa ${items.length}.</p><img class="oral-image" src="${escape(item.image_url)}" alt="${escape(item.alt_text || item.placeholder_label)}"><div class="oral-word">${escape(item.read_word)}</div><button class="button ${oralMode === 'aloud' ? 'gold' : ''}" id="oral-action" type="button" ${oralMode === 'aloud' ? '' : 'data-basahin-button'} ${busy ? 'disabled' : ''}>${escape(actionLabel)}</button><p class="oral-status ${kind}">${escape(message)}</p>`;
+      const oralAction = app.querySelector('#oral-action');
+      if (oralMode === 'aloud') oralAction.onclick = listenCurrentWord;
+      else window.Basahin.bindActivity(oralAction, readCurrentWord);
        announceOralItem();
      }
       async function playIntroInstruction() {
@@ -154,16 +156,15 @@
       activeAttemptController = controller;
       activeAttemptSnapshot = {oralIndex, phase, readingAttempts, aloudAttempts, oralMode};
       activeAttemptCommitted = false;
-      const item = items[oralIndex], button = app.querySelector('#oral-action');
-      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { readingAttempts = Math.min(3, readingAttempts + 1); oralMode = readingAttempts >= 3 ? 'aloud' : 'read'; const feedback = oralMode === 'aloud' ? 'Pakinggan muna ang salita.' : `Hindi available ang mikropono. May ${3 - readingAttempts} pagkakataon pa.`; renderOral(feedback, 'error'); await narrateFeedback(feedback, 'readingRetry'); return; }
+      let item = items[oralIndex], button = app.querySelector('#oral-action');
+      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder || !window.Basahin) { readingAttempts = Math.min(3, readingAttempts + 1); oralMode = readingAttempts >= 3 ? 'aloud' : 'read'; const feedback = oralMode === 'aloud' ? 'Pakinggan muna ang salita.' : `Hindi available ang mikropono. May ${3 - readingAttempts} pagkakataon pa.`; renderOral(feedback, 'error'); await narrateFeedback(feedback, 'readingRetry'); return; }
       busy = true; oralStatus = '🎙 Nakikinig…'; renderOral('Nakikinig sa iyong pagbasa…', 'good');
       try {
+        button = app.querySelector('#oral-action');
         button.disabled = true; button.textContent = 'Nagbabasa...';
-        stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+        stream = await window.Basahin.openMicrophone({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}, {signal:controller.signal});
         if (attempt !== attemptVersion || controller.signal.aborted) return;
-        const parts = [], recorder = new MediaRecorder(stream);
-        recorder.ondataavailable = event => event.data?.size && parts.push(event.data);
-        const recording = await new Promise((resolve, reject) => { recorder.onerror = () => reject(Error('Hindi naitala ang boses.')); recorder.onstop = () => resolve(new Blob(parts, {type:recorder.mimeType || 'audio/webm'})); recorder.start(); setTimeout(() => recorder.state === 'recording' && recorder.stop(), 3500); });
+        const recording = await window.Basahin.capture({button, stream, signal:controller.signal});
         if (attempt !== attemptVersion || controller.signal.aborted) return;
         stopOral(); oralStatus = '⏳ Pinoproseso…'; renderOral('Pinoproseso ang iyong pagbasa…', 'good');
         const form = new FormData(); form.append('audio', recording, 'lesson16-gawain3-reading.webm'); form.append('target_text', item.read_word); form.append('language', 'Filipino'); form.append('mode', 'reading');

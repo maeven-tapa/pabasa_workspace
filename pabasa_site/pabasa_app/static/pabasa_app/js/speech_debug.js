@@ -20,15 +20,42 @@
         ).join(', ') || 'unavailable'}` : '';
       return `Model: ${model}${language}${fallback} | Words: ${data.transcript}${raw}${stitching}${syllables}${wordValues}`;
     };
+    const panelFor = output => output.closest('aside');
+    const setPanelValue = (panel, suffix, value) => {
+      const node = panel?.querySelector(`[id$="-debug-${suffix}"]`);
+      if (node) node.textContent = String(value ?? 'Not available');
+    };
     const publish = data => {
       const line = format(data);
-      if (!line) return;
       document.querySelectorAll('[data-speech-debug-output]').forEach(output => {
-        const lines = [...(histories.get(output) || []), line].slice(-6);
-        histories.set(output, lines);
-        output.textContent = lines.join('\n');
+        if (line) {
+          const lines = [...(histories.get(output) || []), line].slice(-6);
+          histories.set(output, lines);
+          output.textContent = lines.join('\n');
+        }
+        const panel = panelFor(output);
+        setPanelValue(panel, 'result', data.transcript ? `Transcript: ${data.transcript}${data.stt_model ? ` · Model: ${data.stt_model}` : ''}${data.language_code ? ` · ${data.language_code}` : ''}` : (data.error || 'No transcript returned'));
+        setPanelValue(panel, 'error', data.success === false ? (data.error || 'Transcription failed') : '—');
+        setPanelValue(panel, 'status', data.success === false ? 'STT failed' : (data.complete === true ? 'STT complete' : 'STT response received'));
+        setPanelValue(panel, 'recorder', 'Inactive');
       });
     };
+    window.addEventListener('basahin:state', event => {
+      const detail = event.detail || {}, state = detail.state;
+      document.querySelectorAll('[data-speech-debug-output]').forEach(output => {
+        const panel = panelFor(output);
+        if (state === 'level') {
+          setPanelValue(panel, 'vad', detail.speaking ? 'Speaking' : (detail.calibrating ? 'Calibrating' : 'Quiet'));
+          setPanelValue(panel, 'mic', 'Active · Unmuted');
+          return;
+        }
+        const labels = {calibrating: 'Calibrating', waiting: 'Waiting for speech', listening: 'Listening', silence: 'Silence detected', processing: 'Processing speech', idle: 'Ready'};
+        if (labels[state]) setPanelValue(panel, 'status', labels[state]);
+        if (state === 'listening') setPanelValue(panel, 'recorder', 'Recording');
+        if (state === 'processing' || state === 'idle') setPanelValue(panel, 'recorder', 'Inactive');
+        if (state === 'idle') setPanelValue(panel, 'mic', 'Inactive · Unmuted');
+      });
+    });
     let observing = false;
     const observeTranscriptions = () => {
       if (observing || !window.fetch) return;
@@ -41,9 +68,14 @@
         const url = String(args[0]?.url || args[0] || '');
         const transcription = /\/transcribe\/(?:[?#]|$)/.test(url);
         const workbook = /\/api\/dashboard\/assessment\/activity\/prescribed\/[^/]+\/progress\/(?:[?#]|$)/.test(url);
-        if (response.ok && (transcription || workbook)) {
-          response.clone().json().then(publish).catch(() => {});
-        }
+        if (transcription || workbook) response.clone().json().then(publish).catch(error => {
+          document.querySelectorAll('[data-speech-debug-output]').forEach(output => {
+            const panel = panelFor(output);
+            setPanelValue(panel, 'status', 'Malformed STT response');
+            setPanelValue(panel, 'error', error?.message || 'Unable to read transcription response');
+            setPanelValue(panel, 'result', 'No valid reading result returned');
+          });
+        });
         return response;
       };
     };

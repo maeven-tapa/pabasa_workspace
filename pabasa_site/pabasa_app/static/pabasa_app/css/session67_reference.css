@@ -1,0 +1,91 @@
+/* Shared Session 6–7 activity surface.  This intentionally follows the
+ * Lesson 28 reference geometry while leaving each renderer's content and
+ * scoring state untouched. */
+body.session67-activity {
+  height: 100%;
+  overflow: hidden;
+}
+
+body.session67-activity .session67-debug-row {
+  display: grid;
+  gap: 3px;
+  padding: 9px 0;
+  border-bottom: 1px solid #1f6f8b18;
+}
+
+body.session67-activity .session67-debug-row:last-child {
+  border-bottom: 0;
+}
+
+body.session67-activity .session67-debug-key {
+  color: #187b7a;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+body.session67-activity .session67-debug-value {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+body.session67-activity .session67-debug-output {
+  display: block;
+  max-height: 160px;
+  overflow: auto;
+  font-size: .75rem;
+}
+
+body.session67-activity .page {
+  display: flex !important;
+  flex-direction: column !important;
+  width: min(1250px, calc(100% - 36px)) !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  margin: auto !important;
+  padding: 16px 0 18px !important;
+  overflow: visible !important;
+}
+
+body.session67-activity .back {
+  position: static !important;
+  width: 280px;
+  min-height: 64px;
+}
+
+body.session67-activity .card {
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: clamp(18px, 4vh, 44px) 0 0 !important;
+  padding: clamp(22px, 3.5vh, 42px) clamp(22px, 5vw, 72px) 24px !important;
+  border: 2px solid #ffffffaa !important;
+  border-radius: 42px !important;
+  background: #ffffff63 !important;
+  box-shadow: 0 18px 45px #1e5b7a35 !important;
+  text-align: center;
+  overflow: auto !important;
+}
+
+@media (max-width: 680px) {
+  body.session67-activity .page {
+    width: min(100% - 24px, 680px) !important;
+    padding: 12px 0 !important;
+  }
+
+  body.session67-activity .back {
+    width: 245px;
+  }
+
+  body.session67-activity .card {
+    margin-top: 20px !important;
+    padding: 24px 18px 18px !important;
+    border-radius: 30px !important;
+  }
+}

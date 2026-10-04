@@ -194,10 +194,11 @@
       const item = items[index];
       if (phase === 'oral') {
         const listen = oralMode === 'aloud';
-        app.innerHTML = heading() + picture(item) + `<p class="oral">Basahin nang malakas: <strong data-expected-text="${escape(item.word)}">${escape(item.word)}</strong>.</p><p class="hint">${listen ? 'Pakinggan ang salita nang tatlong beses bago muling magbasa.' : 'May tatlong pagkakataon kang basahin ang salita.'}</p><button class="button ${listen ? 'gold' : ''}" id="oralAction" type="button">${listen ? '🔊 Pakinggan' : '🎙 Simulan ang Pagbasa'}</button><p class="hint" id="oralStatus"></p>`;
+        app.innerHTML = heading() + picture(item) + `<p class="oral">Basahin nang malakas: <strong data-expected-text="${escape(item.word)}">${escape(item.word)}</strong>.</p><p class="hint">${listen ? 'Pakinggan ang salita nang tatlong beses bago muling magbasa.' : 'May tatlong pagkakataon kang basahin ang salita.'}</p><button class="button ${listen ? 'gold' : ''}" id="oralAction" type="button" ${listen ? '' : 'data-basahin-button data-basahin-state="idle" aria-busy="false"'}>${listen ? '🔊 Pakinggan' : '🎙 Simulan ang Pagbasa'}</button><p class="hint" id="oralStatus"></p>`;
         const oralAction = document.getElementById('oralAction');
         oralAction.dataset.defaultLabel = oralAction.textContent;
-        oralAction.onclick = listen ? () => readAloud(item) : () => readWord(item);
+        if (listen) oralAction.onclick = () => readAloud(item);
+        else window.Basahin.bindActivity(oralAction, () => readWord(item));
         if (hasMappedLesson16Audio && readingAttempts === 0 && aloudAttempts === 0) {
           narrate('', `word-item-${index}`, mappedLesson16ItemAudio[index]?.prompt);
         }
@@ -230,13 +231,9 @@
       if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { status.textContent = 'Hindi available ang mikropono sa browser na ito.'; return; }
       busy = true; button.disabled = true; button.textContent = 'Nakikinig…'; let stream;
       try {
-        stream = await navigator.mediaDevices.getUserMedia({audio: true});
+        const audio = await window.Basahin.capture({button, signal: controller.signal});
         if (attempt !== attemptVersion || controller.signal.aborted) return;
-        const chunks = [], recorder = new MediaRecorder(stream);
-        recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
-        const finished = new Promise(resolve => { recorder.onstop = () => resolve(new Blob(chunks, {type: recorder.mimeType || 'audio/webm'})); });
-        recorder.start(); setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 3500);
-        const audio = await finished; stream.getTracks().forEach(track => track.stop()); button.textContent = 'Sinusuri…';
+        button.textContent = 'Sinusuri…';
         if (attempt !== attemptVersion || controller.signal.aborted) return;
         const form = new FormData(); form.append('audio', audio, 'prescribed-reading.webm'); form.append('target_text', item.word); form.append('language', 'Filipino'); form.append('mode', 'reading');
         const response = await fetch('{% url "reading_transcribe_api" %}', {method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrf()}, body: form, signal: controller.signal});
