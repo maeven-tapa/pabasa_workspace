@@ -12836,6 +12836,18 @@ def teacher_aral_action(request):
     action = str(data.get('action') or '').strip().lower()
     exit_type = str(data.get('exit_type') or '').strip().lower()
     manual_reason = str(data.get('reason') or '').strip()
+    requested_exit_term = data.get('exit_term')
+    try:
+        requested_exit_term = int(requested_exit_term)
+    except (TypeError, ValueError):
+        requested_exit_term = None
+    selected_context_term = request.session.get('teacher_aral_selected_term')
+    if selected_context_term in (1, 2, 3) and requested_exit_term != selected_context_term:
+        return JsonResponse({
+            'success': False,
+            'code': 'exit_term_mismatch',
+            'error': 'The exit term must match the currently selected Student Exit term.',
+        }, status=403)
     is_manual_exit = action == 'manual_exit' or exit_type == 'manual'
     if action == 'manual_exit':
         action = 'exit'
@@ -12931,6 +12943,8 @@ def teacher_aral_action(request):
         exit_is_official, exit_phase, exit_term = _crla_attempt_phase_and_term(
             official_result, completed_on=timezone.localtime(official_result.completed_at).date()
         )
+        if selected_context_term in (1, 2, 3):
+            exit_term = selected_context_term
         state.update({
             'aral_eligible': False,
             'aral_status': 'ineligible',
@@ -28704,6 +28718,12 @@ def _collect_supplementary_student_results(section, selected_term):
     if not student_ids:
         return []
     calendar = getattr(section, 'school_calendar', None)
+    current_term = _calendar_current_term(calendar) if calendar else None
+    # ARAL participation is currently section/calendar scoped; there is no
+    # per-student term enrollment field. Do not expose the current ARAL roster
+    # as a candidate for a future or otherwise non-active selected term.
+    if selected_term != current_term:
+        return []
     publications = list(SupplementaryMaterialPublication.objects.filter(
         section=section,
         school_calendar=calendar,
@@ -28712,8 +28732,6 @@ def _collect_supplementary_student_results(section, selected_term):
         material__is_active=True,
     ).select_related('material')) if calendar else []
     material_ids = {publication.material_id for publication in publications}
-    if not material_ids:
-        return []
     eligible_by_material = {}
     for publication in publications:
         if str(getattr(publication.material, 'publication_scope', 'whole_class') or 'whole_class').strip().lower() == 'selected_students':
@@ -28788,8 +28806,10 @@ def _collect_supplementary_student_results(section, selected_term):
         row['total_score'] = sum(available) if len(available) == 4 else None
         row['max_score'] = 20
         row['ready_for_exit'] = bool(len(available) == 4 and all(score >= 3 for score in row['scores'].values()) and row['total_score'] >= 12)
-        if available:
-            normalized.append(row)
+        # Keep every active student in the assigned section in the candidate
+        # pool. Missing Supplementary results make the student not ready, but
+        # must not prevent manual review.
+        normalized.append(row)
     return normalized
 
 
@@ -28818,6 +28838,56 @@ def _supplementary_chart_data(student_results):
             ],
         })
     return data if any(indicator['bars'] for indicator in data) else []
+
+
+def _prescribed_activity_chart_data(section, selected_term):
+    """Return whole-program prescribed completion for the selected ARAL scope."""
+    activity_keys = tuple(_prescribed_activity_order())
+    enrollments = _current_section_enrollments(section)
+    student_ids = list(enrollments.values_list('student_id', flat=True))
+    calendar = getattr(section, 'school_calendar', None) if section else None
+    completed_by_student = {student_id: set() for student_id in student_ids}
+    if calendar and selected_term in (1, 2, 3) and activity_keys and student_ids:
+        progress_rows = StudentActivityProgress.objects.filter(
+            student_id__in=student_ids,
+            school_calendar=calendar,
+            term=selected_term,
+            activity_key__in=activity_keys,
+            activity_completed=True,
+        ).values_list('student_id', 'activity_key')
+        for student_id, activity_key in progress_rows:
+            completed_by_student[student_id].add(activity_key)
+
+    denominator = len(student_ids)
+    activity_total = len(activity_keys)
+    student_percentages = [
+        (len(completed_keys) / activity_total) * 100
+        for completed_keys in completed_by_student.values()
+    ] if activity_total else [0] * denominator
+    percentage = round(sum(student_percentages) / denominator, 1) if denominator else 0
+    fully_completed_students = sum(
+        1 for completed_keys in completed_by_student.values()
+        if len(completed_keys) == activity_total
+    )
+    students_by_id = User.objects.filter(id__in=student_ids).in_bulk()
+    return {
+        'label': 'Prescribed Activities',
+        'bars': [{'height': percentage, 'secondary': False}],
+        'percentage': percentage,
+        'tooltip_count': f'Average student completion across {denominator} students ({activity_total} activities)',
+        'activity_count': activity_total,
+        'completed_students': fully_completed_students,
+        'qualifying_students': denominator,
+        'students': [
+            {
+                'name': _display_user_name(students_by_id.get(student_id)),
+                'completed_count': len(completed_by_student[student_id]),
+                'activity_total': activity_total,
+                'percentage': round((len(completed_by_student[student_id]) / activity_total) * 100, 1) if activity_total else 0,
+            }
+            for student_id in student_ids
+        ],
+    }
 
 
 def students(request):
@@ -28854,6 +28924,7 @@ def students(request):
             else calendar_default_term if calendar_default_term in (1, 2, 3)
             else 1
         )
+        request.session['teacher_aral_selected_term'] = selected_aral_term
         supplementary_students = _collect_supplementary_student_results(section, selected_aral_term)
         aral_students = supplementary_students
         exited_student_ids = {
@@ -28988,6 +29059,7 @@ def students(request):
             'Selected term',
         ),
         'aral_story_performance_data': _supplementary_chart_data(aral_students),
+        'aral_prescribed_activity_data': _prescribed_activity_chart_data(section, selected_aral_term),
     }))
 
 def student_detail(request):

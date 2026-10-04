@@ -1468,11 +1468,11 @@
         <span class="aral-section-label">{% if assessment_week_section %}{{ assessment_week_section.grade_level }} · {{ assessment_week_section.section|default:assessment_week_section.class_name }}{% else %}Assigned section not available{% endif %}</span>
         <p class="aral-card-description">Student progress toward ARAL exit across performance and prescribed activities.</p>
         <div class="aral-chart-wrap">
-            {% if aral_story_performance_data %}<div class="aral-chart" role="img" aria-labelledby="aralStoryPerformanceTitle">
+            {% if aral_story_performance_data or aral_prescribed_activity_data %}<div class="aral-chart" role="img" aria-labelledby="aralStoryPerformanceTitle">
                 <div class="aral-chart-axis" aria-hidden="true"><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span></div>
                 <div class="aral-chart-plot">
-                    {% for indicator in aral_story_performance_data %}<div class="aral-bar-group" role="button" tabindex="0" data-performance-index="{{ forloop.counter0 }}" aria-label="{{ indicator.label }}: {% if indicator.percentage is not None %}{{ indicator.percentage }}% meet benchmark, {{ indicator.tooltip_count }}{% else %}{{ indicator.tooltip_count }}{% endif %}">{% for bar in indicator.bars %}<span class="aral-bar{% if bar.secondary %} aral-bar--secondary{% endif %}" style="height:{{ bar.height }}%"></span>{% endfor %}<span class="aral-bar-value">{% if indicator.percentage is not None %}{{ indicator.percentage }}%{% else %}—{% endif %}</span><span class="aral-chart-tooltip" aria-hidden="true"><span class="aral-chart-tooltip-category">{{ indicator.label }}</span>{% if indicator.percentage is not None %}<span class="aral-chart-tooltip-percentage">{{ indicator.percentage }}% meet benchmark</span>{% endif %}<span class="aral-chart-tooltip-count">{{ indicator.tooltip_count }}</span><span class="aral-chart-tooltip-count">Click to view students</span></span></div>{% endfor %}<div class="aral-bar-group aral-bar-group--placeholder" aria-label="Prescribed Activities: Not available yet"><span class="aral-bar-value">—</span><span class="aral-chart-tooltip" aria-hidden="true"><span class="aral-chart-tooltip-category">Prescribed Activities</span><span class="aral-chart-tooltip-count">Completion data coming soon</span></span></div>
-                    {% for indicator in aral_story_performance_data %}<span class="aral-bar-label" style="left:{{ indicator.left }}%">{{ indicator.label }}</span>{% endfor %}<span class="aral-bar-label aral-chart-label-5">Prescribed Activities</span>
+                    {% if aral_story_performance_data %}{% for indicator in aral_story_performance_data %}<div class="aral-bar-group" role="button" tabindex="0" data-performance-index="{{ forloop.counter0 }}" aria-label="{{ indicator.label }}: {% if indicator.percentage is not None %}{{ indicator.percentage }}% meet benchmark, {{ indicator.tooltip_count }}{% else %}{{ indicator.tooltip_count }}{% endif %}">{% for bar in indicator.bars %}<span class="aral-bar{% if bar.secondary %} aral-bar--secondary{% endif %}" style="height:{{ bar.height }}%"></span>{% endfor %}<span class="aral-bar-value">{% if indicator.percentage is not None %}{{ indicator.percentage }}%{% else %}—{% endif %}</span><span class="aral-chart-tooltip" aria-hidden="true"><span class="aral-chart-tooltip-category">{{ indicator.label }}</span>{% if indicator.percentage is not None %}<span class="aral-chart-tooltip-percentage">{{ indicator.percentage }}% meet benchmark</span>{% endif %}<span class="aral-chart-tooltip-count">{{ indicator.tooltip_count }}</span><span class="aral-chart-tooltip-count">Click to view students</span></span></div>{% endfor %}{% else %}<div class="aral-bar-group aral-bar-group--placeholder" aria-label="Story Reading: No qualifying results"><span class="aral-bar-value">—</span><span class="aral-chart-tooltip" aria-hidden="true"><span class="aral-chart-tooltip-category">Story Reading</span><span class="aral-chart-tooltip-count">No qualifying results</span></span></div><div class="aral-bar-group aral-bar-group--placeholder" aria-label="5W Questions: No qualifying results"><span class="aral-bar-value">—</span><span class="aral-chart-tooltip" aria-hidden="true"><span class="aral-chart-tooltip-category">5W Questions</span><span class="aral-chart-tooltip-count">No qualifying results</span></span></div><div class="aral-bar-group aral-bar-group--placeholder" aria-label="Story Response: No qualifying results"><span class="aral-bar-value">—</span><span class="aral-chart-tooltip" aria-hidden="true"><span class="aral-chart-tooltip-category">Story Response</span><span class="aral-chart-tooltip-count">No qualifying results</span></span></div><div class="aral-bar-group aral-bar-group--placeholder" aria-label="Story Retelling: No qualifying results"><span class="aral-bar-value">—</span><span class="aral-chart-tooltip" aria-hidden="true"><span class="aral-chart-tooltip-category">Story Retelling</span><span class="aral-chart-tooltip-count">No qualifying results</span></span></div>{% endif %}<div class="aral-bar-group" role="button" tabindex="0" data-prescribed-performance="true" aria-label="{{ aral_prescribed_activity_data.label }}: {{ aral_prescribed_activity_data.percentage }}%, {{ aral_prescribed_activity_data.tooltip_count }}">{% if aral_prescribed_activity_data.percentage > 0 %}{% for bar in aral_prescribed_activity_data.bars %}<span class="aral-bar{% if bar.secondary %} aral-bar--secondary{% endif %}" style="height:{{ bar.height }}%"></span>{% endfor %}{% endif %}<span class="aral-bar-value">{{ aral_prescribed_activity_data.percentage }}%</span><span class="aral-chart-tooltip" aria-hidden="true"><span class="aral-chart-tooltip-category">{{ aral_prescribed_activity_data.label }}</span><span class="aral-chart-tooltip-percentage">{{ aral_prescribed_activity_data.percentage }}% completed</span><span class="aral-chart-tooltip-count">{{ aral_prescribed_activity_data.tooltip_count }}</span></span></div>
+                    {% if aral_story_performance_data %}{% for indicator in aral_story_performance_data %}<span class="aral-bar-label" style="left:{{ indicator.left }}%">{{ indicator.label }}</span>{% endfor %}{% else %}<span class="aral-bar-label" style="left:0%">Story Reading</span><span class="aral-bar-label" style="left:25.7%">5W Questions</span><span class="aral-bar-label" style="left:51.4%">Story Response</span><span class="aral-bar-label" style="left:77.1%">Story Retelling</span>{% endif %}<span class="aral-bar-label aral-chart-label-5">Prescribed Activities</span>
                 </div>
             </div>
             {% if aral_story_performance_legend %}<div class="aral-chart-legend">{% for legend in aral_story_performance_legend %}<span class="aral-legend-item{% if legend.secondary %} aral-legend-item--secondary{% endif %}">{{ legend.label }}</span>{% endfor %}</div>{% endif %}
@@ -1506,6 +1506,7 @@
     </div></div>
 </div>
 {{ aral_story_performance_data|json_script:"aralStoryPerformanceData" }}
+{{ aral_prescribed_activity_data|json_script:"aralPrescribedActivityData" }}
 <div class="modal fade aral-exit-modal" id="aralExitStudentsModal" tabindex="-1" aria-labelledby="aralExitStudentsModalTitle" aria-describedby="aralExitStudentsModalContext">
     <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
         <div class="modal-header"><div><h2 class="modal-title" id="aralExitStudentsModalTitle">Students Ready for Exit</h2><p class="modal-context" id="aralExitStudentsModalContext">{% if assessment_week_section %}{{ assessment_week_section.grade_level }} · {{ assessment_week_section.section|default:assessment_week_section.class_name }} · {% endif %}{{ selected_aral_term_label }}</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
@@ -2781,7 +2782,7 @@ function bindTeacherAralActions() {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken() || document.querySelector('[name="csrfmiddlewaretoken"]')?.value || ''
                 },
-                body: JSON.stringify({ student_id: pending.dataset.studentId, action, exit_type: manualExit ? 'manual' : '', reason: trimmedReason, reading_level: level.value })
+                body: JSON.stringify({ student_id: pending.dataset.studentId, action, exit_type: manualExit ? 'manual' : '', reason: trimmedReason, reading_level: level.value, exit_term: document.getElementById('aralTermSelect')?.value || null })
             });
             const payload = await response.json();
             if (!response.ok || !payload.success) throw new Error(payload.error || 'ARAL update failed.');
@@ -3029,6 +3030,26 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openDetails(); }
             });
         });
+    }
+
+    const prescribedPerformanceDataElement = document.getElementById('aralPrescribedActivityData');
+    const prescribedPerformanceBar = document.querySelector('.aral-bar-group[data-prescribed-performance="true"]');
+    if (prescribedPerformanceDataElement && prescribedPerformanceBar && storyPerformanceModal && storyPerformanceModalTitle && storyPerformanceModalBody) {
+        const prescribedPerformanceData = JSON.parse(prescribedPerformanceDataElement.textContent || '{}');
+        const escapePrescribedHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[character]));
+        const openPrescribedDetails = () => {
+            if (storyPerformanceModal.parentElement !== document.body) document.body.appendChild(storyPerformanceModal);
+            storyPerformanceModalTitle.textContent = prescribedPerformanceData.label || 'Prescribed Activities';
+            const students = prescribedPerformanceData.students || [];
+            const rows = students.map(student => '<tr><td>' + escapePrescribedHtml(student.name) + '</td><td>' + student.completed_count + '/' + student.activity_total + '</td><td>' + student.percentage + '%</td></tr>').join('');
+            storyPerformanceModalBody.innerHTML = '<div class="aral-modal-performance-summary"><strong>' + prescribedPerformanceData.percentage + '% average completion</strong><span>' + escapePrescribedHtml(prescribedPerformanceData.tooltip_count) + '</span></div>' + (rows ? '<div class="aral-modal-table-wrap"><table class="aral-modal-performance-table"><thead><tr><th scope="col">Student</th><th scope="col">Completed</th><th scope="col">Progress</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<div class="aral-empty-state" role="status"><strong>No qualifying students</strong><span>No enrolled ARAL students are available for this term.</span></div>');
+            if (window.bootstrap?.Modal) bootstrap.Modal.getOrCreateInstance(storyPerformanceModal).show();
+        };
+        prescribedPerformanceBar.addEventListener('click', openPrescribedDetails);
+        prescribedPerformanceBar.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPrescribedDetails(); }
+        });
+        prescribedPerformanceBar.setAttribute('tabindex', '0');
     }
 
     // Refresh data when Add Student Form is submitted
