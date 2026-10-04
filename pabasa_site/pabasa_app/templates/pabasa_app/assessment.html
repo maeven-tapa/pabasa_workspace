@@ -906,10 +906,16 @@
 <section class="assessment-dock student-animated-page">
     {% include "pabasa_app/partials/_student_falling_shapes.html" %}
     <div class="assessment-stage">
-        <div>
+        <div class="assessment-stage-content">
             <span class="dash-pill"><i class="bi bi-journal-bookmark-fill me-2" aria-hidden="true"></i>Aralin Mo Ngayon</span>
             <h2>Handa Ka Na Bang Matuto?</h2>
             <p>Narito ang aralin na inihanda ng iyong guro para sa iyo.</p>
+        </div>
+        <div class="assessment-stage-welcome-art" aria-hidden="true">
+            <span class="welcome-art-glow"></span>
+            <i class="bi bi-book-half welcome-art-book"></i>
+            <span class="welcome-art-star">✦</span>
+            <span class="welcome-art-dot"></span>
         </div>
     </div>
     <section class="subject-card pabasa-preview-subject" aria-label="Grade 2 BALAGTAS reading tracks">
@@ -2178,6 +2184,300 @@ document.addEventListener('DOMContentLoaded',function(){
         #sessionGrid.session-folder-mode .week-folder-icon,
         #templateFolderGrid .week-folder-icon,
         .assessment-dock .subject-grid .week-folder-icon { transition: none; }
+    }
+
+    /* Desktop viewport fit: compact the assessment composition without clipping it. */
+    @media (min-width: 1200px) {
+        body:has(.assessment-dock) {
+            height: 100dvh;
+            min-height: 100dvh;
+            overflow: hidden;
+        }
+        body:has(.assessment-dock) .dashboard-main,
+        body:has(.assessment-dock) .dashboard-page-wrap,
+        body:has(.assessment-dock) .dashboard-content-wrap {
+            min-height: 0;
+        }
+        body:has(.assessment-dock) .dashboard-main {
+            height: 100dvh;
+        }
+        body:has(.assessment-dock) .dashboard-page-wrap,
+        body:has(.assessment-dock) .dashboard-content-wrap {
+            height: calc(100dvh - 76px);
+        }
+        body:has(.assessment-dock) > main {
+            box-sizing: border-box;
+            height: calc(100dvh - 76px);
+            min-height: 0;
+            padding-bottom: 0 !important;
+            padding-top: .75rem !important;
+        }
+        .assessment-dock {
+            box-sizing: border-box;
+            gap: 12px;
+            grid-template-rows: 120px minmax(0, 1fr);
+            height: 100%;
+            min-height: 0;
+            padding: 10px 0 12px;
+        }
+        .assessment-stage {
+            min-height: 0;
+            padding: 16px 24px;
+        }
+        body:has(.assessment-dock) .assessment-stage .dash-pill { margin-bottom: 6px !important; }
+        body:has(.assessment-dock) .assessment-stage h2 { font-size: 1.28rem; margin-bottom: .3rem; }
+        body:has(.assessment-dock) .assessment-stage p { font-size: .82rem; line-height: 1.35; }
+        .assessment-dock .pabasa-preview-subject {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        .assessment-dock .pabasa-track-tabs {
+            flex: 0 0 auto;
+            margin: 0 auto 12px;
+        }
+        .assessment-dock #coreTrackPanel,
+        .assessment-dock #supplementaryTrackPanel {
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        body:has(.assessment-dock) #sessionGrid {
+            grid-template-rows: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            height: 100%;
+            min-height: 0;
+        }
+        #sessionGrid.session-folder-mode .assessment-week-folder,
+        #templateFolderGrid .assessment-week-folder,
+        .assessment-dock .subject-grid .assessment-week-folder {
+            min-height: 0;
+            height: 100%;
+            padding: .65rem .75rem;
+        }
+        #sessionGrid.session-folder-mode .week-folder-icon,
+        #templateFolderGrid .week-folder-icon,
+        .assessment-dock .subject-grid .week-folder-icon {
+            font-size: 2.8rem;
+            margin-bottom: .35rem;
+        }
+        #sessionGrid.session-folder-mode .week-folder-name,
+        #templateFolderGrid .week-folder-name,
+        .assessment-dock .subject-grid .week-folder-name { font-size: 1rem; }
+        #sessionGrid.session-folder-mode .week-activity-count,
+        #templateFolderGrid .week-activity-count,
+        .assessment-dock .subject-grid .week-activity-count {
+            margin-top: .35rem;
+            padding: .34rem .62rem;
+        }
+    }
+
+    /* Final desktop sizing: establish the available height before disabling page scroll. */
+    @media (min-width: 1200px) {
+        body:has(.assessment-dock) > main,
+        body:has(.assessment-dock) .dashboard-main,
+        body:has(.assessment-dock) .dashboard-page-wrap,
+        body:has(.assessment-dock) .dashboard-content-wrap {
+            box-sizing: border-box;
+            min-height: 0;
+        }
+        body:has(.assessment-dock) > main,
+        body:has(.assessment-dock) .dashboard-page-wrap,
+        body:has(.assessment-dock) .dashboard-content-wrap {
+            height: calc(100dvh - 76px);
+        }
+        .assessment-dock {
+            align-content: stretch;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            height: 100%;
+            max-height: 100%;
+            min-height: 0;
+            padding: 8px 0 10px;
+        }
+        .assessment-dock .assessment-stage {
+            box-sizing: border-box;
+            flex: 0 0 100px;
+            height: 100px;
+            padding: 14px 24px;
+        }
+        .assessment-dock .pabasa-preview-subject {
+            box-sizing: border-box;
+            flex: 1 1 auto;
+            height: auto;
+            min-height: 0;
+        }
+        .assessment-dock .pabasa-track-tabs {
+            height: 52px;
+            margin: 0 auto 10px;
+            min-height: 52px;
+        }
+        .assessment-dock .pabasa-track-tabs button {
+            min-height: 44px;
+            padding: .45rem 1.1rem;
+        }
+        .assessment-dock #coreTrackPanel,
+        .assessment-dock #supplementaryTrackPanel {
+            min-height: 0;
+        }
+        .assessment-dock #coreTrackPanel {
+            display: flex;
+            flex: 1 1 auto;
+            flex-direction: column;
+        }
+        .assessment-dock #sessionGrid {
+            align-content: start;
+            box-sizing: border-box;
+            display: grid;
+            flex: 0 0 auto;
+            gap: 10px 12px;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            grid-template-rows: repeat(3, 130px);
+            height: 410px;
+            min-height: 0;
+            padding-bottom: 0;
+        }
+        #sessionGrid.session-folder-mode .assessment-week-folder,
+        #templateFolderGrid .assessment-week-folder,
+        .assessment-dock .subject-grid .assessment-week-folder {
+            box-sizing: border-box;
+            height: 130px;
+            min-height: 130px;
+            padding: .55rem .7rem;
+        }
+        #sessionGrid.session-folder-mode .week-folder-icon,
+        #templateFolderGrid .week-folder-icon,
+        .assessment-dock .subject-grid .week-folder-icon {
+            font-size: 2.45rem;
+            margin-bottom: .25rem;
+        }
+        #sessionGrid.session-folder-mode .week-folder-name,
+        #templateFolderGrid .week-folder-name,
+        .assessment-dock .subject-grid .week-folder-name { font-size: 1.05rem; }
+        #sessionGrid.session-folder-mode .week-activity-count,
+        #templateFolderGrid .week-activity-count,
+        .assessment-dock .subject-grid .week-activity-count {
+            font-size: .72rem;
+            margin-top: .25rem;
+            padding: .3rem .58rem;
+        }
+    }
+    @media (min-width: 1200px) and (max-height: 820px) {
+        .assessment-dock .assessment-stage { flex-basis: 92px; height: 92px; }
+        .assessment-dock #sessionGrid { grid-template-rows: repeat(3, 116px); height: 368px; }
+        #sessionGrid.session-folder-mode .assessment-week-folder,
+        #templateFolderGrid .assessment-week-folder,
+        .assessment-dock .subject-grid .assessment-week-folder { height: 116px; min-height: 116px; }
+    }
+
+    /* Keep the three folder rows compact instead of distributing spare height. */
+    @media (min-width: 1200px) {
+        body:has(.assessment-dock) #sessionGrid {
+            align-content: start !important;
+            grid-auto-rows: 130px !important;
+            grid-template-rows: none !important;
+            height: auto !important;
+            max-height: none !important;
+            row-gap: 10px !important;
+        }
+        #sessionGrid.session-folder-mode > .session-folder-column {
+            align-self: start;
+            height: 130px;
+            min-height: 130px;
+        }
+        #sessionGrid.session-folder-mode .assessment-week-folder {
+            height: 130px;
+            min-height: 130px;
+        }
+    }
+
+    /* Compact welcome banner treatment; kept inside the existing banner height. */
+    .assessment-dock .assessment-stage {
+        background: linear-gradient(110deg, rgba(255, 255, 255, .96) 0%, rgba(232, 248, 253, .96) 64%, rgba(255, 249, 222, .94) 100%);
+        border: 1px solid rgba(31, 111, 139, .12);
+        padding: 16px 24px;
+        box-shadow: inset 0 2px 0 rgba(255, 255, 255, .78), 0 8px 18px rgba(31, 111, 139, .10);
+        overflow: hidden;
+    }
+    .assessment-dock .assessment-stage > div:first-child { position: relative; z-index: 2; }
+    .assessment-dock .assessment-stage-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .assessment-dock .assessment-stage .dash-pill {
+        background: rgba(255, 255, 255, .86);
+        border-color: rgba(31, 111, 139, .16);
+        box-shadow: 0 3px 8px rgba(31, 111, 139, .08);
+        color: #16465d;
+        font-size: .78rem;
+        margin-bottom: 8px !important;
+        padding: 5px 10px;
+    }
+    .assessment-dock .assessment-stage .dash-pill i {
+        color: #e7b83e;
+        display: inline-block;
+        margin-right: .35rem !important;
+    }
+    .assessment-dock .assessment-stage h2 {
+        color: #123d59;
+        font-size: clamp(1.38rem, 2vw, 1.62rem);
+        letter-spacing: -.01em;
+        line-height: 1.1;
+        margin-bottom: 6px;
+    }
+    .assessment-dock .assessment-stage p {
+        color: #58758b;
+        line-height: 1.35;
+    }
+    .assessment-stage-welcome-art {
+        align-items: center;
+        display: flex;
+        height: 78px;
+        justify-content: center;
+        pointer-events: none;
+        position: absolute;
+        right: 5%;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 112px;
+        z-index: 1;
+    }
+    .welcome-art-glow {
+        background: rgba(174, 224, 241, .38);
+        border-radius: 50%;
+        height: 72px;
+        position: absolute;
+        width: 72px;
+    }
+    .welcome-art-book {
+        color: #1f6f8b;
+        filter: drop-shadow(0 4px 2px rgba(31, 111, 139, .12));
+        font-size: 3rem;
+        position: relative;
+        transform: rotate(-4deg);
+    }
+    .welcome-art-star {
+        color: #f1c84b;
+        font-size: 1rem;
+        position: absolute;
+        right: 5px;
+        top: 3px;
+    }
+    .welcome-art-dot {
+        background: #a8dcca;
+        border-radius: 50%;
+        bottom: 8px;
+        height: 7px;
+        position: absolute;
+        right: 14px;
+        width: 7px;
+    }
+    @media (max-width: 1199.98px) {
+        .assessment-stage-welcome-art { right: 3%; }
+    }
+    @media (max-width: 767.98px) {
+        .assessment-stage-welcome-art { opacity: .72; right: 1%; transform: translateY(-50%) scale(.82); }
     }
 </style>
 <script>
