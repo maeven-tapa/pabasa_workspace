@@ -12698,13 +12698,14 @@ def assessment(request):
             } for row in progress_rows
         }
         context['prescribed_activity_progress'] = {
-            row.activity_key: {
-                'completed_items': row.completed_items,
-                'total_items': row.total_items,
-                'activity_completed': row.activity_completed,
+                row.activity_key: {
+                    'completed_items': row.completed_items,
+                    'total_items': row.total_items,
+                    'activity_completed': row.activity_completed,
+                    'state': row.state if isinstance(row.state, dict) else {},
+                }
+                for row in progress_rows if row.activity_key in prescribed_keys
             }
-            for row in progress_rows if row.activity_key in prescribed_keys
-        }
         # Gawain 6 is term-scoped when it is written by the prescribed
         # activity endpoint.  Do not let a legacy/unscoped row rehydrate a
         # stale COMPLETED badge after the current attempt was reset.

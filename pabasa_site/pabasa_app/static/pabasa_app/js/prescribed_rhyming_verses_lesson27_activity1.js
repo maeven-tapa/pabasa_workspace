@@ -92,7 +92,7 @@
     return `<div class="lesson27-progress" aria-label="Poem progress">${data.items.map((_, index) => `<span class="lesson27-step ${complete || index < state.item_index ? 'done' : ''} ${!complete && index === state.item_index ? 'active' : ''}" ${!complete && index === state.item_index ? 'aria-current="step"' : ''}>${index + 1}</span>`).join('')}</div>`;
   }
   function frame(body) {
-    app.innerHTML = `<div class="lesson27-eyebrow">SESSION 11 · LESSON 27 · ACTIVITY 1</div><h1 class="lesson27-title">Rhyming Verses</h1><p class="lesson27-instruction">Read each verse, then select the words that rhyme with “at.”</p>${body}${progressDots()}`;
+    app.innerHTML = `<div class="lesson27-eyebrow">SESSION 11 · LESSON 27 · ACTIVITY 1</div><p class="lesson27-instruction">Read each verse, then select the words that rhyme with “at.”</p>${body}${progressDots()}`;
   }
   function renderLineWords(line, lineIndex) {
     let cursor = 0;

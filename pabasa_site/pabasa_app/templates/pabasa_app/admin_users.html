@@ -17,6 +17,18 @@
     .admin-users-panel .admin-status-pending { background: #fbf2dc; border-color: #e8d39e; color: #80621e; }
     .admin-users-panel .admin-status-dropped { background: #fff1f2; border-color: #fecdd3; color: #9f1239; }
     .admin-users-panel .admin-status-archived { background: #eef0f2; border-color: #cdd2d8; color: #59636d; }
+
+    .admin-users-panel > .table-responsive {
+        border-radius: 12px;
+        overflow: auto;
+    }
+
+    @media (max-width: 991.98px) {
+        .admin-content:has(.admin-users-panel) {
+            padding-top: clamp(0.75rem, 2vw, 1.25rem);
+        }
+    }
+
 </style>
 <div class="admin-panel admin-users-panel">
     <form class="row g-2 align-items-end mb-3" method="get" data-admin-auto-filter>

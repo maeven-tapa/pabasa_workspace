@@ -1,7 +1,23 @@
 {% extends "pabasa_app/admin_base.html" %}
 
 {% block content %}
-<div class="admin-panel">
+<style>
+    .admin-courses-panel .admin-filter-clear-btn {
+        min-height: 44px;
+    }
+
+    .admin-courses-panel > .table-responsive {
+        border-radius: 12px;
+        overflow: auto;
+    }
+
+    @media (max-width: 991.98px) {
+        .admin-content:has(.admin-courses-panel) {
+            padding-top: clamp(0.75rem, 2vw, 1.25rem);
+        }
+    }
+</style>
+<div class="admin-panel admin-courses-panel">
     <form class="row g-2 align-items-end mb-3" method="get" data-admin-auto-filter>
         <div class="col-12 col-lg-4">
             <label class="form-label small fw-bold text-secondary" for="materialSearch">Search materials</label>

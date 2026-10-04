@@ -96,8 +96,43 @@
         }
 
     }
+    @media (max-width: 991.98px) {
+        .admin-content:has(.practice-content-header) {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+
+        .admin-content:has(.practice-empty-panel) {
+            min-height: calc(100dvh - 4.5rem);
+            justify-content: center;
+        }
+
+        .admin-content:has(.practice-content-header) > .admin-panel {
+            margin-inline: auto;
+        }
+    }
+    .practice-empty-panel .practice-results {
+        width: 100%;
+        align-self: stretch;
+    }
+    .practice-empty-panel .practice-results .table-responsive {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+    }
+    .practice-empty-panel .practice-results .placeholder-table {
+        display: table !important;
+        width: 100%;
+        min-width: 100%;
+        table-layout: fixed;
+        overflow: visible;
+    }
 </style>
-<div class="admin-panel">
+<div class="admin-panel{% if not practice_items %} practice-empty-panel{% endif %}">
     <form method="post" class="alert {% if practice_debug_unlock_all %}alert-warning{% else %}alert-secondary{% endif %} d-flex flex-wrap align-items-center justify-content-between gap-3">
         {% csrf_token %}
         <input type="hidden" name="language" value="{{ language_filter }}">

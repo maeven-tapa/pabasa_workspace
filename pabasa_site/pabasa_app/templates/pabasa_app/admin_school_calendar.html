@@ -30,6 +30,17 @@
     .calendar-stage .fc-scroller,
     .calendar-stage .fc-scrollgrid { min-height: 0; }
     .calendar-stage .fc-scrollgrid { height: 100%; border-radius: 18px; overflow: hidden; border-color: rgba(16,70,110,0.08); }
+    .calendar-stage .fc-dayGridMonth-view .fc-scrollgrid-section,
+    .calendar-stage .fc-dayGridMonth-view .fc-scrollgrid-section > td,
+    .calendar-stage .fc-dayGridMonth-view .fc-scroller-harness,
+    .calendar-stage .fc-dayGridMonth-view .fc-scrollgrid-sync-inner,
+    .calendar-stage .fc-dayGridMonth-view .fc-col-header,
+    .calendar-stage .fc-dayGridMonth-view .fc-daygrid-body,
+    .calendar-stage .fc-dayGridMonth-view .fc-daygrid-body-natural { min-width: 0; max-width: 100%; width: 100% !important; }
+    .calendar-stage .fc-dayGridMonth-view .fc-scrollgrid table { display: table; min-width: 0; max-width: 100%; width: 100% !important; table-layout: fixed !important; }
+    .calendar-stage .fc-dayGridMonth-view .fc-scrollgrid col { width: 14.285714% !important; }
+    .calendar-stage .fc-dayGridMonth-view .fc-col-header-cell,
+    .calendar-stage .fc-dayGridMonth-view .fc-daygrid-day { min-width: 0; width: 14.285714% !important; }
     .fc .fc-toolbar { display: none; }
     .fc .fc-button { border-radius: 999px !important; box-shadow: none !important; font-family: "Nunito", "Segoe UI", sans-serif; font-weight: 800; }
     .fc .fc-col-header-cell-cushion { padding: 0.75rem 0.25rem; font-weight: 800; color: #62809a; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.04em; }
@@ -101,6 +112,12 @@
     .term-block-hint { color: #6b7f95; font-size: .82rem; font-weight: 700; }
     @media (max-width: 991.98px) { .calendar-top { grid-template-columns: 1fr; } .calendar-stage { min-height: 32rem; } }
     @media (max-width: 767.98px) { .calendar-toolbar { grid-template-columns: 1fr 1fr; } .calendar-month-title { grid-column: 1 / -1; grid-row: 1; justify-self: center; } .calendar-toolbar > .calendar-toolbar-group:first-child { grid-column: 1; grid-row: 2; } .calendar-toolbar > .calendar-toolbar-group:last-child { grid-column: 2; grid-row: 2; } }
+    @media (max-width: 991.98px) {
+        .admin-content:has(.calendar-page) { padding-top: 1rem; }
+        .calendar-page,
+        .calendar-top { gap: 0.75rem; }
+        .calendar-card-inner { padding: 0.85rem 0.95rem; }
+    }
 </style>
 
 <div class="calendar-page">
@@ -429,6 +446,48 @@
 
         const csrfToken = getCsrfToken();
         let calendar;
+        const normalizeCalendarGrid = () => {
+            if (activeViewName !== 'dayGridMonth') return;
+            const wrappers = calendarEl.querySelectorAll('.fc-scrollgrid-sync-inner, .fc-col-header, .fc-daygrid-body, .fc-daygrid-body-natural');
+            wrappers.forEach((wrapper) => {
+                wrapper.style.width = '100%';
+                wrapper.style.minWidth = '0';
+                wrapper.style.maxWidth = '100%';
+            });
+            const tables = calendarEl.querySelectorAll('.fc-col-header, .fc-scrollgrid-sync-table, .fc-daygrid-body table');
+            tables.forEach((table) => {
+                table.style.width = '100%';
+                table.style.minWidth = '0';
+                table.style.maxWidth = '100%';
+                table.style.tableLayout = 'fixed';
+                table.querySelectorAll('col').forEach((column) => {
+                    column.style.width = '14.285714%';
+                });
+            });
+            const headerTable = calendarEl.querySelector('.fc-col-header');
+            const headerWidth = headerTable?.getBoundingClientRect().width;
+            if (headerWidth) {
+                const synchronizedWidth = `${headerWidth}px`;
+                calendarEl.querySelectorAll('.fc-scrollgrid-sync-inner, .fc-scrollgrid-sync-table, .fc-daygrid-body, .fc-daygrid-body-natural, .fc-daygrid-body table').forEach((element) => {
+                    element.style.width = synchronizedWidth;
+                    element.style.maxWidth = synchronizedWidth;
+                });
+            }
+            calendarEl.querySelectorAll('.fc-col-header-cell, .fc-daygrid-day').forEach((cell) => {
+                cell.style.width = '14.285714%';
+                cell.style.minWidth = '0';
+            });
+        };
+        let calendarGridNormalizationFrame = 0;
+        const scheduleCalendarGridNormalization = () => {
+            if (calendarGridNormalizationFrame) return;
+            calendarGridNormalizationFrame = window.requestAnimationFrame(() => {
+                calendarGridNormalizationFrame = 0;
+                normalizeCalendarGrid();
+            });
+        };
+        window.addEventListener('resize', scheduleCalendarGridNormalization, { passive: true });
+        window.addEventListener('orientationchange', scheduleCalendarGridNormalization, { passive: true });
         let suspensionCalendar;
         let confirmationResolver;
         const selectedSuspensionDates = new Set();
@@ -1198,6 +1257,8 @@
             initialView: 'dayGridMonth',
             initialDate: todayValue,
             now: todayValue,
+            weekends: true,
+            hiddenDays: [],
             height: 'auto',
             headerToolbar: false,
             dayMaxEvents: true,
@@ -1275,10 +1336,12 @@
                     calendarMonthTitle.textContent = `Year ${getSelectedYearMonthRange().start.getFullYear()}`;
                 }
                 updateEmptyState();
+                scheduleCalendarGridNormalization();
             },
         });
 
         calendar.render();
+        scheduleCalendarGridNormalization();
         setView('dayGridMonth');
 
         addEventBtn?.addEventListener('click', () => openEventModal());
