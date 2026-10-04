@@ -7,7 +7,7 @@ from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.cache import never_cache
 from django.core.cache import cache
 from django.core.paginator import Paginator
-from django.core.exceptions import ValidationError
+from django.core.exceptions import DisallowedHost, ValidationError
 from django.core.validators import validate_email
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth.password_validation import validate_password
@@ -19295,6 +19295,8 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             if item_index >= len(workbook['items']) and activity_key not in {'aral-l22-g1-c-syllable-builder', 'aral-l22-g4-f-syllable-builder', 'aral-l23-g6-q-syllable-builder'}:
                 raise ValueError('No reading item remains.')
             request.POST = request.POST.copy()
+            if activity_key == 'aral-l22-g1-c-syllable-builder':
+                request.POST['prescribed_activity_key'] = activity_key
             if activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
                 if not state.get('read_aloud_started'):
                     raise ValueError('Simulan muna ang pagbasa.')
@@ -23641,6 +23643,25 @@ def lesson_1_gawain_1_transcribe_api(request):
         return JsonResponse({'success': False, 'error': 'Hindi naproseso ang audio. Subukan muli.'}, status=502)
 
 
+_LOCAL_SESSION8_STT_ACTIVITY_KEYS = frozenset({'aral-l22-g1-c-syllable-builder'})
+
+
+def _local_session8_stt_test_mode(request):
+    """Allow simulated STT only for the local Lesson 22 Gawain 1 test."""
+    if not getattr(settings, 'DEBUG', False):
+        return ''
+    try:
+        host = request.get_host().split(':', 1)[0].lower()
+    except DisallowedHost:
+        return ''
+    if host not in {'127.0.0.1', 'localhost'}:
+        return ''
+    if (request.POST.get('prescribed_activity_key') or '').strip() not in _LOCAL_SESSION8_STT_ACTIVITY_KEYS:
+        return ''
+    mode = (request.POST.get('local_stt_test') or '').strip().lower()
+    return mode if mode in {'correct', 'incorrect', 'empty'} else ''
+
+
 @csrf_protect
 @require_http_methods(["POST"])
 def reading_transcribe_api(request):
@@ -23666,6 +23687,7 @@ def reading_transcribe_api(request):
     mode = (request.POST.get('mode') or '').strip().lower()
     language = (request.POST.get('language') or '').strip()
     language_code = language_code_for(language, mode)
+    local_stt_test = _local_session8_stt_test_mode(request)
     phrase_hints = [] if language_code.lower() == 'fil-ph' else list(dict.fromkeys(
         phrase_hints_for(language, mode) + target_phrase_hints(target_text, language_code)
     ))
@@ -23687,31 +23709,30 @@ def reading_transcribe_api(request):
     credentials_file = str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or '')
 
     knowlez_selected = uses_knowlez_stt(request)
-    if not knowlez_selected and not api_key and stt_model not in {'chirp_2', 'chirp_3'}:
-        return JsonResponse({'success': False, 'error': 'Google Speech is not configured.'}, status=503)
-
     words = []
     try:
-        if knowlez_selected:
-            transcript, model_used, fallback_reason = transcribe_knowlez_audio(audio, language_code)
+        if local_stt_test:
+            transcript = {'correct': target_text, 'incorrect': 'local test incorrect result', 'empty': ''}[local_stt_test]
+            model_used = 'local_test'
+            fallback_reason = 'explicit local Session 8 test result'
         else:
-            transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
-                audio.read(),
-                api_key,
-                language_code=language_code,
-                phrase_hints=phrase_hints,
-                model=stt_model,
-                word_details=words,
-                allow_fallback=not selected_model and language_code.lower() != 'fil-ph',
-                project_id=project_id,
-                location=location,
-                mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
-                credentials_file=credentials_file,
-            )
+            if not knowlez_selected and not api_key and stt_model not in {'chirp_2', 'chirp_3'}:
+                return JsonResponse({'success': False, 'error': 'Google Speech is not configured.'}, status=503)
+            if knowlez_selected:
+                transcript, model_used, fallback_reason = transcribe_knowlez_audio(audio, language_code)
+            else:
+                transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
+                    audio.read(), api_key, language_code=language_code, phrase_hints=phrase_hints,
+                    model=stt_model, word_details=words,
+                    allow_fallback=not selected_model and language_code.lower() != 'fil-ph',
+                    project_id=project_id, location=location,
+                    mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
+                    credentials_file=credentials_file,
+                )
         logger.warning(
             "FREE_MODE_STT_DIAGNOSTIC provider=%s model=%s language=%s "
             "provider_transcript=%r provider_raw_result=unavailable fallback=%r",
-            'Knowlez' if knowlez_selected else 'Google Speech',
+            'Local test' if local_stt_test else ('Knowlez' if knowlez_selected else 'Google Speech'),
             model_used,
             language_code,
             transcript,
@@ -23897,7 +23918,7 @@ def reading_transcribe_api(request):
         analysis.update({
             'success': True,
             'language_code': language_code,
-            'stt_provider': 'knowlez' if knowlez_selected else 'google',
+            'stt_provider': 'local_test' if local_stt_test else ('knowlez' if knowlez_selected else 'google'),
             'stt_model': model_used,
             'stt_fallback_reason': fallback_reason,
             **stt_word_metadata(words, model_used),
@@ -23912,6 +23933,12 @@ def reading_transcribe_api(request):
         return JsonResponse({'success': False, 'error': str(exc)}, status=exc.status)
     except Exception as exc:
         logger.exception('Reading transcription failed')
+        if request.POST.get('prescribed_activity_key') in _LOCAL_SESSION8_STT_ACTIVITY_KEYS:
+            return JsonResponse({
+                'success': False,
+                'error': 'Hindi makakonekta sa pagbasa. Subukan muli.',
+                'error_code': 'speech_service_unavailable',
+            }, status=502)
         if request.POST.get('prescribed_activity_key') == 'aral-l23-g6-q-syllable-builder':
             return JsonResponse({'success': False, 'error': 'Hindi magamit ang mikropono ngayon. Subukan muli mamaya.'}, status=502)
         return JsonResponse({'success': False, 'error': str(exc)}, status=502)

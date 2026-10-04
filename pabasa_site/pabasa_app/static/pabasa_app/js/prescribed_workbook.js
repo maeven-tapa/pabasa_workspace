@@ -3,6 +3,11 @@
   'use strict';
   const data = JSON.parse(document.getElementById('workbook-payload').textContent);
   const a = data.activity, preview = data.preview;
+  const localSttTest = new URLSearchParams(window.location.search).get('local_stt_test') || '';
+  const appendLocalSttTest = form => {
+    if (['correct', 'incorrect', 'empty'].includes(localSttTest)) form.set('local_stt_test', localSttTest);
+    return form;
+  };
   const qBuilder = a.activity_key === 'aral-l23-g6-q-syllable-builder';
   const l22G1 = a.activity_key === 'aral-l22-g1-c-syllable-builder';
   const l24Builder = a.activity_key === 'aral-l24-g1-v-syllable-builder';
@@ -654,7 +659,7 @@
       const audio=await window.Basahin.capture({button:document.getElementById('wb-basahin'),stream:activeStream,onRecorder:value=>{recorder=activeRecorder=value;}});activeStream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
       if(!audio.size)throw new Error('Walang nakuha sa recording. Subukan muli.');
       if(requestActivity!==a.activity_key||requestIndex!==Number(state.index||0))return;
-      const form=new FormData();form.append('audio',audio,'reading.webm');message('Sinusuri ang iyong pagbasa...');
+      const form=appendLocalSttTest(new FormData());form.append('audio',audio,'reading.webm');message('Sinusuri ang iyong pagbasa...');
       setG1ReadingState('processing');
       await send({action:'reading_syllable_attempt',item_index:requestIndex},form,false);render();
       pendingSpeech=state.read_aloud_completed?'Magaling! Nabasa mo nang tama ang lahat ng pantig.':state.last_feedback==='Tama!'?'Tama!':'Subukan muli.';
@@ -665,8 +670,8 @@
       const micError=error?.name==='NotAllowedError'||error?.name==='NotFoundError'||error?.name==='NotReadableError'||error?.name==='SecurityError';
       render();
       if(qBuilder){const transcript=content.querySelector('.wb-transcript strong');if(transcript)transcript.textContent='—';}
-      const serviceError=qBuilder&&/Google service account|GOOGLE_|credential|speech service|not configured/i.test(error?.message||'');
-      pendingSpeech=micError?'Hindi magamit ang mikropono. Subukan muli.':serviceError?'Hindi magamit ang mikropono ngayon. Subukan muli mamaya.':(error?.message||'Hindi nakuha ang iyong boses. Subukan muli.');
+      const serviceError=l22G1&&/Google service account|GOOGLE_|credential|speech service|not configured|network error|winerror|socket|timed out|connect/i.test(String(error?.message||''));
+      pendingSpeech=micError?'Hindi magamit ang mikropono. Subukan muli.':serviceError?'Hindi makakonekta sa pagbasa. Subukan muli.':(error?.message||'Hindi nakuha ang iyong boses. Subukan muli.');
       message(pendingSpeech,true);
     }finally{clearTimeout(readTimer);const speech=pendingSpeech;pendingSpeech='';if(speech){setG1ReadingState('processing');await playPrescribedAudio(speech).catch(e=>console.error('Lesson 22 feedback audio failed',e));}busy=false;lock();setG1ReadingState('idle');}
   }
