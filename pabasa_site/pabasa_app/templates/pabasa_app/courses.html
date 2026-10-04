@@ -13386,9 +13386,25 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         return [String(rawId), null];
                     }
                     if (String(rawId) === 'prescribed-lesson-29-gawain-3') {
-                        const res = await fetch('{% url "teacher_lesson29_trace_say_recordings" %}', { credentials: 'same-origin' });
+                        const res = await fetch('{% url "teacher_lesson29_trace_say_recordings" %}?student_id=' + encodeURIComponent(window.__studentProgressStudentId || ''), { credentials: 'same-origin' });
                         const data = await res.json();
-                        if (res.ok && data.success) return [String(rawId), { attempts: (data.submissions || []).map(row => ({...row, activity_type: 'lesson_29_trace_say'})) }];
+                        if (res.ok && data.success) {
+                            const recordings = data.items || [];
+                            const allLetterSoundsScored = recordings.length > 0 && recordings.every(item => item.recording_available && item.teacher_score !== null && item.teacher_score !== undefined);
+                            return [String(rawId), { attempts: [{
+                            student_id: window.__studentProgressStudentId,
+                            student_name: window.__studentProgressStudentName || '',
+                            status: data.completed ? 'completed' : 'in_progress',
+                            completed_at: data.completed_at,
+                            activity_type: 'lesson_29_trace_say',
+                            session4_recordings: recordings,
+                            session4_correct_items: recordings.filter(item => item.teacher_score !== null && item.teacher_score !== undefined).reduce((sum, item) => sum + Number(item.teacher_score), 0),
+                            session4_reviewed_items: recordings.filter(item => item.teacher_score !== null && item.teacher_score !== undefined).length,
+                            session4_total_items: recordings.length,
+                            can_retry: !data.completed && recordings.some(item => item.recording_available),
+                            can_check: !data.completed && allLetterSoundsScored,
+                        }] }];
+                        }
                         return [String(rawId), null];
                     }
                     if (String(rawId) === 'prescribed-session-4-gawain-1') {
@@ -14853,6 +14869,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const isSession4Gawain1 = activityType === 'session_4_gawain_1';
                     const isSession4Gawain2 = activityType === 'session_4_gawain_2';
                     const isLesson13Gawain1 = activityType === 'lesson_13_gawain_1';
+                    const usesLetterSoundScores = isLesson29TraceSay || isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1;
                     const timeSpent = isLesson1Recording && attempt?.recording_duration_seconds !== undefined
                         ? attempt.recording_duration_seconds
                         : (attempt ? latestAttemptValue(attempt, 'time_spent', 'duration_seconds', 'duration') : null);
@@ -14875,11 +14892,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         : attempt?.retell_grade;
                     const retellGradeValue = retellGrade === undefined || retellGrade === null || retellGrade === '' ? '' : String(retellGrade);
                     const retellRecordingKey = String(retellSubmissionId || `${task.assessmentId || task.title}-${studentId}`);
-                    const retellRecordingAvailable = (isRetellStory || isStoryResponse || isLesson1Recording || isLesson29TraceSay) && attempt?.recording_available && attempt?.recording_url;
+                    const retellRecordingAvailable = (isRetellStory || isStoryResponse || isLesson1Recording) && attempt?.recording_available && attempt?.recording_url;
                     const lesson29Recordings = isLesson29TraceSay && Array.isArray(attempt?.recordings) ? attempt.recordings : [];
-                    const session4Recordings = (isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1) && Array.isArray(attempt?.session4_recordings) ? attempt.session4_recordings : [];
-                    const session4Reviewed = (isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1) && session4Recordings.length > 0 && session4Recordings.every(recording => recording.teacher_score !== null && recording.teacher_score !== undefined);
-                    const session4Score = (isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1)
+                    const session4Recordings = usesLetterSoundScores && Array.isArray(attempt?.session4_recordings) ? attempt.session4_recordings : [];
+                    const session4Reviewed = usesLetterSoundScores && session4Recordings.length > 0 && session4Recordings.every(recording => recording.teacher_score !== null && recording.teacher_score !== undefined);
+                    const session4Score = usesLetterSoundScores
                         ? (session4Reviewed ? `${attempt.session4_correct_items}/${attempt.session4_total_items}` : 'Awaiting teacher')
                         : null;
                     const session4RecordingHtml = session4Recordings.map(recording => {
@@ -14894,25 +14911,21 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             const duration = escapeHtml(formatStudentProgressAudioTime(recording.recording_duration_seconds));
                             return `<div class="student-progress-audio-controls lesson29-letter-recording"><span class="me-2">${letterLabel}</span><button type="button" class="student-progress-retell-play" data-url="${escapeHtml(recording.recording_url)}" aria-label="Play letter recording ${recordingIndex + 1}"><i class="bi bi-play-fill"></i></button><input class="student-progress-retell-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"><span class="student-progress-retell-time">0:00 / ${duration}</span></div>`;
                         }).join('');
-                    const recordingHtml = isLesson29TraceSay
-                        ? lesson29RecordingHtml
-                        : (isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1)
+                    const recordingHtml = usesLetterSoundScores
                             ? `<div class="session4-recording-review"><h6>Teacher Review</h6><p>Listen to each recording and score the student's letter sound.</p><div class="session4-recording-list">${session4RecordingHtml}</div></div>`
                         : (retellRecordingAvailable
                             ? `<div class="student-progress-audio-controls"><button type="button" class="student-progress-retell-play" data-url="${escapeHtml(attempt.recording_url)}" aria-label="Play recording"><i class="bi bi-play-fill"></i></button><input class="student-progress-retell-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"><span class="student-progress-retell-time">0:00 / ${escapeHtml(formatStudentProgressAudioTime(attempt.recording_duration_seconds))}</span></div>`
                             : '<span class="student-progress-recording-unavailable">Recording unavailable</span>');
-                    const scoreValue = (isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1)
+                    const scoreValue = usesLetterSoundScores
                         ? session4Score
                         : isLesson1Recording
                         ? (attempt?.status === 'checked' ? '1' : '-')
-                        : isLesson29TraceSay
-                        ? (attempt?.status === 'checked' ? 'Checked' : 'Awaiting teacher')
                         : (isRetellStory || isStoryResponse)
                         ? `<select class="student-progress-retell-score form-select form-select-sm${(isStoryResponse || isRetellStory) && (attempt?.grade_locked || retellGradeValue !== '') ? ' is-locked' : ''}" data-submission-id="${escapeHtml(retellSubmissionId || '')}" data-previous-value="${escapeHtml(retellGradeValue)}" ${(!retellSubmissionId || ((isStoryResponse || isRetellStory) && (attempt?.grade_locked || retellGradeValue !== ''))) ? 'disabled' : ''} aria-label="Teacher score"${(isStoryResponse || isRetellStory) && (attempt?.grade_locked || retellGradeValue !== '') ? ' title="Score is locked after submission."' : ''}><option value="" ${retellGradeValue === '' ? 'selected' : ''}>Not scored</option>${['Poor', 'Fair/Beginning', 'Basic/Approaching', 'Proficient', 'Mastery', 'Ready'].map((label, value) => `<option value="${value}" ${retellGradeValue === String(value) ? 'selected' : ''}>${value} - ${label}</option>`).join('')}</select>`
                         : displayedScore;
                     const typeLabel = task.activityLabel || 'Reading Activity';
                     return `
-                        <article class="student-progress-card${isLesson1Recording ? ' lesson1-recording-card' : ''}${(isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1) ? ' session4-recording-card' : ''}">
+                        <article class="student-progress-card${isLesson1Recording ? ' lesson1-recording-card' : ''}${usesLetterSoundScores ? ' session4-recording-card' : ''}">
                             <div class="student-progress-card-header">
                                 <div class="student-progress-identity">
                                     <span class="student-progress-type">${escapeHtml(typeLabel)}</span>
@@ -15005,7 +15018,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const previous = buttons.map(button => button.classList.contains('selected'));
             buttons.forEach(button => { button.disabled = true; });
             if (feedback) feedback.textContent = 'Saving...';
-            const scoreUrl = row.dataset.session4Activity === 'prescribed-session-4-gawain-2'
+            const scoreUrl = row.dataset.session4Activity === 'prescribed-lesson-29-gawain-3'
+                ? '{% url "teacher_lesson29_trace_say_score" %}'
+                : row.dataset.session4Activity === 'prescribed-session-4-gawain-2'
                 ? '{% url "teacher_session_4_gawain_2_score" %}'
                 : row.dataset.session4Activity === 'prescribed-lesson-13-gawain-1'
                 ? '{% url "teacher_lesson_13_gawain_1_score" %}'

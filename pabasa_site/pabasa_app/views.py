@@ -16374,6 +16374,49 @@ def _sanitize_trace_strokes(value):
     return sanitized
 
 
+def _lesson29_has_two_letter_regions(strokes):
+    """Require one trace in each half of the uppercase/lowercase pair board."""
+    if not isinstance(strokes, list):
+        return False
+    regions = set()
+    for stroke in strokes:
+        if not isinstance(stroke, list) or len(stroke) < 2:
+            continue
+        center_x = sum(point['x'] for point in stroke) / len(stroke)
+        regions.add(0 if center_x < .5 else 1)
+    return len(regions) == 2
+
+
+def _lesson29_trace_is_recognizable(strokes, target_letter):
+    target = str(target_letter or '').lower()
+    if is_scribble_like(strokes):
+        return False
+    strict = False
+    if target == 'pp':
+        strict = is_recognizable_p(strokes)
+    elif target == 'ff':
+        strict = is_recognizable_f(strokes)
+    elif target == 'hh':
+        strict = is_recognizable_h(strokes)
+    elif target == 'nn':
+        strict = is_recognizable_n(strokes)
+    elif target == 'ii':
+        strict = is_recognizable_i(strokes)
+    elif target == 'll':
+        strict = is_recognizable_l(strokes)
+    elif target == 'mm':
+        strict = is_recognizable_m(strokes)
+    elif target == 'tt':
+        strict = is_recognizable_t(strokes)
+    elif target == 'aa':
+        strict = is_recognizable_a(strokes)
+    elif target == 'ss':
+        strict = is_recognizable_s(strokes)
+    else:
+        strict = is_recognizable_letter_pair(strokes, target)
+    return strict
+
+
 @login_required(role='student')
 @csrf_protect
 @require_http_methods(['POST'])
@@ -16452,33 +16495,11 @@ def lesson29_trace_say_progress(request):
             if not isinstance(stroke_set, list) or not stroke_set:
                 raise ValueError('Write the letter before continuing.')
             sanitized = _sanitize_trace_strokes(stroke_set)
-            target_letter = str(activity['items'][index].get('letter', '')).lower()
-            if is_scribble_like(sanitized):
-                valid_trace = False
-            elif target_letter == 'pp':
-                valid_trace = is_recognizable_p(sanitized)
-            elif target_letter == 'ff':
-                valid_trace = is_recognizable_f(sanitized)
-            elif target_letter == 'hh':
-                valid_trace = is_recognizable_h(sanitized)
-            elif target_letter == 'nn':
-                valid_trace = is_recognizable_n(sanitized)
-            elif target_letter == 'ii':
-                valid_trace = is_recognizable_i(sanitized)
-            elif target_letter == 'll':
-                valid_trace = is_recognizable_l(sanitized)
-            elif target_letter == 'mm':
-                valid_trace = is_recognizable_m(sanitized)
-            elif target_letter == 'tt':
-                valid_trace = is_recognizable_t(sanitized)
-            elif target_letter == 'aa':
-                valid_trace = is_recognizable_a(sanitized)
-            elif target_letter == 'ss':
-                valid_trace = is_recognizable_s(sanitized)
-            else:
-                valid_trace = is_recognizable_letter_pair(sanitized, target_letter)
-            if not sanitized or not valid_trace:
-                raise ValueError('Write the letter before continuing.')
+            target_letter = str(activity['items'][index].get('letter', ''))
+            if not _lesson29_has_two_letter_regions(sanitized):
+                raise ValueError('Trace both letters before continuing.')
+            if not _lesson29_trace_is_recognizable(sanitized, target_letter):
+                raise ValueError('Write both letters clearly before continuing.')
             repetition = len(traces) % 3
             if len(traces) // 3 != index:
                 traces = traces[:index * 3]
@@ -16487,6 +16508,8 @@ def lesson29_trace_say_progress(request):
             if repetition == 2:
                 index += 1
                 phase = 'sound' if index < total else 'complete'
+            else:
+                phase = 'trace'
             draft_strokes = []
             draft_item = index
         else:
@@ -16527,7 +16550,7 @@ def lesson29_trace_say_complete(request):
     total = len(activity['items'])
     traces = state.get('traces') if isinstance(state.get('traces'), list) else []
     if not existing or int(state.get('current_item', 0) or 0) < total or len(traces) < total * 3:
-        return JsonResponse({'success': False, 'error': 'Complete each letter and all three traces first.'}, status=400)
+        return JsonResponse({'success': False, 'error': 'Complete all three traces for every letter first.'}, status=400)
     # A finished attempt awaits the teacher's verdict; only a teacher may
     # unlock the next activity, consistent with Lesson 1 Gawain 1.
     existing.activity_completed = False
@@ -16561,8 +16584,8 @@ def lesson29_trace_say_recording(request):
         submission = StudentActivityRecordingSubmission.objects.select_for_update().filter(student=student, activity_key=activity_key, item_index=item_index).first()
         old_name = submission.audio_file.name if submission and submission.audio_file else ''
         if submission:
-            submission.audio_file = audio; submission.duration_seconds = duration or None; submission.status = 'submitted'; submission.checked_by = None; submission.checked_at = None
-            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'checked_by', 'checked_at', 'updated_at'])
+            submission.audio_file = audio; submission.duration_seconds = duration or None; submission.status = 'submitted'; submission.teacher_score = None; submission.checked_by = None; submission.checked_at = None
+            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'teacher_score', 'checked_by', 'checked_at', 'updated_at'])
         else:
             submission = StudentActivityRecordingSubmission.objects.create(student=student, activity_key=activity_key, item_index=item_index, audio_file=audio, duration_seconds=duration or None)
         if old_name and old_name != submission.audio_file.name:
@@ -16612,10 +16635,17 @@ def teacher_lesson29_trace_say_review_action(request):
     if not progress:
         return JsonResponse({'success': False, 'error': 'Activity attempt not found.'}, status=404)
     if action == 'retry':
-        StudentActivityRecordingSubmission.objects.filter(student_id=student_id, activity_key='lesson-29-gawain-3').update(status='retry', checked_by=None, checked_at=None)
+        StudentActivityRecordingSubmission.objects.filter(student_id=student_id, activity_key='lesson-29-gawain-3').update(status='retry', teacher_score=None, checked_by=None, checked_at=None)
         progress.activity_completed = False; progress.current_index = progress.completed_items = progress.correct_items = 0
         progress.state = {'current_item': 0, 'phase': 'sound', 'traces': [], 'retry_requested': True}
     else:
+        total = len((prescribed_activity('lesson-29-gawain-3') or {}).get('items') or [])
+        reviewed = StudentActivityRecordingSubmission.objects.filter(
+            student_id=student_id, activity_key='lesson-29-gawain-3', item_index__isnull=False,
+            teacher_score__isnull=False,
+        )
+        if reviewed.count() != total:
+            return JsonResponse({'success': False, 'error': 'Score every letter-sound recording before completing the activity.'}, status=409)
         StudentActivityRecordingSubmission.objects.filter(student_id=student_id, activity_key='lesson-29-gawain-3').update(status='checked', checked_by=teacher, checked_at=system_now())
         progress.activity_completed = True; progress.current_index = progress.completed_items = progress.correct_items = progress.total_items
         progress.state = {**(progress.state if isinstance(progress.state, dict) else {}), 'submitted': True, 'checked': True}
@@ -21224,6 +21254,40 @@ def teacher_lesson29_trace_say_recordings(request):
         for entry in section.get_enrolled_students(active_only=True)
         if entry.get('student_id') is not None
     } if teacher else set()
+    requested_student_id = request.GET.get('student_id')
+    if requested_student_id is not None:
+        try:
+            student_id = int(requested_student_id)
+        except (TypeError, ValueError):
+            return JsonResponse({'success': False, 'error': 'A valid student is required.'}, status=400)
+        if str(student_id) not in student_ids:
+            return JsonResponse({'success': False, 'error': 'Student access denied.'}, status=403)
+        activity = prescribed_activity('lesson-29-gawain-3') or {}
+        items = activity.get('items') or []
+        progress = StudentActivityProgress.objects.filter(
+            student_id=student_id, activity_key='lesson-29-gawain-3',
+        ).first()
+        progress_state = progress.state if progress and isinstance(progress.state, dict) else {}
+        submissions = {
+            row.item_index: row
+            for row in StudentActivityRecordingSubmission.objects.filter(
+                student_id=student_id, activity_key='lesson-29-gawain-3', item_index__isnull=False,
+            )
+        }
+        return JsonResponse({'success': True,
+            'completed': bool(progress and progress.activity_completed),
+            'completed_at': progress_state.get('completed_at') or (progress.updated_at.isoformat() if progress and progress.activity_completed else None),
+            'items': [{
+                'item_index': index,
+                'item_label': item.get('letter', f'Letter {index + 1}'),
+                'submission_id': submission.id if (submission := submissions.get(index)) else None,
+                'audio_url': reverse('teacher_lesson29_trace_say_audio', args=[submission.id]) if submission and submission.audio_file else None,
+                'recording_available': bool(submission and submission.audio_file),
+                'duration_seconds': submission.duration_seconds if submission else None,
+                'teacher_score': submission.teacher_score if submission else None,
+                'status': submission.status if submission else 'missing',
+            } for index, item in enumerate(items)],
+        })
     rows = StudentActivityRecordingSubmission.objects.filter(
         activity_key='lesson-29-gawain-3', student_id__in=student_ids,
     ).select_related('student').order_by('-submitted_at')
@@ -21239,6 +21303,55 @@ def teacher_lesson29_trace_say_recordings(request):
          'activity_type': 'lesson_29_trace_say'}
         for row in rows
     ]})
+
+
+@login_required(role='teacher')
+@csrf_protect
+@require_http_methods(['POST'])
+def teacher_lesson29_trace_say_score(request):
+    """Score one Lesson 29 letter-sound recording, like Session 4 Gawain 1."""
+    try:
+        payload = json.loads(request.body or '{}')
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({'success': False, 'error': 'Invalid request.'}, status=400)
+    score = payload.get('score')
+    if isinstance(score, bool) or not isinstance(score, int) or score not in (0, 1):
+        return JsonResponse({'success': False, 'error': 'Score must be 0 or 1.'}, status=400)
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    allowed_ids = _teacher_session4_student_ids(teacher)
+    activity_key = 'lesson-29-gawain-3'
+    activity = prescribed_activity(activity_key) or {}
+    total = len(activity.get('items') or [])
+    with transaction.atomic():
+        submission = StudentActivityRecordingSubmission.objects.select_for_update().filter(
+            pk=payload.get('submission_id'), activity_key=activity_key,
+        ).first()
+        if not submission or str(submission.student_id) not in {str(value) for value in allowed_ids}:
+            return JsonResponse({'success': False, 'error': 'Recording access denied.'}, status=403)
+        if not submission.audio_file:
+            return JsonResponse({'success': False, 'error': 'No recording submitted.'}, status=409)
+        submission.teacher_score = score
+        submission.status = 'checked'
+        submission.checked_by = teacher
+        submission.checked_at = system_now()
+        submission.save(update_fields=['teacher_score', 'status', 'checked_by', 'checked_at', 'updated_at'])
+        reviewed = StudentActivityRecordingSubmission.objects.filter(
+            student_id=submission.student_id, activity_key=activity_key,
+            item_index__isnull=False, teacher_score__isnull=False,
+        )
+        correct_items = sum(row.teacher_score for row in reviewed)
+        progress = StudentActivityProgress.objects.select_for_update().filter(
+            student_id=submission.student_id, activity_key=activity_key,
+        ).first()
+        if progress:
+            progress.correct_items = correct_items
+            progress.total_items = total
+            progress.save(update_fields=['correct_items', 'total_items', 'updated_at'])
+    return JsonResponse({
+        'success': True, 'submission_id': submission.id, 'teacher_score': score,
+        'status': submission.status, 'correct_items': correct_items,
+        'total_items': total, 'all_reviewed': reviewed.count() == total,
+    })
 
 
 @login_required(role='teacher')

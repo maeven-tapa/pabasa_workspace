@@ -198,7 +198,9 @@ def is_recognizable_p(value):
         shapes.append((min(xs), max(xs), min(ys), max(ys),
                        sum(hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(stroke, stroke[1:]))))
     def complete_letter(candidates, lower=False):
-        stems = [shape for shape in candidates if shape[3] - shape[2] >= .12 and shape[3] - shape[2] >= (shape[1] - shape[0]) * 1.25]
+        min_height = .09 if lower else .12
+        min_aspect = 1.05 if lower else 1.25
+        stems = [shape for shape in candidates if shape[3] - shape[2] >= min_height and shape[3] - shape[2] >= (shape[1] - shape[0]) * min_aspect]
         stem = max(stems, key=lambda shape: shape[3] - shape[2], default=None)
         if not stem:
             # A single continuous P/p stroke may contain both stem and bowl.
@@ -206,20 +208,19 @@ def is_recognizable_p(value):
                 return False
             return any(shape[3] - shape[2] >= .18 and shape[1] - shape[0] >= .08 and shape[4] >= .18 for shape in candidates)
         stem_x = (stem[0] + stem[1]) / 2
-        bowl = next((shape for shape in candidates if shape is not stem and shape[1] - shape[0] >= .035 and shape[3] - shape[2] <= .22 and shape[1] >= stem_x + .01), None)
+        min_bowl_width = .025 if lower else .035
+        bowl = next((shape for shape in candidates if shape is not stem and shape[1] - shape[0] >= min_bowl_width and shape[3] - shape[2] <= .28 and shape[1] >= stem_x + .01), None)
         if not bowl:
             if not lower and stem[1] - stem[0] >= .08 and stem[4] >= .18:
-                return True
-            if lower and stem[1] - stem[0] >= .04 and stem[3] >= .68 and stem[4] >= .10:
                 return True
             return False
         # Lowercase p has a descender below the bowl; b has an ascender
         # above it, so the direction matters for this target.
-        if lower and stem[3] <= bowl[3] + .03:
+        if lower and stem[3] <= bowl[3] + .01:
             return False
         return any(
-            shape is not stem and shape[1] - shape[0] >= .035 and
-            shape[3] - shape[2] <= .22 and shape[1] >= stem_x + .01
+            shape is not stem and shape[1] - shape[0] >= min_bowl_width and
+            shape[3] - shape[2] <= .28 and shape[1] >= stem_x + .01
             for shape in candidates
         )
 
@@ -616,63 +617,77 @@ def segment_lesson13_trace_groups(value, letter, group_count=3):
 # Explicit per-letter entry points keep each target isolated at the activity
 # layer; a future letter-specific rule can be changed without touching others.
 def is_recognizable_h(value):
-    """Recognize uppercase H and lowercase h as independent structures."""
+    """Recognize the structural features of the side-by-side Hh pair."""
     strokes = normalize_strokes(value)
     if strokes is None:
         return False
-    verticals, horizontals = [], []
-    for stroke in strokes:
-        if len(stroke) < 2:
-            continue
-        xs, ys = zip(*stroke)
-        width, height = max(xs) - min(xs), max(ys) - min(ys)
-        if height >= .08 and height >= width * 1.15:
-            verticals.append(((min(xs) + max(xs)) / 2, min(ys), max(ys)))
-        if width >= .025 and width >= height * 1.15:
-            horizontals.append(((min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2))
-        for direction, run in _direction_runs(stroke):
-            rx, ry = zip(*run)
-            rw, rh = max(rx) - min(rx), max(ry) - min(ry)
-            if direction == 'v' and rh >= .04:
-                verticals.append(((min(rx) + max(rx)) / 2, min(ry), max(ry)))
-            if direction == 'h' and rw >= .025:
-                horizontals.append(((min(rx) + max(rx)) / 2, (min(ry) + max(ry)) / 2))
-    if len(strokes) == 1:
-        stroke = strokes[0]
-        xs, ys = zip(*stroke)
-        width, height = max(xs) - min(xs), max(ys) - min(ys)
-        length = sum(hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(stroke, stroke[1:]))
-        if height >= .08 and width >= .025 and length >= .08:
-            return True
-    # Reject an H-shaped lowercase side (two straight stems and a bar). A
-    # lowercase h needs a stem plus a turning/arching stroke.
-    if len(verticals) >= 4:
-        centers = sorted(v[0] for v in verticals)
-        split_x = (centers[len(centers) // 2 - 1] + centers[len(centers) // 2]) / 2
-        right_stems = [center for center in centers if center > split_x]
-        right_turning_runs = 0
-        for stroke in strokes:
-            xs = [point[0] for point in stroke]
-            if not xs or (min(xs) + max(xs)) / 2 <= split_x:
+
+    def features(letter_strokes):
+        verticals, horizontals = [], []
+        for stroke in letter_strokes:
+            if len(stroke) < 2:
                 continue
-            right_turning_runs += sum(1 for direction, run in _direction_runs(stroke)
-                                      if direction != 'v' and len(run) >= 2)
-        if len(right_stems) >= 2 and right_turning_runs < 2:
+            for direction, run in _direction_runs(stroke):
+                if len(run) < 2:
+                    continue
+                xs, ys = zip(*run)
+                width, height = max(xs) - min(xs), max(ys) - min(ys)
+                if direction == 'v' and height >= .055:
+                    verticals.append(((min(xs) + max(xs)) / 2, min(ys), max(ys)))
+                elif direction == 'h' and width >= .025:
+                    horizontals.append(((min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2))
+        return verticals, horizontals
+
+    # The Lesson 29 board displays H on the left and h on the right. Keeping
+    # the structures separate prevents a few unrelated lines from combining
+    # into a false positive.
+    capital_strokes = [stroke for stroke in strokes if sum(x for x, _ in stroke) / len(stroke) < .5]
+    lowercase_strokes = [stroke for stroke in strokes if sum(x for x, _ in stroke) / len(stroke) >= .5]
+    capital_verticals, capital_bars = features(capital_strokes)
+    lowercase_verticals, lowercase_bars = features(lowercase_strokes)
+    if len(capital_verticals) < 2 or not lowercase_verticals:
+        return False
+
+    capital_stems = sorted(capital_verticals, key=lambda stem: stem[0])
+    left_stem, right_stem = capital_stems[0], capital_stems[-1]
+    if right_stem[0] - left_stem[0] < .035:
+        return False
+    h_has_crossbar = any(
+        left_stem[0] - .025 <= center_x <= right_stem[0] + .025 and
+        max(left_stem[1], right_stem[1]) + .025 <= center_y <= min(left_stem[2], right_stem[2]) - .025
+        for center_x, center_y in capital_bars
+    )
+    if not h_has_crossbar:
+        return False
+
+    # A lowercase h is one tall stem joined to a short arch, not another H.
+    # The arch may finish with a short downward mark, but a second full-height
+    # stem is an uppercase H and must not pass for the lowercase side.
+    tall_lowercase_stems = [candidate for candidate in lowercase_verticals
+                             if candidate[2] - candidate[1] >= .30]
+    if len(tall_lowercase_stems) >= 2:
+        tall_lowercase_stems.sort(key=lambda candidate: candidate[0])
+        if tall_lowercase_stems[-1][0] - tall_lowercase_stems[0][0] >= .035:
             return False
-    # A learner may draw lowercase h in one continuous stem-and-arch stroke.
-    if len(verticals) < 2 or len(horizontals) < 1:
+    stem = max(lowercase_verticals, key=lambda candidate: candidate[2] - candidate[1])
+    if stem[2] - stem[1] < .12:
         return False
-    # Two stem pairs must be horizontally separated; each crossbar should lie
-    # between a nearby pair rather than being an unrelated horizontal mark.
-    xs = sorted(v[0] for v in verticals)
-    left, right = xs[:max(1, len(xs) // 2)], xs[max(1, len(xs) // 2):]
-    if not right or right[0] - left[-1] < .03:
-        return False
-    if any(min(left) - .08 <= bar[0] <= max(right) + .08 for bar in horizontals):
-        return True
-    # A single continuous lowercase h may be reported as a tall shape with
-    # no separately detectable horizontal run.
-    return len(verticals) >= 2 and all((v[2] - v[1]) >= .05 for v in verticals)
+    has_arch_bar = any(
+        stem[0] - .025 <= center_x and
+        stem[1] + .045 <= center_y <= stem[2] - .025
+        for center_x, center_y in lowercase_bars
+    )
+    # A child may form the h arch with a steep curve, so its last segment is
+    # classified as vertical instead of horizontal. Accept that short right
+    # finishing stroke, but never a second full-height H stem.
+    has_short_arch_finish = any(
+        candidate is not stem and
+        candidate[0] >= stem[0] + .02 and
+        .05 <= candidate[2] - candidate[1] < .30 and
+        stem[1] + .045 <= (candidate[1] + candidate[2]) / 2 <= stem[2] - .025
+        for candidate in lowercase_verticals
+    )
+    return has_arch_bar or has_short_arch_finish
 
 
 def is_recognizable_i(value):
