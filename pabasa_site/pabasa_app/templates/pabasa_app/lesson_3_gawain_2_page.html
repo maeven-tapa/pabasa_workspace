@@ -148,6 +148,50 @@ body.gawain-2:has(#game .complete) #game .complete-done{text-decoration:none!imp
   }
 </style>
 <body class="gawain-2">
+<script>
+(function(){
+  function syncBackgroundButtons(){
+    var body=document.body,game=document.getElementById('game');
+    if(!game)return;
+    var open=body.classList.contains('lesson-start-open'),row=game.querySelector('.lesson3-background-action-row');
+    if(open){
+      var read=game.querySelector('#read'),listen=game.querySelector('#listen');
+      if(!read||!listen)return;
+      if(!row){
+        row=document.createElement('div');
+        row.className='lesson3-background-action-row';
+        read.parentNode.insertBefore(row,read);
+        row.append(read,listen);
+      }
+      row.style.setProperty('display','flex','important');
+      row.style.setProperty('flex-direction','row','important');
+      row.style.setProperty('flex-wrap','nowrap','important');
+      row.style.setProperty('gap','14px','important');
+      row.style.setProperty('width','min(760px,100%)','important');
+      row.style.setProperty('margin','0 auto','important');
+      [read,listen].forEach(function(button){
+        button.style.setProperty('display','inline-flex','important');
+        button.style.setProperty('flex','1 1 0','important');
+        button.style.setProperty('width','auto','important');
+        button.style.setProperty('min-width','0','important');
+        button.style.setProperty('margin','0','important');
+      });
+    }else if(row){
+      var buttons=Array.from(row.children);
+      row.before.apply(row,buttons);
+      row.remove();
+    }
+  }
+  function install(){
+    var game=document.getElementById('game');
+    if(!game)return;
+    new MutationObserver(syncBackgroundButtons).observe(document.body,{attributes:true,attributeFilter:['class']});
+    new MutationObserver(syncBackgroundButtons).observe(game,{childList:true,subtree:true});
+    syncBackgroundButtons();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+}());
+</script>
   <main class="app">
     <nav class="nav"><a class="back" href="{% url 'assessment' %}">← Bumalik sa<br>Aking Aralin</a></nav>
     <section id="game" class="game"></section>
@@ -258,6 +302,13 @@ body.gawain-2:has(#game .complete) #game .complete-done{text-decoration:none!imp
   .gawain-2 .brand h1{font-size:clamp(1.55rem,3vw,2.15rem);letter-spacing:.01em}
   .gawain-2 .brand p{font-size:.82rem;letter-spacing:.01em}
   .gawain-2 .progress{font-size:.86rem;letter-spacing:.01em}
+  .gawain-2 #game.game{position:relative}
+  .gawain-2 .progress{position:absolute!important;left:50%!important;right:auto!important;bottom:18px!important;top:auto!important;transform:translateX(-50%)!important;font-size:0!important;text-align:center!important;font-family:Fredoka,Nunito,"Segoe UI",sans-serif!important}
+  .gawain-2 .segments{counter-reset:lesson3step;display:flex;justify-content:center;gap:9px;margin-top:0!important}
+  .gawain-2 .segments i{counter-increment:lesson3step;display:grid;width:36px!important;height:36px!important;place-items:center;border:3px solid #e2e8e8;border-radius:50%;background:#ffffffe8;color:#55727e;box-shadow:none;font:900 .9rem/1 Fredoka,Nunito,"Segoe UI",sans-serif}
+  .gawain-2 .segments i::after{content:counter(lesson3step)}
+  .gawain-2 .segments i.done{background:#e5f4f2;border-color:#94d9d6;color:#187b7a}
+  .gawain-2 .segments i.active{background:#f4c866;border-color:#e7af45;color:#6c511e;box-shadow:none}
   .gawain-2 .instruction{font-size:clamp(.95rem,1.45vw,1.08rem);line-height:1.3;letter-spacing:.005em}
   .gawain-2 .pairs{gap:18px}
   .gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){height:clamp(165px,26vh,230px);padding:14px;border:4px solid #94d9d6;border-radius:28px;background:#fffffff2;box-shadow:0 10px 22px rgba(24,123,122,.14)}
@@ -267,7 +318,7 @@ body.gawain-2:has(#game .complete) #game .complete-done{text-decoration:none!imp
   .gawain-2 .read,.gawain-2 .listen{min-height:72px;font-size:clamp(1rem,1.65vw,1.25rem);letter-spacing:.005em}
   .gawain-2 #game.game:has(.answers) .answer{font-size:clamp(.98rem,1.7vw,1.2rem);letter-spacing:.005em}
   @media(min-width:651px){.gawain-2 #game.game,.gawain-2 #game.game:has(#listen){height:calc(100dvh - 145px)!important;max-height:calc(100dvh - 145px)!important;margin-top:0!important}}
-  @media(max-width:650px){.gawain-2 .pairs{gap:12px}.gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){height:170px;border-radius:22px}.gawain-2 .pairs .word img{height:100px}.gawain-2 .read,.gawain-2 .listen{min-height:64px;font-size:1rem}}
+  @media(max-width:650px){.gawain-2 .pairs{gap:12px}.gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){height:170px;border-radius:22px}.gawain-2 .pairs .word img{height:100px}.gawain-2 .read,.gawain-2 .listen{min-height:64px;font-size:1rem}.gawain-2 .segments{gap:6px}.gawain-2 .segments i{width:30px!important;height:30px!important;font-size:.76rem}}
 </style>
 </body>
 </html>
@@ -857,4 +908,8 @@ body.gawain-2:has(#game .complete)::before {
 </style>
 <script>
 (function(){var root=document.getElementById('game');if(!root)return;var feedback=/^(?:Magaling!(?: Susunod na larawan\.)?|Hindi ito ang tamang sagot\. Subukan natin muli\.|Hindi pa ito tama\. Subukan muli\.|Hindi nakuha ang iyong boses\. Subukan muli\.)$/;function sync(){root.querySelectorAll('#status').forEach(function(el){el.classList.toggle('feedback-text-hidden',feedback.test(el.textContent.trim()));});}new MutationObserver(sync).observe(root,{childList:true,subtree:true,characterData:true});sync();}());
+</script>
+<style>.gawain-2 #game.game:not(:has(.complete)) .progress{position:absolute!important;top:auto!important;right:auto!important;bottom:18px!important;left:50%!important;transform:translateX(-50%)!important}</style>
+<script>
+(function(){function place(){var game=document.getElementById('game'),progress=game?.querySelector('.progress');if(!game||!progress)return;if(progress.parentElement!==game)game.appendChild(progress);game.style.setProperty('display','flex','important');game.style.setProperty('flex-direction','column','important');progress.style.setProperty('position','static','important');progress.style.setProperty('order','99','important');progress.style.setProperty('margin','auto auto 0','important');progress.style.setProperty('transform','none','important');progress.style.setProperty('left','auto','important');progress.style.setProperty('right','auto','important');progress.style.setProperty('top','auto','important');progress.style.setProperty('bottom','auto','important');progress.style.setProperty('font-size','0','important');game.querySelectorAll('#read,#listen').forEach(function(button){button.style.setProperty('position','relative','important');button.style.setProperty('top','-16px','important')})}function install(){var game=document.getElementById('game');if(!game)return;new MutationObserver(place).observe(game,{childList:true,subtree:true});place()}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();}());
 </script>

@@ -60,7 +60,7 @@ window.__prescribedNarrationAudio = {
       if(d.progress?.activity_completed){app.innerHTML='<div class="done"><h1>Tapos na ang gawain! 🎉</h1><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><a href="{% url "assessment" %}">BALIK SA AKING ARALIN</a></div>';app.inert=false;return}
       if(!s.oral_reading_completed){
         let i=s.current_reading_item||0,it=d.items[i];
-        app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 2B</p><h1>Letrang Ii</h1><p class="instruction">Tingnan ang larawang nasa kahon. Ano ito?</p><img src="'+it.image_url+'" alt="Larawan: '+it.word+'"><p id="status">Larawan '+(i+1)+' sa 6</p><div class="reading-actions"><button class="button" id="read">Basahin</button><button class="button secondary" id="listen">Pakinggan</button></div>';
+        app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 2B</p><h1>Letrang Ii</h1><p class="instruction">Tingnan ang larawang nasa kahon. Ano ito?</p><div class="lesson7-golden-picture-box"><img src="'+it.image_url+'" alt="Larawan: '+it.word+'"></div><p id="status">Larawan '+(i+1)+' sa 6</p><div class="reading-actions"><button class="button" id="read">Basahin</button><button class="button secondary" id="listen">Pakinggan</button></div>';
         const read=document.getElementById('read'),listenButton=document.getElementById('listen');
         const listen=async()=>{if(audioBusy||read.disabled)return;const audioFile=wordAudioFiles[String(it.word||'').toLowerCase()];if(!audioFile)return;audioBusy=true;setReadingButtonsDisabled(true);try{const audio=new Audio(wordAudioBase+audioFile);await new Promise(resolve=>{audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)})}finally{audioBusy=false;setReadingButtonsDisabled(false)}};
         listenButton.onclick=listen;
@@ -136,4 +136,11 @@ window.__prescribedNarrationAudio = {
     applyHeadingSize();
     new MutationObserver(applyHeadingSize).observe(document.getElementById('app'),{childList:true,subtree:true});
   });
+</script>
+<style>
+.lesson7-golden-picture-box{width:min(420px,88%);min-height:190px;margin:8px auto;padding:10px 16px;display:grid;place-items:center;border:5px solid #e7af45;border-radius:28px;background:#fffdf0;box-shadow:0 0 0 8px #f8dfb0,0 8px 0 #c9902d,0 14px 24px #187b7a25}
+.lesson7-golden-picture-box>img{width:min(220px,48vw);height:min(170px,24vh);margin:0;object-fit:contain;border:0;background:transparent;padding:0;box-shadow:none}
+</style>
+<script>
+(()=>{const wrap=()=>{document.querySelectorAll('#app .reading>img').forEach(image=>{if(image.parentElement.classList.contains('lesson7-golden-picture-box'))return;const box=document.createElement('div');box.className='lesson7-golden-picture-box';image.replaceWith(box);box.appendChild(image)})};const app=document.getElementById('app');if(app){new MutationObserver(wrap).observe(app,{childList:true,subtree:true});wrap()}})();
 </script>

@@ -125,3 +125,10 @@
 </style>
 <script>window.addEventListener('load',()=>{const app=document.getElementById('app');if(app?.querySelector('.done'))app.inert=false})</script>
 <script src="{% static 'pabasa_app/js/session3_visual_feedback_suppression.js' %}" data-activity-key="lesson7-gawain3" data-feedback-messages='["Handa ka na? Sabihin ang salita.","Magaling!","Hindi iyon ang tamang pangalan ng larawan. Subukan muli magsalita.","Hindi iyon ang tamang larawan, Pumili muna at subukan ulit."]'></script>
+<style>
+.lesson7-golden-picture-box{width:min(420px,88%);min-height:190px;margin:8px auto;padding:10px 16px;display:grid;place-items:center;border:5px solid #e7af45;border-radius:28px;background:#fffdf0;box-shadow:0 0 0 8px #f8dfb0,0 8px 0 #c9902d,0 14px 24px #187b7a25}
+.lesson7-golden-picture-box>img{width:min(220px,48vw);height:min(170px,24vh);margin:0;object-fit:contain;border:0;background:transparent;padding:0;box-shadow:none}
+</style>
+<script>
+(()=>{const wrap=()=>{document.querySelectorAll('#app .reading>img').forEach(image=>{if(image.parentElement.classList.contains('lesson7-golden-picture-box'))return;const box=document.createElement('div');box.className='lesson7-golden-picture-box';image.replaceWith(box);box.appendChild(image)})};const app=document.getElementById('app');if(app){new MutationObserver(wrap).observe(app,{childList:true,subtree:true});wrap()}})();
+</script>

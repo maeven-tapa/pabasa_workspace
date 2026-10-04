@@ -2,6 +2,7 @@
 <!doctype html>
 <html lang="fil">
 <head>
+  {% include 'pabasa_app/basahin_script.html' %}
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{{ shape_stamp_activity_data.title }}</title>
@@ -44,7 +45,7 @@
     </style>
   {% endif %}
 </head>
-<body class="{% if shape_stamp_activity_data.activity_key == 'lesson7-gawain4a' %}lesson7-gawain4a-page{% endif %}">
+<body class="{% if shape_stamp_activity_data.activity_key == 'lesson7-gawain4a' %}lesson7-gawain4a-page{% endif %}"><style>body.lesson7-gawain4a-page .numbered-progress{display:none!important}</style>
   <main class="page">
     <a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a>
     <section id="app" class="card">

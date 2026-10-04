@@ -78,3 +78,10 @@ body:has(#picture[hidden]) .actions a{height:auto!important;min-height:64px!impo
 <script src="{% static 'pabasa_app/js/session2_prescribed_debug.js' %}?v=1"></script>
 <script>document.addEventListener('DOMContentLoaded',function(){const b=document.getElementById('session-2-lesson-4-g2-start');if(!b||b.dataset.resume!=='true')return;b.querySelector('.lesson-start-label').textContent='MAY NA-SAVE KANG PROGRESO!';b.querySelector('.lesson-start-title').textContent='May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?'});</script><style>#session-2-lesson-4-g2-start .lesson-start-modal{width:min(500px,calc(100vw - 40px));padding:34px 34px 30px}#session-2-lesson-4-g2-start .lesson-start-label{margin-bottom:16px;color:#277f82;font-size:1.05rem;line-height:1.2;letter-spacing:.04em}#session-2-lesson-4-g2-start .lesson-start-title{margin:0 auto 26px;max-width:430px;color:#183e63;font-size:clamp(1.65rem,3.2vw,2.2rem);line-height:1.2}</style>
 <script>window.Session2PrescribedDebug.init({prefix:'prescribed-s2l4g2',expected:(()=>{const d=JSON.parse(document.getElementById('activity-data').textContent||'{}');return d.items?.[Number(d.progress?.completed_items)||0]?.word||''})(),normalize:value=>String(value||'').toLowerCase().replace(/[^a-z]/g,''),transcript:result=>result?.transcript||'',evaluateResult:result=>Boolean(result?.success&&result?.complete===true)});</script>
+<style>
+/* Session 2 Lesson 4 Gawain 2 only: remove the redundant top-bar label and lower the action row slightly. */
+.progress-label{display:none!important}
+body:not(:has(#picture[hidden])) .card .actions{position:relative!important;top:22px!important;transform:none!important}
+body:not(:has(#picture[hidden])) .card .focus{overflow:visible!important}
+body:not(:has(#picture[hidden])) .card .image-card{position:relative!important;top:18px!important}
+</style>

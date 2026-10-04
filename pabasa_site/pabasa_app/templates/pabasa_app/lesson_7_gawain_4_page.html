@@ -2,6 +2,7 @@
 <!doctype html>
 <html lang="fil">
 <head>
+  {% include 'pabasa_app/basahin_script.html' %}
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>GAWAIN 4: Letrang Oo | PABASA</title>
@@ -135,4 +136,5 @@
   body:has(.done) #session-3-start{display:none!important;pointer-events:none!important}
 </style>
 <script>window.addEventListener('load',()=>{const app=document.getElementById('app');if(app?.querySelector('.done'))app.inert=false})</script>
+<script>(function(){const app=document.getElementById('app');if(!app)return;const style=document.createElement('style');style.textContent='.lesson7-g4-progress{display:flex;justify-content:center;align-items:center;gap:8px;width:100%;margin:12px auto 0;font-family:BasahinFredoka,Fredoka,Nunito,sans-serif}.lesson7-g4-progress span{display:grid;place-items:center;width:32px;height:32px;border:2px solid #dce9e9;border-radius:50%;background:#f5faf9;color:#54727a;font:400 15px/1 BasahinFredoka,Fredoka,Nunito,sans-serif}.lesson7-g4-progress .active{border-color:#e9ad38;background:#f6bf4c;color:#77531d}.lesson7-g4-progress .done{border-color:#299e9a;background:#299e9a;color:#fff}';document.head.appendChild(style);function sync(){const source=app.querySelector('.progress'),match=source?.textContent.match(/Hanay\s+(\d+)\s+ng\s+(\d+)/i);if(!match)return;const n=+match[1],total=+match[2],bar=app.querySelector('.lesson7-g4-progress');if(bar?.dataset.state===n+'/'+total&&app.lastElementChild===bar)return;const next=bar||document.createElement('div');next.className='lesson7-g4-progress';next.dataset.state=n+'/'+total;next.setAttribute('role','progressbar');next.setAttribute('aria-label','Pag-unlad: Hanay '+n+' sa '+total);next.innerHTML=Array.from({length:total},(_,i)=>'<span class="'+(i+1<n?'done':i+1===n?'active':'')+'" aria-hidden="true">'+(i+1)+'</span>').join('');source.setAttribute('aria-label','Pag-unlad: Hanay '+n+' sa '+total);source.style.display='none';app.appendChild(next)}new MutationObserver(sync).observe(app,{childList:true,subtree:true});sync()})();</script>
 <script src="{% static 'pabasa_app/js/session3_visual_feedback_suppression.js' %}" data-activity-key="lesson7-gawain4" data-feedback-messages='["Subukan ulit! Isulat nang malinaw ang letrang Oo."]'></script>

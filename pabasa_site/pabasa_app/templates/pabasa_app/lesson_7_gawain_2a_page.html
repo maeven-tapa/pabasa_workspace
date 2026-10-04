@@ -56,3 +56,11 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 <style>#app .reading #read:disabled{background:#b5c5c7!important;border-color:transparent!important;color:#edf3f4!important;box-shadow:none!important;cursor:not-allowed!important;opacity:1!important;filter:none!important;transform:none!important}</style>
 <script>(function(){var app=document.getElementById('app'),data=document.getElementById('activity-data');if(!app||!data)return;var title=JSON.parse(data.textContent||'{}').title;function sync(){app.querySelectorAll('h1').forEach(function(h){if(h.textContent.trim()==='Tukuyin ang larawan')h.textContent=title})}new MutationObserver(sync).observe(app,{childList:true,subtree:true});sync()})();</script>
+<style>
+.lesson7-golden-picture-box{width:min(420px,88%);min-height:190px;margin:8px auto;padding:10px 16px;display:grid;place-items:center;border:5px solid #e7af45;border-radius:28px;background:#fffdf0;box-shadow:0 0 0 8px #f8dfb0,0 8px 0 #c9902d,0 14px 24px #187b7a25}
+.lesson7-golden-picture-box>img{width:min(220px,48vw);height:min(170px,24vh);margin:0;object-fit:contain;border:0;background:transparent;padding:0;box-shadow:none}
+</style>
+<script>
+(()=>{const wrap=()=>{document.querySelectorAll('#app .reading>img').forEach(image=>{if(image.parentElement.classList.contains('lesson7-golden-picture-box'))return;const box=document.createElement('div');box.className='lesson7-golden-picture-box';image.replaceWith(box);box.appendChild(image)})};const app=document.getElementById('app');if(app){new MutationObserver(wrap).observe(app,{childList:true,subtree:true});wrap()}})();
+</script>
+<style>#app .reading button{margin-top:8px}#app .numbered-progress{margin-top:20px}</style>

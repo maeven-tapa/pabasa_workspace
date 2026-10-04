@@ -13,6 +13,11 @@
 .pairs.picture-naming-phase .word{opacity:.62;filter:saturate(.72);transition:opacity .3s,filter .3s,transform .3s,box-shadow .3s,border-color .3s}.pairs.picture-naming-phase .word.active{opacity:1;filter:none;position:relative;transform:translateY(-3px) scale(1.025);border-color:#ffc928;box-shadow:0 0 0 7px #ffe36b,0 0 30px #ffc928cc,0 12px 26px #e09a2255}.pairs.picture-naming-phase .word.active::before{content:'BASAHIN ITO';position:absolute;top:-18px;left:50%;z-index:3;transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:#ffc928;color:#5b3b00;font-size:1rem;font-weight:1000;letter-spacing:.06em;white-space:nowrap;box-shadow:0 3px 8px #b77b1b55}.pairs.picture-naming-phase .word strong{display:none}.pairs.picture-naming-phase .word.active img{transform:scale(1.08)}.pairs.picture-naming-phase .word img{transition:transform .3s}
 </style>
 <style>
+/* Final placement: keep the six progress circles at the bottom center of the card. */
+.lesson-3-responsive #game.game{position:relative!important}
+.lesson-3-responsive #game:not(:has(.complete)) .progress{position:absolute!important;top:auto!important;right:auto!important;bottom:18px!important;left:50%!important;transform:translateX(-50%)!important;text-align:center!important}
+</style>
+<style>
 @keyframes strongerActiveCardPulse {
   0%, 100% { outline: 3px solid #ffe36b99; outline-offset: 3px; }
   50% { outline: 10px solid #ffe36bcc; outline-offset: 7px; }
@@ -208,6 +213,14 @@ body:has(.complete)::after { display: none !important; }
 #game .segments i{width:24px;height:9px;background:#c5d9d8;box-shadow:inset 0 1px 2px rgba(0,0,0,.12)}
 #game .segments i.done{background:#e0a32e}
 #game .segments i.active{background:#f4c85d;box-shadow:0 0 0 3px rgba(230,163,58,.2)}
+#game.game{position:relative!important}
+#game .progress{position:absolute!important;left:50%!important;right:auto!important;bottom:18px!important;top:auto!important;transform:translateX(-50%)!important;font-size:0!important;text-align:center!important;font-family:Fredoka,Nunito,"Segoe UI",sans-serif!important}
+#game .segments{counter-reset:lesson3step;display:flex;justify-content:center;gap:9px;margin-top:0!important}
+#game .segments i{counter-increment:lesson3step;display:grid;width:36px!important;height:36px!important;place-items:center;border:3px solid #e2e8e8;border-radius:50%;background:#ffffffe8;color:#55727e;box-shadow:none;font:900 .9rem/1 Fredoka,Nunito,"Segoe UI",sans-serif}
+#game .segments i::after{content:counter(lesson3step)}
+#game .segments i.done{background:#e5f4f2;border-color:#94d9d6;color:#187b7a}
+#game .segments i.active{background:#f4c866;border-color:#e7af45;color:#6c511e;box-shadow:none}
+@media(max-width:600px){#game .segments{gap:6px}#game .segments i{width:30px!important;height:30px!important;font-size:.76rem}}
 #game .instruction{width:min(760px,100%);margin:clamp(14px,2.5vh,22px) auto clamp(10px,2vh,16px);padding:10px 18px;background:rgba(255,255,255,.94);border:1px solid rgba(112,77,47,.16);box-shadow:0 6px 14px rgba(37,28,22,.1);font-size:clamp(.86rem,1.6vw,1rem);line-height:1.35}
 #game .pairs{width:min(760px,100%);gap:clamp(12px,2.2vw,22px);margin:0 auto}
 #game .pairs .word{width:100%;height:clamp(220px,31vh,285px);min-height:0;padding:16px 14px 12px;border:2px solid rgba(112,77,47,.18);border-radius:22px;background:rgba(255,252,240,.96);box-shadow:0 10px 20px rgba(41,28,25,.15);transform:none}
@@ -2085,3 +2098,7 @@ body.lesson-start-open.lesson-3-responsive #game .lesson3-read-actions > #prescr
   margin: 0 !important;
 }
 </style>
+<script>
+(function(){function place(){var game=document.getElementById('game'),progress=game?.querySelector('.progress');if(!game||!progress)return;if(progress.parentElement!==game)game.appendChild(progress);game.style.setProperty('display','flex','important');game.style.setProperty('flex-direction','column','important');progress.style.setProperty('position','static','important');progress.style.setProperty('order','99','important');progress.style.setProperty('margin','auto auto 0','important');progress.style.setProperty('transform','translateY(12px)','important');progress.style.setProperty('left','auto','important');progress.style.setProperty('right','auto','important');progress.style.setProperty('top','auto','important');progress.style.setProperty('bottom','auto','important')}function install(){var game=document.getElementById('game');if(!game)return;new MutationObserver(place).observe(game,{childList:true,subtree:true});place()}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();}());
+</script>
+<style>.lesson-3-responsive #game:not(:has(.complete)) .progress{position:absolute!important;top:auto!important;right:auto!important;bottom:18px!important;left:50%!important;transform:translateX(-50%)!important}</style>

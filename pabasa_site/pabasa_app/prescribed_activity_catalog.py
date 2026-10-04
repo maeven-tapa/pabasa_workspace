@@ -708,7 +708,7 @@ PRESCRIBED_ACTIVITIES = {
         'interaction': 'initial_syllable_picture_selection_with_oral_reading',
         'card_image_path': 'pabasa_app/images/sound_detective/detective_bg.png',
         'rows': [
-            {'reference':'me','items':[('pari',False),('sopas',False),('mesa',True)]},
+            {'reference':'me','items':[('pari',False),('miso',False),('mesa',True)]},
             {'reference':'mo','items':[('motor',True),('musika',False),('sultan',False)]},
             {'reference':'si','items':[('santol',False),('isla',False),('sibuyas',True)]},
             {'reference':'is','items':[('upuan',False),('isda',True),('salamin',False)]},

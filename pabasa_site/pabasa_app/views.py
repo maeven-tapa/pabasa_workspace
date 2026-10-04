@@ -23782,6 +23782,19 @@ def reading_transcribe_api(request):
             and ReadingMatcher.normalize_spoken_words(transcript) == ['check']
         ):
             matching_transcript = 'tsek'
+        # Chirp 3 sometimes returns these complete-token sequences for ``elesi``.
+        # Keep this narrowly scoped to the two Session 3 activities and only the
+        # exact expected target; the raw transcript remains unchanged for debug.
+        if (
+            request.POST.get('prescribed_activity_key') in {'lesson7-gawain3', 'lesson8-gawain1a'}
+            and language_code.lower() == 'fil-ph'
+            and mode == 'reading'
+            and target_text.strip().lower() == 'elesi'
+            and ''.join(ReadingMatcher.normalize_spoken_words(transcript)) in {
+                'elesi', 'lclc', 'lclclc', 'nec', 'elic', 'ele', 'lsc',
+            }
+        ):
+            matching_transcript = target_text
         analysis_transcript, next_syllable_context, stitching_applied = target_aware_syllable_stitching(
             target_text,
             current_syllable_index,
