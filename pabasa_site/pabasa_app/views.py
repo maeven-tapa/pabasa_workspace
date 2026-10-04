@@ -23796,6 +23796,23 @@ def reading_transcribe_api(request):
             }
         ):
             matching_transcript = target_text
+        # Chirp 3 may return ``Sí.`` or the phonetic-looking ``C`` for the
+        # Filipino syllable ``si`` in Lesson 9 Gawain 1. Keep the provider
+        # transcript unchanged for diagnostics; only canonicalize the value
+        # used by the activity's pronunciation matcher.
+        si_stt_variant = re.sub(
+            r'[^a-z]+',
+            '',
+            unicodedata.normalize('NFKD', str(transcript or '')).encode('ascii', 'ignore').decode('ascii').lower(),
+        )
+        if (
+            request.POST.get('prescribed_activity_key') == 'lesson9-gawain1'
+            and language_code.lower() == 'fil-ph'
+            and mode == 'reading'
+            and ReadingMatcher.normalize_word(target_text) == 'si'
+            and si_stt_variant in {'si', 'c'}
+        ):
+            matching_transcript = target_text
         analysis_transcript, next_syllable_context, stitching_applied = target_aware_syllable_stitching(
             target_text,
             current_syllable_index,

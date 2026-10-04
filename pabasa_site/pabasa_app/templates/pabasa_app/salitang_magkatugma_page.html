@@ -64,9 +64,14 @@ const pairs=[['aso','laso'],['bundok','sandok'],['tatay','nanay'],['bola','lola'
 .pair .connector::before{background:radial-gradient(circle,#167985 0 3px,transparent 4px) left center/10px 10px repeat-x;border-top:2px dashed #4b9aa0;content:"";height:10px;left:0;position:absolute;right:0;top:50%;transform:translateY(-50%)}
 .pair .connector::after{background:#fff;border:1px solid #c8dfe1;border-radius:999px;box-shadow:0 3px 8px rgba(15,23,42,.08);color:#176078;content:"Magkatugma?";font-size:.72rem;font-weight:900;padding:6px 9px;position:relative;white-space:nowrap;z-index:1}
 @media(max-width:600px){.pair .connector{width:clamp(54px,15vw,82px)}.pair .connector::after{font-size:.58rem;padding:5px 6px}}
-</style>{% include 'pabasa_app/session1_prescribed_controls.html' with prefix='prescribed-s1l2g1' help_text='Basahin nang malinaw ang salita. Pakinggan ito at piliin ang kamay na may tamang sagot.' %}
+</style>{% include 'pabasa_app/session1_prescribed_controls.html' with prefix='prescribed-s1l2g1' help_text='Basahin nang malinaw ang salita. Pakinggan ito at piliin ang kamay na may tamang sagot.' %}<style>.back.no-pseudo{font-size:clamp(.9rem,1.5vw,1.2rem)!important}</style><script>document.querySelector('.back')?.setAttribute('data-leave-label','← Bumalik sa Aking Aralin');</script>
 <style>
 .head{display:block;padding:14px 0 6px;background:transparent;border:0;border-radius:0;box-shadow:none;text-align:center}.activity-title{display:block;text-align:center}.activity-title .eyebrow{margin:18px 0 5px;color:#277f82;font-size:clamp(.72rem,1.25vw,.95rem);font-weight:1000;letter-spacing:.08em;line-height:1.15;text-transform:uppercase}.activity-title h1{margin:0;color:#183e63;font-family:Fredoka,Arial,sans-serif;font-size:clamp(2rem,4.5vw,3.55rem);line-height:1.05;font-weight:900;letter-spacing:.01em}.head .back{position:absolute;left:clamp(12px,3vw,34px);top:clamp(12px,2vw,24px)}.head .progress{position:absolute;right:clamp(12px,3vw,34px);top:clamp(12px,2vw,24px)}@media(max-width:600px){.head{padding-top:8px}.activity-title .eyebrow{font-size:.64rem}.activity-title h1{font-size:clamp(1.75rem,8vw,2.5rem)}.head .back,.head .progress{position:static;display:none}}
+</style>
+<style>
+/* Salitang Magkatugma only: remove the phase instruction container from layout. */
+.stage .card .activity-header-card{display:none!important}
+.stage .card .answers:not([hidden]){margin-top:44px!important}
 </style>
 <style>
 @keyframes strongerActiveCardPulse {
@@ -309,7 +314,7 @@ body:has(.completion-card) .completion-card a {
   const phase2ChoiceText='Piliin ang tamang kamay.';
   const csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
   let generation=0, speaking=false, lastPhase2='', lastPhase1='', currentAudio=null;
-  const otherNarrationAudio={'Hindi ito ang tamang sagot. Subukan natin muli.':"{% static 'pabasa_app/prescribed/audio/SESSION 1/OTHERS/hindi_ito_ang_tamang_sagot_subukan_muli.mp3' %}"};
+const otherNarrationAudio={'Hindi ito ang tamang sagot. Subukan natin muli.':"{% static 'pabasa_app/prescribed/audio/SESSION 1/OTHERS/hindi_ito_ang_tamang_sagot_subukan_muli.mp3' %}"};
   const speak=async text=>{
     const id=++generation;
     if(currentAudio){currentAudio.pause();currentAudio=null;}
@@ -453,6 +458,25 @@ body{display:grid;place-items:center;padding:16px}
 </script>
 <style></style>
 <script>window.__lessonStartProgress={activityKey:'lesson-2-gawain-1',progress:{{ lesson_2_progress|default:"null"|safe }},totalItems:5,progressUrl:'{{ lesson_2_progress_url }}',storageKeys:['pabasa:lesson-2-gawain-1:progress','pabasa:salitang-magkatugma:completed']};</script><script>window.__session1SharedNarrationAudio={'Basahin ito.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/basahin_ito.mp3' %}','Magaling! Susunod na larawan.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/magaling_susunod_na_larawan.mp3' %}','Hindi pa ito tama. Subukan muli.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/hindi_pa_ito_tama_subukan_muli.mp3' %}','Magkatunog ba ang dalawang larawan na ito? Pindutin ang nawawastong sagot.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/magkatunog_ba_ang_dalawang_larawan.mp3' %}','Piliin ang tamang kamay.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/piliin_ang_tamang_kamay.mp3' %} };</script><script>window.salitangOtherNarrationAudio={'Magkatugma ba ang dalawang salitang ito?':'{% static 'pabasa_app/prescribed/audio/SESSION 1/OTHERS/magkatugma_ba_ang_dalawang_salitang_ito.mp3' %}'};</script><script>window.salitangSharedNarrationAudio=window.__session1SharedNarrationAudio;</script><script src="/static/pabasa_app/js/deferred_activity_bootstrap.js?v=1"></script><script>window.deferActivityBootstrap('lesson-2-gawain-1');</script><script src="/static/pabasa_app/js/lesson_start_modal.js?v=4"></script>
+<style>
+/* Target-only answer/progress flow: keep the answer row clear of the fixed progress display. */
+.stage .card .answers:not([hidden]){margin-bottom:96px!important}
+.stage .card .activity-header-card{margin:0 0 4px!important;padding:0!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+</style>
+<script>
+(() => {
+  const stage=document.getElementById('stage');
+  if(!stage)return;
+  const removeChoiceInstruction=()=>{
+    const answers=stage.querySelector('#answers:not([hidden])');
+    if(!answers)return;
+    const status=stage.querySelector('#status');
+    if(status && status.textContent.trim()==='Piliin ang tamang kamay.') status.remove();
+  };
+  new MutationObserver(removeChoiceInstruction).observe(stage,{childList:true,subtree:true,characterData:true});
+  removeChoiceInstruction();
+})();
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   const backdrop = document.getElementById('lesson-2-g1-start');

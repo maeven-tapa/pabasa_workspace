@@ -2,7 +2,7 @@
   'use strict';
 
   const path = window.location.pathname.replace(/\/+$/, '');
-  const target = path.endsWith('/lesson-4-gawain-1') || path.endsWith('/prescribed/lesson4-gawain1')
+  const target = path.endsWith('/lesson-4/gawain-1') || path.endsWith('/lesson-4-gawain-1') || path.endsWith('/prescribed/lesson4-gawain1')
     ? { card: '#app', source: '.progress' }
     : path.endsWith('/session-2-lesson-4-gawain-2') || path.endsWith('/prescribed/session-2-lesson-4-gawain-2')
       ? { card: '.card', source: '#progress' }

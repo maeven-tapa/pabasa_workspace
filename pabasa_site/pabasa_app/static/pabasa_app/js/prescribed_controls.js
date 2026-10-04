@@ -7,9 +7,23 @@
       const cancelReading = () => window.Basahin?.cancelAll?.();
       const q = id => document.getElementById(`${config.prefix}${id}`);
       const leaveEnabled = new Set(['prescribed-s1l1g1','prescribed-s1l2g1','prescribed-s1l3g1','prescribed-s1l3g2','prescribed-s2l4g1','prescribed-s2l4g2','prescribed-s2l5g1','prescribed-s2l6g1','prescribed-s3l7g1','prescribed-s3l7g2a','prescribed-s3l7g2b','prescribed-s3l7g2c','prescribed-s3l7g3','prescribed-s3l7g4','prescribed-s3l7g4a','prescribed-s3l7g4b','prescribed-s3l8g1','prescribed-s3l8g1a','prescribed-s3l9g1','prescribed-s3l9g2','prescribed-s3l9g3']).has(config.prefix);
+      const leaveLabel = document.querySelector('.back')?.dataset.leaveLabel || ({
+        'prescribed-s1l1g1': '← Bumalik sa Aking Aralin',
+        'prescribed-s1l2g1': '← Bumalik sa Aking Aralin',
+        'prescribed-s1l3g1': '← Bumalik sa Aking Aralin',
+        'prescribed-s1l3g2': '← Bumalik sa Aking Aralin',
+        'prescribed-s2l4g1': '← Bumalik sa Aking Aralin',
+        'prescribed-s2l4g2': '← Bumalik sa Aking Aralin',
+        'prescribed-s2l5g1': '← Bumalik sa Aking Aralin',
+        'prescribed-s2l6g1': '← Bumalik sa Aking Aralin',
+        'prescribed-s3l9g1': '← Bumalik sa Aking Aralin',
+        'prescribed-s3l9g2': '← Bumalik sa Aking Aralin',
+        'prescribed-s3l9g3': '← Bumalik sa Aking Aralin',
+        'prescribed-s3l8g1a': '← Bumalik sa Aking Aralin'
+      }[config.prefix] || '← Bumalik sa Aking Gawain');
       const dedupeBackEnabled = new Set(['prescribed-s1l1g1','prescribed-s1l3g2']).has(config.prefix);
-      const noPseudoBackEnabled = new Set(['prescribed-s2l4g1','prescribed-s2l4g2','prescribed-s2l5g1','prescribed-s2l6g1','prescribed-s3l7g1','prescribed-s3l7g2a','prescribed-s3l7g2b','prescribed-s3l7g2c','prescribed-s3l7g3','prescribed-s3l7g4','prescribed-s3l7g4a','prescribed-s3l7g4b','prescribed-s3l8g1','prescribed-s3l8g1a','prescribed-s3l9g1','prescribed-s3l9g2','prescribed-s3l9g3']).has(config.prefix);
-      if (leaveEnabled && !dedupeBackEnabled) { const back = document.querySelector('.back'); if (back) { back.textContent = '← Bumalik sa Aking Gawain'; back.classList.add('leave-back'); if (noPseudoBackEnabled) back.classList.add('no-pseudo'); } }
+      const noPseudoBackEnabled = new Set(['prescribed-s1l1g1','prescribed-s1l2g1','prescribed-s1l3g1','prescribed-s1l3g2','prescribed-s2l4g1','prescribed-s2l4g2','prescribed-s2l5g1','prescribed-s2l6g1','prescribed-s3l7g1','prescribed-s3l7g2a','prescribed-s3l7g2b','prescribed-s3l7g2c','prescribed-s3l7g3','prescribed-s3l7g4','prescribed-s3l7g4a','prescribed-s3l7g4b','prescribed-s3l8g1','prescribed-s3l8g1a','prescribed-s3l9g1','prescribed-s3l9g2','prescribed-s3l9g3']).has(config.prefix);
+      if (leaveEnabled && !dedupeBackEnabled) { const back = document.querySelector('.back'); if (back) { back.textContent = leaveLabel; back.classList.add('leave-back'); if (noPseudoBackEnabled) back.classList.add('no-pseudo'); } }
       if (dedupeBackEnabled) {
         const keepSingleBack = () => {
           const backs = [...document.querySelectorAll('.back')];
@@ -18,11 +32,11 @@
           return back;
         };
         const back = keepSingleBack();
-        if (back) { back.textContent = '← Bumalik sa Aking Gawain'; back.classList.add('leave-back'); if (dedupeBackEnabled || noPseudoBackEnabled) back.classList.add('no-pseudo'); }
+        if (back) { back.textContent = leaveLabel; back.classList.add('leave-back'); if (dedupeBackEnabled || noPseudoBackEnabled) back.classList.add('no-pseudo'); }
         new MutationObserver(() => {
           const retained = keepSingleBack();
           if (retained && !retained.classList.contains('leave-back')) {
-            retained.textContent = '← Bumalik sa Aking Gawain';
+            retained.textContent = leaveLabel;
             retained.classList.add('leave-back');
             if (dedupeBackEnabled) retained.classList.add('no-pseudo');
           }

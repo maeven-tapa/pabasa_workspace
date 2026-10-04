@@ -47,7 +47,7 @@
 </head>
 <body class="{% if shape_stamp_activity_data.activity_key == 'lesson7-gawain4a' %}lesson7-gawain4a-page{% endif %}"><style>body.lesson7-gawain4a-page .numbered-progress{display:none!important}</style>
   <main class="page">
-    <a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a>
+    <a class="back"{% if shape_stamp_activity_data.activity_key == 'lesson7-gawain4a' %} data-leave-label="← Bumalik sa Aking Aralin"{% endif %} href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a>
     <section id="app" class="card">
       <p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 4A</p>
       <h1>{{ shape_stamp_activity_data.title }}</h1>

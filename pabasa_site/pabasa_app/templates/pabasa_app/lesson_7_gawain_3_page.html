@@ -28,7 +28,7 @@
 </head>
 <body>
   <main class="page">
-    <a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a>
+    <a class="back" data-leave-label="← Bumalik sa Aking Aralin" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a>
     <section id="app" class="card"></section>
   </main>
   {{ lesson7_gawain3_data|json_script:"activity-data" }}{% include 'pabasa_app/session3_lesson_start_bootstrap.html' %}

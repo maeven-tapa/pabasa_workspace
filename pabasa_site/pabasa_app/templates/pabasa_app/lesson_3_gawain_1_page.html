@@ -2102,3 +2102,15 @@ body.lesson-start-open.lesson-3-responsive #game .lesson3-read-actions > #prescr
 (function(){function place(){var game=document.getElementById('game'),progress=game?.querySelector('.progress');if(!game||!progress)return;if(progress.parentElement!==game)game.appendChild(progress);game.style.setProperty('display','flex','important');game.style.setProperty('flex-direction','column','important');progress.style.setProperty('position','static','important');progress.style.setProperty('order','99','important');progress.style.setProperty('margin','auto auto 0','important');progress.style.setProperty('transform','translateY(12px)','important');progress.style.setProperty('left','auto','important');progress.style.setProperty('right','auto','important');progress.style.setProperty('top','auto','important');progress.style.setProperty('bottom','auto','important')}function install(){var game=document.getElementById('game');if(!game)return;new MutationObserver(place).observe(game,{childList:true,subtree:true});place()}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();}());
 </script>
 <style>.lesson-3-responsive #game:not(:has(.complete)) .progress{position:absolute!important;top:auto!important;right:auto!important;bottom:18px!important;left:50%!important;transform:translateX(-50%)!important}</style>
+<script>document.addEventListener('DOMContentLoaded',()=>{const back=document.querySelector('.nav>.back');if(back)back.textContent='← Bumalik sa Aking Aralin'},{once:true});</script>
+<style>
+.lesson-3-responsive .nav>.back{
+  color:#183e63!important;
+  font:900 1.2rem/1.15 Fredoka,Nunito,"Segoe UI",sans-serif!important;
+}
+.lesson-3-responsive .nav>.back::after{content:none!important;display:none!important}
+</style>
+<style>
+/* Lesson 3 Gawain 1 only: remove the introductory instruction from layout. */
+.lesson-3-responsive #game .instruction{display:none!important}
+</style>

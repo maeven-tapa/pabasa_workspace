@@ -190,8 +190,13 @@ body.gawain-2:has(#game .complete) #game .complete-done{text-decoration:none!imp
     syncBackgroundButtons();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
-}());
+  }());
 </script>
+<style>
+/* Lesson 3 Gawain 2 only: remove both instruction presentations from layout. */
+.gawain-2 #game .instruction{display:none!important}
+.gawain-2 .nav{left:50%!important;transform:translateX(-50%)!important;width:min(1100px,calc(100% - 32px))!important}
+</style>
   <main class="app">
     <nav class="nav"><a class="back" href="{% url 'assessment' %}">← Bumalik sa<br>Aking Aralin</a></nav>
     <section id="game" class="game"></section>
@@ -541,7 +546,6 @@ body.gawain-2 #game.game:has(#listen) .lesson3-g2-actions > #listen {
 .gawain-2 #game.game:has(.answers) .brand .eyebrow { margin-bottom: 6px !important; padding: 7px 18px !important; font-size: clamp(.68rem, 1vw, .86rem) !important; }
 .gawain-2 #game.game:has(.answers) .progress { font-size: clamp(.85rem, 1.2vw, 1rem) !important; }
 .gawain-2 #game.game:has(.answers) .segments { gap: 4px !important; margin-top: 6px !important; }
-.gawain-2 #game.game:has(.answers) .segments i { width: clamp(16px, 2vw, 22px) !important; height: 8px !important; }
 .gawain-2 #game.game:has(.answers) .instruction { margin: 8px auto 12px !important; padding: 10px 16px !important; font-size: clamp(.88rem, 1.35vw, 1rem) !important; line-height: 1.25 !important; }
 .gawain-2 #game.game:has(.answers) .pairs { width: min(820px, 100%) !important; gap: 12px !important; margin: 0 auto 12px !important; }
 .gawain-2 #game.game:has(.answers) .pairs .word { height: clamp(150px, 23vh, 190px) !important; padding: 8px !important; border-radius: 22px !important; }
@@ -788,21 +792,6 @@ body.gawain-2:has(#game .complete)::before {
   width: min(100%, calc(100% - 180px)) !important;
   margin-inline: auto !important;
 }
-.gawain-2 #game.game:has(.answers) .progress {
-  position: absolute !important;
-  top: 4px !important;
-  right: 12px !important;
-  z-index: 2 !important;
-  margin: 0 !important;
-  transform: none !important;
-  text-align: right !important;
-}
-@media (max-width: 650px) {
-  .gawain-2 #game.game:has(.answers) .progress {
-    top: 2px !important;
-    right: 12px !important;
-  }
-}
 .feedback-text-hidden{color:transparent!important;text-shadow:none!important}
 .feedback-text-hidden::before,.feedback-text-hidden::after{content:none!important;display:none!important}
 .gawain-2 #game #status:not(.feedback-text-hidden){visibility:hidden!important}
@@ -909,7 +898,88 @@ body.gawain-2:has(#game .complete)::before {
 <script>
 (function(){var root=document.getElementById('game');if(!root)return;var feedback=/^(?:Magaling!(?: Susunod na larawan\.)?|Hindi ito ang tamang sagot\. Subukan natin muli\.|Hindi pa ito tama\. Subukan muli\.|Hindi nakuha ang iyong boses\. Subukan muli\.)$/;function sync(){root.querySelectorAll('#status').forEach(function(el){el.classList.toggle('feedback-text-hidden',feedback.test(el.textContent.trim()));});}new MutationObserver(sync).observe(root,{childList:true,subtree:true,characterData:true});sync();}());
 </script>
-<style>.gawain-2 #game.game:not(:has(.complete)) .progress{position:absolute!important;top:auto!important;right:auto!important;bottom:18px!important;left:50%!important;transform:translateX(-50%)!important}</style>
+<style>
+/* Single authoritative Part 2 layout. The renderer keeps the DOM order:
+   header, instruction, pairs, status, answers. */
+.gawain-2 #game.game:has(.answers) {
+  box-sizing: border-box !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  padding-bottom: 34px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+}
+.gawain-2 #game.game:has(.answers) .header {
+  display: contents !important;
+}
+.gawain-2 #game.game:has(.answers) .brand { order: 1 !important; }
+.gawain-2 #game.game:has(.answers) .instruction { order: 2 !important; }
+.gawain-2 #game.game:has(.answers) .pairs {
+  order: 3 !important;
+  flex: 0 0 auto !important;
+  margin-bottom: 12px !important;
+}
+.gawain-2 #game.game:has(.answers) .status { order: 4 !important; }
+.gawain-2 #game.game:has(.answers) .answers {
+  order: 5 !important;
+  position: static !important;
+  top: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  flex: 0 0 auto !important;
+  margin-top: 0 !important;
+}
+.gawain-2 #game.game:has(.answers) .progress {
+  order: 6 !important;
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  transform: none !important;
+  flex: 0 0 auto !important;
+  margin: 8px auto 24px !important;
+  text-align: center !important;
+}
+@media (max-width: 650px) {
+  .gawain-2 #game.game:has(.answers) { width: calc(100vw - 24px) !important; }
+}
+</style>
 <script>
-(function(){function place(){var game=document.getElementById('game'),progress=game?.querySelector('.progress');if(!game||!progress)return;if(progress.parentElement!==game)game.appendChild(progress);game.style.setProperty('display','flex','important');game.style.setProperty('flex-direction','column','important');progress.style.setProperty('position','static','important');progress.style.setProperty('order','99','important');progress.style.setProperty('margin','auto auto 0','important');progress.style.setProperty('transform','none','important');progress.style.setProperty('left','auto','important');progress.style.setProperty('right','auto','important');progress.style.setProperty('top','auto','important');progress.style.setProperty('bottom','auto','important');progress.style.setProperty('font-size','0','important');game.querySelectorAll('#read,#listen').forEach(function(button){button.style.setProperty('position','relative','important');button.style.setProperty('top','-16px','important')})}function install(){var game=document.getElementById('game');if(!game)return;new MutationObserver(place).observe(game,{childList:true,subtree:true});place()}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();}());
+/* Preserve the existing Part 1 progress behavior; Part 2 is intentionally excluded. */
+(function(){
+  function placePart1Progress(){
+    var game=document.getElementById('game');
+    if(!game || game.querySelector('.answers')) return;
+    var progress=game.querySelector('.progress');
+    if(!progress) return;
+    if(progress.parentElement!==game) game.appendChild(progress);
+    game.style.setProperty('display','flex','important');
+    game.style.setProperty('flex-direction','column','important');
+    progress.style.setProperty('position','static','important');
+    progress.style.setProperty('order','99','important');
+    progress.style.setProperty('margin','auto auto 0','important');
+    progress.style.setProperty('transform','none','important');
+    progress.style.setProperty('left','auto','important');
+    progress.style.setProperty('right','auto','important');
+    progress.style.setProperty('top','auto','important');
+    progress.style.setProperty('bottom','auto','important');
+    progress.style.setProperty('font-size','0','important');
+    game.querySelectorAll('#read,#listen').forEach(function(button){
+      button.style.setProperty('position','relative','important');
+      button.style.setProperty('top','-16px','important');
+    });
+  }
+  function install(){
+    var game=document.getElementById('game');
+    if(!game) return;
+    new MutationObserver(placePart1Progress).observe(game,{childList:true,subtree:true});
+    placePart1Progress();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',install,{once:true});
+  else install();
+}());
 </script>

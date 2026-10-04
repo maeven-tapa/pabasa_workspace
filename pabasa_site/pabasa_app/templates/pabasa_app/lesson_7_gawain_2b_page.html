@@ -144,3 +144,51 @@ window.__prescribedNarrationAudio = {
 <script>
 (()=>{const wrap=()=>{document.querySelectorAll('#app .reading>img').forEach(image=>{if(image.parentElement.classList.contains('lesson7-golden-picture-box'))return;const box=document.createElement('div');box.className='lesson7-golden-picture-box';image.replaceWith(box);box.appendChild(image)})};const app=document.getElementById('app');if(app){new MutationObserver(wrap).observe(app,{childList:true,subtree:true});wrap()}})();
 </script>
+<style>
+/* Lesson 7 Gawain 2B: keep the leave control compact and let the activity card
+   size around its rendered contents instead of acting as a viewport shell. */
+html body .page{
+  box-sizing:border-box!important;
+  width:min(1250px,calc(100% - 24px))!important;
+  min-height:100dvh!important;
+  height:auto!important;
+  margin:auto!important;
+  padding:28px 16px 14px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  gap:6px!important;
+}
+html body .page>.back{
+  position:relative!important;
+  top:-8px!important;
+  left:auto!important;
+  align-self:flex-start!important;
+  width:fit-content!important;
+  flex:0 0 auto!important;
+  transform:none!important;
+}
+html body .page>.back:hover,
+html body .page>.back:focus-visible,
+html body .page>.back:active{
+  top:-8px!important;
+  transform:none!important;
+}
+html body .page>#app.card{
+  position:static!important;
+  top:auto!important;
+  left:auto!important;
+  transform:none!important;
+  width:min(1250px,100%)!important;
+  height:auto!important;
+  max-height:none!important;
+  min-height:0!important;
+  margin:0 auto!important;
+  padding:16px 24px!important;
+  overflow:visible!important;
+}
+@media(max-width:760px){
+  html body .page{padding:28px 12px 12px!important}
+  html body .page>#app.card{padding:14px 16px!important}
+}
+</style>

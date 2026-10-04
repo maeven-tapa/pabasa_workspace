@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-  <main class="page"><a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a><section id="app" class="card"></section></main>
+  <main class="page"><a class="back" data-leave-label="← Bumalik sa Aking Aralin" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a><section id="app" class="card"></section></main>
   {{ handwriting_activity_data|json_script:"handwriting-data" }}{% include 'pabasa_app/session3_lesson_start_bootstrap.html' %}
   <script>
     window.__prescribedNarrationAudio = {
@@ -123,7 +123,7 @@
     function render() {
       if (index >= 3) {app.innerHTML = '<div class="done"><h1>Tapos na ang gawain! 🎉</h1><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><button class="button" id="return" type="button" onclick="location.href=\'{% url 'assessment' %}\'">BALIK SA AKING ARALIN</button></div>'; app.inert=false; app.querySelector('#return').onclick = () => location.href = "{% url 'assessment' %}"; return}
       const sheet = '<div class="canvas-wrap"><span class="model">Ⅰi</span><canvas data-row="' + index + '" aria-label="Hanay ' + (index + 1) + '"></canvas></div>';
-      app.innerHTML = '<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 2C</p><h1>Letrang Ii</h1><p class="instruction">' + instructionText + '</p><p class="row-count">Hanay ' + (index + 1) + ' ng 3</p><div class="progress"><i style="width:' + (index / 3 * 100) + '%"></i></div><div class="sheet">' + sheet + '</div><p class="hint">' + normalHint + '</p><div class="actions"><button class="button clear" id="clear">Burahin</button><button class="button" id="next">' + (index === 2 ? 'Tapusin' : 'Susunod') + '</button></div>';
+      app.innerHTML = '<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 2C</p><h1>Letrang Ii</h1><p class="instruction">' + instructionText + '</p><div class="progress"><i style="width:' + (index / 3 * 100) + '%"></i></div><div class="sheet">' + sheet + '</div><p class="hint">' + normalHint + '</p><div class="actions"><button class="button clear" id="clear">Burahin</button><button class="button" id="next">' + (index === 2 ? 'Tapusin' : 'Susunod') + '</button></div>';
       app.querySelectorAll('canvas').forEach(canvas => bindCanvas(canvas, Number(canvas.dataset.row)));
       app.querySelector('#clear').onclick = () => {rows[index] = []; const canvas = app.querySelector('canvas[data-row="' + index + '"]'); canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); setHint()};
       app.querySelector('#next').onclick = submitCurrent;

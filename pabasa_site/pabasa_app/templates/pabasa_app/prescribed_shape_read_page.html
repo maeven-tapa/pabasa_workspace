@@ -50,7 +50,7 @@
 </head>
 <body class="{% if shape_read_activity_data.activity_key == 'lesson7-gawain4b' %}lesson7-gawain4b-page{% endif %}">
   <main class="page">
-    <a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a>
+    <a class="back"{% if shape_read_activity_data.activity_key == 'lesson7-gawain4b' %} data-leave-label="← Bumalik sa Aking Aralin"{% endif %} href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a>
     <section id="app" class="card"></section>
   </main>
   {{ shape_read_activity_data|json_script:"shape-read-data" }}
@@ -130,6 +130,7 @@
 <style>
 .lesson7-gawain4b-page .lesson7-golden-picture-box{width:min(420px,88%);min-height:190px;margin:8px auto;padding:10px 16px;display:grid;place-items:center;border:5px solid #e7af45;border-radius:28px;background:#fffdf0;box-shadow:0 0 0 8px #f8dfb0,0 8px 0 #c9902d,0 14px 24px #187b7a25}
 .lesson7-gawain4b-page .lesson7-golden-picture-box>img{width:min(220px,48vw);height:min(170px,24vh);margin:0;object-fit:contain;border:0;background:transparent;padding:0;box-shadow:none}
+.lesson7-gawain4b-page .lesson7-golden-picture-box>img{width:min(245px,52vw);height:min(190px,27vh)}
 </style>
 <script>
 (()=>{if(!document.body.classList.contains('lesson7-gawain4b-page'))return;const wrap=()=>{document.querySelectorAll('#app .reading>img').forEach(image=>{if(image.parentElement.classList.contains('lesson7-golden-picture-box'))return;const box=document.createElement('div');box.className='lesson7-golden-picture-box';image.replaceWith(box);box.appendChild(image)})};const app=document.getElementById('app');if(app){new MutationObserver(wrap).observe(app,{childList:true,subtree:true});wrap()}})();

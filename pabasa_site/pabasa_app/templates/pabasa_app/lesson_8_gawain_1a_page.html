@@ -27,6 +27,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   window.setTimeout(fallback,250);
 });
 </script>
+<script>document.addEventListener('DOMContentLoaded',()=>document.querySelector('.back')?.setAttribute('data-leave-label','← Bumalik sa Aking Aralin'),{once:true});</script>
+<style>
+html body .page>#app.card{top:54%!important}
+</style>
 <script>
 document.addEventListener('DOMContentLoaded',()=>{
   const data=JSON.parse(document.getElementById('activity-data')?.textContent||'{}');

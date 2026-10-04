@@ -147,6 +147,12 @@ urlpatterns = [
         name='prescribed_activity_page',
     ),
     path(
+        'dashboard/assessment/lesson-7/gawain-2a/',
+        views.prescribed_activity_page,
+        {'activity_key': 'lesson7-gawain2a'},
+        name='lesson7_gawain2a_page_alias',
+    ),
+    path(
         'dashboard/assessment/activity/lesson-8/gawain-1/',
         views.lesson8_gawain1_page,
         name='lesson8_gawain1_page',

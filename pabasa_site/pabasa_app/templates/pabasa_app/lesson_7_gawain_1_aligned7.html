@@ -82,8 +82,8 @@ document.addEventListener('DOMContentLoaded',function(){
     if(!intro.querySelector('.lesson7-intro-eyebrow')){const eyebrow=document.createElement('p');eyebrow.className='eyebrow lesson7-intro-eyebrow';eyebrow.textContent='SESSION 3 · LESSON 7 · GAWAIN 1';intro.prepend(eyebrow)}
     const first='Tingnan ang mga larawan sa bilog',second='Isa-isa nating pangalanan ang mga ito.',start='Magsimula na tayo!';
     const heading=intro.querySelector('h2'),description=intro.querySelector('.lesson7-overview > p:not(.lesson7-intro-eyebrow)');
-    if(heading)heading.textContent=first;
-    if(description)description.textContent=second;
+    if(heading)heading.hidden=true;
+    if(description)description.hidden=true;
     button.textContent='Magsimula';
     button.disabled=true;
     button.setAttribute('aria-disabled','true');
@@ -141,3 +141,12 @@ window.record=async function(){
   }
 };
 </script>
+<style>
+body.lesson-start-open.lesson-7-responsive #app .lesson7-overview h2,body.lesson-start-open.lesson-7-responsive #app .lesson7-overview>p{display:none!important}
+body.lesson-7-responsive{overflow:visible!important}
+body.lesson-7-responsive>.page{box-sizing:border-box!important;height:100dvh!important;min-height:0!important;display:flex!important;flex-direction:column!important;align-items:center!important;gap:6px!important;padding:8px 16px!important}
+body.lesson-7-responsive>.page>a{position:static!important;align-self:flex-start!important;width:fit-content!important;flex:0 0 auto!important;min-height:0!important;box-sizing:border-box!important}
+body.lesson-7-responsive>.page>#app.card{position:static!important;transform:none!important;width:min(880px,calc(100% - 24px))!important;max-width:880px!important;height:auto!important;max-height:none!important;min-height:0!important;margin:0 auto!important;padding:16px 28px 20px!important;overflow:visible!important}
+body.lesson-7-responsive>.page>#app.card .layout{height:auto!important;min-height:0!important}
+@media(max-width:760px){body.lesson-7-responsive>.page{padding:10px 12px 14px!important;gap:8px!important}body.lesson-7-responsive>.page>#app.card{width:100%!important;max-width:100%!important;padding:18px 16px 20px!important}}
+</style>
