@@ -20183,6 +20183,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         function beginPersonalMaterialWorkspace() {
             setAddMaterialMode('supplementary');
             personalWorkspaceActive = true;
+            // Card 16 uses the personal-material editor, but remains a
+            // Supplementary activity. Persist its identity with the same
+            // content_json activity metadata used by the other cards.
+            window.__personalMaterialActivityType = 'reading_practice';
             window.__templateEditStateRestored = false;
             if (!window.__templateEditStateRestored) {
                 if (materialTitleInput) materialTitleInput.value = '';
@@ -23455,6 +23459,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                             randomize_order: randomizeOrder,
                                             assessment_kind: assessmentKind,
                                             source_type: sourceType,
+                                            activity_type: personalWorkspaceActive ? (window.__personalMaterialActivityType || '') : '',
                                             source_material_id: window._pendingSharedMaterialSourceId || null,
                                             ...materialPublicationSettings()
                                         })

@@ -1678,6 +1678,36 @@ class SupplementaryMaterialPublication(models.Model):
         ]
 
 
+class SupplementaryStudentAssignment(models.Model):
+    """Student allow-list entry scoped to one Supplementary publication."""
+
+    publication = models.ForeignKey(
+        SupplementaryMaterialPublication,
+        on_delete=models.CASCADE,
+        related_name="student_assignments",
+    )
+    student = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="supplementary_student_assignments",
+    )
+    enrollment = models.ForeignKey(
+        "Enrollment",
+        on_delete=models.CASCADE,
+        related_name="supplementary_student_assignments",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "supplementary_student_assignments"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["publication", "student"],
+                name="uniq_supplementary_publication_student_assignment",
+            ),
+        ]
+
+
 class ClassCrlaFinalization(models.Model):
     """One teacher-close event for an official CRLA material in a section."""
     section = models.ForeignKey("Section", on_delete=models.CASCADE, related_name="crla_finalizations")

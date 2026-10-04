@@ -65,7 +65,7 @@ from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_
 from django.db import transaction
 import re
 import traceback
-from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, MaterialStudentAssignment, SupplementaryMaterialPublication, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization, StudentActivityProgress, StudentActivityRecordingSubmission, PrescribedActivityAccessSettings
+from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, MaterialStudentAssignment, SupplementaryMaterialPublication, SupplementaryStudentAssignment, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization, StudentActivityProgress, StudentActivityRecordingSubmission, PrescribedActivityAccessSettings
 from .system_clock import invalidate_override_cache, now as system_now, real_now, today as system_today
 from .models import PracticeDebugSettings
 from .section_configuration import ensure_salawag_grade_two_sections
@@ -353,6 +353,8 @@ def _current_supplementary_lifecycle_guard(request, material, *, json_response=F
         return HttpResponseForbidden(message)
     try:
         _current_supplementary_scope(student, material, lifecycle)
+        if not _supplementary_material_currently_published(student, material):
+            raise ValueError('This Supplementary material is not assigned to you for the current term.')
     except ValueError as exc:
         if json_response:
             return JsonResponse({'success': False, 'error': str(exc)}, status=403)
@@ -28701,10 +28703,31 @@ def _collect_supplementary_student_results(section, selected_term):
     student_ids = [enrollment.student_id for enrollment in enrollments]
     if not student_ids:
         return []
-    material_ids = _supplementary_material_ids(section)
+    calendar = getattr(section, 'school_calendar', None)
+    publications = list(SupplementaryMaterialPublication.objects.filter(
+        section=section,
+        school_calendar=calendar,
+        term=selected_term,
+        is_active=True,
+        material__is_active=True,
+    ).select_related('material')) if calendar else []
+    material_ids = {publication.material_id for publication in publications}
     if not material_ids:
         return []
-    term_blocks = _calendar_term_blocks(getattr(section, 'school_calendar', None))
+    eligible_by_material = {}
+    for publication in publications:
+        if str(getattr(publication.material, 'publication_scope', 'whole_class') or 'whole_class').strip().lower() == 'selected_students':
+            eligible_by_material[publication.material_id] = set(
+                SupplementaryStudentAssignment.objects.filter(
+                    publication=publication,
+                    enrollment__section=section,
+                    enrollment__school_calendar=calendar,
+                    enrollment__status='active',
+                    enrollment__is_active=True,
+                ).values_list('student_id', flat=True)
+            )
+        else:
+            eligible_by_material[publication.material_id] = set(student_ids)
     rows = {
         student_id: {
             'student_id': student_id,
@@ -28716,32 +28739,39 @@ def _collect_supplementary_student_results(section, selected_term):
         for student_id in student_ids
     }
 
-    def in_term(enrollment, timestamp):
-        if not enrollment or not enrollment.school_calendar_id:
-            return False
-        return _supplementary_term_for_date(enrollment.school_calendar, timestamp, term_blocks) == selected_term
-
-    progress_rows = StoryReadingProgress.objects.filter(student_id__in=student_ids, material_id__in=material_ids, completed=True, completed_at__isnull=False).select_related('material', 'enrollment').order_by('-completed_at', '-id')
+    progress_rows = StoryReadingProgress.objects.filter(
+        student_id__in=student_ids, material_id__in=material_ids,
+        school_calendar=calendar, term=selected_term,
+        completed=True, completed_at__isnull=False,
+    ).select_related('material', 'enrollment').order_by('-completed_at', '-id')
     for progress in progress_rows:
-        if progress.student_id not in rows or not in_term(progress.enrollment, progress.completed_at):
+        if progress.student_id not in rows or progress.student_id not in eligible_by_material.get(progress.material_id, set()):
             continue
         if rows[progress.student_id]['scores']['story_reading'] is None:
             rows[progress.student_id]['scores']['story_reading'] = _clamp_supplementary_score(progress.reading_score)
 
-    five_w_rows = Assessment.objects.filter(student_id__in=student_ids, material_id__in=material_ids, attempt_status='completed', completed_at__isnull=False, is_active=True).select_related('material', 'enrollment').order_by('-completed_at', '-id')
+    five_w_rows = Assessment.objects.filter(
+        student_id__in=student_ids, material_id__in=material_ids,
+        supplementary_school_calendar=calendar, supplementary_term=selected_term,
+        attempt_status='completed', completed_at__isnull=False, is_active=True,
+    ).select_related('material', 'enrollment').order_by('-completed_at', '-id')
     for attempt in five_w_rows:
         content = attempt.material.content_json if isinstance(attempt.material.content_json, dict) else {}
         if content.get('template_title') != "5W's Story Questions" and content.get('activity_variant') != 'five_w_story_questions':
             continue
-        if attempt.student_id in rows and rows[attempt.student_id]['scores']['five_w_questions'] is None and in_term(attempt.enrollment, attempt.completed_at):
+        if attempt.student_id in rows and attempt.student_id in eligible_by_material.get(attempt.material_id, set()) and rows[attempt.student_id]['scores']['five_w_questions'] is None:
             rows[attempt.student_id]['scores']['five_w_questions'] = _clamp_supplementary_score(attempt.total_score)
 
-    submissions = StoryResponseSubmission.objects.filter(student_id__in=student_ids, material_id__in=material_ids, status='graded', grade__isnull=False).select_related('material', 'enrollment').order_by('-submitted_at', '-id')
+    submissions = StoryResponseSubmission.objects.filter(
+        student_id__in=student_ids, material_id__in=material_ids,
+        school_calendar=calendar, term=selected_term,
+        status='graded', grade__isnull=False,
+    ).select_related('material', 'enrollment').order_by('-submitted_at', '-id')
     for submission in submissions:
         content = submission.material.content_json if isinstance(submission.material.content_json, dict) else {}
         activity_type = content.get('activity_type') or content.get('activity_variant')
         key = 'story_retelling' if activity_type == 'retell_story' else 'story_response' if activity_type == 'story_response' else None
-        if key and submission.student_id in rows and rows[submission.student_id]['scores'][key] is None and in_term(submission.enrollment, submission.submitted_at):
+        if key and submission.student_id in rows and submission.student_id in eligible_by_material.get(submission.material_id, set()) and rows[submission.student_id]['scores'][key] is None:
             rows[submission.student_id]['scores'][key] = _clamp_supplementary_score(submission.grade)
 
     students_by_id = User.objects.filter(id__in=student_ids).in_bulk()
@@ -30045,6 +30075,11 @@ def _section_course_payload(section):
     materials_qs = Material.objects.filter(
         Q(section=section) | Q(assigned_sections=section), is_active=True,
     ).exclude(status='archived').distinct().order_by('-created_at')
+    # Generic materials remain section-scoped. Supplementary materials are
+    # owned by their active publication for the section's current calendar
+    # term, so a reused material cannot bring a different term's publication
+    # into this course panel.
+    materials_qs = _term_scoped_teacher_materials(materials_qs, section)
     practices_qs = Practice.objects.filter(
         teacher=section.teacher, section=section, is_active=True,
     ).exclude(status='archived').order_by('-created_at')
@@ -31806,16 +31841,19 @@ def _compute_teacher_overview(teacher_user):
                     unique_student_ids.add(student_id)
         total_students = len(unique_student_ids)
 
-        materials_posted = Material.objects.filter(
+        materials_qs = Material.objects.filter(
             Q(teacher=teacher_user) | Q(section__teacher=teacher_user) | Q(assigned_sections__teacher=teacher_user),
             is_active=True,
-        ).distinct().count()
+        ).distinct()
+        materials_posted = _term_scoped_teacher_materials_for_teacher(
+            materials_qs, teacher_user,
+        ).count()
 
-        assessments_posted = Material.objects.filter(
+        assessments_posted = _term_scoped_teacher_materials_for_teacher(Material.objects.filter(
             Q(teacher=teacher_user) | Q(section__teacher=teacher_user) | Q(assigned_sections__teacher=teacher_user),
             type__in=["assessment", "both"],
             is_active=True,
-        ).distinct().count()
+        ).distinct(), teacher_user).count()
 
         reports_generated = Note.objects.filter(teacher=teacher_user).count()
 
@@ -32306,10 +32344,10 @@ def get_teacher_classes(request):
         class_list = []
         for cls in classes:
             student_count = _section_student_count(cls)
-            section_materials = Material.objects.filter(
+            section_materials = _term_scoped_teacher_materials(Material.objects.filter(
                 Q(section=cls) | Q(assigned_sections=cls) | Q(courses__sections=cls),
                 is_active=True,
-            ).distinct()
+            ).distinct(), cls)
             represented_asm_ids = section_materials.exclude(assessment=None).values_list('assessment_id', flat=True)
             assessment_material_count = section_materials.filter(Q(type='assessment') | Q(type='both')).count()
             assessment_material_count += Assessment.objects.filter(section=cls, is_active=True, source_assessment__isnull=True).exclude(id__in=represented_asm_ids).count()
@@ -32450,11 +32488,11 @@ def get_teacher_overview(request):
         ).exclude(status__iexact='archived').distinct().count()
 
         # Materials that are standalone (not representing an Assessment)
-        materials_posted = Material.objects.filter(
+        materials_posted = _term_scoped_teacher_materials_for_teacher(Material.objects.filter(
             Q(section__teacher=teacher_user) | Q(assigned_sections__teacher=teacher_user),
             is_active=True,
             assessment__isnull=True,
-        ).exclude(status__iexact='archived').distinct().count()
+        ).exclude(status__iexact='archived').distinct(), teacher_user).count()
 
         reports_generated = Note.objects.filter(teacher=teacher_user).count()
 
@@ -32541,9 +32579,19 @@ def get_class_materials(request):
         ).distinct()
         if request_user.role == 'student':
             current_supplementary = _current_supplementary_materials_for_student(request_user, section)
+            selected_supplementary_ids = current_supplementary.filter(
+                publication_scope='selected_students',
+                supplementary_publications__student_assignments__student=request_user,
+                supplementary_publications__is_active=True,
+            ).values('pk')
             materials_qs = materials_qs.filter(
                 Q(is_official_reading=True, is_system_owned=True)
-                | Q(pk__in=current_supplementary.values('pk'))
+                | Q(
+                    pk__in=current_supplementary.filter(
+                        publication_scope='whole_class',
+                    ).values('pk')
+                )
+                | Q(pk__in=selected_supplementary_ids)
             )
         materials_qs = materials_qs.exclude(
             Q(assessment_kind='crla')
@@ -32614,8 +32662,13 @@ def get_class_materials(request):
         # Archived records should not appear in class/course readings, even for the owning teacher.
         materials_qs = materials_qs.filter(is_active=True).exclude(status__iexact='archived')
         if request_user.role == 'student':
+            # Supplementary materials have already been filtered above using
+            # their current term publication and Supplementary-specific
+            # student assignments. Keep generic material access unchanged.
+            generic_materials = ~Q(pk__in=current_supplementary.values('pk')) if 'current_supplementary' in locals() else Q()
             materials_qs = materials_qs.filter(
-                Q(publication_scope='whole_class')
+                generic_materials
+                | Q(publication_scope='whole_class')
                 | Q(publication_scope='selected_students', student_assignments__student=request_user)
             ).distinct()
         assessments_qs = assessments_qs.filter(is_active=True).exclude(status__iexact='archived')
@@ -34113,6 +34166,60 @@ def _set_material_student_assignments(material, publication_scope, student_ids):
         )
 
 
+def _set_supplementary_student_assignments(publication, publication_scope, student_ids):
+    """Replace selected-student rows for one term-scoped publication only."""
+    if not publication:
+        return
+    assignments = SupplementaryStudentAssignment.objects.filter(publication=publication)
+    if publication_scope == 'whole_class':
+        assignments.delete()
+        return
+    enrollments = {
+        enrollment.student_id: enrollment
+        for enrollment in Enrollment.objects.filter(
+            student_id__in=student_ids,
+            section=publication.section,
+            school_calendar=publication.school_calendar,
+            status='active',
+            is_active=True,
+        )
+    }
+    assignments.exclude(student_id__in=student_ids).delete()
+    SupplementaryStudentAssignment.objects.bulk_create(
+        [
+            SupplementaryStudentAssignment(
+                publication=publication,
+                student_id=student_id,
+                enrollment=enrollments[student_id],
+            )
+            for student_id in student_ids
+            if student_id in enrollments
+        ],
+        ignore_conflicts=True,
+    )
+
+
+def _student_can_access_supplementary_publication(student, publication):
+    if not student or not publication:
+        return False
+    if str(getattr(publication.material, 'publication_scope', 'whole_class') or 'whole_class').strip().lower() == 'whole_class':
+        return Enrollment.objects.filter(
+            student=student,
+            section=publication.section,
+            school_calendar=publication.school_calendar,
+            status='active',
+            is_active=True,
+        ).exists()
+    return SupplementaryStudentAssignment.objects.filter(
+        publication=publication,
+        student=student,
+        enrollment__section=publication.section,
+        enrollment__school_calendar=publication.school_calendar,
+        enrollment__status='active',
+        enrollment__is_active=True,
+    ).exists()
+
+
 def _material_response_payload(material, tokens=None, section=None, is_shared_material=None, shared_owner_teacher_name=None):
     item_count = len(tokens) if tokens is not None else 1
     if tokens is None and isinstance(material.content_json, dict) and isinstance(material.content_json.get('items'), list):
@@ -34235,13 +34342,11 @@ def _supplementary_material_currently_published(student, material):
     calendar = getattr(enrollment, 'school_calendar', None) if enrollment else None
     section = getattr(enrollment, 'section', None) if enrollment else None
     term = _calendar_current_term(calendar, on_date=system_today()) if calendar else None
-    return bool(
-        calendar and section and term in {1, 2, 3}
-        and SupplementaryMaterialPublication.objects.filter(
+    publication = SupplementaryMaterialPublication.objects.filter(
             material=material, school_calendar=calendar, term=term,
             section=section, is_active=True,
-        ).exists()
-    )
+        ).select_related('material').first() if calendar and section and term in {1, 2, 3} else None
+    return _student_can_access_supplementary_publication(student, publication)
 
 
 def _assessment_week_block_response(json_response=False):
@@ -34794,6 +34899,9 @@ def add_reading_material(request):
                 'assigned_weeks': assigned_weeks if assigned_weeks else ([assigned_week] if assigned_week else []),
                 'source_type': source_type,
             }
+            requested_activity_type = str(data.get('activity_type') or '').strip().lower()
+            if requested_activity_type == 'reading_practice':
+                template_content_json['activity_type'] = requested_activity_type
             if source_type == 'template' and isinstance(template_payload, dict):
                 template_content_json.update(template_payload)
                 template_content_json['instructions'] = instructions or str(template_payload.get('instructions') or '').strip()
@@ -34821,19 +34929,25 @@ def add_reading_material(request):
                 publication_scope=publication_scope,
                 is_active=(status in ['published', 'scheduled'])
             )
+            supplementary_publication = None
             if section is not None:
                 m.assigned_sections.add(section)
                 if assessment_kind != 'crla':
                     calendar = section.school_calendar
                     current_term = _calendar_current_term(calendar, on_date=system_today()) if calendar else None
                     if calendar and current_term in {1, 2, 3}:
-                        SupplementaryMaterialPublication.objects.get_or_create(
+                        supplementary_publication, _ = SupplementaryMaterialPublication.objects.get_or_create(
                             material=m,
                             school_calendar=calendar,
                             term=current_term,
                             section=section,
                         )
-            _set_material_student_assignments(m, publication_scope, selected_student_ids)
+            if _is_supplementary_material(m) and supplementary_publication:
+                _set_supplementary_student_assignments(
+                    supplementary_publication, publication_scope, selected_student_ids,
+                )
+            else:
+                _set_material_student_assignments(m, publication_scope, selected_student_ids)
 
             created_ids = [m.id]
             material_payload = _material_response_payload(m, tokens=tokens, section=section)
@@ -35111,6 +35225,7 @@ def teacher_update_material(request):
             material.publication_scope = publication_scope
             material.save()
             publication_section = target_section or material.section
+            supplementary_publication = None
             if (
                 publication_section
                 and _is_supplementary_material(material)
@@ -35120,13 +35235,18 @@ def teacher_update_material(request):
                     publication_section.school_calendar, on_date=system_today()
                 )
                 if current_term in {1, 2, 3}:
-                    SupplementaryMaterialPublication.objects.get_or_create(
+                    supplementary_publication, _ = SupplementaryMaterialPublication.objects.get_or_create(
                         material=material,
                         school_calendar=publication_section.school_calendar,
                         term=current_term,
                         section=publication_section,
                     )
-            _set_material_student_assignments(material, publication_scope, selected_student_ids)
+            if _is_supplementary_material(material) and supplementary_publication:
+                _set_supplementary_student_assignments(
+                    supplementary_publication, publication_scope, selected_student_ids,
+                )
+            else:
+                _set_material_student_assignments(material, publication_scope, selected_student_ids)
         # Return updated overview so clients can sync UI immediately
         try:
             teacher_user = User.objects.filter(id=user_id).first()
@@ -37247,9 +37367,62 @@ def _is_supplementary_material(material):
     content_json = material.content_json if isinstance(material.content_json, dict) else {}
     template_title = str(content_json.get('template_title') or '').strip().lower()
     activity_type = str(content_json.get('activity_type') or '').strip().lower()
-    return activity_type in {'five_w_story_questions', 'story_questions'} or template_title in {
+    return activity_type in {
+        'five_w_story_questions', 'story_questions',
+        'letter_sound_matching', 'sound_detective', 'reading_practice',
+    } or template_title in {
         "5w's story questions", '5ws story questions', 'story questions',
     }
+
+
+def _term_scoped_teacher_materials(materials_qs, section):
+    """Keep generic materials section-scoped and Supplementary materials publication-scoped."""
+    candidate_materials = list(materials_qs)
+    supplementary_ids = {
+        material.id for material in candidate_materials
+        if _is_supplementary_material(material)
+    }
+    if not supplementary_ids:
+        return materials_qs
+
+    calendar = getattr(section, 'school_calendar', None) if section else None
+    selected_term = (
+        _calendar_current_term(calendar) if calendar else None
+    ) or getattr(calendar, 'current_term', None)
+    published_ids = set()
+    if calendar and selected_term in (1, 2, 3) and section:
+        published_ids = set(
+            SupplementaryMaterialPublication.objects.filter(
+                material_id__in=supplementary_ids,
+                school_calendar=calendar,
+                term=selected_term,
+                section=section,
+                is_active=True,
+            ).values_list('material_id', flat=True)
+        )
+    generic_ids = {material.id for material in candidate_materials} - supplementary_ids
+    return materials_qs.filter(id__in=generic_ids | published_ids)
+
+
+def _term_scoped_teacher_materials_for_teacher(materials_qs, teacher):
+    """Apply the same publication scope across all active sections owned by a teacher."""
+    candidate_materials = list(materials_qs)
+    supplementary_ids = {
+        material.id for material in candidate_materials
+        if _is_supplementary_material(material)
+    }
+    if not supplementary_ids:
+        return materials_qs
+
+    published_ids = set()
+    sections = list(_teacher_current_sections(teacher).select_related('school_calendar'))
+    for section in sections:
+        scoped = _term_scoped_teacher_materials(
+            materials_qs.filter(id__in=supplementary_ids), section,
+        )
+        published_ids.update(scoped.values_list('id', flat=True))
+    generic_ids = {material.id for material in candidate_materials} - supplementary_ids
+    return materials_qs.filter(id__in=generic_ids | published_ids)
 
 
 def _retell_recording_component(value, fallback):

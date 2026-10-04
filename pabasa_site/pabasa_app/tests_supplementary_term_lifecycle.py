@@ -115,6 +115,18 @@ class SupplementaryTermLifecycleTests(TestCase):
             completed=completed, classification=classification,
         )
 
+    def publish_for_current_term(self, *materials):
+        """Create the active publication required by direct Supplementary access."""
+        term = self.calendar.current_term
+        for material in materials:
+            SupplementaryMaterialPublication.objects.get_or_create(
+                material=material,
+                school_calendar=self.calendar,
+                term=term,
+                section=self.section,
+                defaults={'is_active': True},
+            )
+
     def test_aral_active_story_page_and_scoped_rows(self):
         self.assertEqual(_current_learning_context(self.student)['state'], 'ARAL_ACTIVE')
         response = self.client.get(reverse('story_reading_page'), {'id': f'material-{self.story.id}'}, follow=True)
@@ -265,6 +277,7 @@ class SupplementaryTermLifecycleTests(TestCase):
         )
         self.assertEqual(first_response.status_code, 200)
         self.activate_term(2)
+        self.publish_for_current_term(self.retell)
         second_response = self.client.post(
             reverse('story_response_submit'),
             {'material_id': f'material-{self.retell.id}', 'audio': SimpleUploadedFile('term-two.webm', b'audio')},
@@ -318,6 +331,7 @@ class SupplementaryTermLifecycleTests(TestCase):
         self.assertEqual(first_row.enrollment_id, self.enrollment.id)
 
         self.activate_term(2)
+        self.publish_for_current_term(self.story_questions)
         self.assertFalse(Assessment.objects.filter(
             student=self.student, material=self.story_questions,
             supplementary_school_calendar=self.calendar, supplementary_term=2,
@@ -405,6 +419,7 @@ class SupplementaryTermLifecycleTests(TestCase):
         self.assertEqual(self.client.post(endpoint, data=payload, content_type='application/json').status_code, 403)
 
         self.activate_term(1, school_year='2027-2028')
+        self.publish_for_current_term(self.story_questions)
         self.assertFalse(Assessment.objects.filter(
             student=self.student, material=self.story_questions,
             supplementary_school_calendar=self.calendar, supplementary_term=1,
