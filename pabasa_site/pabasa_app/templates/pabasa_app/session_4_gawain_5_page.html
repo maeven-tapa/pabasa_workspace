@@ -34,6 +34,7 @@
 .g4-step{width:34px;height:34px;background:#ffffffc7;color:#78909a}
 .g4-step.active{border-color:#e2a934;background:#f4c866;color:#6c511e;box-shadow:0 0 0 4px #ffffffaa,0 4px 10px #e2a93455;transform:scale(1.08)}
 .g4-card:has(.g4-completion){height:auto;max-height:none;margin:0;padding:0;background:transparent;border:0;box-shadow:none;backdrop-filter:none;display:flex;align-items:center;justify-content:center}
+.g4-start{z-index:30}
 .g4-page:has(.g4-completion) #prescribed-s4g5-tools,
 .g4-page:has(.g4-completion) #prescribed-s4g5-debug-vad,
 .g4-page:has(.g4-completion) [id^="prescribed-s4g5-debug"]{display:none!important;visibility:hidden!important;pointer-events:none!important}
@@ -48,7 +49,7 @@
 <body class="g4-page"><main class="g4-shell"><a class="g4-back" href="{% url 'assessment' %}"><i aria-hidden="true">&#xf12f;</i><span>Bumalik sa<br>Aking Aralin</span></a><section id="g4-app" class="g4-card" aria-live="polite"></section></main>
 {{ session4_gawain5_data|json_script:"session4-gawain5-data" }}
 <style>
-  .g4-back{cursor:pointer;transition:background-color .16s ease,transform .16s ease,box-shadow .16s ease}
+  .g4-back{cursor:pointer;transition:background-color .16s ease,transform .16s ease,box-shadow .16s ease;display:inline-flex;align-items:center;justify-content:center;width:max-content!important;min-width:0!important;max-width:none!important;flex:0 0 auto!important;white-space:nowrap;padding-left:22px;padding-right:28px;box-sizing:border-box}
   .g4-back:hover{background:#e8f8fa;transform:translateY(-2px);box-shadow:0 11px 24px #145ca766}
   .g4-back:focus-visible{outline:3px solid #299e9a;outline-offset:4px}
   .session4-leave-modal{position:fixed!important;inset:0!important;z-index:100!important;display:grid!important;place-items:center!important;padding:20px!important;background:#173f6370!important;backdrop-filter:blur(3px)!important;-webkit-backdrop-filter:blur(3px)!important}
@@ -111,6 +112,19 @@
     (async()=>{try{const index=Number(data.progress?.current_index||0),payloadStrokes=serializeStrokes();const r=await fetch(data.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({action:'save_trace',item_index:index,strokes:payloadStrokes})});const result=await r.json().catch(()=>({}));if(!r.ok||!result.success)throw Error(result.error||'Write the letter clearly three times, then try again.');if(token!==version)return;[buttons().clear,buttons().submit].filter(Boolean).forEach(button=>{button.disabled=true});await playPositiveFeedback(index);data.progress=result.progress;if(Number(result.progress?.state?.current_item)>=Number(data.letters?.length||0)){await fetch(data.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});location.reload();return}const nextIndex=Number(result.progress?.state?.current_item||index+1);resetDrawingState();const node=app.querySelector('.g4-instruction-target');if(node)node.textContent=data.letters[nextIndex];app.querySelectorAll('.g4-step').forEach((step,n)=>step.classList.toggle('active',n===nextIndex));target=data.letters[nextIndex]||'';canvas=app.querySelector('.g4-canvas');playInstructionForItem(nextIndex)}catch(error){submit.disabled=true;console.debug('Session 4 Gawain 5 submit failed',error)}})();
   },true);
   new MutationObserver(bind).observe(app,{childList:true,subtree:true});addEventListener('resize',e=>{resizeCanvas();e.stopImmediatePropagation()},true);bind();
+})();
+</script>
+<script>
+(() => {
+  const data = JSON.parse(document.getElementById('session4-gawain5-data')?.textContent || '{}');
+  if (!data.progress?.activity_completed) return;
+  const app = document.getElementById('g4-app');
+  if (!app) return;
+  document.body.classList.add('is-complete');
+  document.querySelector('.g4-start')?.remove();
+  document.querySelector('#prescribed-s4g5-tools')?.setAttribute('hidden', '');
+  document.querySelector('#prescribed-s4g5-debug-vad')?.setAttribute('hidden', '');
+  app.innerHTML = '<div class="g4-completion" role="dialog" aria-modal="true"><h2>Tapos na ang gawain! 🎉</h2><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><a class="g4-button" href="{% url "assessment" %}">BALIK SA AKING ARALIN</a></div>';
 })();
 </script>
 {% include 'pabasa_app/session4_leave_confirmation.html' with prefix='prescribed-s4g5' %}

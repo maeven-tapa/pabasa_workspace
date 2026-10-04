@@ -12731,6 +12731,19 @@ def assessment(request):
                 (item.get('image_path') for item in activity.get('items', []) if item.get('image_path')),
                 '',
             )
+        session5_card_titles = {
+            'lesson-13-gawain-1': 'Tunog ng mga Letra',
+            'lesson-13-gawain-2': 'Pagbasa ng mga Salita',
+            'lesson-13-gawain-3': 'Pagbasa ng Pangungusap',
+            'lesson-13-gawain-4': 'Pagsulat ng mga Letra',
+            'lesson-14-gawain-1': 'Tunog /t/ at /n/',
+            'lesson-14-gawain-2': 'Pagtutugma ng Salita',
+            'lesson-14-gawain-3': 'Pantig at Larawan',
+            'session-5-lesson-14-gawain-4': 'Pagtatala ng Gawain',
+            'lesson-15-gawain-1': 'Letrang Ww at Yy',
+            'lesson-15-gawain-2-angkop-na-pantig': 'Angkop na Pantig',
+            'lesson-15-gawain-3': 'Pagbasa ng mga Pangungusap',
+        }
         context['prescribed_activity_cards'] = [
             {
                 'activity_key': activity['activity_key'],
@@ -12743,7 +12756,9 @@ def assessment(request):
                 'section_order': activity.get('section_order'),
                 'display_gawain_number': activity.get('display_gawain_number', activity['gawain_number']),
                 'section_display_label': activity.get('section_display_label'),
-                'title': activity.get('display_title', activity['title']),
+                'title': session5_card_titles.get(
+                    activity['activity_key'], activity.get('display_title', activity['title'])
+                ) if activity.get('session_number') == 5 else activity.get('display_title', activity['title']),
                 'card_label': activity.get('card_label', ''),
                 'activity_title': activity['title'],
                 'description': activity.get('description', activity['instruction']),
@@ -21711,8 +21726,6 @@ def session_4_gawain_3_page(request):
     activity = prescribed_activity('session-4-gawain-3')
     activity_key = 'session-4-gawain-3'
     progress = StudentActivityProgress.objects.filter(student=_active_prescribed_student(request), activity_key=activity_key).first()
-    if progress and progress.activity_completed:
-        return redirect('assessment')
     raw_state = progress.state if progress and isinstance(progress.state, dict) else {}
     total_items = 9
     try:

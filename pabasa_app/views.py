@@ -11921,6 +11921,19 @@ def assessment(request):
                 (item.get('image_path') for item in activity.get('items', []) if item.get('image_path')),
                 '',
             )
+        card_activities = active_prescribed_activities()
+        session5_activities = sorted(
+            (activity for activity in card_activities if activity.get('session_number') == 5),
+            key=lambda activity: (
+                int(re.search(r'\d+', str(activity.get('lesson_number') or '')).group()),
+                int(re.search(r'\d+', str(activity.get('gawain_number') or '')).group()),
+            ),
+        )
+        session5_iter = iter(session5_activities)
+        card_activities = [
+            next(session5_iter) if activity.get('session_number') == 5 else activity
+            for activity in card_activities
+        ]
         context['prescribed_activity_cards'] = [
             {
                 'activity_key': activity['activity_key'],
@@ -11936,7 +11949,7 @@ def assessment(request):
                 'image_url': static(image_path) if (image_path := (prescribed_card_image_path(activity) or _prescribed_activity_thumbnail_path(activity))) else '',
                 'route_url': reverse(activity['route_name']) if activity.get('route_name') else reverse('prescribed_activity_page', kwargs={'activity_key': activity['activity_key']}),
             }
-            for activity in active_prescribed_activities()
+            for activity in card_activities
         ]
         try:
             logger.warning(

@@ -2023,7 +2023,17 @@ document.addEventListener('DOMContentLoaded', function () {
             session4Modal.onclick = event => { if (event.target === session4Modal) closeSession4(); };
             grid.appendChild(session4Column);
         }
-        const session5Cards = Array.from(grid.children).filter(card => card.classList.contains('pabasa-session-card') && card.dataset.sessionKey === 'session-5');
+        const session5Cards = Array.from(grid.children)
+            .filter(card => card.classList.contains('pabasa-session-card') && card.dataset.sessionKey === 'session-5')
+            .sort((a, b) => {
+                const key = card => {
+                    const match = String(card.dataset.prescribedActivity || '').match(/lesson-(\d+)-gawain-(\d+)/);
+                    return match ? [Number(match[1]), Number(match[2])] : [999, 999];
+                };
+                const [aLesson, aGawain] = key(a);
+                const [bLesson, bGawain] = key(b);
+                return aLesson - bLesson || aGawain - bGawain;
+            });
         if (session5Cards.length) {
             const session5Column = document.createElement('div');
             session5Column.className = 'assessment-week-column session-folder-column';
