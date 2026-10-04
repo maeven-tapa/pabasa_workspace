@@ -138,7 +138,7 @@
     const readAttempts = Number(attempts[String(currentIndex)] || 0);
     const canListen = hasReadCorrectly || readAttempts >= 3;
     app.innerHTML = `<div class="eyebrow">SESSION ${escapeHtml(data.session_number)} · LESSON ${escapeHtml(data.lesson_number)} · ACTIVITY ${escapeHtml(data.gawain_number)}</div>
-      <h1 class="title">Word Search</h1><p class="instruction">Find the words on the grid.</p>
+      <p class="instruction">Find the words on the grid.</p>
       <div class="layout"><section class="word-panel"><div class="label">Read the word aloud first</div>
       <div class="word">${escapeHtml(targetWord)}</div>
       <div class="actions"><button data-basahin-button data-basahin-language="English" class="button" id="read" type="button" ${hasReadCorrectly ? 'disabled' : ''}>Read</button><button class="button secondary" id="listen-instructions" type="button" ${canListen ? '' : 'disabled'}>🔊 Listen</button></div></section>

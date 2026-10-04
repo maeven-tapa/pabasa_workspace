@@ -85,7 +85,7 @@
     return `<div class="lesson26-progress" aria-label="Activity progress">${data.items.map((_, i) => `<span class="lesson26-step ${i < finished ? 'done' : ''} ${i === current && state.phase !== 'complete' ? 'active' : ''}" ${i === current && state.phase !== 'complete' ? 'aria-current="step"' : ''}>${i + 1}</span>`).join('')}</div>`;
   }
   function shell(title, instruction, body) {
-    app.innerHTML = `<div class="eyebrow">SESSION 10 · LESSON 26 · ACTIVITY 2</div><h1 class="title">${escapeHtml(title)}</h1><p class="instruction">${escapeHtml(instruction)}</p>${body}${steps()}`;
+    app.innerHTML = `<div class="eyebrow">SESSION 10 · LESSON 26 · ACTIVITY 2</div><p class="instruction">${escapeHtml(instruction)}</p>${body}${steps()}`;
   }
   function render() {
     hydrate();

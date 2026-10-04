@@ -1,6 +1,18 @@
 {% extends "pabasa_app/admin_base.html" %}
 
 {% block content %}
+<style>
+    @media (max-width: 991.98px) {
+        .admin-content:has(.admin-settings-shell) {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: calc(100dvh - 4.5rem);
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+    }
+</style>
 <div class="admin-settings-shell">
     {% if settings_success %}
         <div class="alert alert-success d-flex align-items-center gap-2" role="alert">
