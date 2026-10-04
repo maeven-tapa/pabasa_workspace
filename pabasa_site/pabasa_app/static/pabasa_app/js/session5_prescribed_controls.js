@@ -298,7 +298,116 @@
     wrapAsyncBoundaries();
     updateMic();
   }
-  window.PrescribedControls.init({prefix, adapter});
+  const leaveModal = document.getElementById(`${prefix}-leave-modal`);
+  const leaveNo = document.getElementById(`${prefix}-leave-no`);
+  const leaveYes = document.getElementById(`${prefix}-leave-yes`);
+  const back = document.querySelector('.lesson-13-back, .back');
+  let leaveInFlight = false;
+  const describeLeaveError = error => ({
+    name: error?.name,
+    message: error?.message,
+    stack: error?.stack,
+    status: error?.status,
+    response: error?.response,
+    data: error?.data,
+  });
+  const resolveLeaveAdapter = () => {
+    const candidates = {
+      Session5LeaveAdapter: window.Session5LeaveAdapter,
+      __session5LeaveAdapter: window.__session5LeaveAdapter,
+      __session5ActivityHooks: window.__session5ActivityHooks,
+    };
+    console.log('[SESSION5 EXIT] adapter candidates', {
+      activity: prefix,
+      Session5LeaveAdapter: Boolean(candidates.Session5LeaveAdapter),
+      __session5LeaveAdapter: Boolean(candidates.__session5LeaveAdapter),
+      __session5ActivityHooks: Boolean(candidates.__session5ActivityHooks),
+    });
+    const source = candidates.Session5LeaveAdapter
+      ? 'Session5LeaveAdapter'
+      : candidates.__session5LeaveAdapter
+        ? '__session5LeaveAdapter'
+        : candidates.__session5ActivityHooks
+          ? '__session5ActivityHooks'
+          : null;
+    const adapter = source ? candidates[source] : null;
+    console.log('[SESSION5 EXIT] selected adapter', {
+      activity: prefix,
+      source,
+      saveCurrentProgress: typeof adapter?.saveCurrentProgress,
+      cleanup: typeof adapter?.cleanup,
+    });
+    if (!adapter) throw new Error('Session 5 leave adapter is not registered');
+    if (typeof adapter.saveCurrentProgress !== 'function') {
+      throw new Error('Session 5 saveCurrentProgress is not available');
+    }
+    return adapter;
+  };
+  const openLeave = source => {
+    if (!leaveModal) return;
+    leaveModal.dataset.source = source;
+    leaveModal.hidden = false;
+    leaveNo?.focus();
+  };
+  window.PrescribedControls.init({prefix, adapter: {...adapter, openLeave}});
+  if (back && !back.dataset.session5LeaveBound) {
+    back.dataset.session5LeaveBound = 'true';
+    const label = back.querySelector('span');
+    if (label) label.textContent = 'Bumalik sa Aking Gawain';
+    else if (!back.textContent.includes('Bumalik sa Aking Gawain')) back.textContent = 'Bumalik sa Aking Gawain';
+    back.addEventListener('click', event => { event.preventDefault(); openLeave('activity'); });
+  }
+  leaveNo?.addEventListener('click', event => {
+    event.preventDefault();
+    const source = leaveModal?.dataset.source;
+    if (leaveModal) leaveModal.hidden = true;
+    if (source === 'pause') { const pause = document.getElementById(`${prefix}-pause-modal`); if (pause) pause.hidden = false; }
+  });
+  leaveYes?.addEventListener('click', async event => {
+    event.preventDefault();
+    if (leaveInFlight) return;
+    console.log('[SESSION5 EXIT] activity', prefix);
+    leaveInFlight = true;
+    if (leaveNo) leaveNo.disabled = true;
+    if (leaveYes) leaveYes.disabled = true;
+    const error = document.getElementById(`${prefix}-leave-error`);
+    if (error) { error.hidden = true; error.textContent = ''; }
+    const failLeave = err => {
+      leaveInFlight = false;
+      if (leaveNo) leaveNo.disabled = false;
+      if (leaveYes) leaveYes.disabled = false;
+      if (error) { error.hidden = false; error.textContent = 'Hindi na-save ang iyong gawain. Subukan muli.'; }
+      return err;
+    };
+    let leaveAdapter;
+    try {
+      leaveAdapter = resolveLeaveAdapter();
+    } catch (err) {
+      console.error('[SESSION5 EXIT] save rejected', describeLeaveError(err));
+      failLeave(err);
+      return;
+    }
+    try {
+      console.log('[SESSION5 EXIT] cleanup start');
+      (leaveAdapter.cleanup || adapter.cleanup)?.();
+      console.log('[SESSION5 EXIT] cleanup success');
+    } catch (err) {
+      console.error('[SESSION5 EXIT] cleanup failed', describeLeaveError(err));
+      failLeave(err);
+      return;
+    }
+    try {
+      console.log('[SESSION5 EXIT] save start');
+      await leaveAdapter.saveCurrentProgress();
+      console.log('[SESSION5 EXIT] save resolved');
+    } catch (err) {
+      console.error('[SESSION5 EXIT] save rejected', describeLeaveError(err));
+      failLeave(err);
+      return;
+    }
+    console.log('[SESSION5 EXIT] navigating');
+    window.location.href = '/dashboard/assessment/';
+  });
   window.__session5ControlsInitialized[prefix] = true;
   scheduleExpectedTextRefresh();
   window.addEventListener('pagehide', () => { stopTest(); stopActivityMedia(); }, {once: true});

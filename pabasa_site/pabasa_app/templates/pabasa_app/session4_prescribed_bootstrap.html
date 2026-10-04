@@ -107,6 +107,7 @@
       window.location.reload();
     },
     cleanup() { cancelActivitySpeech(); stopTest(); },
+    saveCurrentProgress() { return window.__session4SaveAdapters?.[prefix]?.(); },
     stopAudioTest() { stopTest(); },
     help() { cancelActivitySpeech(); },
     getMuted: () => isMuted,
@@ -145,7 +146,7 @@
   };
   syncMic();
 
-  const initializeControls = () => window.Session4PrescribedControls?.init({ prefix, adapter, speech });
+  const initializeControls = () => { console.log('[SESSION4 BOOTSTRAP] INITIALIZE', prefix, Boolean(window.Session4PrescribedControls)); return window.Session4PrescribedControls?.init({ prefix, adapter, speech }); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeControls, { once: true });
   else initializeControls();
 })();

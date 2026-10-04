@@ -1,7 +1,9 @@
 (() => {
   'use strict';
+  console.log('[PRESCRIBED CONTROLS] CURRENT FILE LOADED');
   window.PrescribedControls = {
     init(config) {
+      console.log('[PRESCRIBED CONTROLS] INIT', config?.prefix);
       // Cancel shared speech work before a pause, navigation, reset or mute can
       // make an in-flight result belong to a different activity state.
       const cancelReading = () => window.Basahin?.cancelAll?.();
@@ -15,9 +17,9 @@
           : detail.state === 'silence' ? 'Silent clip skipped' : 'Listening';
         if (field.textContent !== value) field.textContent = value;
       });
-      const help = q('-help-modal'), pause = q('-pause-modal'), restart = q('-restart-modal'), audio = q('-audio-settings-modal');
+      const help = q('-help-modal'), pause = q('-pause-modal'), restart = q('-restart-modal'), audio = q('-audio-settings-modal'), leave = q('-leave-modal');
       const close = modal => { if (modal) modal.hidden = true; };
-      const closeAll = () => [help, pause, restart, audio].forEach(close);
+      const closeAll = () => [help, pause, restart, audio, leave].forEach(close);
       const open = modal => { closeAll(); if (modal) modal.hidden = false; };
       q('-help-btn')?.addEventListener('click', async () => { cancelReading(); await config.adapter.cancelAttempt?.('help'); open(help); });
       q('-help-close')?.addEventListener('click', () => { config.adapter.resume?.(); close(help); });
@@ -26,13 +28,30 @@
       q('-restart')?.addEventListener('click', () => open(restart));
       q('-restart-yes')?.addEventListener('click', async () => { cancelReading(); close(restart); await config.adapter.restart?.(); });
       q('-restart-no')?.addEventListener('click', () => open(pause));
-      q('-back')?.addEventListener('click', () => { cancelReading(); closeAll(); config.adapter.cleanup?.(); window.location.href = '/dashboard/assessment/'; });
+      let leaveInFlight = false;
+      q('-back')?.addEventListener('click', () => {
+        if (!leave) { cancelReading(); closeAll(); config.adapter.cleanup?.(); window.location.href = '/dashboard/assessment/'; return; }
+        const message = q('-leave-message');
+        if (message) message.textContent = 'Babalikan mo ito kung saan ka huminto.';
+        leave.dataset.source = 'pause';
+        close(leave); if (pause) pause.hidden = true; leave.hidden = false; q('-leave-no')?.focus();
+      });
       q('-audio-test')?.addEventListener('click', () => open(audio));
       q('-audio-close')?.addEventListener('click', () => { config.adapter.stopAudioTest?.(); open(pause); });
       [help, pause, restart, audio].forEach(modal => modal?.addEventListener('click', e => { if (e.target === modal) { if (modal === audio) { config.adapter.stopAudioTest?.(); open(pause); } else { if (modal === help) config.adapter.resume?.(); close(modal); } } }));
       const mic = q('-mic-toggle');
       mic?.addEventListener('click', () => { const muted = !(mic.getAttribute('aria-pressed') === 'true'); if (muted) cancelReading(); config.adapter.setMuted?.(muted); });
-      window.addEventListener('keydown', e => { if (e.key === 'Escape' && audio && !audio.hidden) open(pause); });
+      window.addEventListener('keydown', e => {
+        if (e.key !== 'Escape') return;
+        if (leave && !leave.hidden && !leaveInFlight) {
+          const fromPause = leave.dataset.source === 'pause';
+          close(leave);
+          if (fromPause && pause) { pause.hidden = false; q('-back')?.focus(); }
+          else { q('-audio-settings-btn')?.focus(); }
+          return;
+        }
+        if (audio && !audio.hidden) open(pause);
+      });
       config.adapter.bindAudioTest?.({audio, q});
       config.adapter.bindDebug?.({q});
     }

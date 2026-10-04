@@ -1,0 +1,18 @@
+<style>
+  .session4-leave-modal{z-index:31}
+  .session4-leave-modal .session4-leave-actions{display:grid;gap:10px;margin-top:20px}
+  .session4-leave-modal .session4-leave-actions button{min-height:46px;border:0;border-radius:14px;padding:10px 16px;font:inherit;font-weight:800;cursor:pointer;transition:background-color .16s ease,transform .16s ease,box-shadow .16s ease}
+  .session4-leave-modal .session4-leave-actions .secondary{color:#24535a;background:#e8f4f2}
+  .session4-leave-modal .session4-leave-actions .primary{color:#fff;background:#2aa7a0}
+  .session4-leave-modal .session4-leave-actions .secondary:hover:not(:disabled){background:#d9ece9}
+  .session4-leave-modal .session4-leave-actions .primary:hover:not(:disabled){background:#218783;transform:translateY(-1px);box-shadow:0 5px 0 #187b7a,0 10px 18px #187b7a30}
+  .session4-leave-modal .session4-leave-actions button:focus-visible{outline:4px solid #f5d47c;outline-offset:3px}
+  .session4-leave-modal .session4-leave-actions button:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
+</style>
+<div class="prescribed-s4-modal session4-leave-modal" id="{{ prefix }}-leave-modal" role="dialog" aria-modal="true" aria-labelledby="{{ prefix }}-leave-title" hidden>
+  <section class="prescribed-s4-modal-card">
+    <div class="prescribed-s4-modal-head"><h2 id="{{ prefix }}-leave-title">Sigurado ka bang gusto mong umalis?</h2></div>
+    <p id="{{ prefix }}-leave-message">Babalikan mo ito kung saan ka huminto.</p>
+    <div class="session4-leave-actions"><button class="secondary" id="{{ prefix }}-leave-no" type="button">Manatili</button><button class="primary" id="{{ prefix }}-leave-yes" type="button">Umalis</button></div>
+  </section>
+</div>

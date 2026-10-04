@@ -85,6 +85,28 @@ render();
 </script>
 {% include 'pabasa_app/session4_prescribed_controls.html' with prefix='prescribed-s4g2' speech=False help_text='Pakinggan ang mga tunog. Pagsamahin ang mga ito upang mabasa ang pantig.' %}
 {% include 'pabasa_app/session4_prescribed_bootstrap.html' with prefix='prescribed-s4g2' speech=False data_id='lesson13-data' %}
+{% include 'pabasa_app/session4_leave_confirmation.html' with prefix='prescribed-s4g2' %}
+<script src="{% static 'pabasa_app/js/session4_leave_confirmation.js' %}"></script>
+<script>
+(() => {
+  document.querySelector('.lesson-13-back span')?.replaceChildren('Bumalik sa Aking Gawain');
+  const data = JSON.parse(document.getElementById('lesson13-data')?.textContent || '{}');
+  const csrf = '{{ csrf_token }}';
+  const adapter = {
+    captureState() {
+      const app = document.getElementById('lesson-13-app');
+      const step = app?.querySelector('.lesson-13-step.active');
+      const index = Math.max(0, Number(step?.textContent || 1) - 1);
+      const sub = Math.max(0, Number(app?.dataset.currentSubstep || 0));
+      const phase = app?.dataset.phase || 'initial';
+      return {activity_key:data.activity_key,state:{current_index:index,current_substep:sub,completed_items:index + (sub === 2 && phase === 'recorded' ? 1 : 0),correct_items:index + (sub === 2 && phase === 'recorded' ? 1 : 0),total_items:Number(data.total_items || 4),activity_completed:false,phase}};
+    },
+    cleanup() { window.Basahin?.cancelAll?.(); },
+    saveCurrentProgress(state) { return fetch(data.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf,'X-Requested-With':'XMLHttpRequest'},body:JSON.stringify(state)}).then(async response=>{const body=await response.json().catch(()=>({}));if(!response.ok||!body.success)throw new Error(body.error||'save failed');return body;}); },
+  };
+  window.Session4LeaveConfirmation?.init({prefix:'prescribed-s4g2',backSelector:'.lesson-13-back',...adapter});
+})();
+</script>
 <script>
 (()=>{const app=document.getElementById('lesson-13-app'),target=app?.querySelector('.lesson-13-letter')?.textContent.trim()||'—';[['status','Ready'],['expected',target],['result','—'],['mic','Inactive · Unmuted'],['recorder','inactive'],['vad','Quiet'],['error','—']].forEach(([name,value])=>{const node=document.getElementById(`prescribed-s4g2-debug-${name}`);if(node)node.textContent=value})})();
 </script>
