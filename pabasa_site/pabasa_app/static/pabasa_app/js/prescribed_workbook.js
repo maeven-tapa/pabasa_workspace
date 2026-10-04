@@ -161,6 +161,7 @@
   let audioRun = 0, instructionSpoken = false, pendingSpeech = '', g6CompletionPromise = null;
   const instructionText = a.instruction;
   const l22StartupTtsText = 'Letrang C. Handa kana?';
+  const L22_G1_MAPPED_TEXT = new Set([l22StartupTtsText, 'cac', 'ce', 'ca', 'bu', 'com', 'pu', 'ga', 'tus', 'ter', 'yan', 'Car', 'do', 'bi', 'net', 'te', 'Ce', 'les', 'Handa ka na?', 'Subukan muli.', 'Tama!', 'Magaling! Nabasa mo nang tama ang lahat ng pantig.']);
   const session9Activity = s9Family || s9Helping;
   const session9SaveError = 'Could not save your work. Try again.';
   const session9AudioError = 'Audio is not available. Try again.';
@@ -227,7 +228,7 @@
     stopReadAloud();
     const run=audioRun, controller=new AbortController();audioController=controller;
     const localUrl=(l22G1 || l23G1 || l23G3 || qReading || jSyllables || qG6 || l24Builder || g6Search || g7Reading || pictureReading || l24G3WordReading || l24G4Builder || g5Syllables || s9Family || s9Helping) ? localAudioUrl(text) : null;
-    const mapped = (l22G1 && Boolean(localUrl)) || (l23G1 && G1_MAPPED_TEXT.has(text)) || (l23G3 && G3_MAPPED_TEXT.has(text)) || (qReading && G7_MAPPED_TEXT.has(text)) || (jSyllables && G4_MAPPED_TEXT.has(text)) || (qG6 && ((text===instructionText && Boolean(localUrl)) || G6_MAPPED_TEXT.has(text))) || (l24Builder && L24_G1_MAPPED_TEXT.has(text)) || (g6Search && L24_G6_WORD_SEARCH_MAPPED_TEXT.has(text)) || (g7Reading && L24_G7_WORD_READING_MAPPED_TEXT.has(text)) || (pictureReading && L24_G2_PICTURE_MAPPED_TEXT.has(text)) || (l24G3WordReading && L24_G3_WORD_MAPPED_TEXT.has(text)) || (l24G4Builder && L24_G4_BUILDER_MAPPED_TEXT.has(text)) || (g5Syllables && L24_G5_SYLLABLE_MAPPED_TEXT.has(text)) || (s9Family && S9_A1_MAPPED_TEXT.has(text)) || (s9Helping && S9_A2_MAPPED_TEXT.has(text));
+    const mapped = (l22G1 && L22_G1_MAPPED_TEXT.has(text)) || (l23G1 && G1_MAPPED_TEXT.has(text)) || (l23G3 && G3_MAPPED_TEXT.has(text)) || (qReading && G7_MAPPED_TEXT.has(text)) || (jSyllables && G4_MAPPED_TEXT.has(text)) || (qG6 && ((text===instructionText && Boolean(localUrl)) || G6_MAPPED_TEXT.has(text))) || (l24Builder && L24_G1_MAPPED_TEXT.has(text)) || (g6Search && L24_G6_WORD_SEARCH_MAPPED_TEXT.has(text)) || (g7Reading && L24_G7_WORD_READING_MAPPED_TEXT.has(text)) || (pictureReading && L24_G2_PICTURE_MAPPED_TEXT.has(text)) || (l24G3WordReading && L24_G3_WORD_MAPPED_TEXT.has(text)) || (l24G4Builder && L24_G4_BUILDER_MAPPED_TEXT.has(text)) || (g5Syllables && L24_G5_SYLLABLE_MAPPED_TEXT.has(text)) || (s9Family && S9_A1_MAPPED_TEXT.has(text)) || (s9Helping && S9_A2_MAPPED_TEXT.has(text));
     if(mapped){
       if(!localUrl){if(audioController===controller)audioController=null;throw Error((jSyllables||l24Builder)&&text===instructionText?'Hindi available ang panuto.':'Hindi available ang audio.');}
       try{

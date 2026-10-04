@@ -30,6 +30,7 @@ class Lesson22Gawain1AudioTests(SimpleTestCase):
     def test_all_gawain1_recordings_are_nonempty_mp3_files(self):
         expected = {
             'Basahin_ang_mga_pantig_mula_sa_Bid_box_TTS.mp3',
+            'Letrang C. Handa kana_TTS.mp3',
             *(f'{name}_TTS.mp3' for name in ('bi', 'bu', 'ca', 'cac', 'car', 'ce', 'com', 'do', 'ga', 'les', 'net', 'pu', 'te', 'ter', 'tus', 'yan')),
             'Handa ka na_TTS.mp3',
             'Magaling! Nabasa mo nang tama ang lahat ng pantig._TTS.mp3',
@@ -44,11 +45,12 @@ class Lesson22Gawain1AudioTests(SimpleTestCase):
 
     def test_gawain1_audio_precedes_google_tts_and_cache_token_is_scoped(self):
         self.assertIn('const localUrl=', self.js)
-        self.assertIn('(l22G1 && Boolean(localUrl))', self.js)
+        self.assertIn('(l22G1 && L22_G1_MAPPED_TEXT.has(text))', self.js)
         self.assertIn("(localAudio.syllables || {})[text]", self.js)
         self.assertIn("(localAudio.feedback || {})[text]", self.js)
         self.assertIn("(localAudio.completion || {})[text]", self.js)
         self.assertIn("new Audio(localUrl)", self.js)
+        self.assertIn("'Letrang C. Handa kana?': 'Letrang C. Handa kana_TTS.mp3'", self.views)
         self.assertIn("aral-l22-g1-c-syllable-builder' %}<script", self.template)
         self.assertIn('20261005-l22-g1-startup-audio-2', self.template)
 

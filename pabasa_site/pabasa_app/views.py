@@ -14314,6 +14314,7 @@ def prescribed_activity_page(request, activity_key):
                     for text in ('cac', 'ce', 'ca', 'bu', 'com', 'pu', 'ga', 'tus', 'ter', 'yan', 'Car', 'do', 'bi', 'net', 'te', 'Ce', 'les')
                 },
                 'feedback': {
+                    'Letrang C. Handa kana?': 'Letrang C. Handa kana_TTS.mp3',
                     'Handa ka na?': 'Handa ka na_TTS.mp3',
                     'Subukan muli.': 'Subukan muli._TTS.mp3',
                     'Tama!': 'Tama!_TTS.mp3',
@@ -24141,7 +24142,9 @@ _LOCAL_PRESCRIBED_AUDIO_ALIASES = {
        for word in ('pana', 'pisara', 'palaka', 'pito', 'regalo')},
     ('aral-l22-g1-c-syllable-builder', 'handakana'):
         'Handa ka na_TTS.mp3',
-    ('aral-l22-g1-c-syllable-builder', 'magalingnabasamonanangtamangmgapantig'):
+    ('aral-l22-g1-c-syllable-builder', 'letrangchandakana'):
+        'Letrang C. Handa kana_TTS.mp3',
+    ('aral-l22-g1-c-syllable-builder', 'magalingnabasamonangtamaanglahatngpantig'):
         'Magaling! Nabasa mo nang tama ang lahat ng pantig._TTS.mp3',
     ('aral-l22-g1-c-syllable-builder', 'subukanmuli'):
         'Subukan muli._TTS.mp3',
