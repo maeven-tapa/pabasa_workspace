@@ -31,7 +31,7 @@
 .wb-l24-g6-page .wb-g6-reset { width: 100%; min-height: 38px; padding: 6px 15px; border-color: #e5a6a6; border-radius: 999px; color: #b44747; font-size: 14px; font-weight: 900; }
 .wb-l24-g6-page .wb-g6-box-panel { display: flex; flex-direction: column; align-items: center; }
 .wb-l24-g6-page .wb-g6-box-panel .wb-g6-panel-heading, .wb-l24-g6-page .wb-g6-box-panel .wb-g6-help { width: 100%; }
-.wb-l24-g6-page .wb-g6-grid { display: grid; grid-template-columns: repeat(var(--cols), minmax(0,1fr)); gap: clamp(4px,.55vw,8px); width: min(100%, 56vh, 600px); padding: clamp(8px,1vw,12px); border: 2px solid #8bd6d1; border-radius: 20px; background: #cbe6ea; }
+.wb-l24-g6-page .wb-g6-grid { display: grid; grid-template-columns: repeat(var(--cols), minmax(0,1fr)); gap: clamp(4px,.55vw,8px); width: min(100%, 56vh, 600px); padding: clamp(8px,1vw,12px); border: 2px solid #8bd6d1; border-radius: 20px; background: #cbe6ea; touch-action: none; user-select: none; }
 .wb-l24-g6-page .wb-g6-cell { min-width: 0; aspect-ratio: 1; padding: 0; border: 2px solid #d0e6e8; border-radius: 10px; background: #fff; color: #173f6b; font-size: clamp(17px,3.1vw,31px); font-weight: 950; box-shadow: 0 2px 4px rgba(31,86,102,.1); touch-action: manipulation; }
 .wb-l24-g6-page .wb-g6-cell.is-selected { border-color: #e6ad2f; background: #fff1ab; box-shadow: inset 0 0 0 3px #f4c65d; }
 .wb-l24-g6-page .wb-g6-cell.is-found { border-color: #3c8965; border-radius: 50%; background: var(--wb-g6-mark,#b6e6c3); box-shadow: inset 0 0 0 3px rgba(255,255,255,.65), 0 2px 4px rgba(31,86,102,.1); }

@@ -66,3 +66,35 @@ class Lesson24Gawain6WordSearchTests(SimpleTestCase):
         self.assertIn('PRESCRIBED-BG.jpg', css)
         self.assertIn('aral-l24-g6-z-word-search', template)
         self.assertNotIn('overflow:hidden', css)
+
+    def test_renderer_cell_markup_does_not_shadow_selection_state(self):
+        js = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
+        renderer = js.split('function renderL24G6WordSearch', 1)[1].split('function renderFill', 1)[0]
+        self.assertIn('const isSelected=selected.some', renderer)
+        self.assertNotIn('const selected=selected.some', renderer)
+        self.assertIn("addEventListener('pointerdown'", renderer)
+
+    def test_completion_flow_is_target_scoped_and_idempotent(self):
+        root = Path(__file__).parent
+        js = (root / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
+        views = (root / 'views.py').read_text(encoding='utf-8')
+        self.assertIn('let audioRun = 0, instructionSpoken = false, pendingSpeech = \'\', g6CompletionPromise = null;', js)
+        self.assertIn('if(g6Search&&state.completed&&!wasCompleted)await completeG6();', js)
+        completion_branch = js.split('if(g6Search){', 1)[1].split('if(g7Reading){', 1)[0]
+        self.assertIn('BUMALIK SA AKING ARALIN', completion_branch)
+        self.assertIn('SUNOD NA GAWAIN', completion_branch)
+        self.assertNotIn('>Bumalik sa Aking Aralin</a>', completion_branch)
+        self.assertIn('renderL24G6WordSearch();', completion_branch)
+        self.assertIn('document.body.insertAdjacentHTML', completion_branch)
+        self.assertIn('id="wb-g6-completion-modal"', completion_branch)
+        self.assertNotIn('content.innerHTML=`<div class="wb-g6-completion-modal"', completion_branch)
+        self.assertIn("if(g6Search&&L24_G6_WORD_SEARCH_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);", js)
+        self.assertIn('g6CompletionPromise=null;modal.remove();perform({action:\'restart\'})', js)
+        g6_view = views.split("audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_2/GAWAIN_6/'", 1)[1].split("if activity_key == 'aral-l24-g7-z-word-reading':", 1)[0]
+        self.assertIn("'completion_url': reverse('prescribed_activity_complete'", g6_view)
+
+    def test_dashboard_uses_current_scoped_g6_progress(self):
+        views = (Path(__file__).parent / 'views.py').read_text(encoding='utf-8')
+        dashboard_branch = views.split("if stage == 'original':", 1)[1].split("        try:\n            logger.warning(", 1)[0]
+        self.assertIn("g6_progress = _current_progress_queryset(user).filter(activity_key=g6_key).first()", dashboard_branch)
+        self.assertIn("context['prescribed_activity_progress'].pop(g6_key, None)", dashboard_branch)

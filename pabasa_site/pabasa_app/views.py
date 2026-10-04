@@ -12705,6 +12705,19 @@ def assessment(request):
             }
             for row in progress_rows if row.activity_key in prescribed_keys
         }
+        # Gawain 6 is term-scoped when it is written by the prescribed
+        # activity endpoint.  Do not let a legacy/unscoped row rehydrate a
+        # stale COMPLETED badge after the current attempt was reset.
+        g6_key = 'aral-l24-g6-z-word-search'
+        g6_progress = _current_progress_queryset(user).filter(activity_key=g6_key).first()
+        if g6_progress:
+            context['prescribed_activity_progress'][g6_key] = {
+                'completed_items': g6_progress.completed_items,
+                'total_items': g6_progress.total_items,
+                'activity_completed': g6_progress.activity_completed,
+            }
+        else:
+            context['prescribed_activity_progress'].pop(g6_key, None)
         unlocked_activity_keys = _unlocked_prescribed_activity_keys(user)
         context['unlocked_prescribed_activity_keys'] = sorted(unlocked_activity_keys)
         def prescribed_card_image_path(activity):
@@ -14464,6 +14477,7 @@ def prescribed_activity_page(request, activity_key):
                 'workbook_payload': {
                     'activity': get_activity(activity_key), 'state': state, 'preview': preview,
                     'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+                    'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
                     'read_aloud_url': reverse('reading_read_aloud_api'), 'back_url': reverse('assessment'),
                     'next_url': next_url, 'local_audio': local_audio,
                 },
