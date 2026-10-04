@@ -60,9 +60,10 @@
       {prompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/07_item_04_panga_match_prompt.mp3' %}", word: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/08_item_04_panga_word.mp3' %}"},
       {prompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/09_item_05_gamot_match_prompt.mp3' %}", word: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/10_item_05_gamot_word.mp3' %}"},
     ];
-    // Keep the first local reading prompt on the activity intro page only.
-    // The remaining local prompts are announced once per oral-reading item.
-    const lesson16IntroAudio = lesson16Gawain3Items[0]?.prompt || '';
+    // The activity-owned instruction clip is played once after the lesson
+    // modal closes, while the activity intro page is still visible. The
+    // per-item prompt clips are reserved for their corresponding word items.
+    const lesson16IntroAudio = "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/00_activity_intro.mp3' %}";
 
     const state = () => ({match_attempts: matchAttempts, phase, oral_index: oralIndex, stt_attempts: sttAttempts, tts_plays: ttsPlays, state_version: ++stateVersion});
     const completed = () => Object.keys(matches).length;
@@ -120,10 +121,11 @@
       return mappedAudioQueue;
     }
     const narrateFeedback = async (message, mappedAudio = '') => { try { if (isLesson16Gawain3) await playMappedAudio(lesson16Gawain3Audio[mappedAudio]); else await playPrescribedReadAloud(message); } catch (error) { const status = app.querySelector('.oral-status, .hint'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; } };
-    // The match prompt introduces each item. Its word recording is reserved for
-    // the learner's Pakinggan action after three unsuccessful reading attempts.
-    const announceOralItem = () => { const item = items[oralIndex]; if (!item || announcedOralIndex === oralIndex) return; announcedOralIndex = oralIndex; if (isLesson16Gawain3) { void playMappedAudio(lesson16Gawain3Items[oralIndex]?.prompt); return; } void playPrescribedReadAloud(`${data.instruction} Basahin ang salita: ${item.read_word}.`).catch(error => { const status = app.querySelector('.oral-status'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; }); };
+    // Each oral item starts with its dedicated word recording. Match prompts
+    // are reserved for the matching phase and feedback remains separate.
+    const announceOralItem = () => { const item = items[oralIndex]; if (!item || announcedOralIndex === oralIndex) return; announcedOralIndex = oralIndex; if (isLesson16Gawain3) { void playMappedAudio(lesson16Gawain3Items[oralIndex]?.word); return; } void playPrescribedReadAloud(`${data.instruction} Basahin ang salita: ${item.read_word}.`).catch(error => { const status = app.querySelector('.oral-status'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; }); };
     const announceMatching = () => { if (announcedMatching) return; announcedMatching = true; if (isLesson16Gawain3) { void playMappedAudio(lesson16Gawain3Audio.matchingStart); return; } void playPrescribedReadAloud(data.instruction).catch(error => { const status = app.querySelector('.hint'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; }); };
+    const matchingItemPrompt = targetId => { if (!isLesson16Gawain3) return ''; const itemIndex = items.findIndex(item => item.id === targetId); return itemIndex >= 0 ? lesson16Gawain3Items[itemIndex]?.prompt : ''; };
      function renderOral(message = '', kind = '') {
       const item = items[oralIndex];
       const actionLabel = oralMode === 'aloud' ? '🔊 Pakinggan muna' : oralStatus || '🎙 Basahin ngayon';
@@ -226,6 +228,8 @@
       activeMatchCommitted = false;
       busy = true; matchAttempts++; hint.textContent = 'Sinusuri ang pagkakabit…'; hint.className = 'hint';
       try {
+        await playMappedAudio(matchingItemPrompt(targetId));
+        if (operation !== matchVersion || controller.signal.aborted) return;
         const validation = await request(data.progress_url, {matches, state:state(), candidate_match:{target_id:targetId, word}, validate_only:true}, controller.signal);
         if (operation !== matchVersion || controller.signal.aborted) return;
         if (validation.accepted) {

@@ -407,10 +407,18 @@ class PrescribedLesson16ActivityTests(TestCase):
                 self.assertContains(response, 'lesson-start-ready')
                 if key == 'lesson-16-gawain-1':
                     self.assertContains(response, '04_item_01_gumamela_missing_syllable_prompt.mp3')
+                    self.assertContains(response, 'const audioKey = itemAudio?.word;')
+                    self.assertNotContains(response, 'const audioKey = itemAudio?.prompt;')
                 elif key == 'lesson-16-gawain-2':
                     self.assertContains(response, '04_item_01_gumamela_missing_syllable_prompt.mp3')
+                    self.assertContains(response, 'const audioKey = itemAudio?.word;')
+                    self.assertNotContains(response, 'const audioKey = itemAudio?.prompt;')
                 elif key == 'lesson-16-gawain-3':
                     self.assertContains(response, '01_item_01_sanga_match_prompt.mp3')
+                    self.assertContains(response, 'lesson16Gawain3Items[oralIndex]?.word')
+                    self.assertContains(response, 'lesson16Gawain3Audio.matchingStart')
+                    self.assertContains(response, 'matchingItemPrompt(targetId)')
+                    self.assertNotContains(response, 'lesson16Gawain3Items[oralIndex]?.prompt); return;')
 
                 progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
                 state = (

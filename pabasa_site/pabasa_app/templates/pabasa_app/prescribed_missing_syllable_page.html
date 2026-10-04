@@ -48,7 +48,6 @@
     const isLesson16Gawain = ['lesson-16-gawain-1', 'lesson-16-gawain-2'].includes(data.activity_key);
     const isLesson16Gawain1 = data.activity_key === 'lesson-16-gawain-1';
     const isLesson16Gawain2 = data.activity_key === 'lesson-16-gawain-2';
-    const shouldPlaySession6Subukan = isLesson16Gawain1 || isLesson16Gawain2;
     const lesson16Gawain1Audio = {
       readingSuccess: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/01_reading_success_choose_missing_syllable.mp3' %}",
       listenFirst: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/02_listen_first_prompt.mp3' %}",
@@ -95,12 +94,15 @@
     ];
     const hasMappedLesson16Audio = isLesson16Gawain1 || isLesson16Gawain2;
     const mappedLesson16Audio = isLesson16Gawain1 ? lesson16Gawain1Audio : isLesson16Gawain2 ? lesson16Gawain2Audio : {};
-    const session6SubukanAudio = "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_7/subukan_mong_basahin_salita_tts.mp3' %}";
     const mappedLesson16ItemAudio = isLesson16Gawain1 ? lesson16Gawain1ItemAudio : isLesson16Gawain2 ? lesson16Gawain2ItemAudio : [];
-    // The first local reading prompt is the activity-owned intro clip. It is
-    // played once after the lesson modal closes, while the activity intro page
-    // is still visible; the oral item renderer then owns the remaining clips.
-    const lesson16IntroAudio = mappedLesson16ItemAudio[0]?.prompt || '';
+    // The activity-owned intro clip is played once after the lesson modal
+    // closes, while the activity intro page is still visible. Item narration
+    // is kept separate and uses only the local word recording for each item.
+    const lesson16IntroAudio = isLesson16Gawain1
+      ? "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_1/00_activity_intro.mp3' %}"
+      : isLesson16Gawain2
+        ? "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_2/00_activity_intro.mp3' %}"
+        : '';
 
     const state = () => ({phase, oral_mode: oralMode, reading_attempts: readingAttempts, aloud_attempts: aloudAttempts, written_attempts: writtenAttempts, state_version: ++stateVersion});
     const heading = () => `<p class="eyebrow">Session 6 · Lesson ${data.lesson_number} · Gawain ${data.gawain_number}</p><h1>${escape(data.title)}</h1><p class="instruction">${escape(data.instruction)}</p><div class="count">${Math.min(index + 1, items.length)} / ${items.length}</div><div class="track" aria-hidden="true"><i style="width:${items.length ? index / items.length * 100 : 0}%"></i></div>`;
@@ -180,7 +182,7 @@
       if (phase === 'written' && hasMappedLesson16Audio) void playMappedAudio(mappedLesson16Audio.readingSuccess);
       if (phase === 'oral' && hasMappedLesson16Audio && (readingAttempts > 0 || aloudAttempts > 0)) {
         const itemAudio = mappedLesson16ItemAudio[index];
-        const audioKey = oralMode === 'aloud' ? itemAudio?.word : itemAudio?.prompt;
+        const audioKey = itemAudio?.word;
         if (audioKey) void playMappedAudio(mappedLesson16Audio[audioKey]);
       }
     }
@@ -197,7 +199,7 @@
         oralAction.dataset.defaultLabel = oralAction.textContent;
         oralAction.onclick = listen ? () => readAloud(item) : () => readWord(item);
         if (hasMappedLesson16Audio && readingAttempts === 0 && aloudAttempts === 0) {
-          narrate('', `missing-syllable-prompt-${index}`, mappedLesson16ItemAudio[index]?.prompt);
+          narrate('', `word-item-${index}`, mappedLesson16ItemAudio[index]?.prompt);
         }
         return;
       }
@@ -253,7 +255,7 @@
       busy = true; aloudAttempts++;
       const completedListeningCycle = aloudAttempts >= 3;
       if (completedListeningCycle) { oralMode = 'read'; readingAttempts = 0; aloudAttempts = 0; }
-      try { if (hasMappedLesson16Audio) await playMappedAudio(mappedLesson16ItemAudio[index]?.word); else await playPrescribedReadAloud(item.word); if (completedListeningCycle && shouldPlaySession6Subukan) { await playMappedAudio(session6SubukanAudio); narratedKey = `missing-syllable-prompt-${index}`; } await save(); render(); } catch (error) { const status = app.querySelector('#oralStatus'); if (status) status.textContent = error.message; } finally { busy = false; }
+      try { if (hasMappedLesson16Audio) await playMappedAudio(mappedLesson16ItemAudio[index]?.word); else await playPrescribedReadAloud(item.word); await save(); render(); } catch (error) { const status = app.querySelector('#oralStatus'); if (status) status.textContent = error.message; } finally { busy = false; }
     }
     async function submit(value) {
       if (busy) return;
