@@ -69,7 +69,7 @@
     (()=>{
       const d=JSON.parse(document.getElementById('shape-stamp-data').textContent),app=document.getElementById('app'),csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
       let s={placements:{...(d.progress?.state?.placements||{})},state_version:0},feedback=null,busy=false;
-      const save=()=>fetch(d.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({state:{placements:s.placements,state_version:++s.state_version}})});
+      const save=()=>fetch(d.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({state:{placements:s.placements,state_version:++s.state_version}})});window.__session3SaveAdapters=window.__session3SaveAdapters||{};window.__session3SaveAdapters['prescribed-s3l7g4a']=()=>save();
       function render(){
         if(d.progress?.activity_completed){
           app.innerHTML='<div class="done"><h1>Tapos na ang gawain! 🎉</h1><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><a class="button" href="{% url "assessment" %}">BALIK SA AKING ARALIN</a></div>';app.inert=false;

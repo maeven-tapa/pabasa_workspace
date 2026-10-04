@@ -46,6 +46,7 @@
     const csrf = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || '';
     let index = Math.max(0, Math.min(3, Number(data.progress?.current_index) || 0));
     let busy = false;
+    let lastTracePersist = Promise.resolve();
     const rows = [[], [], []];
     const normalizeNarration = value => String(value || '').trim().replace(/[?!.,]+/g, '').replace(/\s+/g, ' ').toLocaleLowerCase();
     const controls = () => [app.querySelector('#clear'), app.querySelector('#next')].filter(Boolean);
@@ -94,7 +95,8 @@
       if (!strokes.some(stroke => stroke.length >= 2)) {await retry(); return}
       busy = true; app.querySelector('#next').disabled = true; app.querySelector('#clear').disabled = true;
       try {
-        const response = await fetch(data.progress_url, {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({row_index:index,strokes})});
+        lastTracePersist = fetch(data.progress_url, {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({row_index:index,strokes})});
+        const response = await lastTracePersist;
         const result = await response.json().catch(() => null);
         if (!response.ok || !result?.success) {await retry(); return}
         if (index < 2) {
@@ -126,6 +128,7 @@
       app.querySelector('#clear').onclick = () => {rows[index] = []; const canvas = app.querySelector('canvas[data-row="' + index + '"]'); canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); setHint()};
       app.querySelector('#next').onclick = submitCurrent;
     }
+    window.__session3SaveAdapters=window.__session3SaveAdapters||{};window.__session3SaveAdapters['prescribed-s3l7g2c']=()=>lastTracePersist;
     document.addEventListener('DOMContentLoaded', () => {
       render();
       app.inert = true;

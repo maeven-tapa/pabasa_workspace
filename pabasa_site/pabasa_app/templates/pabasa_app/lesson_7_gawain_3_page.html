@@ -28,7 +28,7 @@
 </head>
 <body>
   <main class="page">
-    <a href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a>
+    <a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a>
     <section id="app" class="card"></section>
   </main>
   {{ lesson7_gawain3_data|json_script:"activity-data" }}{% include 'pabasa_app/session3_lesson_start_bootstrap.html' %}
@@ -63,7 +63,7 @@
     let introPlayed=false;
     let part2NarratedTarget=-1;
 
-    const save=()=>fetch(d.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({state:{...s,state_version:++s.state_version}})});
+    const save=()=>fetch(d.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({state:{...s,state_version:++s.state_version}})});window.__session3SaveAdapters=window.__session3SaveAdapters||{};window.__session3SaveAdapters['prescribed-s3l7g3']=()=>save();
     const normalizeNarration=text=>String(text||'').trim().replace(/[?!.,]+/g,'').replace(/\s+/g,' ').toLocaleLowerCase();
     const requestAudio=text=>{const mapped=window.__prescribedNarrationAudio?.[normalizeNarration(text)]||Object.entries(window.__prescribedNarrationAudio||{}).find(([phrase])=>normalizeNarration(phrase)===normalizeNarration(text))?.[1];if(mapped){window.__lesson7Gawain3Audio?.pause();const audio=new Audio(mapped);window.__lesson7Gawain3Audio=audio;return new Promise(resolve=>{let settled=false;const finish=()=>{if(settled)return;settled=true;if(window.__lesson7Gawain3Audio===audio)window.__lesson7Gawain3Audio=null;resolve()};audio.onended=finish;audio.onerror=finish;audio.play().catch(finish)})}return fetch('/api/reading/read-aloud/',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','X-CSRFToken':csrf()},body:new URLSearchParams({target_text:text,language:'Filipino',mode:'reading',prescribed_activity_key:'lesson7-gawain3'})}).then(response=>response.ok?response.json():null).then(result=>new Promise(resolve=>{if(!result?.success||!result.audio_content){resolve();return}const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)})).catch(error=>console.error('Lesson 7 Gawain 3 narration failed',error))};
     const readingButtons=()=>[...app.querySelectorAll('.reading-actions button')];

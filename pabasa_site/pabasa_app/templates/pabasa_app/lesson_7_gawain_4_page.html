@@ -34,6 +34,7 @@
     const retryMessage='Subukan ulit! Isulat nang malinaw ang letrang Oo.';
     const retryNarration='Subukan ulit! Isulat nang malinaw ang letrang Oo.';
     const transitionNarration='Sumulat ulit!';
+    let lastPersist=Promise.resolve();
     const prerecordedNarration=data.narration_audio||{};
     const csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
     let index=Math.max(0,Math.min(3,Number(data.progress?.current_index)||0));
@@ -79,7 +80,7 @@
       if(!canvas||!valid(canvas)){await retry();return}
       busy=true;setControlsDisabled(true);
       try{
-        const response=await fetch(data.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({current_index:index+1,completed_items:index+1,state:{activity_key:data.activity_key,completed_areas:index+1}})});
+        lastPersist=fetch(data.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({current_index:index+1,completed_items:index+1,state:{activity_key:data.activity_key,completed_areas:index+1}})});const response=await lastPersist;
         if(!response.ok){await retry();return}
         if(index<2){
           index+=1;
@@ -112,6 +113,7 @@
       app.querySelector('#next').onclick=submitCurrent;
       if(window.__lessonStartReady&&playInstruction)narrateInstruction();
     }
+    window.__session3SaveAdapters=window.__session3SaveAdapters||{};window.__session3SaveAdapters['prescribed-s3l7g4']=()=>lastPersist;
     document.addEventListener('DOMContentLoaded', () => {
       render();
       app.inert = true;
