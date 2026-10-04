@@ -5,7 +5,11 @@
 
   function init({ prefix, adapter, speech = false }) {
     const readyKey = `${prefix.replace(/-([a-z0-9])/g, (_, character) => character.toUpperCase())}ControlsReady`;
-    if (!window.PrescribedControls || document.documentElement.dataset[readyKey]) return;
+    console.log('[SESSION4 CONTROLS] INIT REQUEST', prefix);
+    if (!window.PrescribedControls || document.documentElement.dataset[readyKey]) {
+      console.warn('[SESSION4 CONTROLS] INIT SKIPPED', { hasPrescribedControls: Boolean(window.PrescribedControls), ready: document.documentElement.dataset[readyKey] });
+      return;
+    }
     const q = suffix => document.getElementById(`${prefix}${suffix}`);
     const debug = {
       panel: q('-debug-panel'),
@@ -44,6 +48,7 @@
     try {
       window.PrescribedControls.init({ prefix, adapter });
     } catch (_) {
+      console.error('[SESSION4 CONTROLS] INIT FAILED', _);
       return;
     }
     document.documentElement.dataset[readyKey] = '1';

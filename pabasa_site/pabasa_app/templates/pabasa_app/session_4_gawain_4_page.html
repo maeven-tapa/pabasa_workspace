@@ -18,6 +18,21 @@ var wordCompleted=false,narratorActive=false;
 </script><script>(()=>{const resume=()=>window.session4Gawain4Resume?.();document.getElementById('prescribed-s4g4-resume')?.addEventListener('click',resume);})();</script></body></html>
 {% include 'pabasa_app/session4_prescribed_controls.html' with prefix='prescribed-s4g4' speech=True help_text='Basahin ang pangungusap nang malinaw. Kung hindi naintindihan, subukan muli.' %}
 {% include 'pabasa_app/session4_prescribed_bootstrap.html' with prefix='prescribed-s4g4' speech=True data_id='session4-gawain-4-data' %}
+{% include 'pabasa_app/session4_leave_confirmation.html' with prefix='prescribed-s4g4' %}
+<script src="{% static 'pabasa_app/js/session4_leave_confirmation.js' %}"></script>
+<script>
+(() => {
+  document.querySelector('.session-4-gawain-4-back span')?.replaceChildren('Bumalik sa Aking Gawain');
+  const data=JSON.parse(document.getElementById('session4-gawain-4-data')?.textContent||'{}');
+  const csrf='{{ csrf_token }}';
+  const adapter={
+    captureState(){const app=document.getElementById('session-4-gawain-4-app');const step=app?.querySelector('.session-4-gawain-4-step.active');const index=Math.max(0,Number(step?.textContent||1)-1);return {activity_key:data.activity_key,state:{current_index:index,completed_items:Number(app?.dataset.completedItems||data.progress?.completed_items||0),correct_items:Number(app?.dataset.correctItems||data.progress?.correct_items||0),total_items:4,activity_completed:false,phase:app?.dataset.phase||'active'}};},
+    cleanup(){window.Basahin?.cancelAll?.();window.session4Gawain4StopAudio?.();},
+    saveCurrentProgress(state){return fetch(data.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf,'X-Requested-With':'XMLHttpRequest'},body:JSON.stringify(state)}).then(async response=>{const body=await response.json().catch(()=>({}));if(!response.ok||!body.success)throw new Error(body.error||'save failed');return body;});},
+  };
+  window.Session4LeaveConfirmation?.init({prefix:'prescribed-s4g4',backSelector:'.session-4-gawain-4-back',...adapter});
+})();
+</script>
 <style>
 .session-4-gawain-4-start-backdrop{z-index:30;pointer-events:auto}
 .session-4-gawain-4-start-modal{position:relative;z-index:31;pointer-events:auto}
