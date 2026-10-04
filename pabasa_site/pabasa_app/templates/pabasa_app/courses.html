@@ -24635,4 +24635,12 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const preview = document.getElementById('lesson28Gawain2Preview');
+    const instruction = 'Listen to the word, then circle the correct word.';
+    preview?.querySelector('.prescribed-activity-preview__header p')?.replaceChildren(instruction);
+    preview?.querySelector('.lesson28-identify-preview > p')?.replaceChildren(instruction);
+});
+</script>
 {% endblock %}

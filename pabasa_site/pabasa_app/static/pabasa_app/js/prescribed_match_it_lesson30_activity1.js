@@ -7,12 +7,13 @@
   const d=JSON.parse(dataNode.textContent||'{}');
   const words=d.word_bank||[];
   const items=d.items||[];
+  const pictureAttemptLimit=Math.max(1,Math.min(3,Number(d.picture_attempt_limit)||3));
   const csrf=()=>((document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)||[])[1]||'');
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const norm=v=>String(v||'').toLowerCase().replace(/[^a-z]/g,'');
   const headers=extra=>({'X-CSRFToken':csrf(),'X-Requested-With':'XMLHttpRequest',...extra});
   const setBusyButton=(id,busyState)=>document.getElementById(id)?.classList.toggle('is-busy',busyState);
-  let s={phase:'intro',current_oral_word_index:0,unlocked_oral_words:[],stt_attempts:{},read_aloud_plays:{},matches:{},picture_attempts:{},needs_reread:false,state_version:0,...(d.progress?.state||{})};
+  let s={phase:'intro',current_oral_word_index:0,unlocked_oral_words:[],stt_attempts:{},read_aloud_plays:{},matches:{},picture_attempts:{},skipped_picture_words:[],needs_reread:false,state_version:0,...(d.progress?.state||{})};
   let busy=false,paused=false,muted=false,recordingAttemptActive=false,generation=0,stream=null,recorder=null,recordTimer=null,audio=null,audioUrl=null;
   const debugState={status:'Ready',transcript:'No transcript yet.',expected:'—',normalized:'—',result:'—',mic:'Inactive · Unmuted',recorder:'inactive',vad:'waiting',error:'—',raw:'Waiting for speech...'};
   const emitDebug=detail=>{Object.assign(debugState,detail);Object.entries(debugState).forEach(([key,value])=>{const field=document.getElementById(`lesson30a1-debug-${key}`);if(field)field.textContent=String(value)});window.dispatchEvent(new CustomEvent('lesson30-lesson30a1-debug',{detail:{...debugState}}));};
@@ -25,9 +26,9 @@
       throw Error('The server returned an invalid response. Please try again.');
     }
   }
-  const index=()=>Math.min(Object.keys(s.matches||{}).length,words.length);
+  const index=()=>Math.min(new Set([...Object.values(s.matches||{}),...(s.skipped_picture_words||[])]).size,words.length);
   const current=()=>words[index()];
-  const complete=()=>s.phase==='completion'||Object.keys(s.matches||{}).length===words.length;
+  const complete=()=>s.phase==='completion'||new Set([...Object.values(s.matches||{}),...(s.skipped_picture_words||[])]).size===words.length;
   const syncListen=()=>{const button=document.getElementById('listen'),target=current();if(button)button.disabled=Number(s.stt_attempts?.[target]||0)<3};
 
   async function save(){
@@ -55,6 +56,7 @@
   }
   function announce(message){window.setTimeout(()=>play(message).catch(()=>{}),0)}
   function render(message='',kind=''){
+    document.getElementById('lesson30a1-stage')?.classList.toggle('matching-phase',s.phase==='matching');
     if(complete()){
       showCompletion();
       finish();
@@ -63,12 +65,12 @@
     }
     const target=current();
     if(s.phase==='matching'){
-      app.innerHTML=`<div class="eyebrow">SESSION 14 · LESSON 30 · ACTIVITY 1</div><h1 class="title">Match It!</h1><p class="instruction">Choose the picture that matches the word.</p><div class="word">${esc(target)}</div><div class="pictures">${items.map(item=>`<button class="picture" data-id="${esc(item.id)}" aria-label="${esc(item.alt_text)}"><img src="${esc(item.image_url)}" alt="${esc(item.alt_text)}"></button>`).join('')}</div><p class="status ${kind}">${esc(message||'Choose the matching picture.')}</p>${steps()}</div>`;
+      app.innerHTML=`<div class="eyebrow">SESSION 14 · LESSON 30 · ACTIVITY 1</div><div class="matching-layout"><div class="matching-word"><p class="instruction matching-instruction">Choose the picture that matches the word.</p><div class="word">${esc(target)}</div></div><div class="pictures">${items.map(item=>`<button class="picture" data-id="${esc(item.id)}" aria-label="${esc(item.alt_text)}"><img src="${esc(item.image_url)}" alt="${esc(item.alt_text)}"></button>`).join('')}</div></div><p class="status ${kind}">${esc(message||'Choose the matching picture.')}</p>${steps()}</div>`;
       app.querySelectorAll('.picture').forEach(button=>button.onclick=()=>choose(button));
       emitDebug({status:paused?'Paused':'Ready',expected:target,mic:`Inactive · ${muted?'Muted':'Unmuted'}`,recorder:'inactive',vad:'waiting',raw:'Reading passed. Choose the matching picture.'});
       return;
     }
-    app.innerHTML=`<div class="eyebrow">SESSION 14 · LESSON 30 · ACTIVITY 1</div><h1 class="title">Match It!</h1><p class="instruction">Read the word aloud first. Then choose the matching picture.</p><div class="word">${esc(target)}</div><p class="status ${kind}">${esc(message||'Read the word aloud.')}</p><div class="actions"><button data-basahin-button data-basahin-language="English" class="button" id="read">Read</button><button class="button secondary" id="listen" ${Number(s.stt_attempts?.[target]||0)<3?'disabled':''}>🔊 Listen</button></div>${steps()}`;
+    app.innerHTML=`<div class="eyebrow">SESSION 14 · LESSON 30 · ACTIVITY 1</div><p class="instruction">Read the word aloud first. Then choose the matching picture.</p><div class="word">${esc(target)}</div><p class="status ${kind}">${esc(message||'Read the word aloud.')}</p><div class="actions"><button data-basahin-button data-basahin-language="English" class="button" id="read">Read</button><button class="button secondary" id="listen" ${Number(s.stt_attempts?.[target]||0)<3?'disabled':''}>🔊 Listen</button></div>${steps()}`;
     window.Basahin.bindActivity(app.querySelector('#read'), ()=>read(target));
     app.querySelector('#listen')?.addEventListener('click',()=>play(target).then(()=>{render('Now read the word aloud.');announce('Now read the word aloud.')} ).catch(e=>render(e.message,'bad')));
     emitDebug({status:paused?'Paused':'Ready',transcript:'No transcript yet.',expected:target,normalized:'—',result:'—',mic:`Inactive · ${muted?'Muted':'Unmuted'}`,recorder:'inactive',vad:'waiting',error:'—',raw:'Waiting for speech...'});
@@ -132,8 +134,8 @@
     busy=true;
     try{
       if(item.word!==target){
-        const misses=Math.min(3,Number(s.picture_attempts[target]||0)+1);s.picture_attempts[target]=misses;
-        if(misses>=3){s.needs_reread=true;s.phase='oral_reading';await save();render('Listen to the word, then read it again.','bad');announce('Listen to the word, then read it again.');setTimeout(()=>play(target).catch(e=>render(e.message,'bad')),350)}
+        const misses=Math.min(pictureAttemptLimit,Number(s.picture_attempts[target]||0)+1);s.picture_attempts[target]=misses;
+        if(misses>=pictureAttemptLimit){s.skipped_picture_words=[...new Set([...(s.skipped_picture_words||[]),target])];s.needs_reread=false;s.phase='oral_reading';await save();if(complete()){s.phase='completion';await finish();render();return}render("Let's move to the next word.",'bad');announce("Let's move to the next word.")}
         else{await save();render('That is not the matching picture. Try again.','bad');announce('Try again.')}
         return;
       }

@@ -57,6 +57,35 @@ class PrescribedLesson30MatchItTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'pabasa_app/prescribed_match_it_lesson30_activity1_page.html')
         self.assertEqual(response.context['prescribed_activity_data']['progress']['total_items'], 5)
+        self.assertEqual(response.context['prescribed_activity_data']['picture_attempt_limit'], 2)
+
+    def test_second_wrong_picture_advances_without_requiring_a_reread(self):
+        skipped = self.post_state({
+            'phase': 'oral_reading',
+            'unlocked_oral_words': ['pet'],
+            'matches': {},
+            'picture_attempts': {'pet': 2},
+            'skipped_picture_words': ['pet'],
+            'state_version': 0,
+        })
+        self.assertEqual(skipped.status_code, 200, skipped.content)
+        progress = skipped.json()['progress']
+        self.assertEqual(progress['completed_items'], 1)
+        self.assertEqual(progress['correct_items'], 0)
+        self.assertEqual(progress['state']['skipped_picture_words'], ['pet'])
+        self.assertEqual(progress['state']['phase'], 'oral_reading')
+        self.assertFalse(progress['state']['needs_reread'])
+
+    def test_picture_cannot_be_skipped_before_two_wrong_attempts(self):
+        skipped = self.post_state({
+            'phase': 'oral_reading',
+            'unlocked_oral_words': ['pet'],
+            'matches': {},
+            'picture_attempts': {'pet': 1},
+            'skipped_picture_words': ['pet'],
+            'state_version': 0,
+        })
+        self.assertEqual(skipped.status_code, 400)
 
     def test_must_read_then_match_in_order_and_retry_wrong_picture(self):
         read_first = self.post_state({'phase': 'matching', 'unlocked_oral_words': ['pet'], 'matches': {}})
@@ -121,3 +150,48 @@ class PrescribedLesson30MatchItTests(TestCase):
         )
         self.assertIsNotNone(audio_file)
         self.assertEqual(audio_file.name, 'Great job! You completed Match It..mp3')
+
+    def test_second_wrong_picture_uses_the_next_word_audio(self):
+        script = Path(
+            settings.BASE_DIR,
+            'pabasa_app/static/pabasa_app/js/prescribed_match_it_lesson30_activity1.js',
+        ).read_text(encoding='utf-8')
+        self.assertIn('announce("Let\'s move to the next word.")', script)
+        audio_file = _local_prescribed_audio_file(self.activity_key, "Let's move to the next word.")
+        self.assertIsNotNone(audio_file)
+        self.assertEqual(audio_file.name, "Let's move to the next word..mp3")
+        self.assertIn(
+            "new Set([...Object.values(s.matches||{}),...(s.skipped_picture_words||[])]).size===words.length",
+            script,
+        )
+
+    def test_stage_uses_prominent_instructions_without_a_game_title(self):
+        script = Path(
+            settings.BASE_DIR,
+            'pabasa_app/static/pabasa_app/js/prescribed_match_it_lesson30_activity1.js',
+        ).read_text(encoding='utf-8')
+        self.assertNotIn('<h1 class="title">Match It!</h1>', script)
+        self.assertIn('Choose the picture that matches the word.', script)
+        self.assertIn('Read the word aloud first. Then choose the matching picture.', script)
+
+    def test_matching_phase_places_word_beside_original_size_picture_choices(self):
+        script = Path(
+            settings.BASE_DIR,
+            'pabasa_app/static/pabasa_app/js/prescribed_match_it_lesson30_activity1.js',
+        ).read_text(encoding='utf-8')
+        template = Path(
+            settings.BASE_DIR,
+            'pabasa_app/templates/pabasa_app/prescribed_match_it_lesson30_activity1_page.html',
+        ).read_text(encoding='utf-8')
+        self.assertIn('.matching-layout{--choice-size:', template)
+        self.assertIn('display:grid;grid-template-columns:', template)
+        self.assertIn('.matching-layout .pictures{grid-template-columns:1fr;', template)
+        self.assertIn('class="instruction matching-instruction">Choose the picture that matches the word.</p>', script)
+        self.assertIn('.stage.matching-phase{top:calc(50% + 24px);width:min(1000px,calc(100% - 32px));height:min(840px,calc(100dvh - 112px))}', template)
+        self.assertIn('.matching-layout .word{position:absolute;top:50%;', template)
+        self.assertIn('.matching-layout .matching-instruction{position:absolute;', template)
+        self.assertIn('transform:translateX(clamp(48px,6vw,80px))', template)
+        self.assertIn('--choice-size:min(clamp(130px,17vh,165px),calc((100dvh - 340px)/5))', template)
+        self.assertIn('.matching-layout .picture{width:var(--choice-size);min-width:var(--choice-size);height:var(--choice-size);', template)
+        self.assertIn('padding:8px;overflow:hidden}', template)
+        self.assertIn('.matching-layout .picture img{width:82%;height:82%;', template)

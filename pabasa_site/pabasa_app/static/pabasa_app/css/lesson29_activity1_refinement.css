@@ -8,14 +8,14 @@ html body .page .stage{position:absolute;top:clamp(136px,18vh,188px);left:50%;ri
 html body #app{width:min(100%,1050px);max-height:100%}
 html body .eyebrow{margin:-8px auto 16px;padding:10px 30px;font-size:clamp(.85rem,1.4vw,1.15rem);letter-spacing:.02em}
 html body .title{font-size:clamp(2.2rem,4.2vw,3.8rem)}
-html body .instruction{margin:14px auto;font-size:clamp(1rem,1.5vw,1.25rem)}
-html body .content{margin:clamp(14px,2.5vh,26px) auto}
+html body .instruction{margin:10px auto 0;color:var(--ink);font-size:clamp(1.45rem,2.3vw,2rem);line-height:1.35;font-weight:900}
+html body .content{margin:clamp(26px,4vh,40px) auto 0}
 html body .item{grid-template-columns:max-content minmax(100px,140px) max-content;width:fit-content;max-width:100%;gap:12px;justify-content:center;margin-inline:auto;transform:none}
 html body .picture{width:min(100%,140px);max-height:clamp(110px,18vh,150px);justify-self:center}
 html body .sentence{font-size:clamp(1.45rem,2.8vw,2.35rem);line-height:1.35}
 html body .lead,html body .tail{text-align:left}
 html body .status{min-height:2.2em;margin:10px auto}
-html body .actions{gap:18px;margin-top:12px}
+html body .actions{gap:18px;margin-top:clamp(22px,3vh,32px)}
 html body .button{min-width:min(310px,42vw);min-height:72px;transition:transform .16s,filter .16s,box-shadow .16s}
 html body .button:hover:not(:disabled){background:#38b0aa;transform:translateY(-2px)}
 html body .button.secondary:hover:not(:disabled){background:#f4fffe;color:var(--dark);transform:translateY(-2px);box-shadow:0 6px 16px #187b7a26}
@@ -39,3 +39,4 @@ html body .step{width:36px;height:36px}
 @media(max-width:680px){html body .page{width:min(100% - 24px,680px);padding:12px}html body .page .back{top:12px;left:0;width:245px;min-height:58px}html body .page .stage{top:116px;bottom:12px;padding:22px 14px 16px;border-radius:30px}html body .item{grid-template-columns:1fr;gap:0;transform:none}html body .lead,html body .tail{text-align:center}html body .picture{max-height:180px}html body .sentence{font-size:clamp(1.35rem,6vw,2rem)}html body .button{width:100%;min-width:0;min-height:64px}html body .step{width:32px;height:32px}}
 html body .page .stage{top:calc(50% + 24px);left:50%;right:auto;bottom:auto;width:100%;height:auto;min-height:0;max-height:calc(100dvh - 32px);transform:translate(-50%,-50%);box-shadow:0 18px 45px #1e5b7a35}
 @media(max-width:680px){html body .page .stage{top:calc(50% + 12px);bottom:auto;max-height:calc(100dvh - 24px);padding:22px 14px 16px;border-radius:30px;transform:translate(-50%,-50%)}}
+@media(max-width:800px){html body .instruction{font-size:clamp(1.25rem,4.8vw,1.65rem)}}

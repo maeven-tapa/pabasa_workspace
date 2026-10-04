@@ -303,7 +303,7 @@ PRESCRIBED_ACTIVITIES = {
     'lesson-28-gawain-2': {
         'activity_key': 'lesson-28-gawain-2', 'session_number': 12, 'lesson_number': 28,
         'gawain_number': 2, 'title': 'Word Identifying',
-        'instruction': 'Listen to the word, then say the same word.',
+        'instruction': 'Listen to the word, then circle the correct word.',
         'interaction': 'word_identifying_oral', 'total_items': 5,
         'items': [
             {'id': 'item-1', 'choices': ['sun', 'sit']},
@@ -354,6 +354,7 @@ PRESCRIBED_ACTIVITIES = {
         'description': 'Read each word, then choose the matching picture.',
         'instruction': 'Read the word aloud first. Then choose the matching picture.',
         'interaction': 'oral_then_picture_word_match', 'sequence_mode': 'per_item',
+        'picture_attempt_limit': 2, 'skip_picture_after_attempt_limit': True,
         'total_items': 5, 'word_bank': ['pet', 'mat', 'pat', 'little', 'happy'],
         # Picture order follows Column B in the workbook reference.
         'items': [

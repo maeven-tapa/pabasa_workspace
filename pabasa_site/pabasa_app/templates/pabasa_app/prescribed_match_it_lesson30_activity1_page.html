@@ -29,12 +29,14 @@
     .stage{top:55%;height:min(640px,calc(100dvh - 120px));padding:18px clamp(20px,5vw,72px) 16px}
     #app{justify-content:center}
     .eyebrow{margin-bottom:8px}
-    .instruction{margin:8px auto 6px}
+    .instruction{margin:8px auto 14px;color:var(--ink);font-size:clamp(1.45rem,2.3vw,2rem);line-height:1.35;font-weight:900}
     .word{min-height:clamp(118px,15vh,145px);margin:8px auto 6px}
     .status{margin:4px auto 6px}
     .pictures{margin:10px auto 8px}
     .progress{margin-top:16px}
-    @media(max-width:720px){.stage{top:55%;height:calc(100dvh - 96px);padding:76px 14px 16px}}
+    .stage.matching-phase{top:calc(50% + 24px);width:min(1000px,calc(100% - 32px));height:min(840px,calc(100dvh - 112px))}
+    .matching-layout{--choice-size:min(clamp(130px,17vh,165px),calc((100dvh - 340px)/5));--word-half-height:clamp(75px,12vh,105px);display:grid;grid-template-columns:minmax(220px,.8fr) minmax(240px,1.2fr);align-items:center;gap:clamp(32px,6vw,90px);width:min(900px,100%);margin:4px auto 0}.matching-layout .matching-word{position:relative;align-self:stretch;width:100%;transform:translateX(clamp(48px,6vw,80px))}.matching-layout .matching-instruction{position:absolute;right:0;bottom:calc(50% + var(--word-half-height) + 18px);left:0;margin:0;color:var(--ink);font-size:clamp(1.35rem,2.1vw,1.85rem);line-height:1.25}.matching-layout .word{position:absolute;top:50%;width:100%;min-height:clamp(150px,24vh,210px);margin:0;padding:18px;transform:translateY(-50%)}.matching-layout .pictures{grid-template-columns:1fr;justify-items:center;gap:12px;width:100%;margin:0}.matching-layout .picture{width:var(--choice-size);min-width:var(--choice-size);height:var(--choice-size);min-height:var(--choice-size);padding:8px;overflow:hidden}.matching-layout .picture img{width:82%;height:82%;max-width:82%;max-height:82%;object-fit:contain}
+    @media(max-width:720px){.stage{top:55%;height:calc(100dvh - 96px);padding:76px 14px 16px}.stage.matching-phase{top:55%;width:calc(100% - 24px);height:calc(100dvh - 96px)}}
   </style>
 <style>.button.is-busy:disabled{background:#b5c5c7!important;color:#edf3f4!important;border-color:transparent!important;box-shadow:none!important;opacity:1!important;cursor:not-allowed}</style>
 <style>.status{display:none!important}.actions{margin-top:12px!important}</style>
@@ -55,6 +57,6 @@
   </main>
   <div class="backdrop" id="lesson30a1-start"><div class="modal"><p class="start-label">SESSION 14 · LESSON 30 · ACTIVITY 1</p><h2>MATCH IT!</h2><p>Read the word aloud first. Then choose the matching picture.</p><div class="start-actions"><button class="start" id="lesson30a1-go">START</button><button class="later" id="lesson30a1-later">NOT NOW</button></div></div></div>
   {{ prescribed_activity_data|json_script:"prescribed-activity-data" }}{% include 'pabasa_app/lesson30_prescribed_controls.html' with prefix='lesson30a1' help_text='Read the word aloud, then choose the matching picture.' %}
-  <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-4" defer></script><script src="{% static 'pabasa_app/js/prescribed_match_it_lesson30_activity1.js' %}?v=20260928-completion-ui" defer></script>
+  <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-4" defer></script><script src="{% static 'pabasa_app/js/prescribed_match_it_lesson30_activity1.js' %}?v=20261005-matching-layout-2" defer></script>
 </body>
 </html>

@@ -7,7 +7,7 @@ html body .page .stage{position:absolute;top:calc(50% + 24px);left:50%;right:aut
 html body #app{width:min(100%,1050px);max-height:100%}
 html body .eyebrow{margin-bottom:8px;padding:10px 30px;font-size:clamp(.85rem,1.4vw,1.15rem);letter-spacing:.02em}
 html body .title{font-size:clamp(2.2rem,4.2vw,3.8rem)}
-html body .instruction{margin:10px auto 6px}
+html body .instruction{margin:10px auto 14px;color:var(--ink);font-size:clamp(1.45rem,2.3vw,2rem);line-height:1.35;font-weight:900}
 html body .story{max-width:800px;margin:14px auto;padding:18px 24px;border-radius:24px}
 html body .story h2{margin-bottom:10px}
 html body .line{margin:6px 0;padding:8px 12px}
@@ -30,4 +30,4 @@ html body .later:hover{background:#f4fffe}
 @keyframes lesson30Activity2Pulse{0%,100%{transform:scale(1);box-shadow:0 7px 0 var(--dark),0 12px 24px #187b7a40}50%{transform:scale(1.025);box-shadow:0 0 0 9px #f5d47c55,0 7px 0 var(--dark),0 15px 28px #187b7a55}}
 html body .progress{gap:9px;margin-top:14px}
 html body .step{width:36px;height:36px}
-@media(max-width:680px){html body .page{width:min(100% - 24px,680px);padding:12px}html body .page .back{top:12px;left:0;width:245px;min-height:58px}html body .page .stage{top:calc(50% + 12px);bottom:auto;max-height:calc(100dvh - 24px);padding:18px 14px 14px;border-radius:30px;transform:translate(-50%,-50%)}html body .story{padding:14px 12px}html body .button{width:100%;min-width:0;min-height:64px}html body .step{width:32px;height:32px}}
+@media(max-width:680px){html body .page{width:min(100% - 24px,680px);padding:12px}html body .page .back{top:12px;left:0;width:245px;min-height:58px}html body .page .stage{top:calc(50% + 12px);bottom:auto;max-height:calc(100dvh - 24px);padding:18px 14px 14px;border-radius:30px;transform:translate(-50%,-50%)}html body .story{padding:14px 12px}html body .button{width:100%;min-width:0;min-height:64px}html body .step{width:32px;height:32px}html body .instruction{font-size:clamp(1.25rem,4.8vw,1.65rem)}}

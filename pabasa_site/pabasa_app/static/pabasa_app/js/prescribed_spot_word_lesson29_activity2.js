@@ -5,7 +5,7 @@
   if (!node || !app) return;
   const refinement = document.createElement('link');
   refinement.rel = 'stylesheet';
-  refinement.href = '/static/pabasa_app/css/lesson29_activity2_refinement.css?v=lesson29-a2-ui-7';
+  refinement.href = '/static/pabasa_app/css/lesson29_activity2_refinement.css?v=lesson29-a2-ui-8';
   document.head.appendChild(refinement);
   const data = JSON.parse(node.textContent || '{}');
   const csrf = () => ((document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || '');
@@ -19,7 +19,7 @@
     hydrate();
     if (state.phase === 'complete' || state.current_item >= data.words.length) { window.PrescribedLessonUi.showCompletion(app); post(data.completion_url, {}).catch(() => {}); if (!completionAnnounced) { completionAnnounced = true; play('Great job! You spotted all the words.').catch(() => {}); } return; }
     const selected = new Set(state.selected_words);
-    app.innerHTML = `<div class="eyebrow">SESSION 13 · LESSON 29 · ACTIVITY 2</div><h1 class="title">Spot the Word</h1><p class="instruction">Listen to the word, then encircle it.</p><div class="grid">${data.words.map(word => `<button class="word ${selected.has(word) ? 'correct' : transientWrongWord === word ? 'wrong' : ''}" data-word="${esc(word)}" ${selected.has(word) || busy ? 'disabled' : ''}>${esc(word)}</button>`).join('')}</div><p class="status ${kind}">${esc(message || 'Listen carefully, then choose the word you heard.')}</p><button class="button" id="listen" ${busy ? 'disabled' : ''}>🔊 Listen</button>${steps()}`;
+    app.innerHTML = `<div class="eyebrow">SESSION 13 · LESSON 29 · ACTIVITY 2</div><p class="instruction">Listen to the word, then encircle it.</p><div class="grid">${data.words.map(word => `<button class="word ${selected.has(word) ? 'correct' : transientWrongWord === word ? 'wrong' : ''}" data-word="${esc(word)}" ${selected.has(word) || busy ? 'disabled' : ''}>${esc(word)}</button>`).join('')}</div><p class="status ${kind}">${esc(message || 'Listen carefully, then choose the word you heard.')}</p><button class="button" id="listen" ${busy ? 'disabled' : ''}>🔊 Listen</button>${steps()}`;
     app.querySelectorAll('[data-word]').forEach(button => { button.onclick = () => choose(button.dataset.word); });
     document.getElementById('listen').onclick = () => play(state.target_word).catch(error => render(error.message, 'bad'));
     emitDebug({status:paused ? 'Paused' : 'Ready', expected:state.target_word || '—', mic:'Inactive · Unmuted', recorder:'inactive', vad:'waiting'});

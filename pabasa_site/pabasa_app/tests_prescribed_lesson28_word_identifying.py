@@ -48,6 +48,7 @@ class PrescribedLesson28WordIdentifyingTests(TestCase):
         self.assertEqual(activity['session_number'], 12)
         self.assertEqual(activity['lesson_number'], 28)
         self.assertEqual(activity['gawain_number'], 2)
+        self.assertEqual(activity['instruction'], 'Listen to the word, then circle the correct word.')
         self.assertEqual([item['choices'] for item in activity['items']], [
             ['sun', 'sit'], ['set', 'let'], ['sat', 'met'], ['set', 'set'], ['lit', 'let'],
         ])
@@ -64,20 +65,20 @@ class PrescribedLesson28WordIdentifyingTests(TestCase):
         ])
         self.assertNotContains(response, '<img')
 
-    def test_word_stays_fixed_on_retry_and_progresses_after_correct_speech(self):
+    def test_word_stays_fixed_on_retry_and_progresses_after_correct_choice(self):
         started = self.post_action(action='begin', item_index=0)
         self.assertEqual(started.status_code, 200)
         target = started.json()['target_word']
         self.assertIn(target, {'sun', 'sit'})
 
         wrong_word = 'sit' if target == 'sun' else 'sun'
-        wrong = self.post_action(action='answer', item_index=0, heard=wrong_word)
+        wrong = self.post_action(action='choose', item_index=0, choice=wrong_word)
         self.assertFalse(wrong.json()['accepted'])
         self.assertEqual(wrong.json()['target_word'], target)
 
         resumed = self.post_action(action='begin', item_index=0)
         self.assertEqual(resumed.json()['target_word'], wrong.json()['target_word'])
-        correct = self.post_action(action='answer', item_index=0, heard=resumed.json()['target_word'])
+        correct = self.post_action(action='choose', item_index=0, choice=resumed.json()['target_word'])
         self.assertTrue(correct.json()['accepted'])
         self.assertEqual(correct.json()['progress']['completed_items'], 1)
         self.assertIn(correct.json()['target_word'], {'set', 'let'})
@@ -85,7 +86,7 @@ class PrescribedLesson28WordIdentifyingTests(TestCase):
         for item_index in range(1, 5):
             current = self.post_action(action='begin', item_index=item_index)
             target = current.json()['target_word']
-            response = self.post_action(action='answer', item_index=item_index, heard=target)
+            response = self.post_action(action='choose', item_index=item_index, choice=target)
             self.assertTrue(response.json()['accepted'])
 
         progress = StudentActivityProgress.objects.get(student=self.student, activity_key='lesson-28-gawain-2')

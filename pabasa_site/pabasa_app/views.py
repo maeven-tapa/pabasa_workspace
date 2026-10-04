@@ -13732,6 +13732,8 @@ def _normalized_oral_picture_match_state(activity, raw_state):
     raw = raw_state if isinstance(raw_state, dict) else {}
     total = len(activity['items'])
     words = activity['word_bank']
+    picture_attempt_limit = max(1, min(3, int(activity.get('picture_attempt_limit', 3) or 3)))
+    can_skip_picture = bool(activity.get('skip_picture_after_attempt_limit'))
     unlocked = [word for word in words if word in set(raw.get('unlocked_oral_words') or [])]
     matches = _normalized_prescribed_matches(activity, raw.get('matches') or {})
     try:
@@ -13739,27 +13741,31 @@ def _normalized_oral_picture_match_state(activity, raw_state):
         version = max(0, min(int(raw.get('state_version') or 0), 1_000_000_000))
         stt = {word: max(0, min(3, int((raw.get('stt_attempts') or {}).get(word, 0)))) for word in words}
         aloud = {word: max(0, min(3, int((raw.get('read_aloud_plays') or {}).get(word, 0)))) for word in words}
-        picture_attempts = {word: max(0, min(3, int((raw.get('picture_attempts') or {}).get(word, 0)))) for word in words}
+        picture_attempts = {word: max(0, min(picture_attempt_limit, int((raw.get('picture_attempts') or {}).get(word, 0)))) for word in words}
     except (TypeError, ValueError):
         raise ValueError('Invalid oral matching state.')
     if activity.get('sequence_mode') == 'per_item':
         raw_unlocked = raw.get('unlocked_oral_words')
         raw_unlocked = raw_unlocked if isinstance(raw_unlocked, list) else []
+        raw_skipped = raw.get('skipped_picture_words')
+        raw_skipped = raw_skipped if can_skip_picture and isinstance(raw_skipped, list) else []
         spoken_prefix = []
         for index, word in enumerate(words):
             if index >= len(raw_unlocked) or raw_unlocked[index] != word:
                 break
             spoken_prefix.append(word)
         matched_words = set(matches.values())
+        skipped_words = {word for word in words if word in set(raw_skipped) and word in set(raw_unlocked)}
         completed_prefix = []
         for word in words:
-            if word not in matched_words:
+            if word not in matched_words and word not in skipped_words:
                 break
             completed_prefix.append(word)
         matches = {
             item_id: word for item_id, word in matches.items()
             if word in completed_prefix
         }
+        skipped = [word for word in completed_prefix if word in skipped_words and word not in set(matches.values())]
         unlocked = words[:min(len(spoken_prefix), len(completed_prefix) + 1)]
         oral_index = len(completed_prefix)
         needs_reread = bool(raw.get('needs_reread')) and len(completed_prefix) < total
@@ -13777,6 +13783,7 @@ def _normalized_oral_picture_match_state(activity, raw_state):
                 'unlocked_oral_words': unlocked, 'stt_attempts': stt,
                 'read_aloud_plays': aloud, 'matches': matches,
                 'picture_attempts': picture_attempts, 'needs_reread': needs_reread,
+                'skipped_picture_words': skipped,
                 'selected_pair': raw.get('selected_pair') if isinstance(raw.get('selected_pair'), dict) else {},
                 'state_version': version}
     oral_index = len(unlocked)  # server owns the next word
@@ -15597,9 +15604,6 @@ def prescribed_activity_page(request, activity_key):
                          'total_items': len(activity['items']), 'activity_completed': progress.activity_completed if progress else False,
                          'state': raw_state},
         }
-        if activity_key == 'lesson-28-gawain-2':
-            context['prescribed_activity_data']['read_aloud_url'] = reverse('reading_read_aloud_api')
-            context['prescribed_activity_data']['transcribe_url'] = reverse('reading_transcribe_api')
         template = ('pabasa_app/prescribed_word_identifying_lesson28_activity2_page.html'
                     if activity_key == 'lesson-28-gawain-2' else 'pabasa_app/prescribed_word_identifying_page.html')
         return render(request, template, context)
@@ -16182,6 +16186,8 @@ def prescribed_activity_page(request, activity_key):
             'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
             'display_title': activity['display_title'], 'title': activity['title'],
             'instruction': activity['instruction'], 'sequence_mode': activity.get('sequence_mode', ''),
+            'picture_attempt_limit': activity.get('picture_attempt_limit', 3),
+            'skip_picture_after_attempt_limit': bool(activity.get('skip_picture_after_attempt_limit')),
             'session_number': activity['session_number'], 'items': [
                 {'id': item['id'], 'label': item['label'], 'word': item['word'],
                  'alt_text': item['alt_text'], 'image_url': static(item['image_path'])}
@@ -17819,6 +17825,9 @@ def prescribed_activity_progress(request, activity_key):
             item = activity['items'][index]
             phase = old.get('phase', 'reading')
             attempts = max(0, int(old.get('attempts', 0)))
+            correct_items = max(0, min(total, int(old.get(
+                'correct_items', existing.correct_items if existing else 0,
+            ))))
             action, accepted = data.get('action'), None
             if action == 'read_word':
                 if phase != 'reading':
@@ -17839,17 +17848,21 @@ def prescribed_activity_progress(request, activity_key):
                 accepted = choice == item['word'][0].lower()
                 if accepted:
                     index += 1
+                    correct_items += 1
                     attempts = 0
                     phase = 'complete' if index >= total else 'reading'
                 else:
-                    phase, attempts = 'reading', 0
+                    index += 1
+                    attempts = 0
+                    phase = 'complete' if index >= total else 'reading'
             else:
                 raise ValueError('Invalid activity action.')
             finished = index >= total
             saved = {'activity_key': activity_key, 'current_item': index, 'attempts': attempts,
-                     'completed_items': index, 'phase': 'complete' if finished else phase,
+                     'completed_items': index, 'correct_items': correct_items,
+                     'phase': 'complete' if finished else phase,
                      'state_version': int(old.get('state_version') or 0) + 1}
-            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': correct_items,
                           'total_items': total, 'activity_completed': finished, 'state': saved})
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
                 'current_index': progress.current_index, 'completed_items': progress.completed_items,
@@ -18026,11 +18039,12 @@ def prescribed_activity_progress(request, activity_key):
                 return JsonResponse({'success': True, 'progress': {'state': old, 'completed_items': existing.completed_items, 'activity_completed': existing.activity_completed}})
             if activity.get('sequence_mode') == 'per_item':
                 old_matches = old['matches']
+                old_skipped = old.get('skipped_picture_words', [])
                 unlocked = old['unlocked_oral_words']
                 proposed = incoming['unlocked_oral_words']
                 if proposed[:len(unlocked)] != unlocked or len(proposed) > len(unlocked) + 1:
                     raise ValueError('Invalid oral progress.')
-                next_index = len(old_matches)
+                next_index = len(old_matches) + len(old_skipped)
                 if len(proposed) == len(unlocked) + 1:
                     if next_index >= len(activity['word_bank']) or proposed[-1] != activity['word_bank'][next_index]:
                         raise ValueError('Read the current word first.')
@@ -18044,18 +18058,32 @@ def prescribed_activity_progress(request, activity_key):
                     current_word = activity['word_bank'][next_index]
                     if current_word not in proposed or next(iter(added_pairs.values())) != current_word:
                         raise ValueError('Read the current word before matching its picture.')
+                skipped = incoming.get('skipped_picture_words', [])
+                if not set(old_skipped).issubset(set(skipped)) or len(skipped) > len(old_skipped) + 1:
+                    raise ValueError('Skipped pictures cannot be removed.')
+                added_skips = [word for word in skipped if word not in old_skipped]
+                if added_skips:
+                    if (not activity.get('skip_picture_after_attempt_limit') or len(added_skips) != 1
+                            or next_index >= len(activity['word_bank'])):
+                        raise ValueError('Invalid picture skip.')
+                    current_word = activity['word_bank'][next_index]
+                    attempt_limit = max(1, min(3, int(activity.get('picture_attempt_limit', 3) or 3)))
+                    if (added_skips[0] != current_word or current_word not in proposed
+                            or incoming['picture_attempts'].get(current_word, 0) < attempt_limit):
+                        raise ValueError('Use both picture attempts before moving on.')
                 state = incoming
                 state['unlocked_oral_words'] = proposed
                 state['matches'] = matches
-                state['current_oral_word_index'] = len(matches)
+                state['skipped_picture_words'] = skipped
+                state['current_oral_word_index'] = len(matches) + len(skipped)
                 state['state_version'] = old['state_version'] + 1
-                completed = len(matches)
+                completed = len(matches) + len(skipped)
                 total = len(activity['items'])
                 progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
-                    'current_index': completed, 'completed_items': completed, 'correct_items': completed,
+                    'current_index': completed, 'completed_items': completed, 'correct_items': len(matches),
                     'total_items': total, 'activity_completed': False, 'state': state})
                 return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': completed,
-                    'correct_items': completed, 'total_items': total, 'activity_completed': False}})
+                    'correct_items': len(matches), 'total_items': total, 'activity_completed': False}})
             # A client may only retain existing unlocks and add the immediate next workbook word.
             unlocked = old['unlocked_oral_words']
             proposed = incoming['unlocked_oral_words']
@@ -18197,8 +18225,10 @@ def prescribed_activity_progress(request, activity_key):
             phase = old.get('phase', 'reading_choices')
             choice_index = max(0, min(len(item['choices']), int(old.get('choice_index', 0))))
             attempts = max(0, int(old.get('attempts', 0)))
+            correct_items = max(0, min(total, int(old.get('correct_items', index))))
             action = data.get('action')
             accepted = None
+            skipped = False
             if action == 'read_choice':
                 if phase != 'reading_choices' or int(data.get('choice_index', -1)) != choice_index or choice_index >= len(item['choices']):
                     raise ValueError('Read the current choice first.')
@@ -18223,20 +18253,27 @@ def prescribed_activity_progress(request, activity_key):
                     index += 1
                     choice_index = 0
                     attempts = 0
+                    correct_items += 1
                     phase = 'complete' if index >= total else 'reading_choices'
                 else:
                     attempts += 1
+                    if attempts >= 2:
+                        index += 1
+                        choice_index = 0
+                        attempts = 0
+                        skipped = True
+                        phase = 'complete' if index >= total else 'reading_choices'
             else:
                 raise ValueError('Invalid activity action.')
             finished = index >= total
             saved = {'activity_key': activity_key, 'current_item': index, 'choice_index': choice_index,
-                     'attempts': attempts, 'completed_items': index,
+                     'attempts': attempts, 'correct_items': correct_items, 'completed_items': index,
                      'phase': 'complete' if finished else phase,
                      'state_version': int(old.get('state_version') or 0) + 1}
-            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': correct_items,
                           'total_items': total, 'activity_completed': finished, 'state': saved},
             )
-            return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
+            return JsonResponse({'success': True, 'accepted': accepted, 'skipped': skipped, 'progress': {
                 'current_index': index, 'completed_items': index, 'total_items': total,
                 'activity_completed': finished, 'state': saved,
             }})
@@ -18262,16 +18299,23 @@ def prescribed_activity_progress(request, activity_key):
                 raise ValueError('Choose one of the displayed answers.')
             accepted = choice == activity['questions'][index]['answer']
             attempts = max(0, int(old.get('attempts', 0)))
+            correct_answers = max(0, min(total, int(old.get(
+                'correct_answers', existing.correct_items if existing else 0,
+            ))))
             if accepted:
-                index += 1
+                correct_answers += 1
                 attempts = 0
             else:
                 attempts += 1
+            # Each choice finishes the current question. Incorrect answers
+            # advance without being counted as correct.
+            index += 1
             finished = index >= total
             saved = {'activity_key': activity_key, 'current_item': index, 'attempts': attempts,
-                     'completed_items': index, 'phase': 'complete' if finished else 'answering',
+                     'completed_items': index, 'correct_answers': correct_answers,
+                     'phase': 'complete' if finished else 'answering',
                      'state_version': int(old.get('state_version') or 0) + 1}
-            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': correct_answers,
                           'total_items': total, 'activity_completed': finished, 'state': saved},
             )
             return JsonResponse({'success': True, 'accepted': accepted, 'progress': {
@@ -18468,14 +18512,16 @@ def prescribed_activity_progress(request, activity_key):
                     raise ValueError('This item is no longer current.')
                 if index < total and target not in current_choices:
                     target = random.choice(current_choices)
-            elif action == 'answer':
+            elif action == 'choose':
                 if index >= total or target not in current_choices:
-                    raise ValueError('Start the current word before answering.')
+                    raise ValueError('Start the current word before choosing.')
                 if int(data.get('item_index', -1)) != index:
                     raise ValueError('This item is no longer current.')
-                heard_words = re.findall(r'[a-z]+', str(data.get('heard', '')).lower())
-                heard = target if target in heard_words else ''.join(heard_words)
-                if _prescribed_spoken_word_matches(target, heard_words):
+                choice = str(data.get('choice', '')).strip().lower()
+                if choice not in current_choices:
+                    raise ValueError('Choose one of the words shown.')
+                accepted = choice == target
+                if accepted:
                     index += 1
                     attempts = 0
                     target = random.choice(activity['items'][index]['choices']) if index < total else None
@@ -18486,12 +18532,12 @@ def prescribed_activity_progress(request, activity_key):
             finished = index >= total
             saved = {'activity_key': activity_key, 'current_item': index, 'target_word': target,
                      'attempts': attempts, 'completed_items': index,
-                     'phase': 'complete' if finished else 'listening',
+                     'phase': 'complete' if finished else 'choosing',
                      'state_version': int(old.get('state_version') or 0) + 1}
             progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index,
                           'total_items': total, 'activity_completed': finished, 'state': saved},
             )
-            return JsonResponse({'success': True, 'accepted': _prescribed_spoken_word_matches(old.get('target_word'), heard_words) if action == 'answer' else None,
+            return JsonResponse({'success': True, 'accepted': accepted if action == 'choose' else None,
                                  'target_word': target, 'progress': {
                                      'current_index': progress.current_index,
                                      'completed_items': progress.completed_items, 'total_items': total,
@@ -19869,14 +19915,16 @@ def prescribed_activity_complete(request, activity_key):
         state = _normalized_oral_picture_match_state(activity, existing.state if existing else {})
         if activity.get('sequence_mode') == 'per_item':
             total = len(activity['items'])
-            if len(state['unlocked_oral_words']) != total or len(state['matches']) != total:
+            completed = len(state['matches']) + len(state.get('skipped_picture_words', []))
+            if len(state['unlocked_oral_words']) != total or completed != total:
                 return JsonResponse({'success': False, 'error': 'Basahin at itugma muna ang lahat ng salita.'}, status=400)
             state['phase'] = 'completion'
             state['state_version'] = min(1_000_000_000, state['state_version'] + 1)
             _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
-                'current_index': total, 'completed_items': total, 'correct_items': total,
+                'current_index': total, 'completed_items': total, 'correct_items': len(state['matches']),
                 'total_items': total, 'activity_completed': True, 'state': state})
-            return JsonResponse({'success': True, 'result': {'correct_items': total, 'items_completed': total, 'accuracy': 100.0}})
+            accuracy = round((len(state['matches']) / total) * 100, 1) if total else 0.0
+            return JsonResponse({'success': True, 'result': {'correct_items': len(state['matches']), 'items_completed': total, 'accuracy': accuracy}})
         if len(state['unlocked_oral_words']) != 5 or len(state['matches']) != 5:
             return JsonResponse({'success': False, 'error': 'Kumpletuhin muna ang pagbasa at lahat ng pares.'}, status=400)
         state['phase'] = 'completion'; state['state_version'] = 1_000_000_000
@@ -19914,10 +19962,15 @@ def prescribed_activity_complete(request, activity_key):
         total = len(activity['questions'])
         if not existing or existing.completed_items < total or state.get('phase') != 'complete':
             return JsonResponse({'success': False, 'error': 'Answer every question first.'}, status=400)
+        correct_answers = max(0, min(total, int(state.get('correct_answers', existing.correct_items or 0))))
         existing.activity_completed = True
-        existing.current_index = existing.completed_items = existing.correct_items = existing.total_items = total
+        existing.current_index = existing.completed_items = existing.total_items = total
+        existing.correct_items = correct_answers
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'total_items', 'updated_at'])
-        return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
+        return JsonResponse({'success': True, 'result': {
+            'items_completed': total, 'correct_items': correct_answers,
+            'accuracy': round((correct_answers / total) * 100, 1) if total else 0.0,
+        }})
     if activity['interaction'] == 'oral_story_line':
         existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = existing.state if existing and isinstance(existing.state, dict) else {}
@@ -24135,6 +24188,8 @@ _LOCAL_PRESCRIBED_AUDIO_ALIASES = {
         'Now, encircle the right choice..mp3',
     ('lesson-31-gawain-1', 'hmmletstrythatagain'):
         'Hmm, let’s try that again..mp3',
+    ('lesson-31-gawain-1', 'letsmovetothenextword'):
+        "Let's move to the next word..mp3",
     ('lesson-31-gawain-1', 'correctnowletsreadthenextchoices'):
         "Correct, now let's read the next choices..mp3",
     ('lesson-31-gawain-1', 'wonderfulyoufinishedtheactivity'):
@@ -24161,6 +24216,8 @@ _LOCAL_PRESCRIBED_AUDIO_ALIASES = {
         'That’s right, now let’s read the next word..mp3',
     ('lesson-31-gawain-4', 'hmmletstrythatagain'):
         'Hmm, let’s try that again..mp3',
+    ('lesson-31-gawain-4', 'letsmovetothenextpicture'):
+        "Let's move to the next picture..mp3",
     ('lesson-31-gawain-4', 'nowletsreadthenextpicture'):
         "Now, let's read the next picture..mp3",
     ('lesson-31-gawain-4', 'nowletsboxthecorrectletter'):

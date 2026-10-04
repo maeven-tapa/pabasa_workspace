@@ -3,14 +3,14 @@ html body .page{position:relative;display:block;width:min(1250px,calc(100% - 36p
 html body .page .back{position:absolute;top:16px;left:0;z-index:2}
 html body .page .stage{position:absolute;top:clamp(136px,18vh,188px);left:50%;right:auto;bottom:clamp(18px,5vh,50px);width:100%;height:auto;min-height:0;margin:0;transform:translateX(-50%);padding:clamp(22px,3.3vh,42px) clamp(20px,6vw,80px) 20px;display:grid;place-items:center;overflow:hidden}
 html body #app{width:min(100%,1050px);max-height:100%}
-html body .content{margin:clamp(14px,2.5vh,26px) auto}
+html body .content{margin:clamp(26px,4vh,40px) auto 0}
 html body .word{font-size:clamp(4rem,8vw,6rem)}
-html body .choices{gap:14px;margin:16px auto}
-html body .choice{min-width:145px;padding:13px 22px}
+html body .choices[aria-label="Circle the matching word"]{gap:18px;margin:clamp(16px,2.5vh,22px) auto clamp(22px,3vh,32px)}
+html body .choices[aria-label="Circle the matching word"] .choice{min-width:108px;width:108px;height:108px;min-height:108px;padding:12px;border:0;border-radius:50%;background:transparent;color:var(--ink);box-shadow:none}
 html body .progress{gap:9px;margin-top:clamp(14px,2vh,24px)}
 html body .step{width:36px;height:36px}
 html body .status{display:none!important}
-@media(max-width:680px){html body .page{width:min(100% - 24px,680px);padding:12px}html body .page .back{top:12px;left:0;width:245px;min-height:58px}html body .page .stage{top:116px;bottom:12px;padding:22px 14px 16px;border-radius:30px}html body .choice{min-width:125px;padding:11px 16px}html body .step{width:32px;height:32px}}
+@media(max-width:680px){html body .page{width:min(100% - 24px,680px);padding:12px}html body .page .back{top:12px;left:0;width:245px;min-height:58px}html body .page .stage{top:116px;bottom:12px;padding:22px 14px 16px;border-radius:30px}html body .choices[aria-label="Circle the matching word"] .choice{min-width:88px;width:88px;height:88px;min-height:88px;padding:10px}html body .step{width:32px;height:32px}}
 html body .button:hover:not(:disabled){filter:brightness(1.04);transform:translateY(-2px)}
 html body .button:active:not(:disabled){transform:translateY(3px);box-shadow:0 2px 0 var(--dark)}
 html body .page .stage{top:calc(50% + 24px);left:50%;right:auto;bottom:auto;width:100%;height:auto;min-height:0;max-height:calc(100dvh - 32px);transform:translate(-50%,-50%);box-shadow:0 18px 45px #1e5b7a35}
@@ -19,3 +19,11 @@ html body .button.is-busy:disabled{background:#b5c5c7!important;color:#edf3f4!im
 html body .button.is-busy{animation:lesson27ButtonPulse 1.15s ease-in-out infinite}
 @keyframes lesson27ButtonPulse{0%,100%{transform:scale(1);box-shadow:0 8px 0 var(--dark),0 12px 24px #187b7a40}50%{transform:scale(1.025);box-shadow:0 0 0 9px #f5d47c55,0 8px 0 var(--dark),0 15px 28px #187b7a55}}
 html body .content .label{display:none!important}
+html body .instruction{margin:10px auto 0;color:var(--ink);font-size:clamp(1.45rem,2.3vw,2rem);line-height:1.35;font-weight:900}
+html body .choices .choice{cursor:pointer;transition:transform .16s,background .16s,border-color .16s,box-shadow .16s}
+html body .choices[aria-label="Circle the matching word"] .choice:hover:not(:disabled){background:#fff8dc;border:4px solid #efb947;color:var(--ink);transform:scale(1.04);box-shadow:0 0 0 5px #f5d47c55}
+html body .choices .choice:focus-visible{outline:4px solid #f4c866;outline-offset:4px}
+html body .choices[aria-label="Circle the matching word"] .choice.is-wrong{border:4px solid var(--bad);background:#fff0f0;color:var(--bad);transform:scale(1.04);box-shadow:0 0 0 5px #f4b0b055}
+html body .choices[aria-label="Circle the matching word"] .choice:disabled{cursor:not-allowed;opacity:.65}
+#prescribed-l28a2-mic-toggle{display:none!important}
+@media(max-width:800px){html body .instruction{font-size:clamp(1.25rem,4.8vw,1.65rem)}}

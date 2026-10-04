@@ -1,26 +1,206 @@
 (() => {
   'use strict';
-  const node=document.getElementById('prescribed-activity-data'),app=document.getElementById('app');if(!node||!app)return;const data=JSON.parse(node.textContent||'{}'),csrf=()=>((document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)||[])[1]||''),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),normalize=v=>String(v||'').toLowerCase().replace(/[^a-z]/g,'');let state={...(data.progress?.state||{})},busy=false,stream=null,audioUrl=null,audio=null;const RETRY_FEEDBACK="Hmm, let's try that again.",CORRECT_FEEDBACK="That's right, now let's read the next word.",COMPLETION_FEEDBACK="Great job! You identified all the words.";
-  const localAudioBase='/static/pabasa_app/prescribed/audio/SESSION_12/LESSON_28/GAWAIN_2/';const localAudioKey=v=>String(v||'').trim().toLowerCase().replace(/[’']/g,"'").replace(/[.!?]+$/,'');const localAudioFiles={let:'Let.mp3',lit:'Lit.mp3',met:'Met.mp3',sat:'Sat.mp3',set:'Set.mp3',sit:'Sit.mp3',sun:'Sun.mp3',[localAudioKey('Word Identifying. Listen to the word, then say the same word.')]: 'Word Identifying. Listen to the word, then say the same word..mp3',[localAudioKey(RETRY_FEEDBACK)]:'Hmm, let’s try that again..mp3',[localAudioKey(CORRECT_FEEDBACK)]:'That’s right, now let’s read the next word..mp3',[localAudioKey(COMPLETION_FEEDBACK)]:'Great job! You completed Word Identifying..mp3'};
-  let activeRecorder=null,recordingTimeout=null,generation=0,speechAttemptActive=false,isMuted=false,isPaused=false;
-  const debugFields=Object.fromEntries(['status','transcript','expected','normalized','result','mic','recorder','vad','error','raw'].map(key=>[key,document.getElementById(`prescribed-l28a2-debug-${key}`)]));let debugHistory=['Activity ready'];const micState=()=>`${stream?'Active':'Inactive'} · ${isMuted?'Muted':'Unmuted'}`,recorderState=()=>activeRecorder?.state||'inactive';function debug(patch={},event=''){if(event)debugHistory=[...debugHistory,event].slice(-6);const values={...patch,mic:patch.mic??micState(),recorder:patch.recorder??recorderState(),vad:'Not available',raw:debugHistory.join('\n')};Object.entries(values).forEach(([key,value])=>{if(debugFields[key])debugFields[key].textContent=value??'—';});}function updateMic(){const button=document.getElementById('prescribed-l28a2-mic-toggle');if(!button)return;button.setAttribute('aria-pressed',String(isMuted));button.setAttribute('aria-label',isMuted?'Unmute microphone':'Mute microphone');button.title=isMuted?'Unmute microphone':'Mute microphone';button.classList.toggle('is-muted',isMuted);button.innerHTML=`<i class="bi ${isMuted?'bi-mic-mute-fill':'bi-mic-fill'}" aria-hidden="true"></i>`;}
-  function hydrate(){state.current_item=Number(state.current_item||0);state.completed_items=Number(state.completed_items||0);state.phase||='listening';}
-  async function post(url,body,guard=()=>true){const r=await fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify(body)}),x=await r.json();if(!r.ok||!x.success)throw new Error(x.error||'Could not save your progress.');if(!guard())return x;if(x.progress?.state)state={...x.progress.state};hydrate();return x;}
-  function steps(){const current=state.phase==='complete'?data.items.length:state.current_item;return `<div class="progress" aria-label="Activity progress">${data.items.map((_,i)=>`<span class="step ${i<current?'done':''} ${i===current&&state.phase!=='complete'?'active':''}">${i+1}</span>`).join('')}</div>`;}
-  function render(message='',kind=''){hydrate();if(state.phase==='complete'||state.current_item>=data.items.length){window.PrescribedLessonUi.showCompletion(app);post(data.completion_url,{}).catch(()=>{});return;}const item=data.items[state.current_item],target=state.target_word||'';app.innerHTML=`<div class="eyebrow">SESSION 12 · LESSON 28 · ACTIVITY 2</div><h1 class="title">Word Identifying</h1><p class="instruction">Listen to the word, then say the same word.</p><div class="content"><div class="label">Listen carefully, then read the word aloud</div><div class="choices">${item.choices.map(word=>`<span class="choice">${esc(word)}</span>`).join('')}</div><p class="status ${kind}" id="status">${esc(message||(target?'Press Listen to hear the word.':'Preparing the word…'))}</p><div class="actions"><button data-basahin-button data-basahin-language="English" class="button" id="read" type="button" ${target?'':'disabled'}>Read</button><button class="button secondary" id="listen" type="button" ${target?'':'disabled'}>🔊 Listen</button></div></div>${steps()}`;document.getElementById('listen').addEventListener('click',()=>playAudio(target).catch(error=>render(error.message,'bad')));window.Basahin.bindActivity(document.getElementById('read'), record);}
-  async function playAudio(text){if(busy||isPaused||!text)return;busy=true;const buttons=[...app.querySelectorAll('button')],buttonStates=buttons.map(button=>({button,disabled:button.disabled}));buttons.forEach(button=>{button.disabled=true;button.classList.add('is-busy');});try{const filename=localAudioFiles[localAudioKey(text)];if(!filename)throw new Error('Could not find the audio for this activity.');audio=new Audio(`${localAudioBase}${filename.split('/').map(encodeURIComponent).join('/')}`);await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onpause=resolve;audio.onerror=()=>reject(new Error('Audio playback failed. Try again.'));audio.play().catch(reject);});}finally{busy=false;buttonStates.forEach(({button,disabled})=>{if(button.isConnected)button.disabled=disabled;});buttons.forEach(button=>{if(button.isConnected)button.classList.remove('is-busy');});audio=null;}}
-  async function begin(){const result=await post(data.progress_url,{action:'begin',item_index:state.current_item});render();debug({status:isMuted?'Muted':'Ready',expected:state.target_word||'—',error:'—'},'Activity ready');return result;}
-  async function record(){if(busy||isPaused||isMuted||!state.target_word){if(isMuted)debug({status:'Muted'},'Recording blocked while muted');return;}const attempt=++generation,speechButton=document.getElementById('read');speechAttemptActive=true;if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){render('Microphone recording is not available in this browser.','bad');speechAttemptActive=false;return;}busy=true;speechButton?.classList.add('is-busy');debug({status:'Listening',expected:state.target_word,error:'—'},'Recording started');try{const x = await window.Basahin.read({target_text:state.target_word, language:'English', mode:'reading'}, {button:speechButton, url:data.transcribe_url}); if(attempt!==generation)return;const heard=String(x.raw_transcript||x.transcript||''),normalized=normalize(heard),words=heard.toLowerCase().match(/[a-z]+/g)||[],answer=words.includes(normalize(state.target_word))?state.target_word:heard;debug({status:'Processing',transcript:heard,normalized,expected:state.target_word},'Transcription received');const result=await post(data.progress_url,{action:'answer',item_index:state.current_item,heard:answer},()=>attempt===generation&&!isPaused);if(attempt!==generation||isPaused)return;const correct=Boolean(result.accepted),response=correct?(state.phase==='complete'?COMPLETION_FEEDBACK:CORRECT_FEEDBACK):RETRY_FEEDBACK;debug({status:correct?'Correct':'Try again',result:correct?'Match':'Not Match',transcript:heard,normalized,expected:state.target_word,error:'—'},correct?'Match':'Retry');busy=false;render(correct?'Correct! Listen to the next word.':`I heard “${heard}”. Listen and try again.`,correct?'good':'bad');if(attempt===generation){await playAudio(response);if(state.target_word)await playAudio(state.target_word);}}catch(error){ if (error?.name === 'AbortError') return; if(attempt===generation){stopStream();busy=false;debug({status:'Error',error:error.message||'I could not hear you. Try again.'},'Error: '+(error.message||'recording failed'));render(error.message||'I could not hear you. Try again.','bad');}}finally{if(attempt===generation){speechAttemptActive=false;if(speechButton?.isConnected)speechButton.classList.remove('is-busy');busy=false;debug({status:isPaused?'Paused':(isMuted?'Muted':'Ready'),recorder:'inactive'});}}}
-  function applyMuteToStream(){stream?.getAudioTracks().forEach(track=>{track.enabled=!isMuted;});debug({status:isMuted?'Muted':(isPaused?'Paused':'Ready'),mic:micState()});}
-  function stopStream(){ window.Basahin?.cancelAll(); stream?.getTracks().forEach(track=>track.stop());stream=null;}
-  function stopActivityAudio(){audio?.pause();audio=null;}
-  function cancelSpeechAttempt(){ window.Basahin?.cancelAll(); generation+=1;if(recordingTimeout){clearTimeout(recordingTimeout);recordingTimeout=null;}const recorder=activeRecorder;activeRecorder=null;if(recorder&&recorder.state!=='inactive'){try{recorder.stop();}catch(_){}}stopStream();speechAttemptActive=false;busy=false;document.getElementById('read')?.classList.remove('is-busy');debug({status:isPaused?'Paused':(isMuted?'Muted':'Ready'),mic:micState(),recorder:'inactive'},'Speech attempt cancelled');}
-  async function reset(event){event.preventDefault();if(busy)return;cancelSpeechAttempt();stopActivityAudio();busy=true;try{await post(data.progress_url,{reset:true});window.location.reload();}catch(error){busy=false;window.alert(error.message||'Could not reset the activity.');}}
-  let sampleStream=null,testAudioContext=null,testAnalyser=null,testSource=null,meterFrame=null,testActive=false;
-  const testModal=document.getElementById('prescribed-l28a2-audio-settings-modal'),testStatus=document.getElementById('prescribed-l28a2-settings-status'),testToggle=document.getElementById('prescribed-l28a2-test-toggle'),deviceSelect=document.getElementById('prescribed-l28a2-device-select'),levelFill=document.getElementById('prescribed-l28a2-level-fill'),levelTrack=levelFill?.parentElement;
-  function setTestStatus(message){if(testStatus)testStatus.innerHTML=`<strong>Microphone Status:</strong> ${message}`;}function resetTestMeter(){if(levelFill)levelFill.style.width='0%';levelTrack?.setAttribute('aria-valuenow','0');}function stopSampleStream(){if(meterFrame)cancelAnimationFrame(meterFrame);meterFrame=null;testSource?.disconnect();testSource=null;testAnalyser=null;testAudioContext?.close().catch(()=>{});testAudioContext=null;sampleStream?.getTracks().forEach(track=>track.stop());sampleStream=null;testActive=false;resetTestMeter();if(testToggle)testToggle.innerHTML='<i class="bi bi-mic-fill" aria-hidden="true"></i> Start Test';}function updateMeter(){if(!testAnalyser||!testActive)return;const values=new Uint8Array(testAnalyser.fftSize);testAnalyser.getByteTimeDomainData(values);let sum=0;for(const value of values){const sample=(value-128)/128;sum+=sample*sample;}const level=Math.min(100,Math.round(Math.sqrt(sum/values.length)*260));if(levelFill)levelFill.style.width=`${level}%`;levelTrack?.setAttribute('aria-valuenow',String(level));meterFrame=requestAnimationFrame(updateMeter);}async function refreshDevices(){if(!navigator.mediaDevices?.enumerateDevices||!deviceSelect)return;try{const devices=await navigator.mediaDevices.enumerateDevices(),microphones=devices.filter(device=>device.kind==='audioinput');deviceSelect.replaceChildren(new Option('Default microphone',''));microphones.forEach(device=>deviceSelect.add(new Option(device.label||`Microphone ${deviceSelect.options.length}`,device.deviceId)));}catch(_){}}async function updateTestPermission(){if(!navigator.mediaDevices?.getUserMedia){setTestStatus('Unavailable in this browser.');return;}try{const permission=await navigator.permissions?.query?.({name:'microphone'});setTestStatus(permission?.state==='granted'?'Access granted.':permission?.state==='denied'?'Access denied.':'Permission not granted.');}catch(_){setTestStatus('Permission status unavailable.');}}async function startTest(){const AudioContextCtor=window.AudioContext||window.webkitAudioContext;if(!navigator.mediaDevices?.getUserMedia||!AudioContextCtor){setTestStatus('Unavailable in this browser.');return;}stopSampleStream();try{const constraints=deviceSelect?.value?{audio:{deviceId:{exact:deviceSelect.value}}}:{audio:true};sampleStream=await navigator.mediaDevices.getUserMedia(constraints);testAudioContext=new AudioContextCtor();testAnalyser=testAudioContext.createAnalyser();testAnalyser.fftSize=512;testSource=testAudioContext.createMediaStreamSource(sampleStream);testSource.connect(testAnalyser);testActive=true;setTestStatus('Access granted. Testing live input.');if(testToggle)testToggle.innerHTML='<i class="bi bi-stop-fill" aria-hidden="true"></i> Stop Test';updateMeter();}catch(_){stopSampleStream();setTestStatus('Access denied or microphone unavailable.');}}async function toggleTest(){if(testActive)stopSampleStream();else await startTest();if(!testActive)await updateTestPermission();}function bindAudioTest({audio:modal}){testToggle?.addEventListener('click',toggleTest);deviceSelect?.addEventListener('change',()=>{if(testActive){stopSampleStream();startTest();}});modal?.addEventListener('click',event=>{if(event.target===modal)stopSampleStream();});document.getElementById('prescribed-l28a2-audio-close')?.addEventListener('click',stopSampleStream);refreshDevices();updateTestPermission();}
-  function setDebugVisible(visible,persist=true){const enabled=Boolean(visible),panel=document.getElementById('prescribed-l28a2-debug-panel'),toggle=document.getElementById('prescribed-l28a2-debug-toggle');panel?.toggleAttribute('hidden',!enabled);panel?.setAttribute('aria-hidden',String(!enabled));if(toggle)toggle.checked=enabled;if(persist)localStorage.setItem('pabasaShowSpeechDebugPanel',enabled?'true':'false');}function bindDebug(){const toggle=document.getElementById('prescribed-l28a2-debug-toggle');toggle?.addEventListener('change',()=>setDebugVisible(toggle.checked));setDebugVisible(localStorage.getItem('pabasaShowSpeechDebugPanel')==='true',false);}
-  document.getElementById('lesson28a2-later')?.addEventListener('click',reset);document.getElementById('lesson28a2-go')?.addEventListener('click',async()=>{document.getElementById('lesson28a2-start').hidden=true;document.getElementById('lesson28a2-stage').classList.remove('waiting');try{await playAudio('Word Identifying. Listen to the word, then say the same word.');await begin();await playAudio(state.target_word);}catch(error){render(error.message,'bad');}});window.addEventListener('pagehide',()=>{cancelSpeechAttempt();stopActivityAudio();stopSampleStream();});hydrate();render();
-  function initializeControls(){const prefix='prescribed-l28a2',adapter={pause(){isPaused=true;cancelSpeechAttempt();stopActivityAudio();debug({status:'Paused'},'Activity paused');render();},resume(){isPaused=false;debug({status:isMuted?'Muted':'Ready'},'Activity resumed');render();},restart(){cancelSpeechAttempt();stopActivityAudio();stopSampleStream();return reset(new Event('submit'));},cleanup(){cancelSpeechAttempt();stopActivityAudio();stopSampleStream();},setMuted(value){isMuted=Boolean(value);applyMuteToStream();updateMic();debug({status:isMuted?'Muted':(isPaused?'Paused':'Ready'),mic:micState()},isMuted?'Microphone muted':'Microphone unmuted');},bindAudioTest,bindDebug};if(!window.PrescribedControls||window.__prescribedL28a2ControlsInitialized)return;if(!document.getElementById(`${prefix}-help-btn`))return;window.__prescribedL28a2ControlsInitialized=true;updateMic();window.PrescribedControls.init({prefix,adapter});document.getElementById(`${prefix}-help-btn`)?.addEventListener('click',()=>{if(speechAttemptActive)cancelSpeechAttempt();stopActivityAudio();});}
-  initializeControls();
+
+  const node = document.getElementById('prescribed-activity-data');
+  const app = document.getElementById('app');
+  if (!node || !app) return;
+
+  const data = JSON.parse(node.textContent || '{}');
+  const csrf = () => ((document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || '');
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[char]));
+  const audioBase = '/static/pabasa_app/prescribed/audio/SESSION_12/LESSON_28/GAWAIN_2/';
+  const introAudio = 'Word Identifying. Listen to the word, then circle the correct word..mp3';
+  const correctAudio = 'That’s right, now let’s read the next word..mp3';
+  const retryAudio = 'Hmm, let’s try that again..mp3';
+  const completionAudio = 'Great job! You completed Word Identifying..mp3';
+  const wordAudio = {let: 'Let.mp3', lit: 'Lit.mp3', met: 'Met.mp3', sat: 'Sat.mp3', set: 'Set.mp3', sit: 'Sit.mp3', sun: 'Sun.mp3'};
+
+  let state = {...(data.progress?.state || {})};
+  let busy = false;
+  let paused = false;
+  let audio = null;
+  let wrongChoice = '';
+
+  function updateStaticCopy() {
+    document.querySelector('#lesson28a2-start .modal > p:not(.start-label)')?.replaceChildren('Listen to the word, then circle the correct word.');
+    document.querySelector('#prescribed-l28a2-help-modal .prescribed-l28a2-help-step:last-child span')?.replaceChildren('Circle the word you heard to continue.');
+  }
+
+  function hydrate() {
+    state.current_item = Number(state.current_item || 0);
+    state.completed_items = Number(state.completed_items || 0);
+    state.phase ||= 'choosing';
+  }
+
+  async function post(url, body) {
+    const response = await fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf()},
+      body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.error || 'Could not save your progress.');
+    if (result.progress?.state) state = {...result.progress.state};
+    hydrate();
+    return result;
+  }
+
+  function steps() {
+    const current = state.phase === 'complete' ? data.items.length : state.current_item;
+    return `<div class="progress" aria-label="Activity progress">${data.items.map((_, index) => `<span class="step ${index < current ? 'done' : ''} ${index === current && state.phase !== 'complete' ? 'active' : ''}">${index + 1}</span>`).join('')}</div>`;
+  }
+
+  function render(message = '', kind = '') {
+    hydrate();
+    if (state.phase === 'complete' || state.current_item >= data.items.length) {
+      window.PrescribedLessonUi.showCompletion(app);
+      post(data.completion_url, {}).catch(() => {});
+      return;
+    }
+
+    const item = data.items[state.current_item];
+    const target = state.target_word || '';
+    app.innerHTML = `<div class="eyebrow">SESSION 12 · LESSON 28 · ACTIVITY 2</div>
+      <p class="instruction">Listen to the word, then circle the correct word.</p>
+      <div class="content">
+        <p class="label">Listen carefully, then circle the matching word.</p>
+        <div class="choices" aria-label="Circle the matching word">
+          ${item.choices.map(word => `<button class="choice ${wrongChoice === word ? 'is-wrong' : ''}" data-choice="${esc(word)}" type="button" ${!target || busy || paused ? 'disabled' : ''}>${esc(word)}</button>`).join('')}
+        </div>
+        <p class="status ${kind}" id="status">${esc(message || (target ? 'Choose the word you heard.' : 'Preparing the word…'))}</p>
+        <div class="actions"><button class="button secondary" id="listen" type="button" ${!target || busy || paused ? 'disabled' : ''}><span aria-hidden="true">🔊</span> Listen</button></div>
+      </div>${steps()}`;
+
+    document.getElementById('listen')?.addEventListener('click', () => playWord(target).catch(error => render(error.message, 'bad')));
+    app.querySelectorAll('[data-choice]').forEach(button => {
+      button.addEventListener('click', () => choose(button.dataset.choice));
+    });
+  }
+
+  async function playFile(filename) {
+    if (!filename) throw new Error('Could not find the audio for this activity.');
+    audio?.pause();
+    audio = new Audio(`${audioBase}${filename.split('/').map(encodeURIComponent).join('/')}`);
+    await new Promise((resolve, reject) => {
+      audio.onended = resolve;
+      audio.onerror = () => reject(new Error('Audio playback failed. Try again.'));
+      audio.play().catch(reject);
+    });
+    audio = null;
+  }
+
+  async function playWord(word) {
+    if (busy || paused || !word) return;
+    busy = true;
+    render('Listening…');
+    try {
+      await playFile(wordAudio[String(word).toLowerCase()]);
+    } finally {
+      busy = false;
+      render();
+    }
+  }
+
+  async function begin() {
+    await post(data.progress_url, {action: 'begin', item_index: state.current_item});
+    wrongChoice = '';
+    render();
+  }
+
+  async function choose(choice) {
+    if (busy || paused || !state.target_word) return;
+    busy = true;
+    let message = '';
+    let kind = '';
+    let nextTarget = '';
+    let feedbackAudio = '';
+    let accepted = false;
+    try {
+      const result = await post(data.progress_url, {
+        action: 'choose',
+        item_index: state.current_item,
+        choice,
+      });
+      accepted = Boolean(result.accepted);
+      wrongChoice = accepted ? '' : choice;
+      message = accepted ? 'Correct! Listen to the next word.' : 'That is not the matching word. Try another choice.';
+      kind = accepted ? 'good' : 'bad';
+      nextTarget = accepted ? state.target_word : '';
+      feedbackAudio = accepted
+        ? (state.phase === 'complete' ? completionAudio : correctAudio)
+        : retryAudio;
+      render(message, kind);
+      await playFile(feedbackAudio);
+      if (!accepted) wrongChoice = '';
+    } catch (error) {
+      message = error.message || 'Could not save your choice.';
+      kind = 'bad';
+    } finally {
+      busy = false;
+    }
+    render(message, kind);
+    if (nextTarget) await playWord(nextTarget);
+  }
+
+  function stopAudio() {
+    audio?.pause();
+    audio = null;
+  }
+
+  async function reset(event) {
+    event?.preventDefault();
+    if (busy) return;
+    busy = true;
+    try {
+      await post(data.progress_url, {reset: true});
+      window.location.reload();
+    } catch (error) {
+      busy = false;
+      window.alert(error.message || 'Could not reset the activity.');
+    }
+  }
+
+  document.getElementById('lesson28a2-later')?.addEventListener('click', reset);
+  document.getElementById('lesson28a2-go')?.addEventListener('click', async () => {
+    document.getElementById('lesson28a2-start').hidden = true;
+    document.getElementById('lesson28a2-stage').classList.remove('waiting');
+    try {
+      await playFile(introAudio);
+      await begin();
+      await playWord(state.target_word);
+    } catch (error) {
+      busy = false;
+      render(error.message, 'bad');
+    }
+  });
+
+  window.addEventListener('pagehide', stopAudio);
+  updateStaticCopy();
+  hydrate();
+  render();
+
+  if (window.PrescribedControls && !window.__prescribedL28a2ControlsInitialized) {
+    window.__prescribedL28a2ControlsInitialized = true;
+    window.PrescribedControls.init({
+      prefix: 'prescribed-l28a2',
+      adapter: {
+        pause() {
+          paused = true;
+          stopAudio();
+          render();
+        },
+        resume() {
+          paused = false;
+          render();
+        },
+        restart() {
+          return reset();
+        },
+        cleanup: stopAudio,
+      },
+    });
+  }
 })();
