@@ -25,7 +25,7 @@ class SessionTimeoutPolicyMiddleware:
 
     def __call__(self, request):
         response = self.get_response(request)
-        if request.session.get('user_id'):
+        if request.session.get('user_id') or request.session.get('_auth_user_id'):
             if not settings.SESSION_TIMEOUTS_ENABLED:
                 # Replace legacy browser-close/short expiries once. SessionMiddleware
                 # saves the extended server session and cookie on this response.

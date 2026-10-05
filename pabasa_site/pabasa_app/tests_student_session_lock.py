@@ -1,8 +1,14 @@
+import json
+import os
+import subprocess
+import sys
+
+from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from django.contrib.sessions.models import Session
 from django.contrib.sessions.backends.db import SessionStore
 from django.conf import settings
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
@@ -365,6 +371,20 @@ class StudentSessionLockTests(TestCase):
             self.assertTrue(claim_student_session(self.student.pk, self.client.session.session_key))
 
 
+class SessionTimeoutConfigurationTests(SimpleTestCase):
+    def test_deployment_environment_cannot_reenable_automatic_timeouts(self):
+        result = subprocess.run([sys.executable, '-c',
+            'import json; from django.conf import settings; '
+            'print(json.dumps([settings.SESSION_TIMEOUTS_ENABLED, settings.SESSION_COOKIE_AGE, '
+            'settings.SESSION_EXPIRE_AT_BROWSER_CLOSE]))'],
+            env={**os.environ, 'SESSION_TIMEOUTS_ENABLED': 'true'},
+            capture_output=True, text=True, check=True, timeout=30)
+        enabled, lifetime, browser_close = json.loads(result.stdout)
+        self.assertFalse(enabled)
+        self.assertGreaterEqual(lifetime, 99 * 365 * 24 * 60 * 60)
+        self.assertFalse(browser_close)
+
+
 @override_settings(SESSION_TIMEOUTS_ENABLED=False, SESSION_COOKIE_AGE=100 * 365 * 24 * 60 * 60)
 class SessionTimeoutDisabledTests(TestCase):
     def setUp(self):
@@ -433,6 +453,20 @@ class SessionTimeoutDisabledTests(TestCase):
         self.assertEqual(self.users['student'].last_activity, old)
         self.assertEqual(client.get(reverse('dashboard')).status_code, 200)
         self.assertContains(client.get(reverse('dashboard')), '"timeouts_enabled": false')
+
+    def test_existing_django_admin_sessions_are_extended(self):
+        user = get_user_model().objects.create_user(username='django-admin', is_staff=True, is_superuser=True)
+        self.client.force_login(user)
+        for expiry in (60, 0):
+            with self.subTest(expiry=expiry):
+                session = self.client.session
+                session.set_expiry(expiry)
+                session.save()
+                response = self.client.get(reverse('admin:index'))
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(self.client.session.get('_auth_user_id'), str(user.pk))
+                stored = Session.objects.get(session_key=self.client.session.session_key)
+                self.assertGreater(stored.expire_date, timezone.now() + timedelta(days=99 * 365))
 
     def test_manual_logout_still_invalidates_every_role(self):
         for role in self.users:
