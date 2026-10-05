@@ -133,7 +133,7 @@
         --lesson-one-teal-dark: #187b7a;
         --lesson-one-accent: #e7af45;
         min-height: 100vh;
-        padding: 16px clamp(16px, 4vw, 42px) 22px;
+        padding: 26px clamp(16px, 4vw, 42px) 22px;
         color: var(--lesson-one-ink);
         font-family: LessonOneFredoka, Nunito, "Segoe UI", sans-serif;
         background: #e1f5f7 url('/static/pabasa_app/prescribed/PRESCRIBED-BG.jpg') center/cover no-repeat;
@@ -148,7 +148,7 @@
       }
       .lesson-one-page .back {
         position: absolute;
-        top: 0;
+        top: 30px;
         left: 0;
         z-index: 2;
         display: inline-flex;
@@ -175,7 +175,7 @@
       .lesson-one-page button:focus-visible { outline: 4px solid #f5d47c; outline-offset: 4px; }
       .lesson-one-page .shell {
         position: absolute;
-        top: 50%;
+        top: calc(50% + 60px);
         left: 50%;
         transform: translate(-50%, -50%);
         width: min(1250px, 100%);
@@ -238,8 +238,8 @@
       @media (max-width: 800px) {
         .lesson-one-page { overflow: auto; }
         .lesson-one-page .page { height: auto; min-height: 100vh; }
-        .lesson-one-page .shell { position: relative; top: auto; left: auto; transform: none; width: 100%; margin: 82px auto 0; padding: 28px 16px 20px; border-radius: 30px; }
-        .lesson-one-page .back { width: 230px; min-height: 58px; font-size: 1rem; }
+        .lesson-one-page .shell { position: relative; top: auto; left: auto; transform: none; width: 100%; margin: 58px auto 0; padding: 28px 16px 20px; border-radius: 30px; }
+        .lesson-one-page .back { position: relative; top: 10px; left: auto; width: 230px; min-height: 58px; font-size: 1rem; }
         .lesson-one-page .board { height: auto; grid-template-columns: repeat(3, minmax(108px, 1fr)); grid-template-rows: none; grid-auto-rows: minmax(112px, auto); gap: 10px; }
         .lesson-one-page .tile { min-height: 112px; padding: 10px 7px; }
         .lesson-one-page .tile img { height: 76px; }
@@ -1046,11 +1046,11 @@
     if (eyebrow) eyebrow.textContent = 'SESSION 1 · LESSON 1 · GAWAIN 1';
     const shell = document.querySelector('.shell');
     const backLink = document.querySelector('.back');
-    if (shell && backLink) shell.prepend(backLink);
+    if (shell && backLink) shell.parentNode.insertBefore(backLink, shell);
     document.querySelectorAll('.shell > .instruction').forEach(element => element.remove());
     installRecordingStyles();
     const layoutStyle = document.createElement('style');
-    layoutStyle.textContent = '@media (min-width:761px) { .page { height:100dvh; overflow:hidden; } .shell { height:calc(100dvh - 70px); padding:7px; gap:3px 14px; overflow:hidden; grid-template-rows:auto auto auto minmax(0,1fr); } .shell > .back { grid-column:1/-1; grid-row:1; justify-self:start; margin:0; } .title { font-size:clamp(1.1rem,2.2vh,1.55rem); } .song-panel,.board { grid-row:4; min-height:0; } .song-panel { padding:9px; } .song-panel h2 { font-size:clamp(.9rem,2vh,1.2rem); } .song-panel p { font-size:clamp(.6rem,1.1vh,.7rem); } .lesson-one-page .youtube-link,.lesson-one-page .sing-done { width:fit-content; min-height:42px; max-width:240px; margin-top:8px; padding:8px 12px; font-family:inherit; font-size:.75rem; font-weight:1000; line-height:1.15; } .lesson-one-page .sing-stop,.lesson-one-page .sing-again { width:fit-content; max-width:190px; margin-top:6px; padding:6px 9px; font-family:inherit; font-size:.56rem; font-weight:1000; line-height:1.1; } .board { height:auto; gap:6px; padding:3px 1px; overflow:auto; } .tile { min-height:76px; padding:6px 4px; border-radius:12px; } .tile-letter { font-size:clamp(1.15rem,2.2vw,1.7rem); } .tile img { width:min(78%,54px); height:50px; margin:1px auto 0; } }';
+    layoutStyle.textContent = '@media (min-width:761px) { .page { height:100dvh; overflow:hidden; } .shell { height:calc(100dvh - 70px); padding:7px; gap:3px 14px; overflow:hidden; grid-template-rows:auto auto auto minmax(0,1fr); } .title { font-size:clamp(1.1rem,2.2vh,1.55rem); } .song-panel,.board { grid-row:4; min-height:0; } .song-panel { padding:9px; } .song-panel h2 { font-size:clamp(.9rem,2vh,1.2rem); } .song-panel p { font-size:clamp(.6rem,1.1vh,.7rem); } .lesson-one-page .youtube-link,.lesson-one-page .sing-done { width:fit-content; min-height:42px; max-width:240px; margin-top:8px; padding:8px 12px; font-family:inherit; font-size:.75rem; font-weight:1000; line-height:1.15; } .lesson-one-page .sing-stop,.lesson-one-page .sing-again { width:fit-content; max-width:190px; margin-top:6px; padding:6px 9px; font-family:inherit; font-size:.56rem; font-weight:1000; line-height:1.1; } .board { height:auto; gap:6px; padding:3px 1px; overflow:auto; } .tile { min-height:76px; padding:6px 4px; border-radius:12px; } .tile-letter { font-size:clamp(1.15rem,2.2vw,1.7rem); } .tile img { width:min(78%,54px); height:50px; margin:1px auto 0; } }';
     document.head.appendChild(layoutStyle);
     const completionStyle = document.createElement('style');
     completionStyle.textContent = '.page.is-complete{visibility:hidden}.completion{z-index:1000}.completion .check{display:none}.completion-card{width:min(540px,calc(100vw - 40px));padding:34px 30px 30px}.completion h2{margin:0;color:#164b62;font-size:clamp(1.75rem,4vw,2rem);font-weight:900;line-height:1.2}.completion p:not(.save-error){margin:14px 0 24px;color:#164b62;font-size:clamp(1.1rem,2.2vw,1.2rem);font-weight:900}.done{padding:14px 28px;border-radius:999px;background:#218b8b;color:#fff;font-size:1.05rem;font-weight:900;text-decoration:none;box-shadow:0 5px 0 #176d6d}.done:hover{background:#197878}.done:focus-visible{outline:3px solid #f2c45c;outline-offset:3px}';

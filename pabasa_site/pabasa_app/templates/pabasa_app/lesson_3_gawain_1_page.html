@@ -12,6 +12,7 @@
 \3c style>
 .pairs.picture-naming-phase .word{opacity:.62;filter:saturate(.72);transition:opacity .3s,filter .3s,transform .3s,box-shadow .3s,border-color .3s}.pairs.picture-naming-phase .word.active{opacity:1;filter:none;position:relative;transform:translateY(-3px) scale(1.025);border-color:#ffc928;box-shadow:0 0 0 7px #ffe36b,0 0 30px #ffc928cc,0 12px 26px #e09a2255}.pairs.picture-naming-phase .word.active::before{content:'BASAHIN ITO';position:absolute;top:-18px;left:50%;z-index:3;transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:#ffc928;color:#5b3b00;font-size:1rem;font-weight:1000;letter-spacing:.06em;white-space:nowrap;box-shadow:0 3px 8px #b77b1b55}.pairs.picture-naming-phase .word strong{display:none}.pairs.picture-naming-phase .word.active img{transform:scale(1.08)}.pairs.picture-naming-phase .word img{transition:transform .3s}
 </style>
+<script type="text/plain" data-activity-bootstrap="lesson-3-gawain-1">(function(){const game=document.getElementById('game');if(!game||window.__lesson3CompletionButtonFallback)return;window.__lesson3CompletionButtonFallback=true;function ensure(){const card=game.querySelector('.complete');if(!card)return;let button=card.querySelector('.complete-done');if(!button){button=document.createElement('button');button.className='complete-done';button.type='button';button.textContent='BALIK SA AKING ARALIN';card.append(button)}if(button.dataset.bound==='1')return;button.dataset.bound='1';button.onclick=async()=>{button.disabled=true;button.textContent='Saving...';try{const response=await fetch("{{ lesson_3_progress_url }}",{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||''},body:JSON.stringify({activity_key:'lesson-3-gawain-1',current_index:6,completed_items:6,correct_items:6,total_items:6,activity_completed:true})});const data=await response.json();if(!response.ok||!data.success)throw new Error(data.error||'save failed');location.href="{% url 'assessment' %}"}catch(error){console.error('Lesson 3 Gawain 1 completion save failed',error);button.disabled=false;button.textContent='BALIK SA AKING ARALIN'}}}new MutationObserver(ensure).observe(game,{childList:true,subtree:true});ensure()})();</script>
 <style>
 /* Final placement: keep the six progress circles at the bottom center of the card. */
 .lesson-3-responsive #game.game{position:relative!important}
@@ -218,7 +219,7 @@ body:has(.complete)::after { display: none !important; }
 #game .segments{counter-reset:lesson3step;display:flex;justify-content:center;gap:9px;margin-top:0!important}
 #game .segments i{counter-increment:lesson3step;display:grid;width:36px!important;height:36px!important;place-items:center;border:3px solid #e2e8e8;border-radius:50%;background:#ffffffe8;color:#55727e;box-shadow:none;font:900 .9rem/1 Fredoka,Nunito,"Segoe UI",sans-serif}
 #game .segments i::after{content:counter(lesson3step)}
-#game .segments i.done{background:#e5f4f2;border-color:#94d9d6;color:#187b7a}
+#game .segments i.done{background:#299e9a;border-color:#299e9a;color:#fff}
 #game .segments i.active{background:#f4c866;border-color:#e7af45;color:#6c511e;box-shadow:none}
 @media(max-width:600px){#game .segments{gap:6px}#game .segments i{width:30px!important;height:30px!important;font-size:.76rem}}
 #game .instruction{width:min(760px,100%);margin:clamp(14px,2.5vh,22px) auto clamp(10px,2vh,16px);padding:10px 18px;background:rgba(255,255,255,.94);border:1px solid rgba(112,77,47,.16);box-shadow:0 6px 14px rgba(37,28,22,.1);font-size:clamp(.86rem,1.6vw,1rem);line-height:1.35}
@@ -693,7 +694,10 @@ const startInitial=async()=>{if(initialStarted)return;initialStarted=true;const 
     target.classList.add('lesson3-feedback');
     target.classList.toggle('retry', Boolean(retry));
     if (retry) target.classList.remove('warning');
-    if (retry) game.querySelectorAll('.answer').forEach(button => { button.disabled = true; });
+    if (retry) {
+      game.dataset.part2RetryNarrating = '1';
+      game.querySelectorAll('.answer').forEach(button => { button.disabled = true; });
+    }
     narrationBusy = true;
     syncControls();
     try { await readAloud(text); } catch (error) { console.error('Lesson 3 feedback narration failed', error); }
@@ -701,6 +705,7 @@ const startInitial=async()=>{if(initialStarted)return;initialStarted=true;const 
     narrationBusy = false;
     syncControls();
     if (retry && typeof wi !== 'undefined' && wi >= 2) {
+      delete game.dataset.part2RetryNarrating;
       game.querySelectorAll('.answer').forEach(button => { button.disabled = false; });
     }
     const next = status();
@@ -869,7 +874,11 @@ body.lesson-3-responsive {
   background: #cfe0e1 !important;
 }
 
-.lesson-3-responsive .segments i.done,
+.lesson-3-responsive .segments i.done {
+  background: #299e9a !important;
+  border-color: #299e9a !important;
+  color: #fff !important;
+}
 .lesson-3-responsive .segments i.active {
   background: #f4c866 !important;
 }
@@ -1130,7 +1139,11 @@ body.lesson-3-responsive {
   background: #dce8e8;
 }
 
-.lesson-3-responsive .segments i.done,
+.lesson-3-responsive .segments i.done {
+  background: #299e9a !important;
+  border-color: #299e9a !important;
+  color: #fff !important;
+}
 .lesson-3-responsive .segments i.active {
   background: var(--lesson3-yellow);
 }
@@ -1361,6 +1374,10 @@ body.lesson-3-responsive,
 #game.part2-ready .answers { display: flex !important; }
 #game.part2-narrating .lesson3-read-actions,
 #game.part2-ready .lesson3-read-actions { display: none !important; }
+#game.part2-narrating #status,
+#game.part2-ready #status { min-height: 0 !important; margin: 0 !important; }
+#game.part2-narrating .answers,
+#game.part2-ready .answers { margin-top: 4px !important; }
 #game.part2-narrating .answer:disabled {
   opacity: .48 !important;
   filter: grayscale(.35) !important;
@@ -1461,7 +1478,7 @@ body.lesson-3-responsive,
     if (typeof wi === 'undefined') return;
     const key = game.querySelector('.progress')?.textContent?.trim() || '';
     if (wi >= 2) {
-      if (part2Key === key && !part2Busy) {
+      if (part2Key === key && !part2Busy && game.dataset.part2RetryNarrating !== '1') {
         game.classList.remove('part1-phase', 'part1-ready', 'part1-instruction', 'part1-feedback', 'part1-transition', 'part2-narrating');
         game.classList.add('part2-ready');
         setInstruction(secondPrompt);
@@ -2099,7 +2116,7 @@ body.lesson-start-open.lesson-3-responsive #game .lesson3-read-actions > #prescr
 }
 </style>
 <script>
-(function(){function place(){var game=document.getElementById('game'),progress=game?.querySelector('.progress');if(!game||!progress)return;if(progress.parentElement!==game)game.appendChild(progress);game.style.setProperty('display','flex','important');game.style.setProperty('flex-direction','column','important');progress.style.setProperty('position','static','important');progress.style.setProperty('order','99','important');progress.style.setProperty('margin','auto auto 0','important');progress.style.setProperty('transform','translateY(12px)','important');progress.style.setProperty('left','auto','important');progress.style.setProperty('right','auto','important');progress.style.setProperty('top','auto','important');progress.style.setProperty('bottom','auto','important')}function install(){var game=document.getElementById('game');if(!game)return;new MutationObserver(place).observe(game,{childList:true,subtree:true});place()}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();}());
+(function(){function place(){var game=document.getElementById('game');if(!game)return;if(game.querySelector('.complete')){game.style.removeProperty('display');game.style.removeProperty('flex-direction');return}var progress=game.querySelector('.progress');if(!progress)return;if(progress.parentElement!==game)game.appendChild(progress);game.style.setProperty('display','flex','important');game.style.setProperty('flex-direction','column','important');progress.style.setProperty('position','static','important');progress.style.setProperty('order','99','important');progress.style.setProperty('margin','auto auto 0','important');progress.style.setProperty('transform','translateY(12px)','important');progress.style.setProperty('left','auto','important');progress.style.setProperty('right','auto','important');progress.style.setProperty('top','auto','important');progress.style.setProperty('bottom','auto','important')}function install(){var game=document.getElementById('game');if(!game)return;new MutationObserver(place).observe(game,{childList:true,subtree:true});place()}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();}());
 </script>
 <style>.lesson-3-responsive #game:not(:has(.complete)) .progress{position:absolute!important;top:auto!important;right:auto!important;bottom:18px!important;left:50%!important;transform:translateX(-50%)!important}</style>
 <script>document.addEventListener('DOMContentLoaded',()=>{const back=document.querySelector('.nav>.back');if(back)back.textContent='← Bumalik sa Aking Aralin'},{once:true});</script>
@@ -2114,3 +2131,6 @@ body.lesson-start-open.lesson-3-responsive #game .lesson3-read-actions > #prescr
 /* Lesson 3 Gawain 1 only: remove the introductory instruction from layout. */
 .lesson-3-responsive #game .instruction{display:none!important}
 </style>
+<script type="text/plain" data-activity-bootstrap="lesson-3-gawain-1">(function(){function start(){const game=document.getElementById('game');if(!game||window.__lesson3CompletionButtonFallback)return;window.__lesson3CompletionButtonFallback=true;function ensure(){const card=game.querySelector('.complete');if(!card)return;let button=card.querySelector('.complete-done');if(!button){button=document.createElement('button');button.className='complete-done';button.type='button';button.textContent='BALIK SA AKING ARALIN';card.append(button)}if(button.dataset.bound)return;button.dataset.bound='1';button.onclick=()=>{location.href="{% url 'assessment' %}"}}new MutationObserver(ensure).observe(game,{childList:true,subtree:true});ensure()}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start()})();</script>
+<script>(function(){function install(){const game=document.getElementById('game');if(!game)return;function ensure(){const card=game.querySelector('.complete');if(!card||card.querySelector('.complete-done'))return;const button=document.createElement('button');button.className='complete-done';button.type='button';button.textContent='BALIK SA AKING ARALIN';button.onclick=async()=>{button.disabled=true;button.textContent='Saving...';try{const response=await fetch("{{ lesson_3_progress_url }}",{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||''},body:JSON.stringify({activity_key:'lesson-3-gawain-1',current_index:6,completed_items:6,correct_items:6,total_items:6,activity_completed:true})});const data=await response.json();if(!response.ok||!data.success)throw new Error(data.error||'save failed');location.href="{% url 'assessment' %}"}catch(error){console.error('Lesson 3 completion save failed',error);button.disabled=false;button.textContent='BALIK SA AKING ARALIN'}};card.append(button)}new MutationObserver(ensure).observe(game,{childList:true,subtree:true});ensure()}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install()})();</script>
+<style>.lesson-3-responsive #game:has(.complete),.lesson-3-responsive #game:has(.complete) .complete,.lesson-3-responsive #game:has(.complete) .complete-done{pointer-events:auto!important}.lesson-3-responsive #game:has(.complete) .complete-done{position:relative;z-index:5;cursor:pointer!important}</style>

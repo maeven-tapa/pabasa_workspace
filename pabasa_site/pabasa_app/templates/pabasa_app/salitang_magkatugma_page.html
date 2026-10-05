@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded',function(){
   const progress=document.getElementById('progress');
   if(!progress)return;
   const style=document.createElement('style');
-  style.textContent='.salitang-progress-steps{display:flex;justify-content:center;gap:8px;margin-top:7px}.salitang-progress-step{display:grid;place-items:center;width:34px;height:34px;border:3px solid #e2e8e8;border-radius:50%;background:#ffffffe8;color:#55727e;font:900 .82rem/1 Arial,sans-serif}.salitang-progress-step.active{border-color:#e7af45;background:#f4c866;color:#6c511e}.salitang-progress-step.done{border-color:#94d9d6;background:#e5f4f2;color:#187b7a}.progress .salitang-progress-steps{font-size:initial}.progress:after{content:none!important}@media(max-width:600px){.salitang-progress-steps{gap:5px;margin-top:5px}.salitang-progress-step{width:28px;height:28px;font-size:.7rem}}';
+  style.textContent='.salitang-progress-steps{display:flex;justify-content:center;gap:8px;margin-top:7px}.salitang-progress-step{display:grid;place-items:center;width:34px;height:34px;border:3px solid #e2e8e8;border-radius:50%;background:#ffffffe8;color:#55727e;font:900 .82rem/1 Arial,sans-serif}.salitang-progress-step.active{border-color:#e7af45;background:#f4c866;color:#6c511e}.salitang-progress-step.done{border-color:#299e9a;background:#299e9a;color:#fff}.progress .salitang-progress-steps{font-size:initial}.progress:after{content:none!important}@media(max-width:600px){.salitang-progress-steps{gap:5px;margin-top:5px}.salitang-progress-step{width:28px;height:28px;font-size:.7rem}}';
   document.head.append(style);
   const sync=()=>{
     let steps=progress.querySelector('.salitang-progress-steps');
@@ -68,6 +68,7 @@ const pairs=[['aso','laso'],['bundok','sandok'],['tatay','nanay'],['bola','lola'
 <style>
 .head{display:block;padding:14px 0 6px;background:transparent;border:0;border-radius:0;box-shadow:none;text-align:center}.activity-title{display:block;text-align:center}.activity-title .eyebrow{margin:18px 0 5px;color:#277f82;font-size:clamp(.72rem,1.25vw,.95rem);font-weight:1000;letter-spacing:.08em;line-height:1.15;text-transform:uppercase}.activity-title h1{margin:0;color:#183e63;font-family:Fredoka,Arial,sans-serif;font-size:clamp(2rem,4.5vw,3.55rem);line-height:1.05;font-weight:900;letter-spacing:.01em}.head .back{position:absolute;left:clamp(12px,3vw,34px);top:clamp(12px,2vw,24px)}.head .progress{position:absolute;right:clamp(12px,3vw,34px);top:clamp(12px,2vw,24px)}@media(max-width:600px){.head{padding-top:8px}.activity-title .eyebrow{font-size:.64rem}.activity-title h1{font-size:clamp(1.75rem,8vw,2.5rem)}.head .back,.head .progress{position:static;display:none}}
 </style>
+<style>body:has(.completion-card) #stage>.completion-card{height:fit-content!important;min-height:0!important;max-height:none!important;align-self:center!important;flex:0 0 auto!important}</style>
 <style>
 /* Salitang Magkatugma only: remove the phase instruction container from layout. */
 .stage .card .activity-header-card{display:none!important}
@@ -170,7 +171,7 @@ html,body{height:100%;overflow:hidden!important}
 .completion-card p.feedback-text-hidden{display:none!important;margin:0!important}
 </style>
 <script>
-(function(){function install(){var target=document.body;if(!target)return;var feedback=/^(?:Magaling!(?: Susunod na larawan\.)?|Magaling! Natapos mo ang gawain!.*|Hindi ito ang tamang sagot\. Subukan natin muli\.|Hindi pa ito tama\. Subukan muli\.(?: \(\d+\/3\))?|Subukan muli\.(?: \(\d+\/3\))?|Hindi nakuha ang iyong boses\. Subukan muli\.|Hindi available ang mikropono sa browser na ito\.|Mahusay! Nakumpleto mo na ang aktibidad\.)$/;function sync(){document.querySelectorAll('#stage #status,#stage .completion-card h1,#stage .completion-card p').forEach(function(el){el.classList.toggle('feedback-text-hidden',feedback.test(el.textContent.trim()));});}new MutationObserver(sync).observe(target,{childList:true,subtree:true,characterData:true});sync();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();}());
+(function(){function install(){var target=document.body;if(!target)return;var feedback=/^(?:Magaling!(?: Susunod na larawan\.)?|Magaling! Natapos mo ang gawain!.*|Hindi ito ang tamang sagot\. Subukan natin muli\.|Hindi pa ito tama\. Subukan muli\.(?: \(\d+\/3\))?|Subukan muli\.(?: \(\d+\/3\))?|Hindi nakuha ang iyong boses\. Subukan muli\.|Hindi available ang mikropono sa browser na ito\.|Mahusay! Nakumpleto mo na ang aktibidad\.)$/;function sync(){document.querySelectorAll('#stage #status').forEach(function(el){el.classList.toggle('feedback-text-hidden',feedback.test(el.textContent.trim()));});}new MutationObserver(sync).observe(target,{childList:true,subtree:true,characterData:true});sync();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();}());
 </script>
 <style>
 /* Picture-identification controls: equal, visible side-by-side buttons. */
@@ -460,10 +461,14 @@ body{display:grid;place-items:center;padding:16px}
 <script>window.__lessonStartProgress={activityKey:'lesson-2-gawain-1',progress:{{ lesson_2_progress|default:"null"|safe }},totalItems:5,progressUrl:'{{ lesson_2_progress_url }}',storageKeys:['pabasa:lesson-2-gawain-1:progress','pabasa:salitang-magkatugma:completed']};</script><script>window.__session1SharedNarrationAudio={'Basahin ito.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/basahin_ito.mp3' %}','Magaling! Susunod na larawan.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/magaling_susunod_na_larawan.mp3' %}','Hindi pa ito tama. Subukan muli.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/hindi_pa_ito_tama_subukan_muli.mp3' %}','Magkatunog ba ang dalawang larawan na ito? Pindutin ang nawawastong sagot.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/magkatunog_ba_ang_dalawang_larawan.mp3' %}','Piliin ang tamang kamay.':'{% static 'pabasa_app/prescribed/audio/SESSION 1/SHARED/piliin_ang_tamang_kamay.mp3' %}'};</script><script>window.salitangOtherNarrationAudio={'Magkatugma ba ang dalawang salitang ito?':'{% static 'pabasa_app/prescribed/audio/SESSION 1/OTHERS/magkatugma_ba_ang_dalawang_salitang_ito.mp3' %}'};</script><script>window.salitangSharedNarrationAudio=window.__session1SharedNarrationAudio;</script><script src="/static/pabasa_app/js/deferred_activity_bootstrap.js?v=1"></script><script>window.deferActivityBootstrap('lesson-2-gawain-1');</script><script src="/static/pabasa_app/js/lesson_start_modal.js?v=4"></script>
 <style>
 /* Target-only answer/progress flow: keep the answer row clear of the fixed progress display. */
-.stage .card #status:empty{display:block!important;min-height:40px!important}
-.stage .card #status{display:block!important;min-height:40px!important;visibility:hidden}
+.stage .card #status:empty{display:block!important;min-height:36px!important}
+.stage .card #status{display:block!important;min-height:36px!important;visibility:hidden}
 .stage .card #status.warning{visibility:visible}
-.stage .card .answers:not([hidden]){margin-top:18px!important;margin-bottom:20px!important}
+.stage .card .answers:not([hidden]){margin-top:0!important;margin-bottom:20px!important}
+.stage .card:has(#answers:not([hidden])){gap:4px!important}
+.stage .card:has(#answers:not([hidden])) #status{min-height:18px!important}
+.stage .card:has(#answers:not([hidden])) #status:empty{min-height:18px!important}
+.stage .card:has(#answers:not([hidden])) #status.warning{padding:0!important}
 .stage .card .activity-header-card{margin:0 0 4px!important;padding:0!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important}
 </style>
 <script>
@@ -501,7 +506,7 @@ body:has(.completion-card) .salitang-speech-debug,
 body:has(.completion-card) .lesson-start-backdrop{display:none!important}
 body:has(.completion-card) .app{display:block;height:100dvh;padding:0}
 body:has(.completion-card) .stage{position:fixed;inset:0;z-index:2;display:grid;place-items:center;padding:24px}
-body:has(.completion-card) .completion-card{width:min(540px,calc(100vw - 48px));height:auto!important;min-height:0!important;margin:0;padding:42px 38px 40px;background:#fffffff2!important;border:2px solid #ffffffc7;border-radius:32px;box-shadow:0 22px 60px #173f6340;text-align:center}
+body:has(.completion-card) .completion-card{width:min(540px,calc(100vw - 48px));height:fit-content!important;min-height:0!important;max-height:calc(100dvh - 48px)!important;margin:0;padding:42px 38px 40px;background:#fffffff2!important;border:2px solid #ffffffc7;border-radius:32px;box-shadow:0 22px 60px #173f6340;text-align:center}
 body:has(.completion-card) .completion-card h1{margin:0;color:#183e63;font:900 clamp(1.75rem,3vw,2rem)/1.2 Fredoka,Arial,sans-serif}
 body:has(.completion-card) .completion-card p{margin:18px 0 28px;color:#183e63;font:700 clamp(1.1rem,2vw,1.25rem)/1.4 Fredoka,Arial,sans-serif}
 body:has(.completion-card) .completion-card a{display:inline-flex!important;align-items:center;justify-content:center;min-height:0;padding:15px 26px;border:0;border-radius:999px;background:#299e9a;color:#fff;text-decoration:none;font:900 clamp(1.05rem,1.8vw,1.25rem)/1.2 Fredoka,Arial,sans-serif;box-shadow:0 5px 0 #187b7a}
