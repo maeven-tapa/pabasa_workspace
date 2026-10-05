@@ -52,7 +52,13 @@ class Lesson22Gawain1AudioTests(SimpleTestCase):
         self.assertIn("new Audio(localUrl)", self.js)
         self.assertIn("'Letrang C. Handa kana?': 'Letrang C. Handa kana_TTS.mp3'", self.views)
         self.assertIn("aral-l22-g1-c-syllable-builder' %}<script", self.template)
-        self.assertIn('20261005-l22-g1-startup-audio-2', self.template)
+        self.assertIn('20261005-l22-g1-startup-audio-4', self.template)
+
+    def test_gawain1_startup_owner_is_independent_and_instruction_replay_remains(self):
+        self.assertIn("if(!startupNarrationStarted){startupNarrationStarted=true;playStartup();}", self.js)
+        self.assertIn("playPrescribedAudio(l22StartupTtsText,true)", self.js)
+        self.assertNotIn('wb-l22-g1-start-audio-retry', self.template)
+        self.assertIn('id="wb-instruction-replay"', self.template)
 
     def test_instruction_recording_hash_is_stable(self):
         digest = hashlib.sha256((self.audio_dir / 'Basahin_ang_mga_pantig_mula_sa_Bid_box_TTS.mp3').read_bytes()).hexdigest()

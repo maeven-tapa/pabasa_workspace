@@ -2018,6 +2018,10 @@ def _normalize_l22_c_parts(parts):
 
 def normalize_l22_c_state(state):
     """Upgrade saved pre-specialized Gawain 1 state without trusting old word answers."""
+    draft = state.get('draft') if isinstance(state.get('draft'), dict) else {}
+    if not isinstance(draft.get('builder'), list):
+        draft['builder'] = []
+    state['draft'] = draft
     legacy_index = int(state.get('index') or 0)
     oral = state.get('oral') if isinstance(state.get('oral'), dict) else {}
     item_count = len(ACTIVITIES['aral-l22-g1-c-syllable-builder']['items'])
@@ -2040,6 +2044,10 @@ def normalize_l22_c_state(state):
     state.setdefault('last_transcript', '')
     state.setdefault('pending_words', [])
     state.setdefault('reading_attempts', 0)
+    try:
+        state['building_attempts'] = max(0, min(3, int(state.get('building_attempts', 0) or 0)))
+    except (TypeError, ValueError):
+        state['building_attempts'] = 0
     state.setdefault('read_aloud_listens', 0)
     state.setdefault('reading_phase', 'complete' if state.get('read_aloud_completed') else 'read')
     state.setdefault('pronunciation_help_played', False)
@@ -2464,6 +2472,7 @@ def _apply_l22_c_builder(state, event, verified_reading):
     state.setdefault('read_aloud_completed', False)
     state.setdefault('found_words', [])
     state.setdefault('pending_words', [])
+    state.setdefault('building_attempts', 0)
     state.setdefault('last_feedback', '')
 
     if action == 'draft':
@@ -2538,9 +2547,18 @@ def _apply_l22_c_builder(state, event, verified_reading):
         state['last_transcript'] = ''
         state['last_feedback'] = ''
         return state
+    if action == 'retry_building':
+        if not state['read_aloud_completed']:
+            raise ValueError('Basahin muna ang mga pantig.')
+        state['building_attempts'] = 0
+        state.setdefault('draft', {}).setdefault('builder', [])
+        state['last_feedback'] = 'Subukan muli.'
+        return state
     if action == 'build_word':
         if not state['read_aloud_completed']:
             raise ValueError('Basahin muna ang mga pantig.')
+        if int(state.get('building_attempts', 0) or 0) >= 3:
+            raise ValueError('Subukan muli.')
         parts = _normalize_l22_c_parts(event.get('parts'))
         activity = ACTIVITIES['aral-l22-g1-c-syllable-builder']
         piece_by_id = {item['id']: item['text'] for item in activity['items']}
@@ -2550,6 +2568,7 @@ def _apply_l22_c_builder(state, event, verified_reading):
         accepted = _l22_c_word_for_parts(parts)
         if accepted is None:
             candidate = ''.join(piece_by_id[part] for part in parts)
+            state['building_attempts'] = min(3, int(state.get('building_attempts', 0) or 0) + 1)
             pending = state['pending_words']
             if len(pending) >= 30:
                 raise ValueError('Subukan muli.')
@@ -2561,6 +2580,7 @@ def _apply_l22_c_builder(state, event, verified_reading):
         if accepted.casefold() in found:
             raise ValueError('Bumuo ng ibang salita.')
         state['found_words'].append(accepted)
+        state['building_attempts'] = 0
         state['draft'] = {'builder': []}
         state['last_feedback'] = 'Tama!'
         return state
