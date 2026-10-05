@@ -83,7 +83,7 @@ window.PrescribedSession6Gawain9Audio = (() => {
     const isGawain8 = activity.activity_key === 'lesson-17-18-gawain-8';
     const isGawain6 = activity.activity_key === 'lesson-17-18-gawain-6';
     const isGawain9 = activity.activity_key === 'lesson-17-18-gawain-9';
-    if (isGawain6 || isGawain9) return;
+    if (isGawain6 || isGawain9 || (isGawain8 && window.__gawain8OwnAudio)) return;
     const gawain7Root = '/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_7/';
     const gawain8Root = '/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_8/';
     const gawain7PromptParts = [

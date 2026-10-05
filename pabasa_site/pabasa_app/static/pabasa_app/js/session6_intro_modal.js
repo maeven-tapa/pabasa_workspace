@@ -174,31 +174,6 @@
     }
     window.__session6IntroModalAudioStarted = false;
   };
-  const playGawain9IntroAudio = async () => {
-    if (key !== 'lesson-17-18-gawain-9') return;
-    const phase = String(state.phase || 'intro').toLowerCase();
-    const root = '/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_9/';
-    const prompts = [
-      'unang_larawan_pana_tts.mp3', 'ikalawang_larawan_pisara_tts.mp3',
-      'ikatlong_larawan_palaka_tts.mp3', 'ika_apat_na_larawan_pito_tts.mp3',
-      'ikalimang_larawan_regalo_tts.mp3',
-    ];
-    let sources = [`${root}intro_basahin_isulat_ngalan_larawan_tts.mp3`];
-    if (hasSavedProgress && !['intro', 'initial'].includes(phase)) {
-      if (phase !== 'oral_reading') return;
-      const index = Number(state.current_item_index) || 0;
-      const item = Array.isArray(data.items) ? data.items[index] : null;
-      if (!item || !prompts[index]) return;
-      sources = [`${root}${prompts[index]}`];
-    } else {
-      sources.push(`${root}${prompts[0]}`);
-    }
-    const lease = audioBus.begin();
-    for (const source of sources) {
-      if (!lease.isCurrent()) break;
-      await lease.play(source);
-    }
-  };
   const playGawain4ContinuationAudio = async () => {
     if (!hasSavedProgress || key !== 'session-6-lesson-16-gawain-4' || state.phase !== 'oral_reading') return;
     const index = Array.isArray(progress.answers)
@@ -274,13 +249,6 @@
     // the modal's intro MP3.
     await playOpeningAudio();
     close();
-    if (key === 'lesson-17-18-gawain-9') {
-      const activityStart = document.querySelector('#app #start');
-      if (activityStart) activityStart.disabled = true;
-      void playGawain9IntroAudio().finally(() => {
-        if (activityStart?.isConnected) activityStart.disabled = false;
-      });
-    }
     if (key === 'session-6-lesson-16-gawain-4') {
       void playGawain4ContinuationAudio();
     }

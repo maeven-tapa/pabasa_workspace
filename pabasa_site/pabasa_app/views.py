@@ -13895,16 +13895,25 @@ def _normalized_odd_word_state(activity, raw_state):
     completed = raw.get('completed_answers') if isinstance(raw.get('completed_answers'), dict) else {}
     completed = {str(i): int(completed[str(i)]) for i in range(total) if str(i) in completed and int(completed[str(i)]) == activity['items'][i]['answer_index']}
     group = len(completed)
+    try:
+        feedback_group = int(raw.get('feedback_group_index'))
+    except (TypeError, ValueError):
+        feedback_group = None
+    if not (raw.get('phase') == 'correct_feedback' and group and feedback_group == group - 1):
+        feedback_group = None
     oral_done = raw.get('oral_completed') if isinstance(raw.get('oral_completed'), dict) else {}
     oral_done = {str(i): list(range(min(3, len(oral_done.get(str(i), []))))) for i in range(total) if str(i) not in completed}
     oral = len(oral_done.get(str(group), [])) if group < total else 3
     attempts = raw.get('stt_attempts') if isinstance(raw.get('stt_attempts'), dict) else {}
     plays = raw.get('read_aloud_plays') if isinstance(raw.get('read_aloud_plays'), dict) else {}
-    phase = 'completion' if raw.get('phase') == 'completion' else ('written_selection' if group < total and oral == 3 else ('intro' if raw.get('phase') == 'intro' and not completed and not oral else 'oral_reading'))
+    phase = ('completion' if raw.get('phase') == 'completion' else
+             ('correct_feedback' if feedback_group is not None else
+              ('written_selection' if group < total and oral == 3 else
+               ('intro' if raw.get('phase') == 'intro' and not completed and not oral else 'oral_reading'))))
     return {'phase': phase, 'current_group_index': group, 'current_oral_word_index': oral,
             'oral_completed': oral_done, 'stt_attempts': attempts, 'read_aloud_plays': plays,
             'selected_answer': raw.get('selected_answer') if isinstance(raw.get('selected_answer'), dict) else {},
-            'completed_answers': completed, 'state_version': version}
+            'completed_answers': completed, 'feedback_group_index': feedback_group, 'state_version': version}
 
 
 def _normalized_oral_picture_write_state(activity, raw_state):
@@ -18374,7 +18383,11 @@ def prescribed_activity_progress(request, activity_key):
                 raise ValueError('Invalid oral progress.')
             state = incoming; state['completed_answers'] = answers; state['current_group_index'] = group
             state['current_oral_word_index'] = len(oral_done.get(str(group), [])) if group < len(activity['items']) else 3
-            state['phase'] = 'written_selection' if group < len(activity['items']) and state['current_oral_word_index'] == 3 else ('completion' if group == len(activity['items']) else ('intro' if not group and state['current_oral_word_index'] == 0 and incoming['phase'] == 'intro' else 'oral_reading'))
+            state['feedback_group_index'] = incoming['feedback_group_index']
+            state['phase'] = ('completion' if incoming['phase'] == 'completion' else
+                              ('correct_feedback' if state['feedback_group_index'] is not None else
+                               ('written_selection' if group < len(activity['items']) and state['current_oral_word_index'] == 3 else
+                                ('intro' if not group and state['current_oral_word_index'] == 0 and incoming['phase'] == 'intro' else 'oral_reading'))))
             state['state_version'] = old['state_version'] + 1
             completed = group * 4 + state['current_oral_word_index']
             progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': completed, 'completed_items': completed, 'correct_items': completed, 'total_items': 20, 'activity_completed': False, 'state': state})
