@@ -409,6 +409,7 @@ from .scoring import (
     _crla_part2_band,
     crla_reading_profile,
     crla_task1_next_task,
+    crla_task2_kind,
     crla_sentence_score,
     canonical_crla_classification,
     derive_classification_equivalents,
@@ -3274,7 +3275,7 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             explicit_rhymes_score = score_payload.get('task2_rhymes_score')
             is_task2l = explicit_rhymes_score is not None or (
                 isinstance(score_payload.get('crla_score_data'), dict)
-                and 'l' in str(score_payload['crla_score_data'].get('task2_type') or '').lower()
+                and crla_task2_kind(score_payload['crla_score_data'].get('task2_type')) == 'rhymes'
             )
             if not is_task2l:
                 task1_score = task1_score or 0
@@ -25588,6 +25589,27 @@ def _is_live_assessment_session_stale(session):
     return (now - reference_time) >= timedelta(hours=LIVE_ASSESSMENT_STALE_HOURS)
 
 
+def _merge_live_crla_evidence(existing, incoming):
+    """Partial snapshots cannot blank previously captured CRLA evidence."""
+    merged = dict(existing) if isinstance(existing, dict) else {}
+    score_fields = {
+        'task1_score', 'task1_correct_words', 'task2_type', 'task2_score',
+        'task2_rhymes_score', 'task2_sentences_score', 'sentences_read',
+        'correct_sentences', 'part1_total_score', 'part1_reading_level',
+        'story_number', 'selected_story', 'selected_story_content',
+        'story_total_words', 'total_story_words', 'words_read', 'total_words_read',
+        'miscues', 'duration_seconds', 'wpm', 'passage_accuracy_percent',
+        'story_read_percent', 'comprehension_correct', 'correct_answers',
+        'comprehension_total', 'total_questions', 'learner_experience_rating',
+        'learner_experience',
+    }
+    for key, value in (incoming or {}).items():
+        if key in score_fields and value in (None, '') and merged.get(key) not in (None, ''):
+            continue
+        merged[key] = value
+    return merged
+
+
 def _build_live_session_completion_payload(session, student_user, student_state=None):
     payload = {}
     if not session:
@@ -25629,7 +25651,7 @@ def _build_live_session_completion_payload(session, student_user, student_state=
     if isinstance(recovery_state, dict):
         existing_crla_data = payload.get('crla_score_data')
         crla_score_data = dict(existing_crla_data) if isinstance(existing_crla_data, dict) else {}
-        crla_score_data.update(recovery_state)
+        crla_score_data = _merge_live_crla_evidence(crla_score_data, recovery_state)
         payload['crla_score_data'] = crla_score_data
         # The official completion path canonicalizes classification from the
         # top-level score payload. Preserve the authoritative temporary CRLA
@@ -25637,6 +25659,17 @@ def _build_live_session_completion_payload(session, student_user, student_state=
         for classification_key in ('crla_classification', 'classification'):
             if recovery_state.get(classification_key) and not payload.get(classification_key):
                 payload[classification_key] = recovery_state[classification_key]
+
+    crla_data = payload.get('crla_score_data') or {}
+    if _is_live_crla_material(material):
+        # A reconnect at Learner Experience can still have the Words page's
+        # mode. Score the completed workflow, not that last page or material.
+        if crla_data.get('story_number') or crla_data.get('selected_story'):
+            payload['assessment_type'] = 'paragraph'
+        elif crla_task2_kind(crla_data.get('task2_type')) == 'sentences':
+            payload['assessment_type'] = 'sentence'
+        else:
+            payload['assessment_type'] = 'word'
 
     scores = payload.get('scores') if isinstance(payload.get('scores'), dict) else {}
     if 'scores' not in payload:
@@ -26742,6 +26775,11 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
     if not session:
         return session
 
+    # Finalize the latest acknowledged snapshot, including writes made after
+    # the teacher loaded the monitor. Keep End Session and result creation
+    # atomic so a failure cannot erase the remaining students' evidence.
+    session = LiveAssessmentSession.objects.select_for_update().get(pk=session.pk)
+
     ended_at = ended_at or system_now()
     was_already_ended = session.status == 'ended'
     _trace_live_end_flow(
@@ -26824,7 +26862,7 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
                 and status_value == 'completed'
             )
 
-            if has_active_attempt and student_user and (
+            if (has_active_attempt or has_genuine_temporary_completion) and student_user and (
                 has_genuine_temporary_completion or has_authoritative_completion
             ):
                 payload = _build_live_session_completion_payload(session, student_user, student_state)
@@ -26850,10 +26888,15 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
                     (student_state.get('recovery_state') or {}).get('branch') if isinstance(student_state.get('recovery_state'), dict) else None,
                     (student_state.get('recovery_state') or {}).get('next_stage') if isinstance(student_state.get('recovery_state'), dict) else None,
                 )
-                _complete_assessment_for_student(
+                completion_response = _complete_assessment_for_student(
                     student_user, data=payload, live_session=session,
                     raise_on_error=True,
                 )
+                if completion_response.status_code >= 400 or (
+                    _is_live_crla_material(session.material)
+                    and not _official_crla_completed_result_for_material(student_user, session.material)
+                ):
+                    raise ValueError(f'Unable to finalize CRLA result for student {student_id}')
                 student_state['status'] = 'completed'
                 student_state['connection_status'] = student_state.get('connection_status', 'disconnected')
                 student_state['final_score'] = student_state.get('final_score') or payload.get('scores', {}).get('final_score')
@@ -27182,10 +27225,9 @@ def _update_live_student_state(session, student_id, state_values):
     incoming_recovery_state = incoming_state.get('recovery_state')
     existing_recovery_state = student_record.get('recovery_state')
     if isinstance(existing_recovery_state, dict) and isinstance(incoming_recovery_state, dict):
-        incoming_state['recovery_state'] = {
-            **existing_recovery_state,
-            **incoming_recovery_state,
-        }
+        incoming_state['recovery_state'] = _merge_live_crla_evidence(
+            existing_recovery_state, incoming_recovery_state,
+        )
     student_record.update(incoming_state)
     student_record['updated_at'] = system_now().isoformat()
     states[student_key] = student_record

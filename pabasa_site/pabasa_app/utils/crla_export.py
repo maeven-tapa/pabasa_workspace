@@ -27,7 +27,7 @@ from .crla_mapping import (
     STUDENT_END_ROW,
     STUDENT_START_ROW,
 )
-from ..scoring import crla_reading_profile, crla_sentence_score
+from ..scoring import crla_reading_profile, crla_sentence_score, crla_task2_kind
 from .crla_results import latest_completed_official_crla_results
 
 
@@ -361,10 +361,10 @@ def _row_formulas(row):
     return {
         "I": f'=IF(AND(F{row}="",G{row}="",H{row}=""),"",SUM(F{row}:H{row}))',
         "J": f'=IF(I{row}="","",IF(I{row}<=10,"Full Refresher",IF(I{row}<17,"Moderate Refresher",IF(I{row}<27,"Light Refresher","Grade Ready"))))',
-        "P": f'=IF(AND(M{row}>0,OR(N{row}>0,O{row}>0)),(M{row}/((N{row}*60)+O{row}))*60,"")',
+        "P": f'=IF(AND(K{row}<>"",M{row}<>"",OR(N{row}>0,O{row}>0)),(M{row}/((N{row}*60)+O{row}))*60,"")',
         # A blank Part 2 row must remain blank in Excel.  Without this guard,
         # a blank M cell is treated as zero and produces a misleading 0%.
-        "Q": f'=IF(AND(K{row}<>"",M{row}>0),IFERROR(M{row}/IF(K{row}=2,$P$7,$M$7),""),"")',
+        "Q": f'=IF(AND(K{row}<>"",M{row}<>""),IFERROR(M{row}/IF(K{row}=2,$P$7,$M$7),""),"")',
     }
 
 
@@ -412,35 +412,27 @@ def _student_values(student, attempt, state, assessment):
     task_1_score = _bounded_integer(
         _scoped_score(score_data, state, "task1_score", "task1_correct_words"), 0, 10
     )
-    task_2_type = str(
-        _first_value(score_data.get("task2_type"), state.get("task2_type")) or ""
-    ).lower()
-    task_2_score = _bounded_integer(
-        _first_value(
-            _scoped_score(
-                score_data,
-                state,
-                "task2_score",
-                "task2_rhymes_score",
-                "task2_sentences_score",
-            ),
-        ),
-        0,
-        10,
+    task_2_kind = crla_task2_kind(_first_value(score_data.get("task2_type"), state.get("task2_type")))
+    # Task 2H includes automatic Rhymes credit, but its own score must be
+    # read from the Sentence evidence rather than that Rhymes value.
+    task_2_key = "task2_sentences_score" if task_2_kind == "sentences" else "task2_rhymes_score"
+    task_2_keys = (task_2_key, "task2_score") if task_2_kind else (
+        "task2_score", "task2_rhymes_score", "task2_sentences_score",
     )
-    rhyme_score = task_2_score if "l" in task_2_type else None
-    sentence_score = task_2_score if "h" in task_2_type else None
+    task_2_score = _bounded_integer(
+        _scoped_score(score_data, state, *task_2_keys), 0, 10,
+    )
+    rhyme_score = task_2_score if task_2_kind == "rhymes" else None
+    sentence_score = task_2_score if task_2_kind == "sentences" else None
 
-    if "h" in task_2_type:
+    if task_2_kind == "sentences":
         persisted_sentence_score = _scoped_score(
             score_data, state, "task2_sentences_score"
         )
         sentence_count = _first_value(score_data.get("sentences_read"), state.get("sentences_read"))
         if persisted_sentence_score is not None:
             sentence_score = _bounded_integer(persisted_sentence_score, 0, 10)
-        elif sentence_count is None:
-            sentence_count = min(task_2_score or 0, 4)
-        else:
+        elif sentence_count is not None:
             sentence_score = crla_sentence_score(sentence_count)
 
     if task_1_score is not None:
@@ -448,11 +440,15 @@ def _student_values(student, attempt, state, assessment):
             rhyme_score = _bounded_integer(task_2_score, 0, 10)
             sentence_score = None
         elif 7 <= task_1_score <= 10:
-            sentence_score = crla_sentence_score(
-                score_data.get("sentences_read")
-                if score_data.get("sentences_read") is not None
-                else min(task_2_score or 0, 4)
-            )
+            sentence_count = _first_value(score_data.get("sentences_read"), state.get("sentences_read"), state.get("correct_sentences"))
+            if sentence_count is not None:
+                sentence_score = crla_sentence_score(sentence_count)
+            elif sentence_score is None:
+                sentence_score = _bounded_integer(
+                    _scoped_score(score_data, state, "task2_sentences_score", "task2_score"), 0, 10,
+                )
+            if sentence_count is None and sentence_score in {1, 3, 4}:
+                sentence_score = crla_sentence_score(sentence_score)
             rhyme_score = 10
 
     part_1_total = _bounded_integer(

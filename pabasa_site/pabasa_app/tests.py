@@ -1340,7 +1340,7 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertIn('&& isCrla', speech_controls)
         self.assertIn('button.disabled = true;', speech_controls)
 
-    def test_official_crla_reading_next_persists_each_skip_before_advancing_or_completing(self):
+    def test_official_crla_reading_next_saves_navigation_without_recording_a_skip_as_an_answer(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
         content = script_path.read_text(encoding='utf-8')
         skip = content.split('async function skipCrlaReadingItem() {', 1)[1].split('function goToNextPageOrItem()', 1)[0]
@@ -1350,16 +1350,15 @@ class ReadingLaunchClassificationTests(TestCase):
 
         self.assertIn('const isCrlaReading = isCrla', navigation)
         self.assertIn('!isCrlaReading && (!isRecording || (onLastItem && isLastPage))', navigation)
-        self.assertIn('itemScores[currentIndex] = {', skip)
-        self.assertIn('skipped: true,', skip)
-        self.assertIn('await persistLockedItemResult(currentIndex, nextActiveItemIndex);', skip)
-        self.assertLess(skip.index('await persistLockedItemResult(currentIndex, nextActiveItemIndex);'), skip.index('transitionToItem(currentIndex + 1'))
-        self.assertLess(skip.index('await persistLockedItemResult(currentIndex, nextActiveItemIndex);'), skip.index('showCompletion(true);'))
+        self.assertNotIn('itemScores[currentIndex] =', skip)
+        self.assertNotIn('skipped: true,', skip)
+        self.assertNotIn('persistLockedItemResult(', skip)
+        self.assertLess(skip.index('await updateStudentEndState('), skip.index('transitionToItem(currentIndex + 1'))
         self.assertIn('if (isAdvancingItem) return true;', skip)
         self.assertIn('await stopReading({ allowIdleStoryCompletion: true });', skip)
-        self.assertIn('storyMiscueCount += readableWordCount(getCurrentDisplayText());', skip)
+        self.assertNotIn('storyMiscueCount +=', skip)
         self.assertEqual(next_handler.count('await skipCrlaReadingItem()'), 2)
-        self.assertIn('await completeCRLASpokenAttempt("", questionIndex);', comprehension)
+        self.assertNotIn('completeCRLASpokenAttempt(', comprehension)
         self.assertIn('await finishCRLAComprehension();', comprehension)
 
     def test_crla_locked_result_persists_the_next_active_item_before_auto_advance(self):
@@ -1418,36 +1417,27 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertIn('if (paragraphWordResults[activeWordIndex] !== "miscue")', recorder)
         self.assertNotIn('paragraphWordResults[activeWordIndex] = "correct"', recorder)
 
-    def test_story_finalized_metrics_use_total_words_minus_miscues(self):
+    def test_official_crla_story_metrics_use_captured_words_without_crediting_skips(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
         content = script_path.read_text(encoding='utf-8')
         helper = content.split('function calculateFinalizedStoryMetrics(', 1)[1].split('function correctWordsRead()', 1)[0]
 
-        self.assertIn('const wordsRead = Math.max(0, totalWords - miscues);', helper)
+        self.assertIn('const wordsRead = isOfficialAssessmentLaunch && isCrla', helper)
+        self.assertIn('Math.min(totalWords, Math.max(0, correctWordsRead()))', helper)
+        self.assertIn(': Math.max(0, totalWords - miscues);', helper)
         self.assertIn('wordsRead / totalWords', helper)
-        self.assertIn('wordsRead / Math.max(durationSeconds / 60, 1 / 60)', helper)
-        self.assertNotIn('correctWordsRead()', helper)
+        self.assertIn('wordsRead / (durationSeconds / 60)', helper)
         self.assertNotIn('120', helper)
-
-        for scenario, total_words, miscues, expected_words_read, expected_accuracy, expected_wpm in (
-            ('zero miscues', 4, 0, 4, 100, 4),
-            ('one substitution', 4, 1, 3, 75, 3),
-            ('one omission', 4, 1, 3, 75, 3),
-            ('one insertion', 4, 1, 3, 75, 3),
-            ('multiple miscues', 6, 3, 3, 50, 3),
-        ):
-            self.assertEqual(max(0, total_words - miscues), expected_words_read)
-            self.assertEqual(round((expected_words_read / total_words) * 100), expected_accuracy, scenario)
-            self.assertEqual(expected_words_read / 1, expected_wpm, scenario)
 
     def test_story_finalized_metrics_are_used_at_both_story_persistence_points(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
         content = script_path.read_text(encoding='utf-8')
         completion = content.split('async function showStoryCompletionScreen()', 1)[1].split('function hideStoryCompletionScreen()', 1)[0]
-        stop_reading = content.split('const stopReading = async () => {', 1)[1].split('btnStartReading?.addEventListener', 1)[0]
+        stop_reading = content.split('const stopReading = async (', 1)[1].split('btnStartReading?.addEventListener', 1)[0]
 
         self.assertIn('calculateFinalizedStoryMetrics(', completion)
-        self.assertIn('persistedStoryState?.duration_seconds', completion)
+        self.assertIn('const currentDuration = Number(readingScores.duration_seconds);', completion)
+        self.assertNotIn('persistedStoryState?.duration_seconds', completion)
         self.assertIn('words_read: storyMetrics.wordsRead', completion)
         self.assertIn('wpm: storyMetrics.wpm', completion)
         self.assertNotIn('words_read: correctWordsRead()', completion)

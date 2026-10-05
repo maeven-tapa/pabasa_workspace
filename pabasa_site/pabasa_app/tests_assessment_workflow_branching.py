@@ -674,7 +674,7 @@ class AssessmentWorkflowBranchingTests(TestCase):
         self.assertIn("if (currentStoryAnswers[questionIndex]) return;", next_handler)
         self.assertIn("currentStoryResults[questionIndex] === null", next_handler)
         self.assertIn("crlaSpeechRecognition?.abort()", next_handler)
-        self.assertIn('await completeCRLASpokenAttempt("", questionIndex);', next_handler)
+        self.assertNotIn('completeCRLASpokenAttempt(', next_handler)
         self.assertIn("await persistCRLAComprehensionState();", next_handler)
         self.assertIn("await finishCRLAComprehension();", next_handler)
 

@@ -609,10 +609,16 @@
             }
         }
 
+        let liveStudentEndState = null;
+
         function readStudentEndState() {
             try {
+                if (isCurrentLiveAssessment() && liveStudentEndState !== null) return liveStudentEndState;
                 const liveRecovery = window.__PABASA_STUDENT_END_STATE__ || {};
-                if (urlParams.get('live_recovery') === '1' && Object.keys(liveRecovery).length) return liveRecovery;
+                if (urlParams.get('live_recovery') === '1' && Object.keys(liveRecovery).length) {
+                    liveStudentEndState = { ...liveRecovery };
+                    return liveStudentEndState;
+                }
                 if (sessionStorage.getItem(studentEndStateResetKey) === "1") {
                     sessionStorage.removeItem(studentEndStateResetKey);
                     return {};
@@ -732,6 +738,9 @@
                 ...(patch || {}),
             };
             if (nextState.stage && options.optimisticLocalStorage !== false) {
+                // A reconnect snapshot seeds this reader once. Subsequent
+                // branches must read the scores accumulated in this tab.
+                if (isCurrentLiveAssessment()) liveStudentEndState = nextState;
                 try {
                     localStorage.setItem(getStudentEndStateKey(), JSON.stringify({
                         version: studentEndStateVersion,
@@ -786,9 +795,18 @@
             try {
                 const savedResults = JSON.parse(localStorage.getItem(officialCrlaItemResultsStorageKey) || '{}');
                 const recovered = readStudentEndState();
+                const recoveringLiveSession = isCurrentLiveAssessment() && urlParams.get('live_recovery') === '1';
+                const recoveredItemBranch = recovered.live_item_branch
+                    || (['transition_to_rhymes', 'transition_to_sentence'].includes(recovered.stage)
+                        ? 'words' : recovered.branch || recovered.stage);
                 items.forEach((_, itemIndex) => {
-                    const savedScore = savedResults[getOfficialCrlaItemResultKey(currentAssessmentBranch, itemIndex)]
-                        || recovered?.live_item_scores?.[itemIndex];
+                    // The server snapshot belongs to a specific branch. A
+                    // Words handoff must not lock Sentence or Rhyme items,
+                    // and stale browser results cannot override a reconnect.
+                    const recoveredScore = recoveredItemBranch === currentAssessmentBranch
+                        ? recovered?.live_item_scores?.[itemIndex] : null;
+                    const savedScore = recoveringLiveSession ? recoveredScore
+                        : savedResults[getOfficialCrlaItemResultKey(currentAssessmentBranch, itemIndex)] || recoveredScore;
                     if (!savedScore || typeof savedScore !== 'object') return;
                     itemLocked[itemIndex] = true;
                     itemScores[itemIndex] = savedScore;
@@ -822,6 +840,8 @@
         }
 
         function clearStudentEndState() {
+            liveStudentEndState = isCurrentLiveAssessment() ? {} : null;
+            window.__PABASA_STUDENT_END_STATE__ = {};
             try {
                 localStorage.removeItem(getStudentEndStateKey());
             } catch (error) {}
@@ -1572,10 +1592,8 @@
                 ...extra,
             });
             // The live monitor must reflect the persisted response state, not
-            // the question cursor.  A cursor is advanced only after an answer
-            // and is reset when a learner navigates back, while crla_results
-            // records every completed comprehension question (including an
-            // incorrect or skipped response) on the server.
+            // the question cursor. Skipped questions keep their null result;
+            // only captured answers count as completed responses.
             const persistedResults = persisted?.student_end_assessment_state?.crla_results;
             if (isCurrentLiveAssessment() && Array.isArray(persistedResults)) {
                 const totalQuestions = Math.max(1, currentStoryQuestions.length);
@@ -1787,11 +1805,13 @@
             }
             const questionIndex = currentStoryQuestionIndex;
             crlaSpeechAttemptActive = true;
-            crlaSpeechRecognition = new Recognition();
+            const recognition = new Recognition();
+            crlaSpeechRecognition = recognition;
             crlaSpeechRecognition.lang = /filipino|fil\b/i.test(currentMaterialLanguage || "") ? "fil-PH" : "en-US";
             crlaSpeechRecognition.continuous = false;
             crlaSpeechRecognition.interimResults = false;
             crlaSpeechRecognition.onresult = event => {
+                if (!crlaSpeechAttemptActive || crlaSpeechRecognition !== recognition || currentStoryQuestionIndex !== questionIndex) return;
                 const transcript = String(event.results?.[0]?.[0]?.transcript || "").trim();
                 try { crlaSpeechRecognition.stop(); } catch (error) {}
                 crlaSpeechRecognition = null;
@@ -1799,12 +1819,12 @@
                 completeCRLASpokenAttempt(transcript, questionIndex);
             };
             crlaSpeechRecognition.onerror = () => {
-                if (!crlaSpeechAttemptActive) return;
+                if (!crlaSpeechAttemptActive || crlaSpeechRecognition !== recognition || currentStoryQuestionIndex !== questionIndex) return;
                 crlaSpeechAttemptActive = false; crlaSpeechRecognition = null;
                 completeCRLASpokenAttempt("", questionIndex);
             };
             crlaSpeechRecognition.onend = () => {
-                if (!crlaSpeechAttemptActive) return;
+                if (!crlaSpeechAttemptActive || crlaSpeechRecognition !== recognition || currentStoryQuestionIndex !== questionIndex) return;
                 crlaSpeechAttemptActive = false; crlaSpeechRecognition = null;
                 completeCRLASpokenAttempt("", questionIndex);
             };
@@ -2253,8 +2273,8 @@
             if (!isCrla || (!isStoryReading && !isStandardReading)) return false;
             if (isAdvancingItem) return true;
 
-            // Next means skip for standard CRLA items. Lock and persist the
-            // zero-score result before the established item or branch transition.
+            // Skip is navigation. Preserve captured results and never invent
+            // a locked, zero-score answer for an item the learner did not read.
             isAdvancingItem = true;
             if (nextBtn) nextBtn.disabled = true;
             clearSentenceItemTimer();
@@ -2263,44 +2283,32 @@
                 autoAdvanceTimer = null;
             }
             itemResultVersion += 1;
-            if (!itemLocked[currentIndex]) {
-                const nextActiveItemIndex = isStandardReading && !isOnFinalRenderedItem
-                    ? currentIndex + 1
-                    : null;
-                itemLocked[currentIndex] = true;
-                itemScores[currentIndex] = {
-                    ...(isStoryReading && itemScores[currentIndex] ? itemScores[currentIndex] : {}),
-                    correct_words: Number(correctWordCounts[currentIndex] || 0),
-                    word_results: sentenceWordResults[currentIndex] || [],
-                    skipped: true,
-                    ...(isStoryReading ? {
-                        story_segment_index: currentPageIndex,
-                        skipped_story_segments: Array.from(new Set([
-                            ...(Array.isArray(itemScores[currentIndex]?.skipped_story_segments)
-                                ? itemScores[currentIndex].skipped_story_segments
-                                : []),
-                            currentPageIndex,
-                        ])),
-                    } : {}),
-                    timestamp: new Date().toISOString(),
-                };
-                await persistLockedItemResult(currentIndex, nextActiveItemIndex);
-            }
+            pendingAudioChunk = null;
 
             if (isStoryReading) {
-                // A skipped final story segment is an incorrect segment.  Feed
-                // its words into the existing miscue-based story finalization
-                // rather than introducing a separate story scoring pathway.
-                storyMiscueCount += readableWordCount(getCurrentDisplayText());
+                await persistSkippedStorySegment();
+                isRecording = false;
+                stopSpeechRecognition();
                 await stopReading({ allowIdleStoryCompletion: true });
             } else if (!isOnFinalRenderedItem) {
+                await updateStudentEndState({ crla_question_index: currentIndex + 1 });
                 transitionToItem(currentIndex + 1, "Next item loaded.", "Keep reading clearly.");
             } else {
                 isRecording = false;
                 stopSpeechRecognition();
-                showCompletion(true);
+                await showCompletion(true);
             }
             return true;
+        }
+
+        function persistSkippedStorySegment() {
+            const state = readStudentEndState();
+            const skipped = Array.isArray(state.story_skipped_segments) ? state.story_skipped_segments : [];
+            return updateStudentEndState({
+                stage: "story_reading",
+                story_segment_index: currentPageIndex,
+                story_skipped_segments: Array.from(new Set([...skipped, currentPageIndex])),
+            });
         }
 
         function goToNextPageOrItem() {
@@ -2678,9 +2686,6 @@
                 // CRLA Official Assessment: Initialize item locking
                 itemLocked = new Array(items.length).fill(false);
                 itemScores = new Array(items.length).fill(null);
-                if (activeStage === "story" && Array.isArray(persistedEndState.story_skipped_segments)) {
-                    itemScores[0] = { skipped_story_segments: persistedEndState.story_skipped_segments.slice() };
-                }
                 restoreOfficialCrlaItemResults();
                 currentStoryChoices = getStoryChoicesFromAssessment();
                 const persistedStoryTitle = String(persistedEndState.selected_story || "").trim().toLowerCase();
@@ -2705,6 +2710,14 @@
                             itemTitles = [restoredStory.title];
                             pageCorrectWordCounts = items.map(() => []);
                             correctWordCounts = new Array(items.length).fill(0);
+                            const restoredPageCounts = persistedEndState.live_page_correct_word_counts?.[0];
+                            const restoredWordCount = Number(persistedEndState.live_correct_word_counts?.[0]
+                                ?? persistedEndState.words_read ?? 0);
+                            pageCorrectWordCounts[0] = Array.isArray(restoredPageCounts)
+                                ? restoredPageCounts.map(count => Math.max(0, Number(count) || 0))
+                                : [Math.max(0, restoredWordCount)];
+                            syncItemCorrectWordCount(0);
+                            storyHasReadingEvidence = correctWordCounts[0] > 0 || storyMiscueCount > 0;
                             currentIndex = 0;
                             currentPageIndex = Math.min(
                                 currentStorySegmentIndex,
@@ -3041,6 +3054,18 @@
                 }, 0)
                 : null;
             const needsManualReview = !speechRecognitionUsed;
+            const capturedItemCount = isOfficialAssessmentLaunch && isCrla
+                ? itemScores.filter((score, index) => itemLocked[index] && score && !score.skipped).length
+                : items.length;
+            const incorrectWords = isOfficialAssessmentLaunch && isCrla
+                ? currentStoryState === "story_reading"
+                    ? Math.max(0, storyMiscueCount)
+                    : itemScores.reduce((total, score, index) => total + (
+                        itemLocked[index] && score && !score.skipped
+                            ? Math.max(0, readableWordCount(items[index]) - Number(score.correct_words || 0))
+                            : 0
+                    ), 0)
+                : Math.max(0, targetWordCount - matchedWords);
 
             return {
                 accuracy: targetWordCount && speechRecognitionUsed ? Math.round((matchedWords / targetWordCount) * 10000) / 100 : 0,
@@ -3055,15 +3080,15 @@
                 correct_words: matchedWords,
                 ...(completedSentenceCount !== null ? { correct_sentences: completedSentenceCount, sentence_count: completedSentenceCount } : {}),
                 correct_items: correctItems,
-                items_completed: items.length,
-                incorrect_words: Math.max(0, targetWordCount - matchedWords),
+                items_completed: capturedItemCount,
+                incorrect_words: incorrectWords,
                 skipped_words: 0,
                 raw_metrics: {
                     correct_words: matchedWords,
                     ...(completedSentenceCount !== null ? { correct_sentences: completedSentenceCount, sentence_count: completedSentenceCount } : {}),
                     correct_items: correctItems,
-                    items_completed: items.length,
-                    incorrect_words: Math.max(0, targetWordCount - matchedWords),
+                    items_completed: capturedItemCount,
+                    incorrect_words: incorrectWords,
                     skipped_words: 0,
                     duration_seconds: durationSeconds,
                     target_word_count: targetWordCount,
@@ -3085,17 +3110,19 @@
                     : null;
                 return {
                     totalStoryWords: totalWords,
-                    miscues: totalWords,
+                    miscues: Math.min(totalWords, Math.max(0, Number(storyMiscues) || 0)),
                     wordsRead: 0,
                     durationSeconds,
                     accuracy: 0,
                     wpm: 0,
                 };
             }
-            // Skipped/read-error words are miscues, but stale recovery data
-            // must never exceed this story's word count.
+            // Miscues come from captured speech. Navigation must neither
+            // add errors nor award credit for unread story segments.
             const miscues = Math.min(totalWords, Math.max(0, Number(storyMiscues) || 0));
-            const wordsRead = Math.max(0, totalWords - miscues);
+            const wordsRead = isOfficialAssessmentLaunch && isCrla
+                ? Math.min(totalWords, Math.max(0, correctWordsRead()))
+                : Math.max(0, totalWords - miscues);
             const durationValue = Number(elapsedDurationSeconds);
             const durationSeconds = Number.isFinite(durationValue) && durationValue > 0
                 ? durationValue
@@ -3223,12 +3250,16 @@
             const task1ScoreCandidate = source.task1_score ?? source.task1_correct_words
                 ?? (currentAssessmentBranch === "words" ? source.correct_words ?? source.word_count : null);
             const task1ScoreNumber = Number(task1ScoreCandidate);
-            const task1Score = Number.isInteger(task1ScoreNumber) && task1ScoreNumber >= 0 && task1ScoreNumber <= 10
+            const task1Score = task1ScoreCandidate != null && task1ScoreCandidate !== ""
+                && Number.isInteger(task1ScoreNumber) && task1ScoreNumber >= 0 && task1ScoreNumber <= 10
                 ? task1ScoreNumber
                 : null;
-            const task2Score = source.task2_score
-                ?? source.task2_rhymes_score
-                ?? source.task2_sentences_score
+            const task2Type = source.task2_type ?? (source.task1_score >= 7 ? "Task 2H / Sentences"
+                : source.task2_rhymes_score != null ? "Task 2L / Rhymes" : source.task2_sentences_score != null ? "Task 2H / Sentences" : null);
+            const task2Score = (/2h|sentence/i.test(task2Type || "")
+                ? source.task2_sentences_score
+                : source.task2_rhymes_score)
+                ?? source.task2_score
                 ?? null;
             const sentencesRead = source.sentences_read ?? source.correct_sentences ?? source.sentence_count ?? null;
             const storyTotalWords = source.total_story_words ?? source.story_total_words ?? null;
@@ -3241,8 +3272,10 @@
                 task1_total_words: 10,
                 task1_correct_words: task1Score,
                 task1_score: task1Score,
-                task2_type: source.task2_type ?? (source.task2_rhymes_score != null ? "Task 2L / Rhymes" : source.task2_sentences_score != null ? "Task 2H / Sentences" : null),
+                task2_type: task2Type,
                 task2_score: task2Score,
+                task2_rhymes_score: source.task2_rhymes_score ?? null,
+                task2_sentences_score: source.task2_sentences_score ?? null,
                 sentences_read: sentencesRead,
                 part1_total_score: source.part1_total_score ?? null,
                 story_number: source.story_number ?? currentSelectedStory?.key ?? null,
@@ -6237,8 +6270,10 @@
                     stage: recoveryStage,
                     crla_question_index: currentIndex,
                     live_item_scores: itemScores,
+                    live_item_branch: currentAssessmentBranch,
                     live_item_locked: itemLocked,
                     live_correct_word_counts: correctWordCounts,
+                    live_page_correct_word_counts: pageCorrectWordCounts,
                     ...(updateValues.recovery_state || {}),
                 };
                 const elapsedSeconds = Number.isFinite(Number(updateValues.elapsed_seconds))
@@ -6919,9 +6954,7 @@
                     words_read: storyMetrics.wordsRead,
                     total_words_read: storyMetrics.wordsRead,
                     miscues: storyMetrics.miscues,
-                    story_skipped_segments: Array.isArray(itemScores[0]?.skipped_story_segments)
-                        ? itemScores[0].skipped_story_segments
-                        : [],
+                    story_skipped_segments: readStudentEndState().story_skipped_segments || [],
                     duration_seconds: storyMetrics.durationSeconds,
                     wpm: storyMetrics.wpm,
                     comprehension_total: currentStoryQuestions.length,
@@ -7398,10 +7431,7 @@
                 crlaSpeechAttemptActive = false;
                 try { crlaSpeechRecognition?.abort(); } catch (error) {}
                 crlaSpeechRecognition = null;
-                // The established completion path records an empty response
-                // as false, persists it, and advances/completes the assessment.
-                await completeCRLASpokenAttempt("", questionIndex);
-                return;
+                // Leave the unanswered result null. Only the cursor moves.
             }
             if (questionIndex < currentStoryQuestions.length - 1) {
                 currentStoryQuestionIndex += 1;
@@ -7466,28 +7496,12 @@
             }
             if (currentStoryState === "story_reading" && currentSelectedStory) {
                 if (currentPageIndex < getCurrentPageCount() - 1) {
-                    const skippedSegmentWords = readableWordCount(getCurrentDisplayText());
-                    const currentStoryItemScore = itemScores[currentIndex] || {};
-                    const skippedStorySegments = Array.isArray(currentStoryItemScore.skipped_story_segments)
-                        ? currentStoryItemScore.skipped_story_segments.slice()
-                        : [];
-                    if (!skippedStorySegments.includes(currentPageIndex)) {
-                        skippedStorySegments.push(currentPageIndex);
-                    }
-                    itemScores[currentIndex] = {
-                        ...currentStoryItemScore,
-                        skipped_story_segments: skippedStorySegments,
-                    };
-                    storyMiscueCount += skippedSegmentWords;
-                    await updateStudentEndState({
-                        stage: "story_reading",
-                        selected_story: currentSelectedStory.title,
-                        story_segment_index: currentPageIndex,
-                        story_total_words: readableWordCount(currentSelectedStory.content || ""),
-                        total_story_words: readableWordCount(currentSelectedStory.content || ""),
-                        miscues: storyMiscueCount,
-                        story_skipped_segments: skippedStorySegments,
-                    });
+                    if (isAdvancingItem) return;
+                    isAdvancingItem = true;
+                    if (nextBtn) nextBtn.disabled = true;
+                    itemResultVersion += 1;
+                    pendingAudioChunk = null;
+                    await persistSkippedStorySegment();
                     const previousSegmentIndex = currentPageIndex;
                     currentPageIndex += 1;
                     currentStorySegmentIndex = currentPageIndex;

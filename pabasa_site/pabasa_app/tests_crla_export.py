@@ -289,8 +289,8 @@ class CrlaExportResultTests(TestCase):
         })
         self.assertEqual(payload["crla_score_data"]["sentences_read"], 4)
         self.assertEqual(payload["crla_score_data"]["task2_score"], 10)
-        self.assertEqual(payload["crla_score_data"]["part1_total_score"], 18)
-        self.assertEqual(payload["final_score"], 18)
+        self.assertEqual(payload["crla_score_data"]["part1_total_score"], 28)
+        self.assertEqual(payload["final_score"], 28)
 
     def test_part_1_reading_level_uses_column_i_boundaries(self):
         expected = {
@@ -324,11 +324,11 @@ class CrlaExportResultTests(TestCase):
         )
         self.assertEqual(
             formulas["P"],
-            '=IF(AND(M20>0,OR(N20>0,O20>0)),(M20/((N20*60)+O20))*60,"")',
+            '=IF(AND(K20<>"",M20<>"",OR(N20>0,O20>0)),(M20/((N20*60)+O20))*60,"")',
         )
         self.assertEqual(
             formulas["Q"],
-            '=IF(AND(K20<>"",M20>0),IFERROR(M20/IF(K20=2,$P$7,$M$7),""),"")',
+            '=IF(AND(K20<>"",M20<>""),IFERROR(M20/IF(K20=2,$P$7,$M$7),""),"")',
         )
         for task1, rhymes, sentences, total, level in cases:
             with self.subTest(task1=task1, rhymes=rhymes, sentences=sentences):
@@ -465,7 +465,7 @@ class CrlaExportResultTests(TestCase):
         self.assertEqual(sheet["C6"].value, "Maria G. Santos Jr.")
         self.assertEqual(sheet["C8"].value, "Grade 2 Rizal")
         self.assertEqual(sheet["F11"].value, 10)
-        self.assertIsNone(sheet["G11"].value)
+        self.assertEqual(sheet["G11"].value, 10)
         self.assertEqual(sheet["H11"].value, 10)
         self.assertTrue(str(sheet["I11"].value).startswith("="))
         self.assertTrue(str(sheet["J11"].value).startswith("="))
@@ -670,7 +670,7 @@ class CrlaExportResultTests(TestCase):
 
         sheet = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)["G2 MT Reading Scoresheet"]
         self.assertEqual(sheet["F11"].value, 8)
-        self.assertEqual(sheet["H11"].value, 10)
+        self.assertEqual(sheet["H11"].value, 7)
         self.assertTrue(str(sheet["I11"].value).startswith("="))
         self.assertTrue(str(sheet["J11"].value).startswith("="))
         self.assertEqual(sheet["K11"].value, 2)
