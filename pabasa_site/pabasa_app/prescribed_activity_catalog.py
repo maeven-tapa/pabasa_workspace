@@ -577,12 +577,12 @@ PRESCRIBED_ACTIVITIES = {
         'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'],
         'interaction': 'lesson15_gawain1_student', 'total_items': 6,
         'items': [
-            {'id': 1, 'word': 'tawa', 'image_path': 'pabasa_app/images/picture_word/custom/Boy-Lalaki.png', 'choices': ['tawa', 'sawa']},
-            {'id': 2, 'word': 'lawa', 'image_path': 'pabasa_app/images/picture_word/custom/River-Ilog.png', 'choices': ['lawa', 'hawa']},
-            {'id': 3, 'word': 'gawa', 'image_path': 'pabasa_app/images/letrang_a/medalya.png', 'choices': ['gawa', 'wagi']},
-            {'id': 4, 'word': 'kawa', 'image_path': 'pabasa_app/images/picture_word/custom/Pan-Kawali.png', 'choices': ['kawa', 'diwa']},
-            {'id': 5, 'word': 'walo', 'image_path': 'pabasa_app/images/alpabetong_pilipino/walo.png', 'choices': ['wala', 'walo']},
-            {'id': 6, 'word': 'walis', 'image_path': 'pabasa_app/images/picture_word/custom/Broom-Walis.png', 'choices': ['bawang', 'walis']},
+            {'id': 1, 'word': 'tawa', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/15_GAWAIN_1/tawa.jpg', 'choices': ['tawa', 'sawa']},
+            {'id': 2, 'word': 'lawa', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/15_GAWAIN_1/lawa.jpg', 'choices': ['lawa', 'hawa']},
+            {'id': 3, 'word': 'gawa', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/15_GAWAIN_1/wagi.jpg', 'choices': ['gawa', 'wagi']},
+            {'id': 4, 'word': 'kawa', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/15_GAWAIN_1/kawa.png', 'choices': ['kawa', 'diwa']},
+            {'id': 5, 'word': 'walo', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/15_GAWAIN_1/walo.jpg', 'choices': ['wala', 'walo']},
+            {'id': 6, 'word': 'walis', 'image_path': 'pabasa_app/prescribed/audio/SESSION_5/15_GAWAIN_1/walis.jpg', 'choices': ['bawang', 'walis']},
         ],
     },
     'lesson-14-gawain-3': {

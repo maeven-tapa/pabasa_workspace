@@ -1,0 +1,8 @@
+/* Lesson 15 Gawain 1: final correct answers use the green success state. */
+.choices .choice.selected.is-correct,
+.choices .choice.selected.is-correct:hover,
+.choices .choice.selected.is-correct:active {
+    background: #dff3e5 !important;
+    border-color: #3c9b62 !important;
+    color: #236b43 !important;
+}
