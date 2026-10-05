@@ -353,6 +353,7 @@ for (const failure of ['401', 'AbortError', 'invalid response']) {
         isOfficialAssessmentLaunch: true, isCrla: true, sentenceDebugEnabled: false,
         currentMaterialLanguage: 'English', currentSttLanguageCode: 'en-US', syllableStitchingContext: '',
         updateAssessmentNavigationButtons() {}, updateSpeechProcessingControls() {},
+        syncStoryReadingTimerProcessing() {},
         resetSyllableStitching() {}, getCsrfToken: () => 'test', stopSpeechRecognition() {},
         setSpeechStatus: (...args) => statuses.push(args),
         FormData, AbortController, console: {warn() {}, log() {}},
@@ -373,3 +374,176 @@ for (const failure of ['401', 'AbortError', 'invalid response']) {
     assert.equal(context.pendingAudioChunk, null);
   });
 }
+
+function speechRetryReader(mode, fetch, overrides = {}) {
+  const scores = [], statuses = [], redirects = [];
+  const context = run(
+    section('function currentSpeechContext()', 'function recordParagraphWordResult(') +
+    section('async function sendAudioChunk(', 'function handleSpeechResult('), {
+      currentIndex: 0, currentSyllableIndex: 0, itemResultVersion: 0, items: ['Si Ana ay masaya.'],
+      getCurrentDisplayText: () => 'Si Ana ay masaya.', isAdvancingItem: false,
+      liveSessionEnded: false, liveSessionEndRedirecting: false,
+      isRecording: true, isMuted: false, isSendingChunk: false, pendingAudioChunk: null,
+      currentStoryState: mode === 'paragraph' ? 'story_reading' : 'sentences',
+      currentAssessmentBranch: mode === 'paragraph' ? 'story' : 'sentences', mode,
+      sentenceDebugCallbackId: 0, sentenceWordResults: [[]],
+      isOfficialAssessmentLaunch: true, isCrla: true, sentenceDebugEnabled: false,
+      currentMaterialLanguage: 'Filipino', currentSttLanguageCode: 'fil-PH', syllableStitchingContext: '',
+      updateAssessmentNavigationButtons() {}, updateSpeechProcessingControls() {},
+      syncStoryReadingTimerProcessing() {},
+      resetSyllableStitching() {}, getCsrfToken: () => 'test', stopSpeechRecognition() {},
+      setSpeechStatus: (...args) => statuses.push(args),
+      handleSpeechResult: (data, requestContext) => scores.push({data, requestContext}),
+      FormData, AbortController, console: {warn() {}, log() {}}, fetch,
+      window: {setTimeout(callback, delay) { if (delay < 1000) queueMicrotask(callback); }, clearTimeout() {},
+        location: {pathname: '/reader/', search: '', assign: url => redirects.push(url)}},
+      ...overrides,
+    });
+  return {context, scores, statuses, redirects};
+}
+const speechResponse = (status, data) => ({ok: status === 200, status,
+  text: async () => typeof data === 'string' ? data : JSON.stringify(data)});
+
+for (const mode of ['sentence', 'paragraph']) {
+  test(`ten ${mode} readers retry the identical recording after a server error and score only once`, async () => {
+    await Promise.all(Array.from({length: 10}, async (_, student) => {
+      const bodies = [];
+      const reader = speechRetryReader(mode, async (url, options) => {
+        bodies.push(options.body);
+        return bodies.length === 1
+          ? speechResponse(500, '<html>Internal server error</html>')
+          : speechResponse(200, {success: true, student, language_code: 'fil-PH'});
+      });
+      await reader.context.sendAudioChunk(new Blob([`student-${student}`], {type: 'audio/webm'}));
+      assert.equal(bodies.length, 2);
+      assert.equal(bodies[0], bodies[1]);
+      assert.equal(await bodies[1].get('audio').text(), `student-${student}`);
+      assert.equal(reader.scores.length, 1);
+      assert.equal(reader.scores[0].data.student, student);
+      assert.equal(reader.context.currentIndex, 0);
+      assert.equal(reader.context.isSendingChunk, false);
+      assert.equal(reader.statuses.some(([title]) => title === 'Speech check had trouble.'), false);
+      assert.deepEqual(reader.redirects, []);
+    }));
+  });
+}
+
+test('speech retries are bounded, do not retry permanent errors, and never invent a result', async () => {
+  for (const [status, retryable, expectedAttempts] of [[502, true, 2], [502, false, 1], [400, undefined, 1], [403, undefined, 1], [401, undefined, 1]]) {
+    let attempts = 0;
+    const reader = speechRetryReader('sentence', async () => {
+      attempts++;
+      return speechResponse(status, {success: false, error: 'Test failure', retryable});
+    });
+    await reader.context.sendAudioChunk(new Blob(['audio']));
+    assert.equal(attempts, expectedAttempts);
+    assert.equal(reader.scores.length, 0);
+    assert.equal(reader.context.currentIndex, 0);
+    assert.equal(reader.context.itemResultVersion, 0);
+    assert.equal(reader.redirects.length, status === 401 ? 1 : 0);
+  }
+});
+
+test('teacher End Session during speech retry prevents any later request or score', async () => {
+  let releaseRetry, attempts = 0;
+  const reader = speechRetryReader('paragraph', async () => {
+    attempts++;
+    return speechResponse(503, {success: false, retryable: true});
+  }, {window: {setTimeout(callback, delay) { if (delay < 1000) releaseRetry = callback; }, clearTimeout() {}}});
+  const pending = reader.context.sendAudioChunk(new Blob(['audio']));
+  for (let step = 0; step < 10 && !releaseRetry; step++) await Promise.resolve();
+  assert.ok(releaseRetry);
+  reader.context.liveSessionEnded = true;
+  reader.context.itemResultVersion++;
+  releaseRetry();
+  await pending;
+  assert.equal(attempts, 1);
+  assert.equal(reader.scores.length, 0);
+  assert.equal(reader.context.isSendingChunk, false);
+});
+
+test('final speech draining retains responses that arrive after the old 3.5-second cutoff', async () => {
+  let clock = 0;
+  const context = run(section('async function waitForPendingSpeech(', 'function updateUI()'), {
+    isSendingChunk: true, pendingAudioChunk: null, liveSessionEnded: false, liveSessionEndRedirecting: false,
+    Date: {now: () => clock},
+    window: {setTimeout(callback, delay) {
+      clock += delay;
+      if (clock >= 5000) context.isSendingChunk = false;
+      queueMicrotask(callback);
+    }},
+  });
+  assert.equal(await context.waitForPendingSpeech(), true);
+  assert.equal(clock, 5000);
+});
+
+for (const teacherEnded of [false, true]) {
+  test(`sentence deadline waits for already-recorded speech${teacherEnded ? ' and respects teacher End Session' : ' before saving its score'}`, async () => {
+    let finishSpeech;
+    const context = run(section('function currentSpeechContext()', 'function recordParagraphWordResult(') +
+      section('async function advanceSentenceAfterTimeout()', 'function startSentenceItemTimer()'), {
+      isOfficialAssessmentLaunch: true, mode: 'sentence', isRecording: true, itemLocked: [false, false],
+      currentIndex: 0, items: ['one two three', 'four five'], sentenceItemTimer: 1,
+      getCurrentDisplayText: () => 'one two three', currentSyllableIndex: 0,
+      stoppingSpeechRecognition: false, flushCurrentSpeechChunk: async () => {},
+      waitForPendingSpeech: () => new Promise(resolve => { finishSpeech = resolve; }),
+      liveSessionEnded: false, liveSessionEndRedirecting: false,
+      mediaRecorder: null, isSendingChunk: true, isMuted: false, isAdvancingItem: false,
+      itemScores: [null, null], correctWordCounts: [0, 0], sentenceWordResults: [[], []], itemResultVersion: 0,
+      persistLockedItemResult() {}, transitionToItem() {}, stopSpeechRecognition() {}, showCompletion() {},
+    });
+    const pending = context.advanceSentenceAfterTimeout();
+    for (let step = 0; step < 10 && !finishSpeech; step++) await Promise.resolve();
+    assert.ok(finishSpeech);
+    assert.equal(context.itemLocked[0], false);
+    assert.equal(context.stoppingSpeechRecognition, true);
+    context.correctWordCounts[0] = 2;
+    context.currentSyllableIndex = 2;
+    context.sentenceWordResults[0] = [{result: 'correct'}, {result: 'correct'}, {result: 'miscue'}];
+    context.isSendingChunk = false;
+    context.liveSessionEnded = teacherEnded;
+    finishSpeech();
+    await pending;
+    if (teacherEnded) assert.equal(context.itemScores[0], null);
+    else {
+      assert.equal(context.itemScores[0].correct_words, 2);
+      assert.equal(context.itemScores[0].word_results.length, 3);
+      assert.equal(context.itemLocked[0], true);
+    }
+  });
+}
+
+test('story deadline drains its pending recording before finalizing and rejects duplicate completion', async () => {
+  let finishSpeech, finalizations = 0;
+  const saved = [];
+  const context = run(section('const stopReading = async', 'btnStartReading?.addEventListener("click", startReading)') +
+    'this.testStopReading = stopReading;', {
+      isOfficialAssessmentLaunch: true, isCrla: true, currentStoryState: 'story_reading',
+      isReviewMode: false, isFinalizingReading: false, isRecording: true,
+      isSpeechResponsePending: () => context.isSendingChunk, isSendingChunk: true, pendingAudioChunk: null,
+      currentSelectedStory: {title: 'Story', content: 'one two three'},
+      clearStoryReadingTimer() {}, clearSentenceItemTimer() {}, autoAdvanceTimer: null,
+      stoppingSpeechRecognition: false, mediaRecorder: null,
+      waitForPendingSpeech: () => new Promise(resolve => { finishSpeech = resolve; }),
+      liveSessionEnded: false, liveSessionEndRedirecting: false,
+      stopSpeechRecognition() {}, commitPendingStorySelfCorrection() {},
+      finalizeStoryReading() { finalizations++; }, calculateScores: () => ({duration_seconds: 60}),
+      calculateFinalizedStoryMetrics: () => ({wordsRead: context.capturedWords, miscues: 0, durationSeconds: 60}),
+      capturedWords: 0, readableWordCount: () => 3, storyMiscueCount: 0,
+      updateStudentEndState: async data => saved.push(data), readStudentEndState: () => ({}),
+      strictStoryEvidence: () => ({}), currentStoryQuestions: [], renderCRLAComprehensionState() {},
+    });
+  const pending = context.testStopReading({allowCompletedStorySegment: true});
+  await context.testStopReading({allowCompletedStorySegment: true});
+  assert.equal(finalizations, 0);
+  assert.equal(context.isFinalizingReading, true);
+  assert.equal(context.stoppingSpeechRecognition, true);
+  context.capturedWords = 3;
+  context.isSendingChunk = false;
+  finishSpeech();
+  await pending;
+  assert.equal(finalizations, 1);
+  assert.equal(saved[0].words_read, 3);
+  assert.equal(context.isRecording, false);
+  assert.equal(context.isFinalizingReading, false);
+});

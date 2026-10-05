@@ -4,8 +4,10 @@ import html
 import json
 import os
 from pathlib import Path
+import random
 import re
 import socket
+import time
 import unicodedata
 import urllib.error
 import urllib.request
@@ -475,6 +477,24 @@ def summarize_stt_error(exc):
     return message or exc.__class__.__name__
 
 
+def is_retryable_stt_error(exc):
+    """Retry temporary transport/provider failures, never bad audio or configuration."""
+    if hasattr(exc, 'retryable'):
+        return bool(exc.retryable)
+    if isinstance(exc, urllib.error.HTTPError):
+        return exc.code in {429, 500, 502, 503, 504}
+    if isinstance(exc, (urllib.error.URLError, TimeoutError)):
+        return True
+    try:
+        from google.api_core.exceptions import GoogleAPICallError
+    except ImportError:
+        pass
+    else:
+        if isinstance(exc, GoogleAPICallError):
+            return exc.code in {429, 500, 502, 503, 504}
+    return exc.__cause__ is not None and is_retryable_stt_error(exc.__cause__)
+
+
 def transcribe_audio_bytes_v2_chirp3(
     audio_bytes,
     language_code,
@@ -542,7 +562,16 @@ def _transcribe_audio_bytes_v2_chirp(
         config=config,
         content=audio_bytes,
     )
-    response = client.recognize(request=request, timeout=timeout_seconds)
+    # Keep the retry budget explicit, independent of SDK defaults, and retain
+    # the same recording and selected model within the browser's request limit.
+    for attempt in range(2):
+        try:
+            response = client.recognize(request=request, timeout=timeout_seconds, retry=None)
+            break
+        except Exception as exc:
+            if attempt or not is_retryable_stt_error(exc):
+                raise
+            time.sleep(random.uniform(0.2, 0.5))
     transcripts = []
     for result in response.results:
         if not result.alternatives:

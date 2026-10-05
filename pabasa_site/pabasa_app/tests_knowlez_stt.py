@@ -56,10 +56,12 @@ class KnowlezSpeechAdapterTests(SimpleTestCase):
             with self.subTest(status=status), self.assertRaises(KnowlezSpeechError) as error:
                 transcribe_knowlez_audio(recording(), 'fil-PH')
             self.assertNotIn('private-test-key', str(error.exception))
+            self.assertEqual(error.exception.retryable, status in (429, 500))
         post.side_effect = requests.Timeout('private-test-key')
         with self.assertRaises(KnowlezSpeechError) as error:
             transcribe_knowlez_audio(recording(), 'fil-PH')
         self.assertNotIn('private-test-key', str(error.exception))
+        self.assertTrue(error.exception.retryable)
 
     @patch('pabasa_app.knowlez_stt.requests.post')
     def test_silence_and_invalid_responses(self, post):
@@ -120,7 +122,15 @@ class KnowlezSpeechRoutingTests(SimpleTestCase):
         response = reading_transcribe_api(self.request('azure'))
         self.assertEqual(response.status_code, 503)
         self.assertIn('Knowlez', json.loads(response.content)['error'])
+        self.assertFalse(json.loads(response.content)['retryable'])
         google.assert_not_called()
+
+    @patch('pabasa_app.views.transcribe_knowlez_audio',
+           side_effect=KnowlezSpeechError('Temporarily busy', retryable=True))
+    def test_transient_provider_failure_is_retryable(self, knowlez):
+        response = reading_transcribe_api(self.request('knowlez'))
+        self.assertEqual(response.status_code, 502)
+        self.assertTrue(json.loads(response.content)['retryable'])
 
     @patch('pabasa_app.views._lesson1_ffmpeg_binary')
     @patch('pabasa_app.views.transcribe_knowlez_audio', return_value=('A B K', 'knowlez_stt', ''))

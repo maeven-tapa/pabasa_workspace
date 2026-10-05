@@ -11,9 +11,10 @@ from django.conf import settings
 
 
 class KnowlezSpeechError(RuntimeError):
-    def __init__(self, message, status=502):
+    def __init__(self, message, status=502, retryable=False):
         super().__init__(message)
         self.status = status
+        self.retryable = retryable
 
 
 def uses_knowlez_stt(request):
@@ -51,7 +52,7 @@ def transcribe_knowlez_audio(audio, language_code):
         )
     except requests.RequestException:
         # Never return provider exception details, credentials, or response bodies.
-        raise KnowlezSpeechError('Knowlez speech recognition could not be reached. Please try again.') from None
+        raise KnowlezSpeechError('Knowlez speech recognition could not be reached. Please try again.', retryable=True) from None
 
     if response.status_code not in (200, 201):
         if response.status_code in (401, 403):
@@ -60,12 +61,12 @@ def transcribe_knowlez_audio(audio, language_code):
             message = 'Knowlez has reached its usage limit or is busy. Please try again later.'
         else:
             message = 'Knowlez could not transcribe this recording. Please try again.'
-        raise KnowlezSpeechError(message)
+        raise KnowlezSpeechError(message, retryable=response.status_code in (429, 500, 502, 503, 504))
     try:
         result = response.json()
         transcript = result['text']
         if not isinstance(transcript, str):
             raise ValueError('Invalid transcript')
     except (ValueError, KeyError, TypeError):
-        raise KnowlezSpeechError('Knowlez returned an invalid transcription result. Please try again.') from None
+        raise KnowlezSpeechError('Knowlez returned an invalid transcription result. Please try again.', retryable=True) from None
     return transcript.strip(), 'knowlez_stt', ''

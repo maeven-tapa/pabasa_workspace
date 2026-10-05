@@ -120,6 +120,68 @@ assert all(User.objects.get(pk=student.pk).active_session_key == student.active_
 print('10 student logins preserved; 80 overlapping login, publish, poll and auth checks passed.')
 print('Login checks stayed available while all 10 speech requests were waiting on provider I/O.')
 
+# Exercise the actual reader endpoint and scoring with ten simultaneous students.
+# Only external Google transport/credentials are replaced, including a temporary
+# provider 500 for every recording. Each recovered transcript belongs to its student.
+from unittest.mock import patch
+from django.core.files.uploadedfile import SimpleUploadedFile
+from google.api_core.exceptions import InternalServerError
+from google.cloud.speech_v2.types import cloud_speech
+settings.GOOGLE_CLOUD_PROJECT_ID = 'concurrency-test'
+settings.GOOGLE_STT_API_KEY = ''
+attempts = {}
+attempt_lock = threading.Lock()
+provider_barrier = threading.Barrier(len(students))
+transcripts = {}
+
+def recognize(*, request, **kwargs):
+    audio = request.content
+    with attempt_lock:
+        attempts[audio] = attempts.get(audio, 0) + 1
+        attempt = attempts[audio]
+    if attempt == 1:
+        provider_barrier.wait(timeout=10)
+        raise InternalServerError('500 Internal server error') from RuntimeError('provider transport')
+    return cloud_speech.RecognizeResponse(results=[{'alternatives': [{'transcript': transcripts[audio]}]}])
+
+def read_sentence_or_story(student, mode):
+    close_old_connections()
+    client = Client(raise_request_exception=False)
+    client.cookies[settings.SESSION_COOKIE_NAME] = student.active_session_key
+    audio = f'{student.pk}-{mode}'.encode()
+    target = 'Si Ana ay masaya.' if mode == 'sentence' else 'Si Ana ay masaya. May bola si Ana.'
+    # Half the students substitute a word; recovery must preserve actual errors.
+    transcripts[audio] = target if student.pk % 2 else target.replace('masaya', 'malungkot')
+    try:
+        response = client.post(reverse('reading_transcribe_api'), {
+            'audio': SimpleUploadedFile('clip.webm', audio, content_type='audio/webm'),
+            'target_text': target, 'language': 'Filipino', 'mode': mode,
+            'crla_sentence_word_scoring': '1', 'sentence_word_results': '[]',
+            'crla_story_reading': '1', 'current_syllable_index': '0',
+        }, HTTP_X_PABASA_STT_PROVIDER='google', HTTP_X_PABASA_STT_MODEL='chirp_3')
+        assert response.status_code == 200, (mode, student.pk, response.status_code, response.content[:300])
+        data = response.json()
+        assert data['success'] and data['raw_transcript'] == transcripts[audio], data
+        results = data['word_results']
+        assert len(results) == len(target.split()), results
+        incorrect = [word for word in results if word['result'] != 'correct']
+        assert len(incorrect) == (0 if student.pk % 2 else 1), results
+        assert attempts[audio] == 2, attempts
+        assert client.session.get('user_id') == student.pk
+        return 200
+    finally:
+        close_old_connections()
+
+with patch('pabasa_app.reading_stt.google_stt_credentials', return_value=object()), \
+        patch('google.cloud.speech_v2.SpeechClient') as speech_client:
+    speech_client.return_value.recognize.side_effect = recognize
+    with ThreadPoolExecutor(max_workers=thread_count) as executor:
+        for mode in ('sentence', 'paragraph'):
+            assert list(executor.map(lambda student: read_sentence_or_story(student, mode), students)) == [200] * 10
+assert len(attempts) == 20
+assert all(count == 2 for count in attempts.values())
+print('10 simultaneous sentence and 10 story readings recovered provider 500s with isolated, accurate scores.')
+
 # Reconnect after explicit server-side revocation, without any inactivity rule.
 Session.objects.filter(session_key__in=[student.active_session_key for student in students]).delete()
 
@@ -193,4 +255,5 @@ class LiveCrlaConcurrentRequestsTests(TransactionTestCase):
             self.assertEqual(result.returncode, 0, result.stdout[-4000:] + result.stderr[-4000:])
             self.assertIn('10 student logins preserved', result.stdout)
             self.assertIn('Login checks stayed available', result.stdout)
+            self.assertIn('10 simultaneous sentence and 10 story readings recovered', result.stdout)
             self.assertIn('10 concurrent replacement logins', result.stdout)

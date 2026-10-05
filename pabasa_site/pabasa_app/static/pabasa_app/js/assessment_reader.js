@@ -275,6 +275,7 @@
         let speechChunkTimer = null;
         let speechAudioChunks = [];
         let stoppingSpeechRecognition = false;
+        let isFinalizingReading = false;
         let isSendingChunk = false;
         let pendingAudioChunk = null;
         let storyReadingHasAttempted = false;
@@ -328,6 +329,7 @@
         let storyReadingTimerExpiryId = null;
         let storyReadingCountdownId = null;
         let storyReadingTimerStartedAt = null;
+        let storyReadingTimerPausedAt = null;
         let storyReadingTimerExpired = false;
         let storyReadingCountdownActive = false;
         const storyReadingDurationMs = 179000;
@@ -666,6 +668,7 @@
             const savedState = {
                 version: studentEndStateVersion,
                 ...(nextState || {}),
+                ...(nextState?.stage === "story_reading" ? storyReadingTimerRecoveryState() : {}),
                 material_id: String(officialAssessmentId || materialId || "").trim(),
                 updated_at: new Date().toISOString(),
             };
@@ -1421,7 +1424,9 @@
             storyReadingTimerExpiryId = null;
             storyReadingCountdownId = null;
             storyReadingTimerStartedAt = null;
+            storyReadingTimerPausedAt = null;
             storyReadingCountdownActive = false;
+            storyReadingTimer?.setAttribute("data-paused", "false");
         }
 
         function resetStoryReadingTimerUi() {
@@ -1435,30 +1440,82 @@
             storyReadingTimeUpOverlay?.classList.add("d-none");
         }
 
+        function storyReadingElapsedMs(now = Date.now()) {
+            if (storyReadingTimerStartedAt === null) return 0;
+            return Math.max(0, Math.min(storyReadingDurationMs,
+                (storyReadingTimerPausedAt ?? now) - storyReadingTimerStartedAt));
+        }
+
+        function storyReadingTimerRecoveryState() {
+            if (storyReadingTimerStartedAt === null) return {};
+            const elapsed = storyReadingElapsedMs();
+            return {
+                story_reading_elapsed_ms: elapsed,
+                // Keep legacy readers compatible without charging processing
+                // time. New readers restore the saved active elapsed value.
+                story_reading_started_at: new Date(Date.now() - elapsed).toISOString(),
+            };
+        }
+
+        function updateStoryReadingTimerUi() {
+            const remaining = storyReadingDurationMs - storyReadingElapsedMs();
+            const paused = storyReadingTimerPausedAt !== null;
+            storyReadingTimer?.setAttribute("data-paused", String(paused));
+            if (storyReadingTimerProgress) {
+                storyReadingTimerProgress.style.strokeDashoffset = String(1000 - ((remaining / storyReadingDurationMs) * 1000));
+            }
+            storyReadingTimer?.setAttribute("aria-valuenow", String(Math.ceil(remaining / 1000)));
+            storyReadingTimer?.setAttribute("aria-valuetext", `${Math.ceil(remaining / 1000)} seconds remaining${paused ? ", paused" : ""}`);
+        }
+
+        function scheduleStoryReadingTimerExpiry() {
+            if (storyReadingTimerExpiryId) window.clearTimeout(storyReadingTimerExpiryId);
+            storyReadingTimerExpiryId = null;
+            if (storyReadingTimerStartedAt === null || storyReadingTimerPausedAt !== null) return;
+            storyReadingTimerExpiryId = window.setTimeout(() => {
+                // A queued expiry callback cannot end reading while a request
+                // or its retry is processing, even at the last second.
+                syncStoryReadingTimerProcessing();
+                if (storyReadingTimerStartedAt === null || storyReadingTimerPausedAt !== null) return;
+                if (storyReadingElapsedMs() < storyReadingDurationMs) {
+                    scheduleStoryReadingTimerExpiry();
+                    return;
+                }
+                clearStoryReadingTimer();
+                if (storyReadingTimerProgress) storyReadingTimerProgress.style.strokeDashoffset = "1000";
+                storyReadingTimer?.setAttribute("aria-valuenow", "0");
+                storyReadingTimer?.setAttribute("aria-valuetext", "0 seconds remaining");
+                storyReadingTimerExpired = true;
+                stopReading({ allowCompletedStorySegment: true }).then(() => {
+                    storyReadingTimeUpOverlay?.classList.remove("d-none");
+                });
+            }, storyReadingDurationMs - storyReadingElapsedMs());
+        }
+
+        function syncStoryReadingTimerProcessing() {
+            if (storyReadingTimerStartedAt === null) return;
+            const shouldPause = Boolean(isSendingChunk || pendingAudioChunk || liveSessionPaused
+                || liveSessionEnded || liveSessionEndRedirecting || isFinalizingReading);
+            if (shouldPause && storyReadingTimerPausedAt === null) {
+                storyReadingTimerPausedAt = Date.now();
+                if (storyReadingTimerExpiryId) window.clearTimeout(storyReadingTimerExpiryId);
+                storyReadingTimerExpiryId = null;
+            } else if (!shouldPause && storyReadingTimerPausedAt !== null) {
+                storyReadingTimerStartedAt += Date.now() - storyReadingTimerPausedAt;
+                storyReadingTimerPausedAt = null;
+                scheduleStoryReadingTimerExpiry();
+            }
+            updateStoryReadingTimerUi();
+        }
+
         function startStoryReadingTimer(startedAt = Date.now()) {
             clearStoryReadingTimer();
             storyReadingTimerExpired = false;
             storyReadingTimerStartedAt = startedAt;
             storyReadingTimer?.setAttribute("aria-hidden", "false");
-            const update = () => {
-                const elapsed = Math.min(storyReadingDurationMs, Date.now() - storyReadingTimerStartedAt);
-                const remaining = Math.max(0, storyReadingDurationMs - elapsed);
-                if (storyReadingTimerProgress) {
-                    storyReadingTimerProgress.style.strokeDashoffset = String(1000 - ((remaining / storyReadingDurationMs) * 1000));
-                    storyReadingTimer?.setAttribute("aria-valuenow", String(Math.ceil(remaining / 1000)));
-                }
-            };
-            update();
-            storyReadingTimerId = window.setInterval(update, 200);
-            storyReadingTimerExpiryId = window.setTimeout(() => {
-                clearStoryReadingTimer();
-                if (storyReadingTimerProgress) storyReadingTimerProgress.style.strokeDashoffset = "1000";
-                storyReadingTimer?.setAttribute("aria-valuenow", "0");
-                storyReadingTimerExpired = true;
-                stopReading({ allowCompletedStorySegment: true }).then(() => {
-                    storyReadingTimeUpOverlay?.classList.remove("d-none");
-                });
-            }, Math.max(0, storyReadingDurationMs - (Date.now() - storyReadingTimerStartedAt)));
+            syncStoryReadingTimerProcessing();
+            storyReadingTimerId = window.setInterval(syncStoryReadingTimerProcessing, 200);
+            scheduleStoryReadingTimerExpiry();
         }
 
         function startStoryReadingCountdown() {
@@ -1958,6 +2015,7 @@
                 selected_story_content: choice.content || "",
                 story_segment_index: 0,
                 story_reading_started_at: null,
+                story_reading_elapsed_ms: null,
                 duration_seconds: null,
                 wpm: null,
                 words_read: null,
@@ -2741,7 +2799,10 @@
                             );
                             updateUI();
                             renderStoryReadingState(restoredStory);
-                            const restoredStart = Date.parse(persistedEndState.story_reading_started_at || "");
+                            const restoredElapsed = Number(persistedEndState.story_reading_elapsed_ms);
+                            const restoredStart = persistedEndState.story_reading_elapsed_ms != null && Number.isFinite(restoredElapsed)
+                                ? Date.now() - Math.max(0, Math.min(storyReadingDurationMs, restoredElapsed))
+                                : Date.parse(persistedEndState.story_reading_started_at || "");
                             startStoryReadingTimer(Number.isFinite(restoredStart) ? restoredStart : Date.now());
                             animateCurrentItem();
                             return;
@@ -4337,6 +4398,7 @@
                 return;
             }
             isSendingChunk = true;
+            syncStoryReadingTimerProcessing();
             if (currentStoryState === "story_reading") storyReadingHasAttempted = true;
             updateAssessmentNavigationButtons();
             updateSpeechProcessingControls();
@@ -4380,37 +4442,52 @@
             } else {
                 resetSyllableStitching();
             }
-            const requestController = new AbortController();
-            // The first Chirp request can include a cold OAuth/channel setup.
-            // Allow it to complete instead of cancelling it at the old 15-second cap.
-            const requestTimeout = window.setTimeout(() => requestController.abort(), 35000);
-
             try {
-                const response = await fetch("/api/reading/transcribe/", {
-                    method: "POST",
-                    headers: {
-                        "Accept": "application/json",
-                        "X-Requested-With": "XMLHttpRequest",
-                        "X-CSRFToken": getCsrfToken(),
-                    },
-                    credentials: "same-origin",
-                    body: formData,
-                    signal: requestController.signal,
-                });
-                const responseText = await response.text();
                 let data = null;
-                try {
-                    data = responseText ? JSON.parse(responseText) : {};
-                } catch (parseError) {
-                    const isHtml = /<!doctype|<html[\s>]/i.test(responseText || "");
-                    throw new Error(isHtml
-                        ? `The speech service returned a server page instead of data (HTTP ${response.status}).`
-                        : "The speech service returned an invalid response.");
-                }
-                if (!response.ok || !data.success) {
-                    const responseError = new Error(data.error || "Speech check failed.");
-                    responseError.status = response.status;
-                    throw responseError;
+                // Keep the recording until it has been checked. A temporary
+                // provider/proxy error must not discard the student's answer.
+                for (let attempt = 0; attempt < 2; attempt++) {
+                    if (!isCurrentSpeechContext(context)) return;
+                    const requestController = new AbortController();
+                    const requestTimeout = window.setTimeout(() => requestController.abort(), 35000);
+                    try {
+                        const response = await fetch("/api/reading/transcribe/", {
+                            method: "POST",
+                            headers: {
+                                "Accept": "application/json",
+                                "X-Requested-With": "XMLHttpRequest",
+                                "X-CSRFToken": getCsrfToken(),
+                            },
+                            credentials: "same-origin",
+                            body: formData,
+                            signal: requestController.signal,
+                        });
+                        const responseText = await response.text();
+                        try {
+                            data = responseText ? JSON.parse(responseText) : {};
+                        } catch (parseError) {
+                            const responseError = new Error("The speech service returned an invalid response.");
+                            responseError.status = response.status;
+                            throw responseError;
+                        }
+                        if (!response.ok || !data?.success) {
+                            const responseError = new Error(data?.error || "Speech check failed.");
+                            responseError.status = response.status;
+                            responseError.retryable = data?.retryable;
+                            throw responseError;
+                        }
+                        break;
+                    } catch (error) {
+                        const temporaryFailure = error?.retryable !== false && (
+                            [429, 500, 502, 503, 504].includes(error?.status)
+                            || error?.name === "AbortError" || error?.name === "TypeError"
+                        );
+                        if (attempt || !temporaryFailure || !isCurrentSpeechContext(context)) throw error;
+                        setSpeechStatus("Checking your reading…", "Please wait while we retry the same recording.");
+                        await new Promise(resolve => window.setTimeout(resolve, 400 + Math.random() * 300));
+                    } finally {
+                        window.clearTimeout(requestTimeout);
+                    }
                 }
                 if (sentenceDebugEnabled && mode === "sentence") {
                     sentenceDebug("[SENTENCE DEBUG][STT]", {
@@ -4472,12 +4549,11 @@
                 }
                 if (isCurrentSpeechContext(context)) {
                     const message = error?.name === "AbortError"
-                        ? "Speech processing timed out. Keep reading; the next audio chunk will retry automatically."
+                        ? "The speech service is taking too long. Please read this item again."
                         : (error.message || "Keep reading, then try again.");
                     setSpeechStatus("Speech check had trouble.", message);
                 }
             } finally {
-                window.clearTimeout(requestTimeout);
                 isSendingChunk = false;
                 if (pendingAudioChunk && isRecording && !isMuted && isCurrentSpeechContext(pendingAudioChunk.context)) {
                     const nextChunk = pendingAudioChunk.blob;
@@ -4486,6 +4562,7 @@
                     sendAudioChunk(nextChunk, nextContext);
                 } else {
                     pendingAudioChunk = null;
+                    syncStoryReadingTimerProcessing();
                     updateAssessmentNavigationButtons();
                     updateSpeechProcessingControls();
                 }
@@ -5334,11 +5411,15 @@
             return /^\d+[\.)]?$/.test(raw) || /^\(?\d+[\.)]$/.test(raw) || /^\d+$/.test(normalized);
         }
 
-        async function waitForPendingSpeech(maxMs = 3500) {
+        async function waitForPendingSpeech(maxMs = 145000) {
+            // Two bounded 35-second attempts for the active recording and,
+            // if present, one queued final chunk. Never finalize after the old
+            // 3.5-second wait while spoken evidence is still being checked.
             const started = Date.now();
-            while (isSendingChunk && Date.now() - started < maxMs) {
+            while ((isSendingChunk || pendingAudioChunk) && !liveSessionEnded && !liveSessionEndRedirecting && Date.now() - started < maxMs) {
                 await new Promise(resolve => window.setTimeout(resolve, 100));
             }
+            return !isSendingChunk && !pendingAudioChunk;
         }
 
         function updateUI() {
@@ -5535,9 +5616,25 @@
             }
         }
 
-        function advanceSentenceAfterTimeout() {
+        async function advanceSentenceAfterTimeout() {
             if (!isOfficialAssessmentLaunch || mode !== "sentence" || !isRecording || itemLocked[currentIndex]) return;
             sentenceItemTimer = null;
+            const context = currentSpeechContext();
+            // Stop capturing at the reading deadline, but let audio recorded
+            // before it finish scoring rather than treating provider latency
+            // as words the student did not read.
+            stoppingSpeechRecognition = true;
+            await flushCurrentSpeechChunk();
+            await waitForPendingSpeech();
+            if (liveSessionEnded || liveSessionEndRedirecting || !isRecording) return;
+            stoppingSpeechRecognition = false;
+            // The response may advance the syllable cursor within this same
+            // sentence; only an item/attempt change invalidates finalization.
+            if (context.index !== currentIndex || context.version !== itemResultVersion
+                || context.itemText !== (getCurrentDisplayText() || items[currentIndex]) || itemLocked[currentIndex]) {
+                if (!mediaRecorder && !isSendingChunk && !isMuted && !isAdvancingItem) startSpeechChunkRecorder();
+                return;
+            }
             itemLocked[currentIndex] = true;
             itemScores[currentIndex] = {
                 correct_words: Number(correctWordCounts[currentIndex] || 0),
@@ -6397,6 +6494,7 @@
                     live_page_correct_word_counts: pageCorrectWordCounts,
                     ...(isStrictStoryReading() ? strictStoryEvidence() : {}),
                     ...(updateValues.recovery_state || {}),
+                    ...(recoveryStage === "story_reading" ? storyReadingTimerRecoveryState() : {}),
                 };
                 const elapsedSeconds = Number.isFinite(Number(updateValues.elapsed_seconds))
                     ? Number(updateValues.elapsed_seconds)
@@ -6588,6 +6686,7 @@
         }
 
         function showLiveSessionPaused() {
+            syncStoryReadingTimerProcessing();
             if (pauseOverlay) pauseOverlay.classList.remove('d-none');
             if (pauseMenu) pauseMenu.classList.remove('d-none');
             // Hide interactive buttons for students — teacher controls resume/end
@@ -6820,6 +6919,7 @@
             if (liveSessionPaused && state.status === 'started') {
                 liveSessionPaused = false;
                 liveSessionEnded = false;
+                syncStoryReadingTimerProcessing();
                 const restoredStudentState = (state.student_states || {})[currentStudentId] || {};
                 resumeLiveElapsedTimer(restoredStudentState);
                 if (restoredStudentState.recovery_state && state.reader_url) {
@@ -7034,71 +7134,77 @@
         };
 
         const stopReading = async ({ allowIdleStoryCompletion = false, allowCompletedStorySegment = false } = {}) => {
-            clearStoryReadingTimer();
             const isCompletedOfficialCrlaStorySegment = allowCompletedStorySegment
                 && isOfficialAssessmentLaunch
                 && isCrla
                 && currentStoryState === "story_reading";
-            const genuineProcessingPending = Boolean(isSendingChunk || pendingAudioChunk);
-            if (isReviewMode || (isSpeechResponsePending() && (!isCompletedOfficialCrlaStorySegment || genuineProcessingPending))) return;
+            if (isReviewMode || isFinalizingReading || (isSpeechResponsePending() && !isCompletedOfficialCrlaStorySegment)) return;
             if (!isRecording && !(
                 allowIdleStoryCompletion
                 && isCrla
                 && currentStoryState === "story_reading"
                 && currentSelectedStory
             )) return;
-            clearSentenceItemTimer();
-            // CRLA Official Assessment: Cleanup auto-advance timer
-            if (autoAdvanceTimer) {
-                window.clearTimeout(autoAdvanceTimer);
-                autoAdvanceTimer = null;
-            }
-            if (mediaRecorder && mediaRecorder.state === "recording") {
-                try {
-                    await flushCurrentSpeechChunk();
-                    await waitForPendingSpeech();
-                } catch (error) {
-                    console.warn("PABASA: Final audio request failed", error);
+            clearStoryReadingTimer();
+            isFinalizingReading = true;
+            try {
+                clearSentenceItemTimer();
+                // CRLA Official Assessment: Cleanup auto-advance timer
+                if (autoAdvanceTimer) {
+                    window.clearTimeout(autoAdvanceTimer);
+                    autoAdvanceTimer = null;
                 }
+                stoppingSpeechRecognition = true;
+                if (mediaRecorder && mediaRecorder.state === "recording") {
+                    try {
+                        await flushCurrentSpeechChunk();
+                    } catch (error) {
+                        console.warn("PABASA: Final audio request failed", error);
+                    }
+                }
+                await waitForPendingSpeech();
+                if (liveSessionEnded || liveSessionEndRedirecting) return;
+                isRecording = false;
+                stopSpeechRecognition();
+                if (currentStoryState === "story_reading" && currentSelectedStory) {
+                    commitPendingStorySelfCorrection();
+                    finalizeStoryReading();
+                    const readingScores = calculateScores();
+                    const storyMetrics = calculateFinalizedStoryMetrics(
+                        readableWordCount(currentSelectedStory.content || ""),
+                        storyMiscueCount,
+                        readingScores.duration_seconds,
+                    );
+                    await updateStudentEndState({
+                        stage: "story_reading",
+                        selected_story: currentSelectedStory.title,
+                        story_total_words: storyMetrics.totalStoryWords,
+                        total_story_words: storyMetrics.totalStoryWords,
+                        words_read: storyMetrics.wordsRead,
+                        total_words_read: storyMetrics.wordsRead,
+                        miscues: storyMetrics.miscues,
+                        story_skipped_segments: readStudentEndState().story_skipped_segments || [],
+                        ...strictStoryEvidence(),
+                        duration_seconds: storyMetrics.durationSeconds,
+                        wpm: storyMetrics.wpm,
+                        comprehension_total: currentStoryQuestions.length,
+                        total_questions: currentStoryQuestions.length,
+                    });
+                    if (isCrla) renderCRLAComprehensionState(currentSelectedStory.title, {
+                        story_read_percent: storyMetrics.accuracy,
+                        passage_accuracy_percent: storyMetrics.accuracy,
+                        story_total_words: storyMetrics.totalStoryWords, total_story_words: storyMetrics.totalStoryWords,
+                        words_read: storyMetrics.wordsRead, total_words_read: storyMetrics.wordsRead,
+                        miscues: storyMetrics.miscues, duration_seconds: storyMetrics.durationSeconds, wpm: storyMetrics.wpm,
+                    });
+                    else renderStoryComprehensionState(currentSelectedStory.title);
+                    return;
+                }
+                const reachedLastItem = items.length > 0 && currentIndex === items.length - 1;
+                showCompletion(isAssistMode || reachedLastItem);
+            } finally {
+                isFinalizingReading = false;
             }
-            isRecording = false;
-            stopSpeechRecognition();
-            if (currentStoryState === "story_reading" && currentSelectedStory) {
-                commitPendingStorySelfCorrection();
-                finalizeStoryReading();
-                const readingScores = calculateScores();
-                const storyMetrics = calculateFinalizedStoryMetrics(
-                    readableWordCount(currentSelectedStory.content || ""),
-                    storyMiscueCount,
-                    readingScores.duration_seconds,
-                );
-                await updateStudentEndState({
-                    stage: "story_reading",
-                    selected_story: currentSelectedStory.title,
-                    story_total_words: storyMetrics.totalStoryWords,
-                    total_story_words: storyMetrics.totalStoryWords,
-                    words_read: storyMetrics.wordsRead,
-                    total_words_read: storyMetrics.wordsRead,
-                    miscues: storyMetrics.miscues,
-                    story_skipped_segments: readStudentEndState().story_skipped_segments || [],
-                    ...strictStoryEvidence(),
-                    duration_seconds: storyMetrics.durationSeconds,
-                    wpm: storyMetrics.wpm,
-                    comprehension_total: currentStoryQuestions.length,
-                    total_questions: currentStoryQuestions.length,
-                });
-                if (isCrla) renderCRLAComprehensionState(currentSelectedStory.title, {
-                    story_read_percent: storyMetrics.accuracy,
-                    passage_accuracy_percent: storyMetrics.accuracy,
-                    story_total_words: storyMetrics.totalStoryWords, total_story_words: storyMetrics.totalStoryWords,
-                    words_read: storyMetrics.wordsRead, total_words_read: storyMetrics.wordsRead,
-                    miscues: storyMetrics.miscues, duration_seconds: storyMetrics.durationSeconds, wpm: storyMetrics.wpm,
-                });
-                else renderStoryComprehensionState(currentSelectedStory.title);
-                return;
-            }
-            const reachedLastItem = items.length > 0 && currentIndex === items.length - 1;
-            showCompletion(isAssistMode || reachedLastItem);
         };
 
         btnStartReading?.addEventListener("click", startReading);

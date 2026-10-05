@@ -5,6 +5,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import RequestFactory, SimpleTestCase, override_settings
 from django.template.loader import render_to_string
 from google.cloud.speech_v2.types import cloud_speech
+from google.api_core.exceptions import InternalServerError, InvalidArgument, ServiceUnavailable
 
 from .reading_stt import transcribe_audio_bytes_with_model, transcribe_audio_bytes_v1, v1_model_for_language
 from .views import lesson_1_gawain_1_transcribe_api, reading_transcribe_api
@@ -25,6 +26,32 @@ class ChirpAdapterTests(SimpleTestCase):
             project_id='test-project', location='us-central1' if model == 'chirp_2' else 'us',
             **kwargs,
         )
+
+    def test_transient_provider_failure_retries_identical_audio_and_model(self):
+        recognize = self.client.return_value.recognize
+        provider_error = InternalServerError('500 Internal server error')
+        # Google wraps an underlying gRPC error as the exception cause.
+        provider_error.__cause__ = RuntimeError('transport details')
+        recognize.side_effect = [provider_error,
+            cloud_speech.RecognizeResponse(results=[{'alternatives': [{'transcript': 'bata'}]}])]
+        self.assertEqual(self.transcribe('chirp_3'), ('bata', 'chirp_3', ''))
+        self.assertEqual(recognize.call_count, 2)
+        first, second = recognize.call_args_list
+        self.assertEqual(first.kwargs['request'], second.kwargs['request'])
+        self.assertEqual(first.kwargs['request'].content, b'audio')
+        self.assertIsNone(first.kwargs['retry'])
+
+    def test_provider_retries_are_bounded_and_do_not_retry_bad_audio(self):
+        recognize = self.client.return_value.recognize
+        for error, attempts in ((ServiceUnavailable('busy'), 2), (InvalidArgument('invalid audio'), 1)):
+            with self.subTest(error=type(error).__name__):
+                recognize.reset_mock()
+                recognize.side_effect = error
+                words = [{'word': 'stale'}]
+                with self.assertRaises(type(error)):
+                    self.transcribe('chirp_3', word_details=words)
+                self.assertEqual(recognize.call_count, attempts)
+                self.assertEqual(words, [])
 
     def test_chirp2_requests_word_values_and_keeps_all_segments(self):
         self.client.return_value.recognize.return_value = cloud_speech.RecognizeResponse(results=[

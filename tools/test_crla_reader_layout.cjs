@@ -72,6 +72,8 @@ async function snapshot(page) {
           let paused = true;
           let ended = false;
           let heldSpeechRoute, signalSpeechStarted;
+          let testingSpeechRetry = false;
+          const retriedAudio = [];
           const speechStarted = new Promise(resolve => { signalSpeechStarted = resolve; });
           let signalStrictSnapshot;
           const strictSnapshot = new Promise(resolve => { signalStrictSnapshot = resolve; });
@@ -89,6 +91,15 @@ async function snapshot(page) {
             const url = new URL(route.request().url());
             if (url.origin !== origin) return route.abort();
             if (url.pathname === '/api/reading/transcribe/') {
+              if (testingSpeechRetry) {
+                retriedAudio.push(route.request().postDataBuffer().toString());
+                if (retriedAudio.length === 1) {
+                  return route.fulfill({status: 500, contentType: 'text/html', body: '<html>Internal server error</html>'});
+                }
+                if (branch === 'story_reading') await new Promise(resolve => setTimeout(resolve, 900));
+                return route.fulfill({json: {success: true, language_code: 'fil-PH', transcript: '',
+                  correct_word_count: 0, word_results: [], current_syllable_index: 0}});
+              }
               heldSpeechRoute = route;
               signalSpeechStarted();
               return;
@@ -128,6 +139,34 @@ async function snapshot(page) {
           await page.reload();
           await page.waitForFunction(() => !document.getElementById('readingWord').textContent.includes('Loading'));
           assert.deepEqual(await snapshot(page), before, `${branch}, ${viewport.width}px, debug=${debug}: refresh`);
+          if (['sentences', 'story_reading'].includes(branch) && viewport.width === 1366 && !debug) {
+            testingSpeechRetry = true;
+            await page.evaluate(() => {
+              window.timerRetryFinished = false;
+              window.__readerTest.sendAudioChunk(new Blob(['same-recorded-answer'], {type: 'audio/webm'}))
+                .then(() => { window.timerRetryFinished = true; });
+            });
+            if (branch === 'story_reading') {
+              await page.waitForFunction(() => document.getElementById('storyReadingTimer').dataset.paused === 'true');
+              const timerSnapshot = () => page.evaluate(() => ({
+                remaining: document.getElementById('storyReadingTimer').getAttribute('aria-valuenow'),
+                border: getComputedStyle(document.getElementById('storyReadingTimerProgress')).strokeDashoffset,
+              }));
+              const frozen = await timerSnapshot();
+              await page.waitForTimeout(600);
+              assert.deepEqual(await timerSnapshot(), frozen, 'Story timer moved during processing/retry');
+              console.log('PASS Story timer: computed border animation and countdown freeze while processing/retrying');
+            }
+            await page.waitForFunction(() => window.timerRetryFinished);
+            if (branch === 'story_reading') {
+              await page.waitForFunction(() => document.getElementById('storyReadingTimer').dataset.paused === 'false');
+            }
+            assert.equal(retriedAudio.length, 2);
+            assert.ok(retriedAudio.every(body => body.includes('same-recorded-answer')));
+            testingSpeechRetry = false;
+            assert.ok(!page.url().includes('/auth/'));
+            console.log(`PASS ${branch}: a server HTML 500 retries the same recording in Chrome`);
+          }
           if (branch === 'story_reading') {
             let expectedMiscues = 9, expectedRead = 0;
             if (viewport.width === 1366) {

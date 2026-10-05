@@ -92,6 +92,7 @@ from .reading_stt import (
     transcribe_audio_bytes_with_model,
     google_stt_credentials,
     google_stt_credentials_available,
+    is_retryable_stt_error,
     l22_c_pronunciation_match,
     word_numbers_in_transcript,
 )
@@ -24431,12 +24432,12 @@ def reading_transcribe_api(request):
         )
         return JsonResponse(analysis)
     except KnowlezSpeechError as exc:
-        return JsonResponse({'success': False, 'error': str(exc)}, status=exc.status)
+        return JsonResponse({'success': False, 'error': str(exc), 'retryable': exc.retryable}, status=exc.status)
     except Exception as exc:
         logger.exception('Reading transcription failed')
         if request.POST.get('prescribed_activity_key') == 'aral-l23-g6-q-syllable-builder':
             return JsonResponse({'success': False, 'error': 'Hindi magamit ang mikropono ngayon. Subukan muli mamaya.'}, status=502)
-        return JsonResponse({'success': False, 'error': str(exc)}, status=502)
+        return JsonResponse({'success': False, 'error': str(exc), 'retryable': is_retryable_stt_error(exc)}, status=502)
 
 
 _LOCAL_PRESCRIBED_AUDIO_PATHS = {
