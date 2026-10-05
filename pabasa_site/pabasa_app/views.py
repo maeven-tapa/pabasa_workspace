@@ -5509,7 +5509,8 @@ def login_user(request):
             # Student auth cookies are browser-session cookies, so a client
             # clock change cannot make the browser discard a valid session.
             # Django's server-side session expiry remains authoritative.
-            request.session.set_expiry(0)
+            if settings.SESSION_TIMEOUTS_ENABLED:
+                request.session.set_expiry(0)
             if not claim_student_session(user.id, session_key):
                 return JsonResponse({'success': False, 'error': 'Account Already in Use: This student account is currently logged in on another device. Please log out from that device before logging in here.'}, status=409)
 

@@ -1,6 +1,7 @@
 import hashlib
 from datetime import timedelta
 
+from django.conf import settings
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.http import JsonResponse
@@ -14,6 +15,28 @@ from .student_session_lock import (
     student_session_status, student_session_timed_out,
 )
 from .system_clock import real_now as session_now
+
+
+class SessionTimeoutPolicyMiddleware:
+    """Apply the temporary login lifetime to new and existing account sessions."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        if request.session.get('user_id'):
+            if not settings.SESSION_TIMEOUTS_ENABLED:
+                # Replace legacy browser-close/short expiries once. SessionMiddleware
+                # saves the extended server session and cookie on this response.
+                if request.session.get('_session_expiry') != settings.SESSION_COOKIE_AGE:
+                    request.session.set_expiry(settings.SESSION_COOKIE_AGE)
+                if not request.session.get('session_timeouts_disabled'):
+                    request.session['session_timeouts_disabled'] = True
+            elif request.session.pop('session_timeouts_disabled', False):
+                expiry = 0 if request.session.get('user_role') == 'student' else None
+                request.session.set_expiry(expiry)
+        return response
 
 
 class PrincipalPasswordChangeMiddleware:

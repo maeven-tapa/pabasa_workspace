@@ -7,6 +7,7 @@
   const tabId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const storageKey = `pabasa-session-tabs:${config.channel}`;
   let deadline = performance.now() + config.remaining_seconds * 1000;
+  let timeoutsEnabled = config.timeouts_enabled !== false;
   let protectedSession = config.protected, pendingActivity = false;
   let pending = null, ended = false, lastRequest = -Infinity, lastActivity = -Infinity;
   let dialog, title, message, countdown, stay, signOut, previousFocus;
@@ -82,10 +83,11 @@
   }
 
   function applyStatus(status, broadcast = true) {
+    timeoutsEnabled = status.timeouts_enabled !== false;
     protectedSession = Boolean(status.protected);
     deadline = performance.now() + Math.max(0, status.remaining_seconds) * 1000;
     config.warning_seconds = status.warning_seconds;
-    if (protectedSession || status.remaining_seconds > config.warning_seconds) closeDialog();
+    if (!timeoutsEnabled || protectedSession || status.remaining_seconds > config.warning_seconds) closeDialog();
     if (broadcast) channel?.postMessage({type: 'status', status});
     render();
   }
@@ -124,7 +126,7 @@
   }
 
   function render() {
-    if (ended || protectedSession || config.learning_page) return;
+    if (ended || !timeoutsEnabled || protectedSession || config.learning_page) return;
     const remaining = Math.max(0, Math.ceil((deadline - performance.now()) / 1000));
     if (remaining > config.warning_seconds) return;
     showDialog();

@@ -36,6 +36,8 @@ def is_learning_page(path):
 
 
 def student_session_timed_out(user, now=None):
+    if not settings.SESSION_TIMEOUTS_ENABLED:
+        return False
     now = now or session_now()
     if not user:
         return False
@@ -49,11 +51,13 @@ def student_session_timed_out(user, now=None):
 
 def student_session_status(user, now=None):
     now = now or session_now()
+    timeouts_enabled = settings.SESSION_TIMEOUTS_ENABLED
     remaining = STUDENT_SESSION_IDLE_TIMEOUT.total_seconds()
-    if user.last_activity and not user.active_session_learning:
+    if timeouts_enabled and user.last_activity and not user.active_session_learning:
         remaining -= (now - user.last_activity).total_seconds()
     return {
-        'success': True, 'protected': user.active_session_learning,
+        'success': True, 'protected': not timeouts_enabled or user.active_session_learning,
+        'timeouts_enabled': timeouts_enabled,
         'remaining_seconds': max(0, remaining),
         'warning_seconds': settings.STUDENT_SESSION_WARNING_SECONDS,
     }

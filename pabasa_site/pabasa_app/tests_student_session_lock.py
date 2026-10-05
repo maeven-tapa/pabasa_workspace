@@ -1,7 +1,8 @@
 from django.contrib.auth.hashers import make_password
 from django.contrib.sessions.models import Session
 from django.contrib.sessions.backends.db import SessionStore
-from django.test import TestCase
+from django.conf import settings
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
@@ -14,6 +15,7 @@ from .student_session_lock import (
 )
 
 
+@override_settings(SESSION_TIMEOUTS_ENABLED=True)
 class StudentSessionLockTests(TestCase):
     def setUp(self):
         self.student = User.objects.create(
@@ -361,3 +363,100 @@ class StudentSessionLockTests(TestCase):
         with patch('pabasa_app.system_clock.now', return_value=timezone.now() + timedelta(days=30)):
             self.assertTrue(student_session_is_active(self.student, self.client.session.session_key))
             self.assertTrue(claim_student_session(self.student.pk, self.client.session.session_key))
+
+
+@override_settings(SESSION_TIMEOUTS_ENABLED=False, SESSION_COOKIE_AGE=100 * 365 * 24 * 60 * 60)
+class SessionTimeoutDisabledTests(TestCase):
+    def setUp(self):
+        password = make_password('password')
+        self.users = {}
+        for role in ('student', 'teacher', 'admin', 'principal'):
+            self.users[role] = User.objects.create(
+                custom_id=f'NO-TIMEOUT-{role}', role=role, first_name='Session', last_name=role,
+                middle_initial='', suffix='', sex='female', birth_month=1, birth_day=1,
+                birth_year=1990, email=f'no-timeout-{role}@example.com', password_hash=password,
+            )
+
+    def login(self, role):
+        client = self.client_class()
+        response = client.post(reverse('login_user'), {
+            'custom_id': self.users[role].custom_id, 'password': 'password',
+        })
+        self.assertEqual(response.status_code, 200, response.content)
+        return client, response
+
+    def test_every_role_gets_a_long_lived_cookie_and_server_session(self):
+        for role in self.users:
+            with self.subTest(role=role):
+                client, response = self.login(role)
+                self.assertEqual(int(response.cookies[settings.SESSION_COOKIE_NAME]['max-age']), settings.SESSION_COOKIE_AGE)
+                stored = Session.objects.get(session_key=client.session.session_key)
+                self.assertGreater(stored.expire_date, timezone.now() + timedelta(days=99 * 365))
+
+    def test_every_role_remains_authenticated_past_the_old_django_expiry(self):
+        for role in self.users:
+            with self.subTest(role=role):
+                client, _ = self.login(role)
+                original_key = client.session.session_key
+                future = timezone.now() + timedelta(days=30)
+                with patch('django.contrib.sessions.backends.db.timezone.now', return_value=future):
+                    self.assertEqual(client.get(reverse('home')).status_code, 200)
+                    self.assertEqual(client.session.get('user_id'), self.users[role].pk)
+                    self.assertEqual(client.session.session_key, original_key)
+
+    def test_existing_short_and_browser_close_sessions_are_extended_for_every_role(self):
+        for role in self.users:
+            client, _ = self.login(role)
+            for expiry in (60, 0):
+                with self.subTest(role=role, expiry=expiry):
+                    session = client.session
+                    session.set_expiry(expiry)
+                    session.save()
+                    response = client.get(reverse('home'))
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(client.session.get('user_id'), self.users[role].pk)
+                    self.assertEqual(client.session.get('_session_expiry'), settings.SESSION_COOKIE_AGE)
+                    stored = Session.objects.get(session_key=client.session.session_key)
+                    self.assertGreater(stored.expire_date, timezone.now() + timedelta(days=99 * 365))
+
+    def test_dashboard_and_passive_heartbeat_survive_long_inactivity_without_warning(self):
+        client, _ = self.login('student')
+        old = timezone.now() - timedelta(days=30)
+        User.objects.filter(pk=self.users['student'].pk).update(
+            active_session_learning=False, last_activity=old, active_session_last_seen=old,
+        )
+        response = client.post(reverse('student_session_heartbeat'))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()['timeouts_enabled'])
+        self.assertTrue(response.json()['protected'])
+        self.users['student'].refresh_from_db()
+        self.assertEqual(self.users['student'].last_activity, old)
+        self.assertEqual(client.get(reverse('dashboard')).status_code, 200)
+        self.assertContains(client.get(reverse('dashboard')), '"timeouts_enabled": false')
+
+    def test_manual_logout_still_invalidates_every_role(self):
+        for role in self.users:
+            with self.subTest(role=role):
+                client, _ = self.login(role)
+                original_key = client.session.session_key
+                self.assertEqual(client.get(reverse('logout')).status_code, 302)
+                self.assertNotIn('user_id', client.session)
+                self.assertFalse(Session.objects.filter(session_key=original_key).exists())
+
+    def test_disabling_timeouts_does_not_bypass_student_device_ownership(self):
+        client, _ = self.login('student')
+        User.objects.filter(pk=self.users['student'].pk).update(active_session_key='different-device')
+        self.assertEqual(client.post(reverse('student_session_heartbeat')).status_code, 401)
+        self.users['student'].refresh_from_db()
+        self.assertEqual(self.users['student'].active_session_key, 'different-device')
+
+    def test_reenabling_policy_restores_normal_cookie_lifetimes_for_existing_accounts(self):
+        for role in self.users:
+            with self.subTest(role=role):
+                client, _ = self.login(role)
+                with override_settings(SESSION_TIMEOUTS_ENABLED=True, SESSION_COOKIE_AGE=14 * 24 * 60 * 60):
+                    self.assertEqual(client.get(reverse('home')).status_code, 200)
+                    self.assertFalse(client.session.get('session_timeouts_disabled'))
+                    self.assertEqual(client.session.get_expire_at_browser_close(), role == 'student')
+                    stored = Session.objects.get(session_key=client.session.session_key)
+                    self.assertLess(stored.expire_date, timezone.now() + timedelta(days=15))

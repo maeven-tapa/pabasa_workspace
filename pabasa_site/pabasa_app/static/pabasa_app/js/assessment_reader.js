@@ -9,6 +9,7 @@
         // panel, and reading navigation controls.
         const readerTop = shell.querySelector(".reader-top");
         const readerStage = shell.querySelector(".reader-stage");
+        const readerCard = shell.querySelector(".reader-card");
 
         let mode = 'word'; 
         if (shell.classList.contains('reader-sentence')) mode = 'sentence';
@@ -438,6 +439,13 @@
         function setCurrentItemMode(nextMode) {
             const normalized = String(nextMode || mode || "word").toLowerCase();
             mode = normalized;
+            // Recovery can restore a different task than the URL's template.
+            // Replace its stale layout classes so word/sentence targets do not
+            // inherit the small paragraph text and story card styling.
+            for (const itemMode of ["word", "sentence", "paragraph", "vowel", "phrase"]) {
+                shell.classList.toggle(`reader-${itemMode}`, itemMode === mode);
+                readerCard?.classList.toggle(`content-${itemMode}`, itemMode === mode);
+            }
             speechChunkMs = ["sentence", "phrase", "paragraph"].includes(mode) ? 10000 : 2400;
         }
 
@@ -2657,6 +2665,7 @@
                 shell.classList.toggle("is-crla-rhymes", activeStage === "rhymes");
 
                 if (stageMap[activeStage]) {
+                    setCurrentItemMode(stageMap[activeStage].type);
                     items = stageMap[activeStage].items.slice();
                     itemTypes = new Array(items.length).fill(stageMap[activeStage].type);
                 } else {
