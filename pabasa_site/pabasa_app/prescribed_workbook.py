@@ -2455,6 +2455,11 @@ def _apply_l24_g5_syllabication(state, event):
 def _apply_l22_c_builder(state, event, verified_reading):
     """Persist the reading gate and validated word attempts for Lesson 22 Gawain 1."""
     action = event.get('action')
+    if action == 'restart':
+        state.clear()
+        state.update(initial_state())
+        normalize_l22_c_state(state)
+        return state
     state.setdefault('read_aloud_started', False)
     state.setdefault('read_aloud_completed', False)
     state.setdefault('found_words', [])

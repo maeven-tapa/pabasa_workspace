@@ -398,6 +398,22 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertEqual(restored['index'], 4)
         self.assertFalse(restored['read_aloud_completed'])
         self.assertFalse(restored['found_words'])
+    def test_lesson22_gawain1_restart_restores_empty_reading_state(self):
+        activity = get_activity('aral-l22-g1-c-syllable-builder')
+        state = {
+            'index': len(activity['items']), 'read_aloud_started': True,
+            'read_aloud_completed': True, 'reading_phase': 'complete',
+            'reading_attempts': 2, 'found_words': ['cactus'],
+            'draft': {'builder': ['item-1']}, 'completed': False,
+        }
+        apply_event(activity, state, {'action': 'restart'})
+        self.assertEqual(state['index'], 0)
+        self.assertFalse(state['read_aloud_started'])
+        self.assertFalse(state['read_aloud_completed'])
+        self.assertEqual(state['reading_phase'], 'read')
+        self.assertEqual(state['reading_attempts'], 0)
+        self.assertEqual(state['found_words'], [])
+        self.assertEqual(state['draft'], {'builder': []})
 
     def test_lesson22_gawain1_completion_unlocks_word_building_without_resetting_reading(self):
         a = get_activity('aral-l22-g1-c-syllable-builder')
