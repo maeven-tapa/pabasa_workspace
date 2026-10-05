@@ -241,6 +241,7 @@ window.PrescribedSession6Gawain9Audio = (() => {
       if (stepChanged) lastStep = step.key;
 
       if (isGawain7) {
+        if (window.__gawain7ActivityOwnsAudio) return;
         // The activity page already announces Gawain 7 feedback through the
         // read-aloud endpoint. Its local aliases cover those lines; this
         // mapping supplies only the ordered prompt clips and matching prompt.

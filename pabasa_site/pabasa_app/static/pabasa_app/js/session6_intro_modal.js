@@ -111,11 +111,13 @@
     return false;
   };
 
+  const isGawain6 = String(data.activity_key || '') === 'lesson-17-18-gawain-6';
   const hasSavedProgress = !progress.activity_completed && (
     Number(progress.current_index) > 0
     || Number(progress.completed_items) > 0
     || Number(progress.correct_items) > 0
     || hasMeaningfulValue(state)
+    || (isGawain6 && (state.phase === 'written' || Number(state.reading_attempts) > 0))
   );
 
   // Completed activities reopen directly, matching the reference activity.
@@ -281,9 +283,6 @@
     }
     if (key === 'session-6-lesson-16-gawain-4') {
       void playGawain4ContinuationAudio();
-    }
-    if (key === 'lesson-17-18-gawain-6') {
-      void playGawain6ContinuationAudio();
     }
     // Leave the activity-owned intro screen visible. Its own start handler
     // must control the transition into the first word prompt.
