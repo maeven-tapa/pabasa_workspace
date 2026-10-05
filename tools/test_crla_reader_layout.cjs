@@ -8,6 +8,10 @@ const {chromium} = require(process.env.CRLA_PLAYWRIGHT_PATH || 'playwright-core'
 const root = path.resolve(__dirname, '../pabasa_site');
 const source = fs.readFileSync(process.env.CRLA_READER_SOURCE_PATH ||
   path.join(root, 'pabasa_app/static/pabasa_app/js/assessment_reader.js'), 'utf8');
+// Expose the actual speech entry point only in this test to hold a provider
+// request across the teacher's End Session action without microphone hardware.
+const testSource = source.replace('        loadItems();',
+  '        window.__readerTest = {sendAudioChunk, currentSpeechContext, handleSpeechResult, strictStoryEvidence};\n        loadItems();');
 const rendered = spawnSync(process.env.CRLA_PYTHON_PATH || 'python', ['-c', `
 import os, json, django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pabasa_site.settings')
@@ -66,6 +70,11 @@ async function snapshot(page) {
             ...(branch === 'story_reading' ? {selected_story: 'Ang Pito', story_segment_index: 0,
               story_reading_started_at: new Date().toISOString()} : {})};
           let paused = true;
+          let ended = false;
+          let heldSpeechRoute, signalSpeechStarted;
+          const speechStarted = new Promise(resolve => { signalSpeechStarted = resolve; });
+          let signalStrictSnapshot;
+          const strictSnapshot = new Promise(resolve => { signalStrictSnapshot = resolve; });
           // Resume through a mismatched route, including the paragraph URL in the report.
           const resumeMode = mode === 'para' ? 'word' : 'para';
           const resumedUrl = readerUrl(resumeMode, branch);
@@ -79,9 +88,20 @@ async function snapshot(page) {
           await page.route('**/*', async route => {
             const url = new URL(route.request().url());
             if (url.origin !== origin) return route.abort();
+            if (url.pathname === '/api/reading/transcribe/') {
+              heldSpeechRoute = route;
+              signalSpeechStarted();
+              return;
+            }
             if (url.pathname.startsWith('/api/')) {
+              if (route.request().method() === 'POST') {
+                const payload = route.request().postDataJSON();
+                if (payload?.recovery_state?.stage === 'story_comprehension') {
+                  signalStrictSnapshot(payload.recovery_state);
+                }
+              }
               return route.fulfill({json: {success: true, state, session: {
-                id: 'layout-test', status: paused ? 'paused' : 'started', reader_url: resumedUrl,
+                id: 'layout-test', status: ended ? 'ended' : paused ? 'paused' : 'started', reader_url: resumedUrl,
                 student_states: {'1': {status: 'in_progress', participation_status: 'active',
                   recovery_state: state}},
               }}});
@@ -93,7 +113,7 @@ async function snapshot(page) {
             return route.fulfill({body: ''});
           });
           // The real init, loader, and poll handlers run on every navigation/refresh.
-          page.on('domcontentloaded', () => page.addScriptTag({content: source}).catch(error => errors.push(error.message)));
+          page.on('domcontentloaded', () => page.addScriptTag({content: testSource}).catch(error => errors.push(error.message)));
           await page.goto(readerUrl(mode, branch));
           await page.waitForFunction(() => !document.getElementById('pauseOverlay').classList.contains('d-none'));
           const before = await snapshot(page);
@@ -108,6 +128,54 @@ async function snapshot(page) {
           await page.reload();
           await page.waitForFunction(() => !document.getElementById('readingWord').textContent.includes('Loading'));
           assert.deepEqual(await snapshot(page), before, `${branch}, ${viewport.width}px, debug=${debug}: refresh`);
+          if (branch === 'story_reading') {
+            let expectedMiscues = 9, expectedRead = 0;
+            if (viewport.width === 1366) {
+              const evidence = await page.evaluate(({partial}) => {
+                const words = ['May', 'pito', 'si', 'Ana', 'Narinig', 'ni', 'Ben', 'ang', 'pito'];
+                const attempted = partial ? words.slice(0, 2) : words;
+                window.__readerTest.handleSpeechResult({
+                  transcript: attempted.map((word, index) => index === 1 ? 'mali' : word).join(' '),
+                  words, syllables: words, word_syllable_ranges: words.map((_, index) => [index, index + 1]),
+                  current_word_index: attempted.length, current_syllable_index: attempted.length,
+                  // Generic cursor credit must not override strict per-word evidence.
+                  correct_word_count: 9, matched: attempted.length - 1, complete: false,
+                  word_alignment: {miscues: 1},
+                  word_results: attempted.map((word, index) => ({expected_index: index,
+                    result: index === 1 ? 'miscue' : 'correct',
+                    type: index === 1 ? 'substitution' : 'correct'})),
+                });
+                return window.__readerTest.strictStoryEvidence();
+              }, {partial: debug});
+              expectedRead = debug ? 1 : 8;
+              expectedMiscues = 9 - expectedRead;
+              assert.equal(evidence.words_read, expectedRead);
+              assert.equal(evidence.miscues, 1);
+            }
+            await page.locator('#nextBtn').click();
+            const saved = await Promise.race([strictSnapshot,
+              new Promise((_, reject) => setTimeout(() => reject(Error('Missing strict Story snapshot')), 5000))]);
+            assert.equal(saved.miscues, expectedMiscues);
+            assert.equal(saved.words_read, expectedRead);
+            assert.equal(saved.total_story_words, 9);
+            console.log(`PASS strict Story: ${expectedRead} correct words, ${expectedMiscues} substitutions/unread miscues saved`);
+          }
+          if (branch === 'words' && viewport.width === 1366 && !debug) {
+            await page.evaluate(() => {
+              window.__readerTest.sendAudioChunk(new Blob(['audio'], {type: 'audio/webm'}))
+                .then(() => { window.speechFinished = true; });
+            });
+            await speechStarted;
+            ended = true;
+            await page.locator('#liveSessionEndedTitle').waitFor({state: 'visible'});
+            assert.equal(await page.locator('#liveSessionEndedTitle').textContent(), "Your teacher ended today's session");
+            await heldSpeechRoute.fulfill({status: 401, json: {success: false, error: 'Authentication required'}});
+            await page.waitForFunction(() => window.speechFinished);
+            assert.ok(!page.url().includes('/auth/'));
+            assert.equal(await page.locator('#liveSessionEndedTitle').textContent(), "Your teacher ended today's session");
+            await page.waitForURL(`${origin}/dashboard/assessment/`);
+            console.log('PASS teacher End Session: late speech 401 keeps the teacher-ended screen and returns to Assessment');
+          }
           assert.deepEqual(errors, []);
           console.log(`PASS ${branch}: ${viewport.width}px, debug=${debug}, ${before.fontSize}, resume + refresh`);
           checked++;

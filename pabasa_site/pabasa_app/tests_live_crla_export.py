@@ -6,11 +6,14 @@ from unittest.mock import patch
 
 from django.http import JsonResponse
 from django.test import TestCase
+from django.urls import reverse
+from django.contrib.sessions.models import Session
 from django.utils import timezone
 from openpyxl import load_workbook
 
 from .models import Assessment, CalendarEvent, LiveAssessmentSession, Material, School, SchoolCalendar, Section, User
 from .scoring import build_assessment_score_payload, crla_task2_kind
+from .student_session_lock import claim_student_session
 from .utils.crla_export import _student_values, export_crla_excel
 from .utils.crla_results import latest_completed_official_crla_results
 from .views import (
@@ -98,6 +101,99 @@ class LiveCrlaWorkbookTests(TestCase):
             first_name=identifier, last_name='Learner', middle_initial='', suffix='', sex='female',
             birth_month=1, birth_day=1, birth_year=2010, email=identifier + '@example.com',
             password_hash='unused', school_record=self.school)
+
+    def test_teacher_end_keeps_all_ten_student_logins_active_with_timeouts_disabled(self):
+        students, clients, states, keys = [], [], {}, {}
+        for index in range(10):
+            student = self.make_user(f'end-auth-{index}')
+            self.section.add_student(student)
+            client = self.client_class()
+            auth = client.session
+            auth.update({'user_id': student.pk, 'user_role': 'student'})
+            auth.save()
+            self.assertTrue(claim_student_session(student.pk, auth.session_key))
+            keys[student.pk] = auth.session_key
+            students.append(student)
+            clients.append(client)
+            evidence = {'stage': 'completed', 'temporary_completed': True, 'task1_score': 0,
+                'task2_type': 'Task 2L / Rhymes', 'task2_rhymes_score': 0,
+                'part1_total_score': 0, 'learner_experience_rating': 3}
+            states[str(student.pk)] = {'status': 'completed' if index < 5 else 'reading',
+                'progress': 1 if index < 5 else .3,
+                'recovery_state': evidence if index < 5 else {'stage': 'story_reading', 'branch': 'story'}}
+            before = client.post(reverse('student_session_heartbeat'))
+            self.assertEqual(before.status_code, 200)
+            self.assertFalse(before.json()['timeouts_enabled'])
+        session = LiveAssessmentSession.objects.create(id='live-end-auth-ten', teacher=self.teacher,
+            section=self.section, material=self.material, student_ids=[student.pk for student in students],
+            student_count=10, batch_assignments={str(student.pk): 1 for student in students},
+            current_batch=1, status='started', start_at=timezone.now(), student_states=states)
+        teacher_auth = self.client.session
+        teacher_auth.update({'user_id': self.teacher.pk, 'user_role': 'teacher'})
+        teacher_auth.save()
+        response = self.client.post(reverse('live_assessment_session_action', args=[session.pk]),
+            {'action': 'end'}, content_type='application/json')
+        self.assertEqual(response.status_code, 200, response.content)
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'ended')
+        for student, client in zip(students, clients):
+            with self.subTest(student=student.pk):
+                self.assertEqual(client.post(reverse('student_session_heartbeat')).status_code, 200)
+                poll = client.get(reverse('live_assessment_session_state', args=[session.pk]))
+                self.assertEqual(poll.status_code, 200)
+                self.assertEqual(poll.json()['session']['status'], 'ended')
+                # An empty speech request is a 400 input error, never a 401 logout.
+                self.assertEqual(client.post(reverse('reading_transcribe_api')).status_code, 400)
+                self.assertEqual(client.session.get('user_id'), student.pk)
+                self.assertTrue(Session.objects.filter(session_key=keys[student.pk]).exists())
+                student.refresh_from_db()
+                self.assertEqual(student.active_session_key, keys[student.pk])
+
+    def test_strict_unread_story_miscues_survive_finalization_and_excel_export(self):
+        student = self.make_user('strict-story')
+        self.section.add_student(student)
+        evidence = {'stage': 'completed', 'temporary_completed': True, 'task1_score': 8,
+            'task2_type': 'Task 2H / Sentences', 'task2_rhymes_score': 10,
+            'task2_sentences_score': 10, 'sentences_read': 4, 'part1_total_score': 28,
+            'story_number': 1, 'story_total_words': 96, 'words_read': 3, 'miscues': 93,
+            'duration_seconds': 60, 'comprehension_correct': 0, 'comprehension_total': 6,
+            'learner_experience_rating': 3}
+        session = LiveAssessmentSession.objects.create(id='live-strict-story', teacher=self.teacher,
+            section=self.section, material=self.material, student_ids=[student.pk], student_count=1,
+            status='started', start_at=timezone.now(), student_states={str(student.pk): {
+                'status': 'completed', 'progress': 1, 'recovery_state': evidence}})
+        _end_live_assessment_session(session)
+        result = latest_completed_official_crla_results([student.pk])[student.pk]
+        self.assertEqual(result.crla_score_data['miscues'], 93)
+        self.assertEqual(result.crla_score_data['words_read'], 3)
+        sheet = load_workbook(BytesIO(export_crla_excel(self.root.pk, section_id=self.section.pk).getvalue()))['G2 MT Reading Scoresheet']
+        self.assertEqual(sheet['L11'].value, 93)
+        self.assertEqual(sheet['M11'].value, 3)
+
+    def test_finalization_includes_unread_targets_from_strict_story_evidence(self):
+        student = self.make_user('interrupted-story')
+        self.section.add_student(student)
+        evidence = {'stage': 'completed', 'temporary_completed': True, 'task1_score': 8,
+            'task2_type': 'Task 2H / Sentences', 'task2_rhymes_score': 10,
+            'task2_sentences_score': 10, 'part1_total_score': 28, 'story_number': 1,
+            'selected_story_content': 'one two three four five six',
+            'words_read': 1, 'miscues': 2, 'story_insertion_miscues': 1,
+            'duration_seconds': 60, 'comprehension_correct': 0, 'comprehension_total': 6,
+            'learner_experience_rating': 3,
+            'story_word_results': {'0': {'0': 'correct', '1': 'substitution'}}}
+        session = LiveAssessmentSession.objects.create(id='live-interrupted-story', teacher=self.teacher,
+            section=self.section, material=self.material, student_ids=[student.pk], student_count=1,
+            status='started', start_at=timezone.now(), student_states={str(student.pk): {
+                'status': 'completed', 'progress': 1, 'elapsed_seconds': 60, 'recovery_state': evidence}})
+        _end_live_assessment_session(session)
+        result = latest_completed_official_crla_results([student.pk])[student.pk]
+        # One substitution, four unread targets, and one extra word.
+        self.assertEqual(result.crla_score_data['miscues'], 6)
+        self.assertEqual(result.crla_score_data['words_read'], 1)
+        workbook = load_workbook(BytesIO(export_crla_excel(self.root.id, section_id=self.section.id).getvalue()))
+        sheet = workbook['G2 MT Reading Scoresheet']
+        self.assertEqual(sheet['L11'].value, 6)
+        self.assertEqual(sheet['M11'].value, 1)
 
     def test_end_session_exports_completed_students_from_both_batches_with_skips(self):
         students, states, assignments = [], {}, {}

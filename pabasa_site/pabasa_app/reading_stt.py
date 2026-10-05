@@ -903,6 +903,25 @@ def _story_two_token_candidate(expected_word, first_token, second_token):
     }
 
 
+def _story_fragment_candidate(expected_word, tokens, language_code):
+    if len(tokens) == 2:
+        return _story_two_token_candidate(expected_word, *tokens)
+    # Filipino STT can split the final consonant cluster off a syllable:
+    # "pa go ng" / "ba go ng". Group this as one attempted word, keeping
+    # a different reconstructed word a substitution rather than accepting it.
+    if (len(tokens) == 3 and str(language_code).lower() == "fil-ph"
+            and re.fullmatch(r"[bcdfghjklmnpqrstvwxyz]{1,2}", tokens[-1])):
+        expected = _normalize_story_word_text(expected_word)
+        combined = "".join(tokens)
+        parts = ReadingMatcher.split_syllables(expected)
+        if (len(expected) == len(combined)
+                and [len(token) for token in tokens] == [len(part) for part in parts]
+                and ReadingMatcher.edit_distance(combined, expected, 2) <= 2):
+            return {"combined": combined, "correct": combined == expected,
+                    "cost": 0 if combined == expected else 0.9}
+    return None
+
+
 def story_word_states_from_results(expected_text, recognized_text=None, total_words=None, word_results=None):
     """Return per-word visual states using the same attempted-then-advance pattern.
 
@@ -993,42 +1012,48 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
                 dp[i][j - 1] + 1,
                 dp[i - 1][j - 1] + substitution_cost,
             ]
-            if j >= 2:
-                multi_token = _story_two_token_candidate(
-                    expected_word,
-                    recognized_words[j - 2],
-                    recognized_words[j - 1],
-                )
+            for width in (2, 3):
+                if j < width:
+                    continue
+                multi_token = _story_fragment_candidate(expected_word, recognized_words[j - width:j], language_code)
                 if multi_token:
-                    candidates.append(dp[i - 1][j - 2] + multi_token["cost"])
+                    candidates.append(dp[i - 1][j - width] + multi_token["cost"])
             dp[i][j] = min(candidates)
 
     word_results = []
     insertion_count = 0
     i = len(expected_words)
     j = len(recognized_words)
+    if cursor_relative:
+        # A streaming chunk aligns to a prefix of the remaining story. Ending
+        # at the full story tail can otherwise shift a short wrong word to the
+        # final target and mark every intervening unread word as an omission.
+        i = min(range(rows), key=lambda end: (dp[end][j], -end))
     while i > 0 or j > 0:
-        if i > 0 and j >= 2:
+        matched_fragment = False
+        for width in (3, 2):
+            if i <= 0 or j < width:
+                continue
             expected_word = expected_words[i - 1]
-            multi_token = _story_two_token_candidate(
-                expected_word,
-                recognized_words[j - 2],
-                recognized_words[j - 1],
-            )
-            if multi_token and dp[i][j] == dp[i - 1][j - 2] + multi_token["cost"]:
+            multi_token = _story_fragment_candidate(expected_word, recognized_words[j - width:j], language_code)
+            if multi_token and dp[i][j] == dp[i - 1][j - width] + multi_token["cost"]:
                 word_results.append({
                     "expected": expected_word,
-                    "recognized": f"{recognized_words[j - 2]} {recognized_words[j - 1]}",
+                    "recognized": " ".join(recognized_words[j - width:j]),
                     "result": "correct" if multi_token["correct"] else "miscue",
-                    "type": "multi_token_correct" if multi_token["correct"] else "multi_token_substitution",
+                    "type": "multi_token_correct" if multi_token["correct"] else (
+                        "multi_token_substitution" if width == 2 else "substitution"),
                     "expected_index": i - 1,
-                    "recognized_index": j - 2,
-                    "recognized_start_index": j - 2,
+                    "recognized_index": j - width,
+                    "recognized_start_index": j - width,
                     "recognized_end_index": j,
                 })
                 i -= 1
-                j -= 2
-                continue
+                j -= width
+                matched_fragment = True
+                break
+        if matched_fragment:
+            continue
         if i > 0 and j > 0:
             expected_word = expected_words[i - 1]
             recognized_word = recognized_words[j - 1]

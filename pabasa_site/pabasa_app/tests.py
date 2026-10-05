@@ -1422,9 +1422,10 @@ class ReadingLaunchClassificationTests(TestCase):
         content = script_path.read_text(encoding='utf-8')
         helper = content.split('function calculateFinalizedStoryMetrics(', 1)[1].split('function correctWordsRead()', 1)[0]
 
-        self.assertIn('const wordsRead = isOfficialAssessmentLaunch && isCrla', helper)
+        self.assertIn('const strictStory = isOfficialAssessmentLaunch && isCrla;', helper)
+        self.assertIn('const wordsRead = strictStory', helper)
         self.assertIn('Math.min(totalWords, Math.max(0, correctWordsRead()))', helper)
-        self.assertIn(': Math.max(0, totalWords - miscues);', helper)
+        self.assertIn('totalWords - wordsRead + storyInsertionMiscues', helper)
         self.assertIn('wordsRead / totalWords', helper)
         self.assertIn('wordsRead / (durationSeconds / 60)', helper)
         self.assertNotIn('120', helper)
@@ -1463,15 +1464,17 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertIn('Extra or repeated word detected.', content)
         self.assertNotIn('paragraphWordResults["insertion"]', content)
 
-    def test_story_self_correction_is_strict_and_story_scoped(self):
+    def test_story_self_correction_remains_scoped_outside_strict_official_crla(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
         content = script_path.read_text(encoding='utf-8')
         recorder = content.split('function recordStoryAlignmentMiscues(', 1)[1].split('function storyAlignmentHasInsertionMiscue(', 1)[0]
         same_callback = content.split('function storySameCallbackSelfCorrection(', 1)[1].split('function storySelfCorrectionCandidate(', 1)[0]
         immediate = content.split('function isImmediateStorySelfCorrection(', 1)[1].split('function recordStoryAlignmentMiscues(', 1)[0]
-        stop_reading = content.split('const stopReading = async () => {', 1)[1].split('btnStartReading?.addEventListener', 1)[0]
+        stop_reading = content.split('const stopReading = async (', 1)[1].split('btnStartReading?.addEventListener', 1)[0]
 
         self.assertIn('let pendingStorySelfCorrection = null;', content)
+        self.assertLess(recorder.index('if (isStrictStoryReading()) return recordStrictStoryResults(data, responseKey);'),
+                        recorder.index('const candidate = pendingStorySelfCorrection;'))
         self.assertIn('alignmentMiscues !== 1 || substitutions.length !== 1', content)
         self.assertIn('recognizedWords.length === 1', immediate)
         self.assertIn('Number(context?.syllableIndex) === candidate.expectedWordEnd', immediate)
@@ -4256,6 +4259,26 @@ class ReadingMatcherTests(TestCase):
         short = align_story_transcript("bibilis pa sa akin", "li", start_word_index=0)
         self.assertEqual([(item["expected_index"], item["result"]) for item in single["word_results"]], [(0, "miscue")])
         self.assertEqual([(item["expected_index"], item["result"]) for item in short["word_results"]], [(0, "miscue")])
+
+    def test_crla_story_fragmented_substitution_is_one_error_without_marking_unread_tail(self):
+        for transcript, status, miscues in (("pa go ng", "correct", 0), ("ba go ng", "miscue", 1)):
+            with self.subTest(transcript=transcript):
+                result = align_story_transcript("sabi ni Pagong umalis", transcript,
+                    language_code="fil-PH", start_word_index=2, crla_story_reading=True)
+                self.assertEqual(result["miscues"], miscues)
+                self.assertEqual([(item["expected_index"], item["result"]) for item in result["word_results"]], [(2, status)])
+                self.assertEqual(result["recognized_text"], transcript)
+                self.assertEqual(result["word_results"][0]["recognized_end_index"], 3)
+
+    def test_crla_story_silent_chunk_keeps_remaining_words_unattempted(self):
+        result = align_story_transcript("one two three", "", start_word_index=1, crla_story_reading=True)
+        self.assertEqual(result["word_results"], [])
+        self.assertEqual(result["miscues"], 0)
+
+    def test_crla_story_does_not_group_unrelated_words_as_one_fragment(self):
+        result = align_story_transcript("Pagong", "ba go sa", language_code="fil-PH", crla_story_reading=True)
+        self.assertEqual(result["correct_words"], 0)
+        self.assertEqual(result["miscues"], 3)
 
     def test_story_post_miscue_repeated_words_use_next_occurrence(self):
         result = align_story_transcript("ako ako rin", "mali ako rin", start_word_index=0)

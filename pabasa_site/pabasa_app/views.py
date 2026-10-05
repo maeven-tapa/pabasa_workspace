@@ -23579,6 +23579,7 @@ def persist_student_end_assessment_state(request):
         'learner_experience', 'learner_experience_rating',
         'total_words_read', 'story_total_words', 'total_story_words', 'words_read',
         'miscues', 'duration_seconds', 'wpm', 'correct_words_percentage',
+        'story_word_results', 'story_insertion_miscues', 'live_page_correct_word_counts',
         'comprehension_total', 'total_questions', 'comprehension_correct', 'correct_answers',
         'passage_accuracy_percent', 'story_number', 'selected_story_content',
         'story_segment_index', 'story_skipped_segments', 'crla_question_index', 'locked_items_count', 'crla_answers', 'crla_results',
@@ -25673,6 +25674,22 @@ def _build_live_session_completion_payload(session, student_user, student_state=
         # mode. Score the completed workflow, not that last page or material.
         if crla_data.get('story_number') or crla_data.get('selected_story'):
             payload['assessment_type'] = 'paragraph'
+            if isinstance(crla_data.get('story_word_results'), dict):
+                # Finalized strict stories include every unread target, even
+                # when the last saved snapshot has only an intermediate tally.
+                counts = {}
+                for field in ('story_total_words', 'total_story_words', 'words_read', 'story_insertion_miscues'):
+                    try:
+                        counts[field] = max(0, int(crla_data.get(field) or 0))
+                    except (TypeError, ValueError, OverflowError):
+                        counts[field] = 0
+                total = (counts['story_total_words'] or counts['total_story_words'] or
+                         len(ReadingMatcher.readable_words(crla_data.get('selected_story_content') or '')))
+                read = min(total, counts['words_read'])
+                insertions = counts['story_insertion_miscues']
+                crla_data.update({'story_total_words': total, 'total_story_words': total,
+                                  'words_read': read, 'total_words_read': read,
+                                  'miscues': total - read + insertions})
         elif crla_task2_kind(crla_data.get('task2_type')) == 'sentences':
             payload['assessment_type'] = 'sentence'
         else:

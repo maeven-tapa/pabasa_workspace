@@ -295,6 +295,8 @@
         let selectedLearnerExperienceRating = null;
         let learnerExperienceSubmitting = false;
         let storyMiscueCount = 0;
+        let storyWordResults = {};
+        let storyInsertionMiscues = 0;
         let storyHasReadingEvidence = false;
         let storyMiscueResponseKeys = new Set();
         let pendingStorySelfCorrection = null;
@@ -1961,6 +1963,8 @@
                 words_read: null,
                 total_words_read: null,
                 miscues: null,
+                story_word_results: {},
+                story_insertion_miscues: 0,
             });
             currentStorySegmentIndex = 0;
             renderStoryReadyState(choice);
@@ -2312,10 +2316,12 @@
         function persistSkippedStorySegment() {
             const state = readStudentEndState();
             const skipped = Array.isArray(state.story_skipped_segments) ? state.story_skipped_segments : [];
+            finalizeStorySegment(currentPageIndex);
             return updateStudentEndState({
                 stage: "story_reading",
                 story_segment_index: currentPageIndex,
                 story_skipped_segments: Array.from(new Set([...skipped, currentPageIndex])),
+                ...strictStoryEvidence(),
             });
         }
 
@@ -2699,7 +2705,7 @@
                 currentStoryChoices = getStoryChoicesFromAssessment();
                 const persistedStoryTitle = String(persistedEndState.selected_story || "").trim().toLowerCase();
                 if (activeStage === "story") {
-                    resetStoryMiscueTracking(persistedEndState.miscues);
+                    resetStoryMiscueTracking(persistedEndState.miscues, persistedEndState);
                     const restoredStory = currentStoryChoices.find(item => String(item.title || "").trim().toLowerCase() === persistedStoryTitle);
                     if (restoredStory) {
                         currentSelectedStory = restoredStory;
@@ -2726,6 +2732,7 @@
                                 ? restoredPageCounts.map(count => Math.max(0, Number(count) || 0))
                                 : [Math.max(0, restoredWordCount)];
                             syncItemCorrectWordCount(0);
+                            if (Object.keys(storyWordResults).length) syncStrictStoryCounts();
                             storyHasReadingEvidence = correctWordCounts[0] > 0 || storyMiscueCount > 0;
                             currentIndex = 0;
                             currentPageIndex = Math.min(
@@ -3112,7 +3119,8 @@
 
         function calculateFinalizedStoryMetrics(totalStoryWords, storyMiscues, elapsedDurationSeconds) {
             const totalWords = Math.max(0, Number(totalStoryWords) || 0);
-            if (!storyHasReadingEvidence) {
+            const strictStory = isOfficialAssessmentLaunch && isCrla;
+            if (!strictStory && !storyHasReadingEvidence) {
                 const durationValue = Number(elapsedDurationSeconds);
                 const durationSeconds = Number.isFinite(durationValue) && durationValue > 0
                     ? durationValue
@@ -3126,12 +3134,15 @@
                     wpm: 0,
                 };
             }
-            // Miscues come from captured speech. Navigation must neither
-            // add errors nor award credit for unread story segments.
-            const miscues = Math.min(totalWords, Math.max(0, Number(storyMiscues) || 0));
-            const wordsRead = isOfficialAssessmentLaunch && isCrla
+            const wordsRead = strictStory
                 ? Math.min(totalWords, Math.max(0, correctWordsRead()))
-                : Math.max(0, totalWords - miscues);
+                : Math.max(0, totalWords - Math.min(totalWords, Math.max(0, Number(storyMiscues) || 0)));
+            // Every target without a correct reading is one miscue, including
+            // substitutions and unread/skipped words. Extra words add miscues
+            // but never subtract the same target twice.
+            const miscues = strictStory
+                ? totalWords - wordsRead + storyInsertionMiscues
+                : Math.min(totalWords, Math.max(0, Number(storyMiscues) || 0));
             const durationValue = Number(elapsedDurationSeconds);
             const durationSeconds = Number.isFinite(durationValue) && durationValue > 0
                 ? durationValue
@@ -3905,11 +3916,106 @@
             syllableStitchingContextAt = 0;
         }
 
-        function resetStoryMiscueTracking(initialCount = 0) {
+        function resetStoryMiscueTracking(initialCount = 0, saved = {}) {
             storyMiscueCount = Math.max(0, Number(initialCount) || 0);
+            storyWordResults = saved.story_word_results && typeof saved.story_word_results === "object"
+                ? JSON.parse(JSON.stringify(saved.story_word_results)) : {};
+            storyInsertionMiscues = Math.max(0, Number(saved.story_insertion_miscues) || 0);
             storyHasReadingEvidence = false;
             storyMiscueResponseKeys = new Set();
             pendingStorySelfCorrection = null;
+        }
+
+        function isStrictStoryReading() {
+            return isOfficialAssessmentLaunch && isCrla && currentStoryState === "story_reading";
+        }
+
+        function storySegmentResults(segmentIndex) {
+            if (!storyWordResults[segmentIndex]) {
+                const results = {};
+                // Older recovery snapshots have counts rather than word indexes.
+                // Preserve their captured credit while new callbacks use indexes.
+                const captured = Math.min(readableWordCount(itemPages[0]?.[segmentIndex] || ""),
+                    Math.max(0, Number(pageCorrectWordCounts[0]?.[segmentIndex]) || 0));
+                for (let index = 0; index < captured; index += 1) results[index] = "correct";
+                storyWordResults[segmentIndex] = results;
+            }
+            return storyWordResults[segmentIndex];
+        }
+
+        function syncStrictStoryCounts() {
+            let targetMiscues = 0;
+            const counts = pageCorrectWordCounts[0] || [];
+            Object.entries(storyWordResults).forEach(([segment, results]) => {
+                const total = readableWordCount(itemPages[0]?.[segment] || "");
+                let correct = 0;
+                for (let index = 0; index < total; index += 1) {
+                    if (results[index] === "correct") correct += 1;
+                    else if (results[index]) targetMiscues += 1;
+                }
+                counts[segment] = correct;
+            });
+            pageCorrectWordCounts[0] = counts;
+            syncItemCorrectWordCount(0);
+            storyMiscueCount = targetMiscues + storyInsertionMiscues;
+        }
+
+        function finalizeStorySegment(segmentIndex) {
+            if (!isStrictStoryReading()) return;
+            const results = storySegmentResults(segmentIndex);
+            const total = readableWordCount(itemPages[0]?.[segmentIndex] || "");
+            for (let index = 0; index < total; index += 1) {
+                if (!results[index]) results[index] = "omission";
+            }
+            syncStrictStoryCounts();
+        }
+
+        function finalizeStoryReading() {
+            if (!isStrictStoryReading()) return;
+            (itemPages[0] || []).forEach((_, index) => finalizeStorySegment(index));
+        }
+
+        function strictStoryEvidence() {
+            return {
+                story_word_results: storyWordResults,
+                story_insertion_miscues: storyInsertionMiscues,
+                miscues: storyMiscueCount,
+                words_read: correctWordsRead(),
+                live_page_correct_word_counts: pageCorrectWordCounts,
+            };
+        }
+
+        function recordStrictStoryResults(data, responseKey) {
+            if (storyMiscueResponseKeys.has(responseKey)) return { accepted: false };
+            storyMiscueResponseKeys.add(responseKey);
+            const results = storySegmentResults(currentPageIndex);
+            const total = readableWordCount(getCurrentDisplayText());
+            const wordResults = Array.isArray(data?.word_results) ? data.word_results : [];
+            let targetErrors = 0;
+            let insertions = 0;
+            wordResults.forEach(result => {
+                const index = result?.expected_index;
+                const status = String(result?.result || "").toLowerCase();
+                if (status !== "correct" && status !== "miscue") return;
+                if (index === null || index === undefined) {
+                    if (status === "miscue" && result.type === "insertion") insertions += 1;
+                    return;
+                }
+                const target = Number(index);
+                if (!Number.isInteger(target) || target < 0 || target >= total) return;
+                if (status === "miscue") {
+                    targetErrors += 1;
+                    results[target] = String(result.type || "miscue");
+                    paragraphWordResults[target] = "miscue";
+                } else if (!results[target] || results[target] === "correct") {
+                    results[target] = "correct";
+                }
+            });
+            // Alignment also reports insertions omitted from its visual results.
+            const alignmentErrors = Math.max(0, Number(data?.word_alignment?.miscues) || 0);
+            storyInsertionMiscues += Math.max(insertions, alignmentErrors - targetErrors);
+            syncStrictStoryCounts();
+            return { accepted: true };
         }
 
         function storyNormalizedSingleWord(value) {
@@ -4029,6 +4135,8 @@
                 word_results: data?.word_results || [],
             });
 
+            if (isStrictStoryReading()) return recordStrictStoryResults(data, responseKey);
+
             const candidate = pendingStorySelfCorrection;
             const hadPendingCandidate = Boolean(candidate);
             if (hadPendingCandidate) {
@@ -4087,6 +4195,7 @@
 
         function resetStorySegmentState(previousSegmentIndex, nextSegmentIndex, reason) {
             storyReadingHasAttempted = false;
+            if (previousSegmentIndex !== nextSegmentIndex) finalizeStorySegment(previousSegmentIndex);
             commitPendingStorySelfCorrection();
             const before = {
                 currentSyllableIndex,
@@ -4141,6 +4250,7 @@
         function isCurrentSpeechContext(context) {
             const accepted = Boolean(
                 context
+                && !liveSessionEnded && !liveSessionEndRedirecting
                 && context.index === currentIndex
                 && context.itemText === (getCurrentDisplayText() || items[currentIndex])
                 && context.syllableIndex === currentSyllableIndex
@@ -4346,11 +4456,14 @@
                 handleSpeechResult(data, context);
             } catch (error) {
                 console.warn("PABASA: Reading transcription failed", error);
+                // Late failures from an ended session or skipped item cannot
+                // replace the teacher's end screen with timeout/login UI.
+                if (!isCurrentSpeechContext(context)) return;
                 if (error?.status === 401) {
                     pendingAudioChunk = null;
                     isRecording = false;
                     stopSpeechRecognition();
-                    setSpeechStatus("Session expired.", "Please sign in again to continue Sentence Reading.", false);
+                    setSpeechStatus("Sign-in required.", "Please sign in again to continue reading.", false);
                     window.setTimeout(() => {
                         const returnUrl = `${window.location.pathname}${window.location.search}`;
                         window.location.assign(`/auth/?next=${encodeURIComponent(returnUrl)}`);
@@ -4492,10 +4605,9 @@
                 ? "Extra or repeated word detected."
                 : "";
 
-            const itemCorrectWords = Math.max(
-                previousCorrectWords,
-                proposedCorrectWords
-            );
+            const itemCorrectWords = isStrictStoryReading()
+                ? Number(pageCorrectWordCounts[0]?.[currentPageIndex] || 0)
+                : Math.max(previousCorrectWords, proposedCorrectWords);
             const pageCounts = pageCorrectWordCounts[currentIndex] || [];
             pageCounts[currentPageIndex] = Math.min(itemCorrectWords, readableWordCount(getCurrentDisplayText() || items[currentIndex]));
             pageCorrectWordCounts[currentIndex] = pageCounts;
@@ -6283,6 +6395,7 @@
                     live_item_locked: itemLocked,
                     live_correct_word_counts: correctWordCounts,
                     live_page_correct_word_counts: pageCorrectWordCounts,
+                    ...(isStrictStoryReading() ? strictStoryEvidence() : {}),
                     ...(updateValues.recovery_state || {}),
                 };
                 const elapsedSeconds = Number.isFinite(Number(updateValues.elapsed_seconds))
@@ -6512,6 +6625,9 @@
             traceEndSession('showLiveSessionEnded.enter');
             if (liveSessionEndRedirecting) return;
             liveSessionEndRedirecting = true;
+            itemResultVersion += 1;
+            pendingAudioChunk = null;
+            isRecording = false;
             // End Session terminates the live reader; it is not a pause or a
             // CRLA completion. Return to the existing student assessment
             // workflow so Assessment Week/availability routing is reused.
@@ -6949,6 +7065,7 @@
             stopSpeechRecognition();
             if (currentStoryState === "story_reading" && currentSelectedStory) {
                 commitPendingStorySelfCorrection();
+                finalizeStoryReading();
                 const readingScores = calculateScores();
                 const storyMetrics = calculateFinalizedStoryMetrics(
                     readableWordCount(currentSelectedStory.content || ""),
@@ -6964,6 +7081,7 @@
                     total_words_read: storyMetrics.wordsRead,
                     miscues: storyMetrics.miscues,
                     story_skipped_segments: readStudentEndState().story_skipped_segments || [],
+                    ...strictStoryEvidence(),
                     duration_seconds: storyMetrics.durationSeconds,
                     wpm: storyMetrics.wpm,
                     comprehension_total: currentStoryQuestions.length,
