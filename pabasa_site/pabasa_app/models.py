@@ -120,9 +120,6 @@ class User(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     active_session_key = models.CharField(max_length=64, null=True, blank=True, db_index=True)
     active_session_created_at = models.DateTimeField(null=True, blank=True)
-    last_activity = models.DateTimeField(null=True, blank=True)
-    active_session_last_seen = models.DateTimeField(null=True, blank=True)
-    active_session_learning = models.BooleanField(default=False)
 
     class Meta:
         db_table = "users"
@@ -2305,8 +2302,6 @@ class LiveAssessmentSession(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='waiting')
     start_at = models.DateTimeField(null=True, blank=True)
     countdown_seconds = models.IntegerField(default=10)
-    timing_mode = models.CharField(max_length=20, choices=[('none', 'No Limit'), ('duration', 'Duration')], default='none')
-    duration_seconds = models.IntegerField(null=True, blank=True)
     ends_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

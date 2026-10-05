@@ -562,7 +562,7 @@
             } catch (parseError) {
                 const isHtml = /<!doctype|<html[\s>]/i.test(responseText || "");
                 if (response.status === 401 || response.status === 403 || response.redirected) {
-                    throw new Error("Your session or security token expired. Refresh the page and try again.");
+                    throw new Error("Unable to authorize this request. Refresh the page and try again.");
                 }
                 throw new Error(isHtml
                     ? `The speech service returned a server page instead of data (HTTP ${response.status}).`

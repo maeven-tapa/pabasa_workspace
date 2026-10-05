@@ -74,7 +74,7 @@
   async function responseJson(response, label) {
     const type = response.headers.get('content-type') || '';
     if (!type.includes('application/json')) {
-      if (response.redirected) throw new Error('Your session may have expired. Refresh and sign in again.');
+      if (response.redirected) throw new Error('Please sign in again to continue.');
       throw new Error(`${label} returned an unexpected page (HTTP ${response.status}). Refresh and try again.`);
     }
     return response.json();

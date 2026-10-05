@@ -42,8 +42,7 @@ class PrescribedLesson16ActivityTests(TestCase):
         session.update({'user_id': self.student.id, 'user_role': 'student', 'email': self.student.email})
         session.save()
         self.student.active_session_key = session.session_key
-        self.student.last_activity = timezone.now()
-        self.student.save(update_fields=['active_session_key', 'last_activity', 'updated_at'])
+        self.student.save(update_fields=['active_session_key', 'updated_at'])
 
     def login_teacher(self):
         session = self.client.session

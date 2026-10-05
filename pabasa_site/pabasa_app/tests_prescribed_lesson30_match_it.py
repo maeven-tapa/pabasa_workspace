@@ -39,8 +39,7 @@ class PrescribedLesson30MatchItTests(TestCase):
         session.update({'user_id': self.student.id, 'user_role': 'student', 'email': self.student.email})
         session.save()
         self.student.active_session_key = session.session_key
-        self.student.last_activity = timezone.now()
-        self.student.save(update_fields=['active_session_key', 'last_activity', 'updated_at'])
+        self.student.save(update_fields=['active_session_key', 'updated_at'])
         prescribed_term_fixture(self.student, teacher=teacher, section=section)
         self.progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': self.activity_key})
         self.complete_url = reverse('prescribed_activity_complete', kwargs={'activity_key': self.activity_key})

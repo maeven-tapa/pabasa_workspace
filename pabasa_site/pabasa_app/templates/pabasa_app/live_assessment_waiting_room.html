@@ -282,7 +282,7 @@
       const r = await fetch(stateUrl, { cache: 'no-store', credentials: 'same-origin', headers: { Accept: 'application/json' }});
       if (!r.ok) {
         if (r.status === 404 || r.status === 403) {
-          return { error: 'session-inactive' };
+          return { error: 'session-unavailable' };
         }
         return null;
       }
@@ -307,7 +307,7 @@
         recovery_state: j?.session?.viewer_student_state?.recovery_state,
         reader_url: j?.session?.reader_url || null,
       });
-      return j.success ? j.session : { error: 'session-inactive' };
+      return j.success ? j.session : { error: 'session-unavailable' };
     } catch (e) {
       console.warn('waiting room fetch', e);
       return null;
@@ -364,7 +364,7 @@
       viewer_student_state: state.viewer_student_state,
       reader_url: state.reader_url || null,
     });
-    if (state.error === 'session-inactive') {
+    if (state.error === 'session-unavailable') {
       stopPolling();
       window.location.replace('{% url "dashboard" %}');
       return;

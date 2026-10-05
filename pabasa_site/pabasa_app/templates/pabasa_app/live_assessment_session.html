@@ -871,25 +871,6 @@
                         </div>
                     </div>
                     <div class="col-lg-3">
-                        <div class="mb-3">
-                            <label class="form-label mb-2">Session Timing</label>
-                            <div class="profile-surface-dropdown mb-3" id="timingModeDropdown">
-                                <button type="button" class="profile-surface-trigger" id="timingModeTrigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="timingModeMenu">
-                                    <span class="profile-surface-trigger-text">
-                                        <span class="profile-surface-value" id="timingModeValue">No limit</span>
-                                    </span>
-                                    <i class="bi bi-chevron-down" aria-hidden="true"></i>
-                                </button>
-                                <select id="timingMode" class="profile-surface-select" tabindex="-1" aria-hidden="true">
-                                    <option value="none" selected>No limit</option>
-                                    <option value="duration">Duration</option>
-                                </select>
-                                <div class="profile-surface-menu" id="timingModeMenu" role="listbox" aria-label="Session timing"></div>
-                            </div>
-                            <div id="durationInputs" class="d-none mb-2">
-                                <input id="durationMinutes" type="number" min="1" class="form-control form-control-sm" placeholder="Minutes">
-                            </div>
-                        </div>
                         <div>
                             <label class="form-label mb-2">Countdown</label>
                             <div class="countdown-controls">
@@ -924,10 +905,6 @@
                                             <div id="summaryStudentsSelected" class="fw-semibold">0</div>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <div class="text-muted small">Session Duration</div>
-                                            <div id="summarySessionDuration" class="fw-semibold">No Limit</div>
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
                                             <div class="text-muted small">Countdown</div>
                                             <div id="summaryCountdown" class="fw-semibold">None</div>
                                         </div>
@@ -935,20 +912,12 @@
                                             <div class="text-muted small">Assessment</div>
                                             <div id="summaryAssessment" class="fw-semibold text-end" style="min-width:0;">{{ live_session.material.title|default:'Not selected' }}</div>
                                         </div>
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <div class="text-muted small">Auto End</div>
-                                            <div id="summaryAutoEnd" class="fw-semibold">Disabled</div>
-                                        </div>
                                         <div class="d-flex justify-content-between align-items-start">
                                             <div class="text-muted small">Status</div>
                                             <div><span id="summaryStartStatusBadge" class="badge bg-secondary">Ready to Start</span></div>
                                         </div>
                                     </div>
                                     <div id="summaryLiveFields" class="d-none">
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <div class="text-muted small">Time Remaining</div>
-                                            <div id="summaryTimeRemaining" class="fw-semibold">00:00</div>
-                                        </div>
                                         <div class="d-flex justify-content-between align-items-start mb-2">
                                             <div class="text-muted small">Active</div>
                                             <div id="summaryActive" class="fw-semibold">0</div>
@@ -1149,7 +1118,6 @@
 
         liveModalClose?.addEventListener('click', () => hideModal(false));
 
-
         // Lightweight toast for success messages (green)
         function showToast(message, type='success', duration=3000) {
             return new Promise((resolve) => {
@@ -1216,13 +1184,6 @@
         if (el) el.textContent = text;
     }
 
-    function formatDuration(seconds) {
-        if (seconds == null || seconds <= 0) return 'No limit';
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return mins ? `${mins}m ${secs}s` : `${secs}s`;
-    }
-
     function addActivity(message, when) {
         const timeline = document.getElementById('activityTimeline');
         const time = when || new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
@@ -1250,58 +1211,31 @@
         return m ? `${m}m ${s}s` : `${s}s`;
     }
 
-    function formatClock(seconds) {
-        if (seconds == null || seconds < 0) return '00:00';
-        const m = Math.floor(seconds / 60);
-        const s = Math.floor(seconds % 60);
-        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    }
-
-    function formatDurationText(seconds) {
-        if (seconds == null || seconds <= 0) return 'No Limit';
-        const minutes = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        if (minutes > 0 && secs === 0) {
-            return `${minutes} Minute${minutes === 1 ? '' : 's'}`;
-        }
-        if (minutes > 0) {
-            return `${minutes} Minute${minutes === 1 ? '' : 's'} ${secs} Second${secs === 1 ? '' : 's'}`;
-        }
-        return `${secs} Second${secs === 1 ? '' : 's'}`;
-    }
 
     function getSelectedStudentCount() {
         return selectedStudentIds.size;
     }
 
     function getCurrentPreStartSettings() {
-        const timingMode = document.getElementById('timingMode')?.value;
-        const durationMinutes = parseInt(document.getElementById('durationMinutes')?.value || 0, 10);
+
         const countdownValue = document.getElementById('countdown')?.value;
         const countdownCustomValue = parseInt(document.getElementById('countdownCustom')?.value || 0, 10);
         return {
-            timing_mode: timingMode,
-            duration_seconds: timingMode === 'duration' ? (durationMinutes > 0 ? durationMinutes * 60 : null) : null,
             countdown_seconds: countdownValue === 'custom' ? (countdownCustomValue > 0 ? countdownCustomValue : null) : parseInt(countdownValue || 0, 10),
         };
     }
 
     function setSummaryPreStartFields(session) {
         const selectedCount = session?.student_count ?? getSelectedStudentCount();
-        const timingMode = session?.timing_mode ?? getCurrentPreStartSettings().timing_mode;
-        const durationSeconds = session?.duration_seconds ?? getCurrentPreStartSettings().duration_seconds;
+
         const countdownSeconds = session?.countdown_seconds ?? getCurrentPreStartSettings().countdown_seconds;
         const assessmentTitle = session?.material?.title || document.getElementById('summaryAssessment')?.textContent?.trim() || 'Not selected';
 
-        const durationText = timingMode === 'duration' ? (durationSeconds ? formatDurationText(durationSeconds) : '0 Minutes') : 'No Limit';
         const countdownText = countdownSeconds == null || countdownSeconds === 0 ? 'None' : `${countdownSeconds} Second${countdownSeconds === 1 ? '' : 's'}`;
-        const autoEndText = timingMode === 'duration' ? 'Enabled' : 'Disabled';
 
         setText('#summaryStudentsSelected', selectedCount);
-        setText('#summarySessionDuration', durationText);
         setText('#summaryCountdown', countdownText);
         setText('#summaryAssessment', assessmentTitle);
-        setText('#summaryAutoEnd', autoEndText);
         setText('#summaryStartStatusBadge', 'Ready to Start');
         const badge = document.getElementById('summaryStartStatusBadge');
         if (badge) badge.className = 'badge bg-secondary';
@@ -1310,30 +1244,14 @@
         document.getElementById('summaryLiveFields')?.classList.add('d-none');
     }
 
-    function formatSecondsClock(totalSeconds) {
-        const value = Math.max(0, Math.floor(Number(totalSeconds) || 0));
-        return formatClock(value);
-    }
-
     function getSessionStartTimestamp(session) {
         if (!session?.start_at) return null;
         const parsed = Date.parse(session.start_at);
         return Number.isFinite(parsed) ? parsed : null;
     }
 
-    function getSessionDurationDeadlineMs() {
-        if (summarySessionStartAtMs == null || summarySessionDurationSeconds == null) return null;
-        return summarySessionStartAtMs + (summarySessionDurationSeconds * 1000);
-    }
-
     function getSessionCountdownDeadlineMs() {
         return summarySessionStartAtMs;
-    }
-
-    function getLiveSessionDurationRemainingSeconds(nowMs = Date.now()) {
-        const deadlineMs = getSessionDurationDeadlineMs();
-        if (deadlineMs == null) return null;
-        return Math.max(0, Math.ceil((deadlineMs - nowMs) / 1000));
     }
 
     function getLiveSessionCountdownRemainingSeconds(nowMs = Date.now()) {
@@ -1351,10 +1269,6 @@
         const statusKey = (session.status || '').toLowerCase();
         const statusText = statusKey === 'started' ? 'Running' : statusKey === 'paused' ? 'Paused' : 'Finished';
 
-        const remainingSeconds = session.timing_mode === 'duration'
-            ? getLiveSessionDurationRemainingSeconds()
-            : null;
-        setText('#summaryTimeRemaining', session.timing_mode === 'duration' ? formatSecondsClock(remainingSeconds) : 'No limit');
         setText('#summaryActive', active);
         setText('#summaryCompleted', completed);
         setText('#summaryWaiting', waiting);
@@ -1375,7 +1289,7 @@
             setSummaryPreStartFields(session);
         } else {
             summarySessionStartAtMs = getSessionStartTimestamp(session);
-            summarySessionDurationSeconds = Number.isFinite(Number(session.duration_seconds)) ? Number(session.duration_seconds) : null;
+
             summaryCountdownSeconds = Number.isFinite(Number(session.countdown_seconds)) ? Number(session.countdown_seconds) : null;
             setSummaryLiveFields(session);
             summaryCurrentStatus = (session.status || 'started').toLowerCase();
@@ -1395,11 +1309,6 @@
             }
         }
 
-        if (sessionStatus === 'started' && summarySessionDurationSeconds != null) {
-            setText('#summaryTimeRemaining', formatSecondsClock(getLiveSessionDurationRemainingSeconds()));
-        } else if (sessionStatus === 'paused' && summarySessionDurationSeconds != null) {
-            setText('#summaryTimeRemaining', formatSecondsClock(getLiveSessionDurationRemainingSeconds()));
-        }
     }
 
     function scheduleLiveTimerTick() {
@@ -1416,7 +1325,7 @@
 
     let liveTimerTickHandle = null;
     let summarySessionStartAtMs = null;
-    let summarySessionDurationSeconds = null;
+
     let summaryCountdownSeconds = null;
     let summaryCurrentStatus = 'waiting';
 
@@ -1549,13 +1458,12 @@
         setText('#statOffline', counts.offline);
         const localSelectedCount = selectedStudentIds.size;
         setText('#selectedCount', summaryCurrentStatus === 'waiting' ? (localSelectedCount || session.student_count || 0) : (session.student_count || localSelectedCount || 0));
-        const remainingSeconds = session.remaining_seconds;
-        setText('#teacherSessionTimer', session.timing_mode === 'duration' ? formatDuration(remainingSeconds) : 'No limit');
+
         setText('#currentCountdown', session.start_countdown_seconds != null ? `${session.start_countdown_seconds}s` : (session.countdown_seconds != null ? `${session.countdown_seconds}s` : '0s'));
 
         lastSessionState = session;
         summarySessionStartAtMs = getSessionStartTimestamp(session);
-        summarySessionDurationSeconds = Number.isFinite(Number(session.duration_seconds)) ? Number(session.duration_seconds) : null;
+
         summaryCountdownSeconds = Number.isFinite(Number(session.countdown_seconds)) ? Number(session.countdown_seconds) : null;
         summaryCurrentStatus = (session.status || 'waiting').toLowerCase();
 
@@ -1693,8 +1601,6 @@
         if (!settingsSaved) {
             const saved = await sendAction('save_settings', {
                 selected_student_ids: selected,
-                timing_mode: document.getElementById('timingMode').value,
-                duration_seconds: document.getElementById('timingMode').value === 'duration' ? parseInt(document.getElementById('durationMinutes').value || 0) * 60 : null,
                 countdown_seconds: document.getElementById('countdown').value === 'custom' ? parseInt(document.getElementById('countdownCustom').value || 0) : parseInt(document.getElementById('countdown').value || 0),
             });
             if (!saved) return;
@@ -1706,8 +1612,6 @@
 
         await sendAction('start', {
             selected_student_ids: selected,
-            timing_mode: document.getElementById('timingMode').value,
-            duration_seconds: document.getElementById('timingMode').value === 'duration' ? parseInt(document.getElementById('durationMinutes').value || 0) * 60 : null,
             countdown_seconds: document.getElementById('countdown').value === 'custom' ? parseInt(document.getElementById('countdownCustom').value || 0) : parseInt(document.getElementById('countdown').value || 0),
         });
     });
@@ -2252,19 +2156,13 @@
         if (selectedOption) triggerValueEl.textContent = selectedOption.text;
     }
 
-    const timingModeSelect = document.getElementById('timingMode');
     const countdownSelect = document.getElementById('countdown');
 
-    timingModeSelect.addEventListener('change', (e) => {
-        syncCustomDropdownValue('timingMode', 'timingModeValue');
-        document.getElementById('durationInputs').classList.toggle('d-none', e.target.value !== 'duration');
-    });
     countdownSelect.addEventListener('change', (e) => {
         syncCustomDropdownValue('countdown', 'countdownValue');
         document.getElementById('countdownCustom').classList.toggle('d-none', e.target.value !== 'custom');
     });
 
-    syncCustomDropdownValue('timingMode', 'timingModeValue');
     syncCustomDropdownValue('countdown', 'countdownValue');
 
     async function validateSessionSettings() {
@@ -2273,19 +2171,13 @@
             await showToast('Please select at least one participant before saving settings.', 'success');
             return null;
         }
-        const timing = document.getElementById('timingMode').value;
-        const duration = timing === 'duration' ? parseInt(document.getElementById('durationMinutes').value || 0) * 60 : null;
-        if (timing === 'duration' && (!duration || duration <= 0)) {
-            await showAlert('Invalid duration', 'Please enter a valid duration greater than zero.');
-            return null;
-        }
         const countdownValue = document.getElementById('countdown').value;
         const countdown = countdownValue === 'custom' ? parseInt(document.getElementById('countdownCustom').value || 0) : parseInt(countdownValue || 0);
         if (countdownValue === 'custom' && (!countdown || countdown <= 0)) {
             await showAlert('Invalid countdown', 'Please enter a valid custom countdown length.');
             return null;
         }
-        return { selected, timing, duration, countdown };
+        return { selected, countdown };
     }
 
     document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
@@ -2293,8 +2185,6 @@
         if (!validated) return;
         const payload = {
             selected_student_ids: validated.selected,
-            timing_mode: validated.timing,
-            duration_seconds: validated.duration,
             countdown_seconds: validated.countdown,
         };
         const s = await sendAction('save_settings', payload);

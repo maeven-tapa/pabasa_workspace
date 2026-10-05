@@ -5106,25 +5106,6 @@ def logout_user(request):
     return redirect('home')
 
 
-@require_http_methods(['POST'])
-def student_session_heartbeat(request):
-    """Refresh only the authenticated student's login lease.
-
-    This deliberately has no interaction with LiveAssessmentSession or its
-    recovery_state; an expired device login can be replaced without losing
-    temporary CRLA progress.
-    """
-    if not _check_auth(request) or request.session.get('user_role') != 'student':
-        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
-    user_id = request.session.get('user_id')
-    session_key = request.session.session_key
-    updated = User.objects.filter(
-        id=user_id, role='student', active_session_key=session_key,
-    ).update(last_activity=system_now())
-    if not updated:
-        return JsonResponse({'success': False, 'error': 'This student session is no longer valid.'}, status=401)
-    return JsonResponse({'success': True})
-
 def _check_auth(request):
     """Check if user is authenticated"""
     return 'user_id' in request.session
@@ -20454,7 +20435,6 @@ def _build_live_assessment_session_url(session_id):
 
 
 LIVE_ASSESSMENT_ACTIVE_STATUSES = ['waiting', 'countdown', 'started', 'paused']
-LIVE_ASSESSMENT_STALE_HOURS = 24
 LIVE_ASSESSMENT_BATCH_SIZE = 10
 LIVE_ASSESSMENT_MAX_STUDENTS = 10
 LIVE_ASSESSMENT_STATE_MAX_RETRIES = 3
@@ -20812,14 +20792,6 @@ def _append_live_session_activity(session, message):
     except Exception:
         session.activity_log = [{'timestamp': system_now().isoformat(), 'message': str(message)}]
 
-
-def _is_live_assessment_session_stale(session):
-    if not session or session.status not in LIVE_ASSESSMENT_ACTIVE_STATUSES:
-        return False
-
-    now = system_now()
-    reference_time = session.start_at or session.created_at or now
-    return (now - reference_time) >= timedelta(hours=LIVE_ASSESSMENT_STALE_HOURS)
 
 
 def _build_live_session_completion_payload(session, student_user, student_state=None):
@@ -22328,28 +22300,6 @@ def _advance_live_assessment_state(session):
     return session
 
 
-def _maybe_auto_end_live_session(session):
-    if session.status == 'started':
-        now = system_now()
-        if session.timing_mode == 'duration' and session.duration_seconds and session.start_at:
-            if session.start_at + timedelta(seconds=session.duration_seconds) <= now:
-                _trace_live_end_flow('auto_end_duration_triggered', session)
-                return _end_live_assessment_session(session, 'Live assessment session duration expired and session ended automatically.', ended_at=now)
-
-    if session.status in ['waiting', 'countdown', 'paused'] and _is_live_assessment_session_stale(session):
-        _trace_live_end_flow('auto_end_stale_triggered', session)
-        return _end_live_assessment_session(session, 'Live assessment session was stale and ended automatically.')
-
-    return session
-
-
-def _get_live_session_remaining_seconds(session):
-    if session.timing_mode != 'duration' or not session.duration_seconds or not session.start_at:
-        return None
-    remaining = int((session.start_at + timedelta(seconds=session.duration_seconds) - system_now()).total_seconds())
-    return max(0, remaining)
-
-
 def _get_live_session_start_countdown_seconds(session):
     if not session.start_at:
         return None
@@ -22747,19 +22697,6 @@ def live_assessment_active_invitation(request):
         )
         return JsonResponse({'success': True, 'session': None})
 
-    auto_end_started_at = time.perf_counter()
-    logger.warning(
-        'LIVE_CRLA_INVITE_SERVER_DEBUG maybe_auto_end_start session_id=%s status=%s',
-        session.id,
-        session.status,
-    )
-    _maybe_auto_end_live_session(session)
-    logger.warning(
-        'LIVE_CRLA_INVITE_SERVER_DEBUG maybe_auto_end_end session_id=%s elapsed_ms=%s status=%s',
-        session.id,
-        round((time.perf_counter() - auto_end_started_at) * 1000, 2),
-        session.status,
-    )
     session.refresh_from_db()
 
     student_ids = []
@@ -22872,8 +22809,6 @@ def live_assessment_active_invitation(request):
         'session': {
             'id': session.id,
             'status': session.status,
-            'timing_mode': session.timing_mode or 'none',
-            'remaining_seconds': _get_live_session_remaining_seconds(session),
             'join_url': _build_live_assessment_waiting_url(session.id),
             'material_title': session.material.title if session.material else '',
             'course_title': session.course.title if session.course else '',
@@ -23099,7 +23034,6 @@ def live_assessment_session_entry(request, session_id):
     if not _is_live_crla_material(session.material):
         return HttpResponseForbidden('Only official CRLA assessments can use Live Assessment.')
 
-    _maybe_auto_end_live_session(session)
 
     if not _check_auth(request):
         return redirect('auth')
@@ -23129,7 +23063,6 @@ def live_assessment_session_page(request, session_id):
     if not _is_live_crla_material(session.material):
         return HttpResponseForbidden('Only official CRLA assessments can use Live Assessment.')
 
-    _maybe_auto_end_live_session(session)
 
     if not _check_auth(request):
         return redirect('auth')
@@ -23194,7 +23127,6 @@ def live_assessment_waiting_room_page(request, session_id):
     if not session:
         return HttpResponse('Live assessment session not found', status=404)
 
-    _maybe_auto_end_live_session(session)
 
     if not _check_auth(request):
         return redirect('auth')
@@ -23227,7 +23159,7 @@ def live_assessment_waiting_room_page(request, session_id):
 def live_assessment_recovery_validation(request, session_id):
     """Read-only validation for a local CRLA recovery draft.
 
-    Do not call _maybe_auto_end_live_session here: discovering a browser draft
+    Discovering a browser draft
     must not turn a brownout/expired-login into an official completion.
     """
     if not _check_auth(request):
@@ -23381,7 +23313,6 @@ def live_assessment_session_state(request, session_id):
         user_id=request.session.get('user_id'),
         user_role=request.session.get('user_role'),
     )
-    _maybe_auto_end_live_session(session)
 
     if not _check_auth(request):
         return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
@@ -23401,14 +23332,12 @@ def live_assessment_session_state(request, session_id):
         return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
 
     _advance_live_assessment_state(session)
-    _maybe_auto_end_live_session(session)
     _ensure_live_session_batches(session)
     _trace_live_end_flow(
         'state_endpoint_before_response',
         session,
         user_id=user_id,
         user_role=user_role,
-        remaining_seconds=_get_live_session_remaining_seconds(session),
     )
 
     reader_url = ''
@@ -23532,13 +23461,10 @@ def live_assessment_session_state(request, session_id):
             'start_at': session.start_at.isoformat() if session.start_at else None,
             'countdown_seconds': session.countdown_seconds,
             'start_countdown_seconds': _get_live_session_start_countdown_seconds(session),
-            'remaining_seconds': _get_live_session_remaining_seconds(session),
             'student_count': session.student_count,
             'student_ids': session.student_ids or [],
             'material_title': session.material.title if session.material else '',
             'course_title': session.course.title if session.course else '',
-            'timing_mode': session.timing_mode or 'none',
-            'duration_seconds': session.duration_seconds or 0,
             'ends_at': session.ends_at.isoformat() if session.ends_at else None,
             'reader_url': reader_url,
             'official_crla': True,
@@ -23571,7 +23497,6 @@ def live_assessment_student_state_update(request, session_id):
         user_id=user_id,
         user_role=user_role,
     )
-    _maybe_auto_end_live_session(session)
 
     if user_role != 'student' or not user_id:
         return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
@@ -23742,10 +23667,6 @@ def live_assessment_session_action(request, session_id):
         data = {}
 
     action = (data.get('action') or '').strip().lower()
-    # Recovery and explicit discard are deliberately exempt from the stale
-    # auto-end path. Neither action may finalize an interrupted batch.
-    if action not in {'recover', 'abandon', 'interrupt'}:
-        _maybe_auto_end_live_session(session)
     _trace_live_end_flow(
         'action_endpoint_payload',
         session,
@@ -23758,9 +23679,6 @@ def live_assessment_session_action(request, session_id):
     batch_mode = str(data.get('batch_mode') or 'automatic').strip().lower()
     manual_batch_assignments = data.get('batch_assignments')
     countdown_seconds = data.get('countdown_seconds')
-    timing_mode = (data.get('timing_mode') or session.timing_mode or 'none').strip().lower()
-    duration_seconds = data.get('duration_seconds')
-    ends_at = data.get('ends_at')
 
     # Allow selecting students from the available course/section roster while in waiting state.
     if selected_student_ids is not None and session.status == 'waiting':
@@ -23791,9 +23709,6 @@ def live_assessment_session_action(request, session_id):
         session.student_states = {k: v for k, v in existing_states.items() if k in [str(sid) for sid in filtered_ids]}
         _ensure_live_session_student_states(session, filtered_ids)
 
-    if timing_mode not in ['none', 'duration', 'deadline']:
-        timing_mode = 'none'
-
     if countdown_seconds is not None and session.status == 'waiting':
         try:
             session.countdown_seconds = int(countdown_seconds)
@@ -23801,16 +23716,7 @@ def live_assessment_session_action(request, session_id):
             pass
 
     if session.status == 'waiting':
-        session.timing_mode = timing_mode
-        if timing_mode == 'duration':
-            try:
-                session.duration_seconds = int(duration_seconds)
-            except (ValueError, TypeError):
-                session.duration_seconds = session.duration_seconds or 0
-            session.ends_at = None
-        else:
-            session.duration_seconds = None
-            session.ends_at = None
+        session.ends_at = None
 
     if action == 'start':
         if session.status not in ['waiting', 'batch_loaded']:
@@ -23833,8 +23739,7 @@ def live_assessment_session_action(request, session_id):
         _append_live_session_activity(session, activity_message)
         start_values = {
             field: getattr(session, field) for field in (
-                'status', 'start_at', 'countdown_seconds', 'timing_mode',
-                'duration_seconds', 'ends_at', 'student_ids', 'student_count',
+                'status', 'start_at', 'countdown_seconds', 'ends_at', 'student_ids', 'student_count',
                 'batch_assignments', 'batch_size', 'current_batch',
                 'total_batches', 'activity_log', 'student_states',
             )
@@ -24265,7 +24170,7 @@ def live_assessment_session_action(request, session_id):
         _append_live_session_activity(session, 'Teacher saved session configuration and invited students to the waiting room.')
         settings_values = {
             field: getattr(session, field) for field in (
-                'countdown_seconds', 'timing_mode', 'duration_seconds', 'ends_at',
+                'countdown_seconds', 'ends_at',
                 'student_ids', 'student_count', 'student_states', 'batch_assignments',
                 'batch_size', 'current_batch', 'total_batches', 'activity_log',
             )
@@ -24335,8 +24240,6 @@ def live_assessment_session_action(request, session_id):
             'material_title': session.material.title if session.material else '',
             'course_title': session.course.title if session.course else '',
             'reader_url': reader_url,
-            'timing_mode': session.timing_mode or 'none',
-            'duration_seconds': session.duration_seconds or 0,
             'ends_at': session.ends_at.isoformat() if session.ends_at else None,
             'student_states': session.student_states or {},
             'activity_log': session.activity_log or [],
@@ -30332,7 +30235,7 @@ def toggle_material_student_access(request):
     user_id = request.session.get('user_id')
     teacher_user = User.objects.filter(id=user_id).first()
     if not teacher_user:
-        return JsonResponse({'success': False, 'error': 'Session expired. Please log in again.'}, status=401)
+        return JsonResponse({'success': False, 'error': 'Please sign in again.'}, status=401)
 
     _, material_id = _parse_prefixed_id(data.get('material_id'))
     if not material_id:
@@ -30463,7 +30366,7 @@ def delete_reading_material(request):
             
         user_id = request.session.get('user_id')
         if not user_id:
-            return JsonResponse({'success': False, 'error': 'Session expired. Please log in again.'}, status=401)
+            return JsonResponse({'success': False, 'error': 'Please sign in again.'}, status=401)
 
         # Find the material. We check both the direct section link and assigned_sections
         material = Material.objects.filter(

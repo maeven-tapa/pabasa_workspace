@@ -78,7 +78,6 @@ class AssessmentWeekTests(TestCase):
         if user.role == 'student':
             User.objects.filter(pk=user.pk).update(
                 active_session_key=session.session_key,
-                last_activity=timezone.now(),
             )
 
     def _toggle(self, section_id, enabled):

@@ -254,9 +254,7 @@
             student_ids: draft.studentIds, contextKey: draft.contextKey,
         });
         recoveryDebug('draft_selected', { contextKey: draft.contextKey, sessionKey: draft.sessionKey, session_id: draft.sessionId, draft_status: draft.sessionState?.status });
-        // This endpoint is intentionally read-only. The normal live-state
-        // endpoint can auto-end an expired session, so it is unsafe for draft
-        // discovery after a brownout or expired login.
+        // Validate this draft without changing live state or finalizing results.
         let validation = null;
         try {
             const query = new URLSearchParams({

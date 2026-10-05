@@ -6184,7 +6184,7 @@ class LiveAssessmentStartTests(TestCase):
         ).count()
         self.assertEqual(completed_attempts, 1)
 
-    def test_stale_live_assessment_session_auto_ends_on_poll(self):
+    def test_old_live_assessment_session_stays_open_on_poll(self):
         session = LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex,
             teacher=self.teacher,
@@ -6206,16 +6206,18 @@ class LiveAssessmentStartTests(TestCase):
         student_session['email'] = self.student.email
         student_session['custom_id'] = self.student.custom_id
         student_session.save()
+        from .student_session_lock import claim_student_session
+        self.assertTrue(claim_student_session(self.student.pk, student_session.session_key))
 
         response = student_client.get(reverse("live_assessment_session_state", kwargs={"session_id": session.id}))
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertTrue(body["success"])
-        self.assertEqual(body["session"]["status"], 'ended')
+        self.assertEqual(body["session"]["status"], 'waiting')
 
         session.refresh_from_db()
-        self.assertEqual(session.status, 'ended')
-        self.assertIsNotNone(session.ends_at)
+        self.assertEqual(session.status, 'waiting')
+        self.assertIsNone(session.ends_at)
 
     def test_live_assessment_session_state_api_returns_200_after_session_started(self):
         session = LiveAssessmentSession.objects.create(
@@ -7414,8 +7416,6 @@ class LiveAssessmentStartTests(TestCase):
             student_count=1,
             status='started',
             countdown_seconds=0,
-            timing_mode='duration',
-            duration_seconds=60,
             start_at=timezone.now() - timedelta(seconds=20),
             student_states={str(self.student.id): {'status': 'waiting', 'progress': 0, 'connection_status': 'waiting'}},
         )
@@ -7430,6 +7430,8 @@ class LiveAssessmentStartTests(TestCase):
         student_session['custom_id'] = self.student.custom_id
         student_session['login_at'] = (timezone.now() + timedelta(seconds=5)).isoformat()
         student_session.save()
+        from .student_session_lock import claim_student_session
+        self.assertTrue(claim_student_session(self.student.pk, student_session.session_key))
 
         response = student_client.get(reverse('live_assessment_active_invitation'))
 
@@ -7439,8 +7441,8 @@ class LiveAssessmentStartTests(TestCase):
         self.assertIsNotNone(body['session'])
         self.assertTrue(body['session']['show_modal'])
         self.assertEqual(body['session']['id'], session.id)
-        self.assertEqual(body['session']['timing_mode'], 'duration')
-        self.assertIsNotNone(body['session']['remaining_seconds'])
+        self.assertNotIn('timing_mode', body['session'])
+        self.assertNotIn('remaining_seconds', body['session'])
         self.assertTrue(body['session']['join_url'].endswith(f'/dashboard/live-assessment/{session.id}/waiting/'))
 
     def test_student_active_invitation_endpoint_redirects_already_logged_in_students_to_waiting_room(self):
@@ -7453,8 +7455,6 @@ class LiveAssessmentStartTests(TestCase):
             student_count=1,
             status='started',
             countdown_seconds=0,
-            timing_mode='none',
-            duration_seconds=None,
             start_at=timezone.now() - timedelta(seconds=10),
             student_states={str(self.student.id): {'status': 'waiting', 'progress': 0, 'connection_status': 'waiting'}},
         )
@@ -7479,7 +7479,7 @@ class LiveAssessmentStartTests(TestCase):
         self.assertTrue(body['session']['redirect_to_waiting_room'])
         self.assertFalse(body['session']['show_modal'])
 
-    def test_student_active_invitation_endpoint_returns_duration_session_details(self):
+    def test_recovered_student_invitation_ignores_legacy_duration(self):
         session = LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex,
             teacher=self.teacher,
@@ -7489,8 +7489,6 @@ class LiveAssessmentStartTests(TestCase):
             student_count=1,
             status='started',
             countdown_seconds=0,
-            timing_mode='duration',
-            duration_seconds=60,
             start_at=timezone.now() - timedelta(seconds=20),
             student_states={str(self.student.id): {'status': 'reading', 'progress': 0.5, 'connection_status': 'connected'}},
         )
@@ -7504,6 +7502,8 @@ class LiveAssessmentStartTests(TestCase):
         student_session['email'] = self.student.email
         student_session['custom_id'] = self.student.custom_id
         student_session.save()
+        from .student_session_lock import claim_student_session
+        self.assertTrue(claim_student_session(self.student.pk, student_session.session_key))
 
         response = student_client.get(reverse('live_assessment_active_invitation'))
 
@@ -7511,10 +7511,9 @@ class LiveAssessmentStartTests(TestCase):
         body = response.json()
         self.assertTrue(body['success'])
         self.assertEqual(body['session']['id'], session.id)
-        self.assertEqual(body['session']['timing_mode'], 'duration')
-        self.assertIsNotNone(body['session']['remaining_seconds'])
-        self.assertGreaterEqual(body['session']['remaining_seconds'], 0)
-        self.assertLessEqual(body['session']['remaining_seconds'], 60)
+        self.assertNotIn('timing_mode', body['session'])
+        self.assertNotIn('remaining_seconds', body['session'])
+        self.assertTrue(body['session']['redirect_to_waiting_room'])
         self.assertTrue(body['session']['join_url'].endswith(f'/dashboard/live-assessment/{session.id}/waiting/'))
 
     def test_student_active_invitation_endpoint_returns_no_limit_session_details(self):
@@ -7527,8 +7526,6 @@ class LiveAssessmentStartTests(TestCase):
             student_count=1,
             status='started',
             countdown_seconds=0,
-            timing_mode='none',
-            duration_seconds=None,
             start_at=timezone.now() - timedelta(seconds=10),
             student_states={str(self.student.id): {'status': 'reading', 'progress': 0.5, 'connection_status': 'connected'}},
         )
@@ -7549,8 +7546,8 @@ class LiveAssessmentStartTests(TestCase):
         body = response.json()
         self.assertTrue(body['success'])
         self.assertEqual(body['session']['id'], session.id)
-        self.assertEqual(body['session']['timing_mode'], 'none')
-        self.assertIsNone(body['session']['remaining_seconds'])
+        self.assertNotIn('timing_mode', body['session'])
+        self.assertNotIn('remaining_seconds', body['session'])
         self.assertTrue(body['session']['join_url'].endswith(f'/dashboard/live-assessment/{session.id}/waiting/'))
 
     def test_student_active_invitation_uses_login_timestamp_for_late_join_modal(self):
@@ -7563,8 +7560,6 @@ class LiveAssessmentStartTests(TestCase):
             student_count=1,
             status='started',
             countdown_seconds=0,
-            timing_mode='duration',
-            duration_seconds=120,
             start_at=timezone.now() - timedelta(minutes=2),
             student_states={str(self.student.id): {'status': 'waiting', 'progress': 0, 'connection_status': 'waiting'}},
         )

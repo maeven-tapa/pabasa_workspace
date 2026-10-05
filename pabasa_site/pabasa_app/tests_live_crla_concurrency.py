@@ -15,7 +15,6 @@ from django.test import TransactionTestCase
 from django.utils import timezone
 
 from .models import LiveAssessmentSession, Material, User
-from .student_session_lock import STUDENT_SESSION_LEASE_TIMEOUT
 
 
 CONCURRENT_REQUESTS = r'''
@@ -36,6 +35,7 @@ from django.urls import clear_url_caches, path, reverse
 from django.utils import timezone
 from datetime import timedelta
 from pabasa_app.models import LiveAssessmentSession, User
+from django.contrib.sessions.models import Session
 from pabasa_site import urls
 
 students = list(User.objects.filter(custom_id__startswith='CONCURRENT-LIVE-STUDENT-'))
@@ -45,7 +45,7 @@ release_speech = threading.Event()
 
 def blocked_speech(request):
     # Replace only provider I/O: the real login middleware still validates
-    # each long-running request while the other threads handle heartbeats.
+    # each long-running request while the other threads handle login checks.
     speech_ready.wait(timeout=10)
     if not release_speech.wait(timeout=15):
         return JsonResponse({'success': False}, status=504)
@@ -63,12 +63,12 @@ def simulate_speech(student):
     finally:
         close_old_connections()
 
-def check_heartbeat(student):
+def check_login(student):
     close_old_connections()
     client = Client(raise_request_exception=False)
     client.cookies[settings.SESSION_COOKIE_NAME] = student.active_session_key
     try:
-        return client.post(reverse('student_session_heartbeat'), {'page': reverse('assessment')}).status_code
+        return client.get(reverse('live_assessment_session_state', args=[sys.argv[2]])).status_code
     finally:
         close_old_connections()
 
@@ -79,8 +79,8 @@ def read_and_publish(student):
     statuses = []
     try:
         barrier.wait(timeout=10)
-        response = client.post(reverse('student_session_heartbeat'), {'page': reverse('assessment')})
-        statuses.append(('heartbeat', response.status_code))
+        response = client.get(reverse('live_assessment_session_state', args=[sys.argv[2]]))
+        statuses.append(('login', response.status_code))
         for progress in (0.1, 0.2, 0.3):
             barrier.wait(timeout=10)
             response = client.post(reverse('live_assessment_student_state_update', args=[sys.argv[2]]),
@@ -101,8 +101,8 @@ with ThreadPoolExecutor(max_workers=thread_count) as executor:
     speech_requests = [executor.submit(simulate_speech, student) for student in students]
     try:
         speech_ready.wait(timeout=10)
-        heartbeat_requests = [executor.submit(check_heartbeat, student) for student in students]
-        assert [request.result(timeout=10) for request in heartbeat_requests] == [200] * 10
+        login_checks = [executor.submit(check_login, student) for student in students]
+        assert [request.result(timeout=10) for request in login_checks] == [200] * 10
         assert all(not request.done() for request in speech_requests)
     finally:
         release_speech.set()
@@ -117,13 +117,11 @@ assert len(session.student_states) == 10
 assert all(session.student_states[str(student.pk)]['progress'] == 0.3 for student in students)
 assert all(session.student_states[str(student.pk)]['recovery_state']['task1_score'] == student.pk % 10 for student in students)
 assert all(User.objects.get(pk=student.pk).active_session_key == student.active_session_key for student in students)
-print('10 student logins preserved; 80 overlapping heartbeat, publish, poll and auth checks passed.')
+print('10 student logins preserved; 80 overlapping login, publish, poll and auth checks passed.')
 print('Login checks stayed available while all 10 speech requests were waiting on provider I/O.')
 
-# Reconnect all ten accounts from replacement devices at once. Each old
-# device has stopped publishing presence beyond its takeover lease.
-User.objects.filter(pk__in=[student.pk for student in students]).update(
-    active_session_last_seen=timezone.now() - timedelta(minutes=11))
+# Reconnect after explicit server-side revocation, without any inactivity rule.
+Session.objects.filter(session_key__in=[student.active_session_key for student in students]).delete()
 
 def sign_in_again(student):
     close_old_connections()
@@ -136,8 +134,8 @@ def sign_in_again(student):
         new_key = client.session.session_key
         old_client = Client(raise_request_exception=False)
         old_client.cookies[settings.SESSION_COOKIE_NAME] = student.active_session_key
-        assert old_client.post(reverse('student_session_heartbeat')).status_code == 401
-        assert client.post(reverse('student_session_heartbeat'), {'page': reverse('assessment')}).status_code == 200
+        assert old_client.get(reverse('live_assessment_session_state', args=[sys.argv[2]])).status_code == 401
+        assert client.get(reverse('live_assessment_session_state', args=[sys.argv[2]])).status_code == 200
         assert User.objects.get(pk=student.pk).active_session_key == new_key
         return 200
     finally:
@@ -168,18 +166,17 @@ class LiveCrlaConcurrentRequestsTests(TransactionTestCase):
                 is_system_owned=True, is_official_reading=True, assessment_kind='crla',
                 system_assessment_key='bosy_crla_pretest')
         students = []
-        earlier = timezone.now() - STUDENT_SESSION_LEASE_TIMEOUT - timedelta(minutes=1)
+        earlier = timezone.now() - timedelta(days=30)
         for index in range(10):
             student = self.make_user(f'CONCURRENT-LIVE-STUDENT-{index}')
             login = SessionStore()
             login.update({'user_id': student.pk, 'user_role': 'student'})
             login.create()
             User.objects.filter(pk=student.pk).update(active_session_key=login.session_key,
-                active_session_created_at=earlier, active_session_last_seen=earlier,
-                last_activity=earlier, active_session_learning=True)
+                active_session_created_at=earlier)
             students.append(student)
         session = LiveAssessmentSession.objects.create(id='concurrent-live-timeout', teacher=teacher,
-            material=material, status='started', start_at=timezone.now(), timing_mode='none',
+            material=material, status='started', start_at=timezone.now(),
             student_ids=[student.pk for student in students], student_count=10,
             batch_assignments={str(student.pk): 1 for student in students}, total_batches=1,
             student_states={str(student.pk): {'status': 'reading', 'progress': 0} for student in students})

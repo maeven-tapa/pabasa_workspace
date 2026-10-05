@@ -102,7 +102,7 @@ class LiveCrlaWorkbookTests(TestCase):
             birth_month=1, birth_day=1, birth_year=2010, email=identifier + '@example.com',
             password_hash='unused', school_record=self.school)
 
-    def test_teacher_end_keeps_all_ten_student_logins_active_with_timeouts_disabled(self):
+    def test_teacher_end_keeps_all_ten_student_logins_active(self):
         students, clients, states, keys = [], [], {}, {}
         for index in range(10):
             student = self.make_user(f'end-auth-{index}')
@@ -121,9 +121,8 @@ class LiveCrlaWorkbookTests(TestCase):
             states[str(student.pk)] = {'status': 'completed' if index < 5 else 'reading',
                 'progress': 1 if index < 5 else .3,
                 'recovery_state': evidence if index < 5 else {'stage': 'story_reading', 'branch': 'story'}}
-            before = client.post(reverse('student_session_heartbeat'))
-            self.assertEqual(before.status_code, 200)
-            self.assertFalse(before.json()['timeouts_enabled'])
+            before = client.post(reverse('reading_transcribe_api'))
+            self.assertEqual(before.status_code, 400)
         session = LiveAssessmentSession.objects.create(id='live-end-auth-ten', teacher=self.teacher,
             section=self.section, material=self.material, student_ids=[student.pk for student in students],
             student_count=10, batch_assignments={str(student.pk): 1 for student in students},
@@ -138,7 +137,6 @@ class LiveCrlaWorkbookTests(TestCase):
         self.assertEqual(session.status, 'ended')
         for student, client in zip(students, clients):
             with self.subTest(student=student.pk):
-                self.assertEqual(client.post(reverse('student_session_heartbeat')).status_code, 200)
                 poll = client.get(reverse('live_assessment_session_state', args=[session.pk]))
                 self.assertEqual(poll.status_code, 200)
                 self.assertEqual(poll.json()['session']['status'], 'ended')
@@ -148,6 +146,74 @@ class LiveCrlaWorkbookTests(TestCase):
                 self.assertTrue(Session.objects.filter(session_key=keys[student.pk]).exists())
                 student.refresh_from_db()
                 self.assertEqual(student.active_session_key, keys[student.pk])
+
+    def test_live_session_polling_never_ends_old_sessions(self):
+        student = self.make_user('persistent-live')
+        self.section.add_student(student)
+        login = self.client.session
+        login.update({'user_id': self.teacher.pk, 'user_role': 'teacher'})
+        login.save()
+        old = timezone.now() - timedelta(days=90)
+        for status in ('waiting', 'paused', 'started'):
+            with self.subTest(status=status):
+                session = LiveAssessmentSession.objects.create(id='persistent-live-' + status,
+                    teacher=self.teacher, section=self.section, material=self.material,
+                    student_ids=[student.pk], student_count=1, status=status,
+                    start_at=old,
+                    student_states={str(student.pk): {'status': 'reading', 'progress': .2}})
+                LiveAssessmentSession.objects.filter(pk=session.pk).update(created_at=old)
+                response = self.client.get(reverse('live_assessment_session_state', args=[session.pk]))
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json()['session']['status'], status)
+                for field in ('timing_mode', 'duration_seconds', 'remaining_seconds'):
+                    self.assertNotIn(field, response.json()['session'])
+                session.refresh_from_db()
+                self.assertEqual(session.status, status)
+                self.assertIsNone(session.ends_at)
+                self.assertFalse(Assessment.objects.filter(student=student, material=self.material).exists())
+
+    def test_old_duration_settings_cannot_enable_live_session_expiry(self):
+        student = self.make_user('persistent-start')
+        self.section.add_student(student)
+        session = LiveAssessmentSession.objects.create(id='persistent-live-start', teacher=self.teacher,
+            section=self.section, material=self.material, student_ids=[student.pk], student_count=1,
+            status='waiting')
+        login = self.client.session
+        login.update({'user_id': self.teacher.pk, 'user_role': 'teacher'})
+        login.save()
+        response = self.client.post(reverse('live_assessment_session_action', args=[session.pk]),
+            {'action': 'start', 'timing_mode': 'duration', 'duration_seconds': 1, 'countdown_seconds': 0},
+            content_type='application/json')
+        self.assertEqual(response.status_code, 200, response.content)
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'started')
+        for field in ('timing_mode', 'duration_seconds', 'remaining_seconds'):
+            self.assertNotIn(field, response.json()['session'])
+
+    def test_teacher_controls_render_without_session_expiry_inputs(self):
+        session = LiveAssessmentSession.objects.create(id='persistent-live-controls', teacher=self.teacher,
+            section=self.section, material=self.material, status='waiting')
+        login = self.client.session
+        login.update({'user_id': self.teacher.pk, 'user_role': 'teacher'})
+        login.save()
+        response = self.client.get(reverse('live_assessment_session_control', args=[session.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'End Session')
+        for label in ('Session Timing', 'Session Duration', 'Time Remaining', 'Auto End'):
+            self.assertNotContains(response, label)
+        self.assertNotContains(response, 'id="timingMode"')
+        self.assertNotContains(response, 'id="durationMinutes"')
+        # Validate the JavaScript generated by the actual Django templates.
+        import re
+        import shutil
+        import subprocess
+        if shutil.which('node'):
+            for attributes, script in re.findall(r'<script\b([^>]*)>([\s\S]*?)</script>', response.content.decode()):
+                if 'application/json' in attributes:
+                    continue
+                result = subprocess.run(['node', '--check'], input=script, text=True, encoding='utf-8',
+                                        capture_output=True, timeout=15)
+                self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_strict_unread_story_miscues_survive_finalization_and_excel_export(self):
         student = self.make_user('strict-story')

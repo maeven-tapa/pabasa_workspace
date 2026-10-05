@@ -68,7 +68,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'pabasa_app.middleware.SessionTimeoutPolicyMiddleware',
+    'pabasa_app.middleware.PersistentSessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -139,22 +139,9 @@ USE_I18N = True
 
 USE_TZ = True
 
-# Temporarily disable automatic login timeouts across all account roles.
-# Keep this disabled even when deployment has an older environment override.
-# Restore the setting in code when automatic timeouts are requested again.
-SESSION_TIMEOUTS_ENABLED = False
-# Django requires a finite backing expiry. Keep logins long-lived while
-# the temporary policy is off, including sessions without heartbeats.
+# Django requires a finite backing expiry; keep account logins persistent.
 SESSION_COOKIE_AGE = 100 * 365 * 24 * 60 * 60
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
-
-# Student idle expiry is separate from the short single-device presence lease.
-# A closed/crashed browser stops its 30-second heartbeat; after this lease,
-# another login may reclaim the account without waiting for the 30-minute idle
-# warning window used by ordinary dashboard sessions.
-STUDENT_SESSION_IDLE_SECONDS = 30 * 60
-STUDENT_SESSION_LEASE_SECONDS = 10 * 60
-STUDENT_SESSION_WARNING_SECONDS = 2 * 60
 
 
 # Static files (CSS, JavaScript, Images)
