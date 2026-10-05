@@ -2401,8 +2401,10 @@ document.addEventListener('DOMContentLoaded',function(){
     }
     .assessment-dock .assessment-stage > div:first-child { position: relative; z-index: 2; }
     .assessment-dock .assessment-stage-content {
+        align-self: stretch;
         display: flex;
         flex-direction: column;
+        min-height: 0;
         justify-content: center;
     }
     .assessment-dock .assessment-stage .dash-pill {
