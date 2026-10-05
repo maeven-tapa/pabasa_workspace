@@ -1,5 +1,6 @@
 from django.contrib.auth.hashers import make_password
 from django.contrib.sessions.models import Session
+from django.contrib.sessions.backends.db import SessionStore
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -151,6 +152,55 @@ class StudentSessionLockTests(TestCase):
         self.student.save()
         self.assertTrue(student_session_is_active(self.student, self.client.session.session_key))
 
+    def test_learning_login_survives_delayed_presence_after_lease(self):
+        self.login(self.client)
+        earlier = timezone.now() - STUDENT_SESSION_LEASE_TIMEOUT - timedelta(minutes=1)
+        User.objects.filter(pk=self.student.pk).update(
+            active_session_learning=True, last_activity=earlier,
+            active_session_last_seen=earlier,
+        )
+        response = self.client.post(reverse('student_session_heartbeat'), {'page': reverse('assessment')})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['protected'])
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.active_session_key, self.client.session.session_key)
+
+    def test_dashboard_login_uses_idle_timeout_not_presence_lease(self):
+        self.login(self.client)
+        earlier = timezone.now() - STUDENT_SESSION_LEASE_TIMEOUT - timedelta(minutes=1)
+        User.objects.filter(pk=self.student.pk).update(
+            active_session_learning=False, last_activity=earlier,
+            active_session_last_seen=earlier,
+        )
+        response = self.client.post(reverse('student_session_heartbeat'))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()['protected'])
+
+    def test_ten_learning_accounts_survive_a_delayed_heartbeat_together(self):
+        clients = []
+        for index in range(10):
+            student = self.student if index == 0 else User.objects.create(
+                custom_id=f'LIVE-LOCK-{index}', role='student', first_name=f'Learner{index}',
+                last_name='Live', middle_initial='', suffix='', sex='female',
+                birth_month=1, birth_day=1, birth_year=2012,
+                email=f'live-lock-{index}@example.com', password_hash=self.student.password_hash,
+            )
+            client = self.client_class()
+            response = client.post(reverse('login_user'), {'custom_id': student.custom_id, 'password': 'password'})
+            self.assertEqual(response.status_code, 200)
+            clients.append((student, client, client.session.session_key))
+        earlier = timezone.now() - STUDENT_SESSION_LEASE_TIMEOUT - timedelta(minutes=1)
+        User.objects.filter(pk__in=[student.pk for student, _, _ in clients]).update(
+            active_session_learning=True, last_activity=earlier, active_session_last_seen=earlier,
+        )
+        responses = [client.post(reverse('student_session_heartbeat'), {'page': reverse('assessment')})
+            for _, client, _ in clients]
+        self.assertEqual([response.status_code for response in responses], [200] * 10)
+        for student, client, original_key in clients:
+            student.refresh_from_db()
+            self.assertEqual(student.active_session_key, original_key)
+            self.assertEqual(client.session.get('user_id'), student.pk)
+
     def test_disconnected_device_can_still_be_replaced(self):
         self.login(self.client)
         User.objects.filter(pk=self.student.pk).update(
@@ -169,6 +219,29 @@ class StudentSessionLockTests(TestCase):
         replacement = self.client_class()
         response = self.login(replacement)
         self.assertEqual(response.status_code, 409)
+
+    def test_claim_cannot_replace_a_device_that_refreshed_during_validation(self):
+        from .student_session_lock import _active_session_is_usable
+
+        self.login(self.client)
+        original_key = self.client.session.session_key
+        earlier = timezone.now() - STUDENT_SESSION_LEASE_TIMEOUT - timedelta(seconds=1)
+        User.objects.filter(pk=self.student.pk).update(active_session_last_seen=earlier)
+        calls = []
+
+        def refresh_device(user, key, now):
+            if not calls:
+                User.objects.filter(pk=self.student.pk).update(active_session_last_seen=now)
+            calls.append(key)
+            return _active_session_is_usable(user, key, now)
+
+        replacement = SessionStore()
+        replacement.update({'user_id': self.student.pk, 'user_role': 'student'})
+        replacement.create()
+        with patch('pabasa_app.student_session_lock._active_session_is_usable', side_effect=refresh_device):
+            self.assertFalse(claim_student_session(self.student.pk, replacement.session_key))
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.active_session_key, original_key)
 
     def test_heartbeat_refreshes_presence_timestamp(self):
         self.login(self.client)
@@ -195,6 +268,24 @@ class StudentSessionLockTests(TestCase):
         self.assertEqual(response.status_code, 401)
         self.student.refresh_from_db()
         self.assertEqual(self.student.active_session_key, replacement_key)
+        self.assertEqual(self.student.active_session_last_seen, replacement_seen)
+
+    def test_device_replacement_during_heartbeat_validation_keeps_new_owner(self):
+        self.login(self.client)
+        replacement_seen = timezone.now()
+
+        def replace_while_validating(*args):
+            User.objects.filter(pk=self.student.pk).update(
+                active_session_key='replacement-during-heartbeat',
+                active_session_last_seen=replacement_seen,
+            )
+            return True
+
+        with patch('pabasa_app.views.student_session_is_active', side_effect=replace_while_validating):
+            response = self.client.post(reverse('student_session_heartbeat'), {'activity': '1'})
+        self.assertEqual(response.status_code, 401)
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.active_session_key, 'replacement-during-heartbeat')
         self.assertEqual(self.student.active_session_last_seen, replacement_seen)
 
     def test_learning_login_survives_long_reading_without_requests(self):

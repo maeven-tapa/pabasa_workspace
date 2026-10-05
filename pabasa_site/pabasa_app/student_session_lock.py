@@ -2,7 +2,6 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.sessions.models import Session
-from django.db import transaction
 from django.urls import resolve, Resolver404
 
 from .models import User
@@ -41,8 +40,10 @@ def student_session_timed_out(user, now=None):
     if not user:
         return False
     if user.active_session_learning:
-        last_seen = user.active_session_last_seen or user.last_activity
-        return bool(last_seen and last_seen <= now - STUDENT_SESSION_LEASE_TIMEOUT)
+        # The presence lease lets a different device reclaim an abandoned
+        # login. A delayed heartbeat on the current learning device is not
+        # logout evidence; ownership and the auth session are checked below.
+        return False
     return bool(user.last_activity and user.last_activity <= now - STUDENT_SESSION_IDLE_TIMEOUT)
 
 
@@ -80,9 +81,9 @@ def _active_session_is_usable(user, session_key, now=None):
 
 def claim_student_session(user_id, session_key):
     """Atomically claim a student session, returning False if another is active."""
-    now = session_now()
-    with transaction.atomic():
-        user = User.objects.select_for_update().get(pk=user_id, role='student')
+    for _attempt in range(3):
+        now = session_now()
+        user = User.objects.get(pk=user_id, role='student')
         active_key = user.active_session_key
         same_session = active_key == session_key
         session_exists = _active_session_is_usable(user, active_key, now)
@@ -94,14 +95,22 @@ def claim_student_session(user_id, session_key):
         )
         if active_key and active_key != session_key and session_exists and not stale and not student_session_timed_out(user, now):
             return False
-        user.active_session_key = session_key
-        user.active_session_created_at = user.active_session_created_at if same_session else now
-        user.last_activity = now
-        user.active_session_last_seen = now
-        user.active_session_learning = False
-        user.save(update_fields=['active_session_key', 'active_session_created_at', 'last_activity',
-                                 'active_session_last_seen', 'active_session_learning', 'updated_at'])
-        return True
+        # Compare ownership and presence in the write itself. SQLite cannot
+        # lock a row with select_for_update(), and upgrading ten concurrent
+        # validation reads to writes caused sign-ins to fail with DB locks.
+        # Recheck after a competing claim or heartbeat rather than overwriting it.
+        claimed = User.objects.filter(
+            pk=user.pk, role='student', active_session_key=active_key,
+            active_session_last_seen=user.active_session_last_seen, last_activity=user.last_activity,
+        ).update(
+            active_session_key=session_key,
+            active_session_created_at=user.active_session_created_at if same_session else now,
+            last_activity=now, active_session_last_seen=now,
+            active_session_learning=False, updated_at=now,
+        )
+        if claimed:
+            return True
+    return False
 
 
 def student_session_is_active(user, session_key, now=None):
@@ -110,8 +119,7 @@ def student_session_is_active(user, session_key, now=None):
     return bool(
         user and session_key and user.active_session_key == session_key and
         _active_session_is_usable(user, session_key, now) and
-        not student_session_timed_out(user, now) and last_seen and
-        last_seen > now - STUDENT_SESSION_LEASE_TIMEOUT
+        not student_session_timed_out(user, now) and last_seen
     )
 
 

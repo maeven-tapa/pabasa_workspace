@@ -5619,30 +5619,33 @@ def student_session_heartbeat(request):
         return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
     user_id = request.session.get('user_id')
     session_key = request.session.session_key
-    with transaction.atomic():
-        user = User.objects.select_for_update().filter(id=user_id, role='student').first()
-        now = session_now()
-        if not student_session_is_active(user, session_key, now):
-            return JsonResponse({'success': False, 'error': 'Your session has ended. Please sign in again.'}, status=401)
-        was_learning = user.active_session_learning
-        if 'page' in request.POST:
-            try:
-                pages = json.loads(request.POST.get('learning_pages', '[]'))
-            except (ValueError, TypeError):
-                pages = []
-            if not isinstance(pages, list):
-                pages = []
-            user.active_session_learning = is_learning_page(request.POST['page']) or any(
-                is_learning_page(path) for path in pages[:20] if isinstance(path, str)
-            )
-        # Reading/listening/writing counts as activity without mouse input.
-        # Passive notification polling and ordinary heartbeats do not.
-        if request.POST.get('activity') == '1' or user.active_session_learning or was_learning:
-            user.last_activity = now
-        user.active_session_last_seen = now
-        user.save(update_fields=['last_activity', 'active_session_last_seen', 'active_session_learning'])
-        result = student_session_status(user, now)
-    return JsonResponse(result)
+    user = User.objects.filter(id=user_id, role='student').first()
+    now = session_now()
+    if not student_session_is_active(user, session_key, now):
+        return JsonResponse({'success': False, 'error': 'Your session has ended. Please sign in again.'}, status=401)
+    was_learning = user.active_session_learning
+    if 'page' in request.POST:
+        try:
+            pages = json.loads(request.POST.get('learning_pages', '[]'))
+        except (ValueError, TypeError):
+            pages = []
+        if not isinstance(pages, list):
+            pages = []
+        user.active_session_learning = is_learning_page(request.POST['page']) or any(
+            is_learning_page(path) for path in pages[:20] if isinstance(path, str)
+        )
+    values = {'active_session_last_seen': now, 'active_session_learning': user.active_session_learning}
+    # Reading/listening/writing counts as activity without mouse input.
+    # Passive notification polling and ordinary heartbeats do not.
+    if request.POST.get('activity') == '1' or user.active_session_learning or was_learning:
+        user.last_activity = now
+        values['last_activity'] = now
+    # One conditional write avoids SQLite read-to-write transaction upgrades
+    # when ten heartbeats arrive together. An old device cannot refresh a
+    # login that a replacement device has claimed since the validation read.
+    if not User.objects.filter(pk=user.pk, active_session_key=session_key).update(**values):
+        return JsonResponse({'success': False, 'error': 'Your session has ended. Please sign in again.'}, status=401)
+    return JsonResponse(student_session_status(user, now))
 
 def _check_auth(request):
     """Check if user is authenticated"""
@@ -25219,7 +25222,7 @@ LIVE_ASSESSMENT_ACTIVE_STATUSES = ['waiting', 'countdown', 'started', 'paused']
 LIVE_ASSESSMENT_STALE_HOURS = 24
 LIVE_ASSESSMENT_BATCH_SIZE = 10
 LIVE_ASSESSMENT_MAX_STUDENTS = 10
-LIVE_ASSESSMENT_STATE_MAX_RETRIES = 3
+LIVE_ASSESSMENT_STATE_MAX_RETRIES = 12
 
 
 def _mutate_live_session_state(session_id, mutation, max_retries=LIVE_ASSESSMENT_STATE_MAX_RETRIES):
@@ -25257,9 +25260,12 @@ def _mutate_live_session_state(session_id, mutation, max_retries=LIVE_ASSESSMENT
             # SQLite may report a transient writer lock; retry from fresh
             # state just as for a normal CAS conflict.
             last_error = exc
+            time.sleep(random.uniform(0.01, 0.03) * min(_attempt + 1, 3))
             continue
         if updated:
             return LiveAssessmentSession.objects.select_related('material', 'course', 'teacher').get(id=session_id), None
+        # Stagger colliding batch writes before rereading the latest version.
+        time.sleep(random.uniform(0.01, 0.03) * min(_attempt + 1, 3))
     return None, 'Live session state changed concurrently; please retry.' if last_error is None else 'Live session is busy; please retry.'
 
 

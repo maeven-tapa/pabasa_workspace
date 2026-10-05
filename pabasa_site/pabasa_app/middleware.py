@@ -1,4 +1,5 @@
 import hashlib
+from datetime import timedelta
 
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -61,7 +62,12 @@ class StudentSessionLockMiddleware:
                 return redirect("auth")
             # Polling proves presence, not user interaction. Device ownership
             # and idle validity are checked above, before any refresh.
-            User.objects.filter(pk=user.pk, active_session_key=key).update(active_session_last_seen=session_now())
+            now = session_now()
+            # Live readers poll and publish every few seconds. A presence
+            # lease needs one refresh per heartbeat interval, not a SQLite
+            # write for every student's poll and speech request.
+            if not user.active_session_last_seen or user.active_session_last_seen <= now - timedelta(seconds=30):
+                User.objects.filter(pk=user.pk, active_session_key=key).update(active_session_last_seen=now)
         elif session_key:
             # A re-authentication redirect can arrive with a session whose
             # payload was cleared or invalidated before the middleware could

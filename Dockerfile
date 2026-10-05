@@ -32,5 +32,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.getenv('PORT', '8080') + '/', timeout=3)" || exit 1
 
 # Apply schema updates before serving the application. `exec` lets Gunicorn
-# receive container stop/restart signals directly.
-CMD ["sh", "-c", "python pabasa_site/manage.py check_migration_readiness && python pabasa_site/manage.py migrate --noinput && exec gunicorn pabasa_site.wsgi:application --chdir pabasa_site --worker-tmp-dir /dev/shm --bind 0.0.0.0:${PORT:-8080}"]
+# receive container stop/restart signals directly. Ten learners can wait on
+# speech recognition at once; leave threads available for login heartbeats
+# and the teacher monitor instead of serializing all requests in one worker.
+CMD ["sh", "-c", "python pabasa_site/manage.py check_migration_readiness && python pabasa_site/manage.py migrate --noinput && exec gunicorn pabasa_site.wsgi:application --chdir pabasa_site --worker-class gthread --threads 16 --timeout 120 --worker-tmp-dir /dev/shm --bind 0.0.0.0:${PORT:-8080}"]
