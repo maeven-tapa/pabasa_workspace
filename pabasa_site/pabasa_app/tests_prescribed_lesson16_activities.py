@@ -1,10 +1,13 @@
 import json
 import uuid
+from pathlib import Path
 from unittest.mock import patch
 
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.staticfiles import finders
+from django.core import signing
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 
 from .models import Material, School, Section, StudentActivityProgress, User
@@ -186,6 +189,29 @@ class PrescribedLesson16ActivityTests(TestCase):
         )
         self.assertEqual(catalog_activity, prescribed_activity('session-6-lesson-16-gawain-4'))
 
+    def test_gawain_4_page_has_scoped_step_progress_and_scroll_safe_visuals(self):
+        self.login_student()
+        response = self.client.get(reverse('prescribed_activity_page', kwargs={
+            'activity_key': 'session-6-lesson-16-gawain-4',
+        }))
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertIn('class="steps"', html)
+        self.assertIn('class="step ${index<answers.length?', html)
+        self.assertIn("index===answers.length?'active'", html)
+        self.assertIn('min-height:2.8em', html)
+        self.assertIn('grid-template-columns:minmax(280px,.95fr)', html)
+        self.assertIn('@media(max-width:820px)', html)
+        scoped_css = html.split('/* Lesson 16', 1)[1].split('</style>', 1)[0]
+        self.assertNotIn('height:100dvh', scoped_css)
+        self.assertNotIn('overflow:hidden', scoped_css)
+        self.assertNotIn('!important', scoped_css)
+        self.assertNotIn('top:calc(-1', scoped_css)
+        self.assertIn('width:100%;height:clamp(250px,32vw,390px)', scoped_css)
+        self.assertIn('progress_url', html)
+        self.assertIn('completion_url', html)
+        self.assertIn('activity_completed', html)
+
     def test_gawain_4_persists_correct_items_and_requires_all_for_completion(self):
         self.login_student()
         key = 'session-6-lesson-16-gawain-4'
@@ -222,6 +248,26 @@ class PrescribedLesson16ActivityTests(TestCase):
         saved = StudentActivityProgress.objects.get(student=self.student, activity_key=key)
         self.assertTrue(saved.activity_completed)
         self.assertEqual(saved.completed_items, 5)
+
+    def test_gawain_4_page_uses_saved_progress_steps_and_scroll_safe_activity_styles(self):
+        template = Path(__file__).parent / 'templates' / 'pabasa_app' / 'prescribed_picture_word_write_page.html'
+        source = template.read_text(encoding='utf-8')
+        style = source.split('/* Gawain 4 visual system.', 1)[1].split('</style>', 1)[0]
+        self.assertIn("'Isulat ang wastong salita para sa larawan'", source)
+        self.assertIn('Session 6 · Lesson 16 · Gawain 4', source)
+        self.assertIn('index<answers.length', source)
+        self.assertIn('index===answers.length', source)
+        self.assertNotIn('${Math.min(answers.length+1,items.length)} / ${items.length}', source)
+        self.assertNotIn('height:100dvh', style)
+        self.assertNotIn('overflow:hidden', style)
+        self.assertNotIn('max-height:', style)
+        self.assertNotRegex(style, r'(?<![a-z-])top\s*:')
+        self.assertNotIn('!important', style)
+        self.assertIn('grid-template-columns:minmax(280px,1fr) minmax(340px,1fr)', style)
+        self.assertIn('grid-template-columns:1fr', style)
+        self.assertIn('min-height:3.2em', style)
+        self.assertIn('min-height:4.5em', style)
+        self.assertIn('min-height:68px', style)
 
     def test_gawain_4_recovers_a_saved_final_answer_when_completion_was_interrupted(self):
         self.login_student()
@@ -265,72 +311,263 @@ class PrescribedLesson16ActivityTests(TestCase):
             reverse('prescribed_activity_page', kwargs={'activity_key': 'lesson-16-gawain-3'}),
         )
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'pabasa_app/prescribed_picture_word_matching_page.html')
+        self.assertTemplateUsed(response, 'pabasa_app/lesson_16_gawain_3_page.html')
         payload = response.context['prescribed_activity_data']
-        self.assertEqual(payload['word_bank'], ['panga', 'gamot', 'sanga', 'bunga', 'goma'])
-        self.assertEqual([item['id'] for item in payload['items']], [
-            'picture-1', 'picture-2', 'picture-3', 'picture-4', 'picture-5',
-        ])
-        self.assertNotIn('word', payload['items'][0])
+        self.assertEqual(payload['title'], 'Piliin ang Larawang Katugma ng Salita')
+        self.assertEqual(payload['screen']['picture_choices'], [])
+        self.assertNotIn('word_bank', payload)
+        self.assertNotIn('items', payload)
+        self.assertNotIn('matches', payload['progress'])
+        self.assertNotIn('picture_order', payload['progress']['state'])
+        self.assertContains(response, 'lesson_16_gawain_3.css')
+        self.assertContains(response, 'session6_intro_modal.js')
+        self.assertNotContains(response, 'activityStart')
+        generic_template = Path(__file__).parent / 'templates' / 'pabasa_app' / 'prescribed_picture_word_matching_page.html'
+        generic_source = generic_template.read_text(encoding='utf-8')
+        self.assertNotIn('lesson-16-gawain-3', generic_source)
+        self.assertNotIn('lesson16Gawain3', generic_source)
+        script_path = Path(finders.find('pabasa_app/js/lesson_16_gawain_3.js'))
+        script = script_path.read_text(encoding='utf-8')
+        self.assertIn('00_activity_intro.mp3', script)
+        self.assertIn('16_feedback_completion.mp3', script)
+        self.assertIn("window.addEventListener('lesson-start-ready', startOrResume)", script)
+        self.assertNotIn('activityStart', script)
+        self.assertIn('aria-label="Larawan ${i+1}"', script)
+        self.assertIn("i === current ? 'is-current'", script)
+        started = self.client.post(reverse('prescribed_activity_progress', kwargs={'activity_key': 'lesson-16-gawain-3'}),
+                                   data=json.dumps({'action': 'start'}), content_type='application/json')
+        self.assertEqual(started.json()['screen']['current_word'], 'sanga')
+        self.assertTrue(started.json()['screen']['oral_image_url'].endswith('/sanga.png'))
 
-    def test_gawain_3_validates_matches_and_restores_partial_progress(self):
+    def test_gawain_3_rejects_client_oral_index_and_requires_signed_one_use_proof(self):
         self.login_student()
-        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': 'lesson-16-gawain-3'})
-        complete_url = reverse('prescribed_activity_complete', kwargs={'activity_key': 'lesson-16-gawain-3'})
-        blocked = self.client.post(progress_url, data=json.dumps({
-            'matches': {}, 'candidate_match': {'target_id': 'picture-1', 'word': 'panga'},
-            'state': {'match_attempts': 1, 'state_version': 1},
+        key = 'lesson-16-gawain-3'
+        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
+        start = self.client.post(progress_url, data=json.dumps({'action': 'start'}), content_type='application/json')
+        self.assertEqual(start.status_code, 200)
+        self.assertEqual(start.json()['progress']['state']['oral_index'], 0)
+        forged_progress = self.client.post(progress_url, data=json.dumps({
+            'state': {'phase': 'matching', 'oral_index': 5, 'oral_verified_count': 5},
         }), content_type='application/json')
-        self.assertEqual(blocked.status_code, 400)
-        oral = self.client.post(progress_url, data=json.dumps({
-            'matches': {}, 'state': {'phase': 'matching', 'oral_index': 5, 'stt_attempts': {}, 'tts_plays': {}, 'state_version': 2},
+        self.assertEqual(forged_progress.status_code, 400)
+        row = StudentActivityProgress.objects.get(student=self.student, activity_key=key)
+        nonce = uuid.uuid4().hex
+        row.state['pending_reading_nonce'] = nonce
+        row.save(update_fields=['state', 'updated_at'])
+        wrong_item = signing.dumps({'student': self.student.pk, 'activity': key, 'progress': row.pk,
+                                   'item': 1, 'nonce': nonce}, salt='lesson16-gawain3-reading')
+        self.assertEqual(self.client.post(progress_url, data=json.dumps({
+            'action': 'advance_oral', 'verification_token': wrong_item,
+        }), content_type='application/json').status_code, 400)
+        token = signing.dumps({'student': self.student.pk, 'activity': key, 'progress': row.pk, 'item': 0, 'nonce': nonce}, salt='lesson16-gawain3-reading')
+        forged = self.client.post(progress_url, data=json.dumps({
+            'action': 'advance_oral', 'verification_token': token + 'forged',
         }), content_type='application/json')
-        self.assertEqual(oral.status_code, 200)
-        self.assertEqual(oral.json()['progress']['state']['phase'], 'intro')
-        self.assertEqual(oral.json()['progress']['state']['oral_verified_count'], 0)
-        for oral_index in range(1, 6):
-            advanced = self.client.post(progress_url, data=json.dumps({
-                'matches': {},
-                'state': {
-                    'phase': 'matching' if oral_index == 5 else 'oral_reading',
-                    'oral_index': oral_index,
-                    'oral_verified_count': oral_index - 1,
-                    'state_version': 2 + oral_index,
-                },
-            }), content_type='application/json')
-            self.assertEqual(advanced.status_code, 200)
-        incorrect = self.client.post(progress_url, data=json.dumps({
-            'matches': {}, 'candidate_match': {'target_id': 'picture-1', 'word': 'panga'},
-            'state': {'phase': 'matching', 'oral_index': 5, 'oral_verified_count': 5, 'state_version': 8},
-        }), content_type='application/json')
-        self.assertEqual(incorrect.status_code, 200)
-        self.assertFalse(incorrect.json()['accepted'])
-        self.assertEqual(incorrect.json()['progress']['completed_items'], 0)
+        self.assertEqual(forged.status_code, 400)
+        advance = self.client.post(progress_url, data=json.dumps({'action': 'advance_oral', 'verification_token': token}), content_type='application/json')
+        self.assertEqual(advance.status_code, 200)
+        self.assertEqual(advance.json()['progress']['state']['oral_index'], 1)
+        replay = self.client.post(progress_url, data=json.dumps({'action': 'advance_oral', 'verification_token': token}), content_type='application/json')
+        self.assertEqual(replay.status_code, 400)
 
-        correct = self.client.post(progress_url, data=json.dumps({
-            'matches': {}, 'candidate_match': {'target_id': 'picture-4', 'word': 'panga'},
-            'state': {'phase': 'matching', 'oral_index': 5, 'oral_verified_count': 5, 'match_attempts': 2, 'state_version': 9},
+    def test_gawain_3_rejects_expired_reading_verification(self):
+        class ExpiredSigner(signing.TimestampSigner):
+            def timestamp(self):
+                return '1'
+
+        self.login_student()
+        key = 'lesson-16-gawain-3'
+        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
+        self.client.post(progress_url, data=json.dumps({'action': 'start'}), content_type='application/json')
+        row = StudentActivityProgress.objects.get(student=self.student, activity_key=key)
+        nonce = uuid.uuid4().hex
+        row.state['pending_reading_nonce'] = nonce
+        row.save(update_fields=['state', 'updated_at'])
+        with patch('django.core.signing.time.time', return_value=1):
+            token = signing.dumps({'student': self.student.pk, 'activity': key, 'progress': row.pk,
+                                   'item': 0, 'nonce': nonce}, salt='lesson16-gawain3-reading')
+        expired = self.client.post(progress_url, data=json.dumps({
+            'action': 'advance_oral', 'verification_token': token,
         }), content_type='application/json')
+        self.assertEqual(expired.status_code, 400)
+        row.refresh_from_db()
+        self.assertEqual(row.state['oral_index'], 0)
+
+    @patch('pabasa_app.views.analyze_reading', return_value={'complete': False})
+    @patch('pabasa_app.views.transcribe_audio_bytes_with_model', return_value=('sanganga', 'chirp_3', None))
+    @patch('pabasa_app.views.uses_knowlez_stt', return_value=False)
+    @patch('pabasa_app.views._local_api_key_stt_fallback', return_value=False)
+    def test_gawain_3_rejects_substring_transcript_without_authoritative_completion(self, *_mocks):
+        self.login_student()
+        key = 'lesson-16-gawain-3'
+        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
+        self.client.post(progress_url, data=json.dumps({'action': 'start'}), content_type='application/json')
+        response = self.client.post(reverse('reading_transcribe_api'), {
+            'audio': SimpleUploadedFile('reading.webm', b'voice', content_type='audio/webm'),
+            'target_text': 'sanga', 'language': 'Filipino', 'mode': 'reading',
+            'prescribed_activity_key': key,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()['complete'])
+        self.assertNotIn('verification_token', response.json())
+        row = StudentActivityProgress.objects.get(student=self.student, activity_key=key)
+        self.assertEqual(row.state['oral_index'], 0)
+
+    @patch('pabasa_app.views.analyze_reading', return_value={'complete': True})
+    @patch('pabasa_app.views.transcribe_audio_bytes_with_model', return_value=('sanga', 'chirp_3', None))
+    @patch('pabasa_app.views.uses_knowlez_stt', return_value=False)
+    @patch('pabasa_app.views._local_api_key_stt_fallback', return_value=False)
+    def test_gawain_3_issues_attempt_bound_verification_token_from_authoritative_result(self, *_mocks):
+        self.login_student()
+        key = 'lesson-16-gawain-3'
+        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
+        self.client.post(progress_url, data=json.dumps({'action': 'start'}), content_type='application/json')
+        response = self.client.post(reverse('reading_transcribe_api'), {
+            'audio': SimpleUploadedFile('reading.webm', b'voice', content_type='audio/webm'),
+            'target_text': 'sanga', 'language': 'Filipino', 'mode': 'reading',
+            'prescribed_activity_key': key,
+        })
+        self.assertEqual(response.status_code, 200)
+        token = response.json()['verification_token']
+        proof = signing.loads(token, salt='lesson16-gawain3-reading', max_age=300)
+        row = StudentActivityProgress.objects.get(student=self.student, activity_key=key)
+        self.assertEqual(proof['student'], self.student.pk)
+        self.assertEqual(proof['progress'], row.pk)
+        self.assertEqual(proof['item'], 0)
+        self.assertEqual(proof['nonce'], row.state['pending_reading_nonce'])
+        advanced = self.client.post(progress_url, data=json.dumps({'action': 'advance_oral', 'verification_token': token}), content_type='application/json')
+        self.assertEqual(advanced.status_code, 200)
+        self.assertEqual(advanced.json()['progress']['state']['oral_index'], 1)
+
+    def test_gawain_3_matching_is_server_checked_persisted_and_completion_is_authoritative(self):
+        self.login_student()
+        key = 'lesson-16-gawain-3'
+        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
+        complete_url = reverse('prescribed_activity_complete', kwargs={'activity_key': key})
+        started = self.client.post(progress_url, data=json.dumps({'action': 'start'}), content_type='application/json').json()
+        row = StudentActivityProgress.objects.get(student=self.student, activity_key=key)
+        order = list(row.state['picture_order'])
+        row.state.update({'oral_index': 5, 'oral_verified_count': 5, 'phase': 'matching'})
+        row.save(update_fields=['state', 'updated_at'])
+        wrong = self.client.post(progress_url, data=json.dumps({'action': 'match_picture', 'picture_id': 'picture-1'}), content_type='application/json')
+        self.assertEqual(wrong.status_code, 200)
+        self.assertFalse(wrong.json()['accepted'])
+        correct_picture_id = next(item['id'] for item in prescribed_activity(key)['items'] if item['word'] == 'panga')
+        correct_id = next(token for token, picture_id in row.state['choice_tokens'].items() if picture_id == correct_picture_id)
+        correct = self.client.post(progress_url, data=json.dumps({'action': 'match_picture', 'picture_id': correct_id}), content_type='application/json')
         self.assertEqual(correct.status_code, 200)
         self.assertTrue(correct.json()['accepted'])
-        self.assertEqual(correct.json()['progress']['matches'], {'picture-4': 'panga'})
-        saved = StudentActivityProgress.objects.get(student=self.student, activity_key='lesson-16-gawain-3')
-        self.assertEqual(saved.completed_items, 1)
-        self.assertEqual(saved.state['matches'], {'picture-4': 'panga'})
-
-        page = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': 'lesson-16-gawain-3'}))
-        self.assertEqual(page.context['prescribed_activity_data']['progress']['matches'], {'picture-4': 'panga'})
-        rejected = self.client.post(complete_url, data=json.dumps({'matches': {'picture-4': 'panga'}}), content_type='application/json')
-        self.assertEqual(rejected.status_code, 400)
-
-        completed = self.client.post(complete_url, data=json.dumps({'matches': {
-            'picture-1': 'sanga', 'picture-2': 'goma', 'picture-3': 'bunga',
-            'picture-4': 'panga', 'picture-5': 'gamot',
-        }}), content_type='application/json')
+        self.assertNotIn('matches', correct.json()['progress'])
+        self.assertNotIn(correct_id, correct.json()['progress']['state'].get('matched_picture_ids', []))
+        self.assertNotIn(correct_picture_id, json.dumps(correct.json()))
+        self.assertEqual(correct.json()['progress']['state']['matching_index'], 1)
+        row.refresh_from_db()
+        self.assertEqual(row.state['picture_order'], order)
+        self.assertEqual(row.state['matching_index'], 1)
+        row.state['matching_index'] = 0
+        row.save(update_fields=['state', 'updated_at'])
+        restored = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': key}))
+        restored_data = restored.context['prescribed_activity_data']
+        self.assertEqual(restored_data['progress']['state']['matching_index'], 1)
+        self.assertEqual(restored_data['screen']['current_word'], 'gamot')
+        self.assertEqual([choice['id'] for choice in restored_data['screen']['picture_choices']],
+                         [token for token, picture_id in row.state['choice_tokens'].items()
+                          if picture_id in order and picture_id != correct_picture_id])
+        incomplete = self.client.post(complete_url, data='{}', content_type='application/json')
+        self.assertEqual(incomplete.status_code, 400)
+        row.state.update({
+            'oral_index': 5, 'oral_verified_count': 5, 'phase': 'matching',
+            'matching_index': 0, 'matched_picture_ids': [item['id'] for item in prescribed_activity(key)['items']],
+        })
+        row.save(update_fields=['state', 'updated_at'])
+        completed = self.client.post(complete_url, data='{}', content_type='application/json')
         self.assertEqual(completed.status_code, 200)
-        saved.refresh_from_db()
-        self.assertTrue(saved.activity_completed)
-        self.assertEqual(saved.correct_items, 5)
+        row.refresh_from_db()
+        self.assertTrue(row.activity_completed)
+        reset = self.client.post(progress_url, data=json.dumps({'reset': True}), content_type='application/json')
+        self.assertEqual(reset.status_code, 200)
+        row = StudentActivityProgress.objects.get(student=self.student, activity_key=key)
+        self.assertEqual(row.state['matching_index'], 0)
+        self.assertEqual(row.state['oral_index'], 0)
+
+    def test_gawain_3_restart_rotates_picture_order_and_invalidates_old_read_token(self):
+        self.login_student()
+        key = 'lesson-16-gawain-3'
+        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
+        shuffle_round = [0]
+        def shuffle_for_attempt(values):
+            if shuffle_round[0] == 0:
+                values[:] = values[1:] + values[:1]
+            else:
+                values.reverse()
+            shuffle_round[0] += 1
+        with patch('pabasa_app.views.random.shuffle', side_effect=shuffle_for_attempt):
+            self.client.post(progress_url, data=json.dumps({'action': 'start'}), content_type='application/json')
+            row = StudentActivityProgress.objects.get(student=self.student, activity_key=key)
+            first_order = list(row.state['picture_order'])
+            nonce = uuid.uuid4().hex
+            row.state['pending_reading_nonce'] = nonce
+            row.save(update_fields=['state', 'updated_at'])
+            stale = signing.dumps({'student': self.student.pk, 'activity': key, 'progress': row.pk,
+                                   'item': 0, 'nonce': nonce}, salt='lesson16-gawain3-reading')
+            reset = self.client.post(progress_url, data=json.dumps({'reset': True}), content_type='application/json')
+            self.assertEqual(reset.status_code, 200)
+            row = StudentActivityProgress.objects.get(student=self.student, activity_key=key)
+            self.assertNotEqual(row.state['picture_order'], first_order)
+            rejected = self.client.post(progress_url, data=json.dumps({'action': 'advance_oral', 'verification_token': stale}), content_type='application/json')
+            self.assertEqual(rejected.status_code, 400)
+
+    def test_gawain_3_layout_uses_scoped_non_scrolling_responsive_shell(self):
+        css_path = Path(finders.find('pabasa_app/css/lesson_16_gawain_3.css'))
+        css = css_path.read_text(encoding='utf-8')
+        self.assertIn('body.l16g3-page', css)
+        self.assertIn('@media(max-width:850px)', css)
+        self.assertIn('@media(max-width:560px)', css)
+        self.assertIn('max-width:calc(100vw - 190px)', css)
+        self.assertNotIn('overflow:auto', css)
+        self.assertNotRegex(css, r'\.l16g3-card\s*\{[^}]*overflow\s*:')
+
+    def test_gawain_3_uses_required_serial_audio_order_and_picture_only_controls(self):
+        script = Path(finders.find('pabasa_app/js/lesson_16_gawain_3.js')).read_text(encoding='utf-8')
+        for filename in (
+            '00_activity_intro.mp3', '01_item_01_sanga_match_prompt.mp3',
+            '03_item_02_goma_match_prompt.mp3', '05_item_03_bunga_match_prompt.mp3',
+            '07_item_04_panga_match_prompt.mp3', '09_item_05_gamot_match_prompt.mp3',
+            '02_item_01_sanga_word.mp3', '04_item_02_goma_word.mp3',
+            '06_item_03_bunga_word.mp3', '08_item_04_panga_word.mp3',
+            '10_item_05_gamot_word.mp3', '11_feedback_reading_correct.mp3',
+            '12_feedback_reading_retry.mp3', '13_matching_start_prompt.mp3',
+            '14_feedback_matching_correct.mp3', '15_feedback_matching_retry.mp3',
+            '16_feedback_completion.mp3',
+        ):
+            self.assertIn(filename, script)
+        self.assertIn("[audioBase+'00_activity_intro.mp3',audioBase+readPrompts[0]]", script)
+        self.assertIn("[audioBase+'12_feedback_reading_retry.mp3',retryCue,audioBase+wordAudio[", script)
+        self.assertIn("[audioBase+'11_feedback_reading_correct.mp3',audioBase+readPrompts[next]]", script)
+
+    def test_gawain_3_cancels_stale_work_and_keeps_correct_choice_until_feedback_ends(self):
+        script = Path(finders.find('pabasa_app/js/lesson_16_gawain_3.js')).read_text(encoding='utf-8')
+        self.assertIn('controller?.abort()', script)
+        self.assertIn('stream?.getTracks().forEach(track => track.stop())', script)
+        self.assertIn('window.Basahin?.cancelAll?.()', script)
+        self.assertIn("controller?.signal", script)
+        self.assertIn("signal:controller.signal", script)
+        self.assertIn("event.detail?.reason === 'pause'", script)
+        self.assertIn("event.detail?.reason === 'restart'", script)
+        self.assertIn('if (gen !== generation) return;', script)
+        self.assertIn("button?.classList.add('is-correct')", script)
+        self.assertLess(script.index("button?.classList.add('is-correct')"),
+                        script.index("await play(audioBase+'14_feedback_matching_correct.mp3',gen)"))
+        feedback_after_correct = script.index("await play(audioBase+'14_feedback_matching_correct.mp3',gen)",
+                                              script.index("button?.classList.add('is-correct')"))
+        next_render = script.index('render();', feedback_after_correct)
+        self.assertLess(feedback_after_correct, next_render)
+        self.assertIn("await play(audioBase+'13_matching_start_prompt.mp3',gen)", script)
+        matching = script.split('async function submitPicture', 1)[1].split('async function finishCompletion', 1)[0]
+        self.assertNotIn('readPrompts', matching)
+        self.assertIn('aria-label="Larawan ${i+1}"', script)
+        self.assertIn('alt="" aria-hidden="true"', script)
+        self.assertIn("role=\"status\" aria-live=\"polite\"", script)
 
     def test_lesson_17_18_gawain_5_requires_saved_oral_reading_before_matching(self):
         self.login_student()
@@ -390,7 +627,7 @@ class PrescribedLesson16ActivityTests(TestCase):
         scenarios = {
             'lesson-16-gawain-1': ('prescribed_missing_syllable_page.html', 'oral'),
             'lesson-16-gawain-2': ('prescribed_missing_syllable_page.html', 'oral'),
-            'lesson-16-gawain-3': ('prescribed_picture_word_matching_page.html', 'oral_reading'),
+            'lesson-16-gawain-3': ('lesson_16_gawain_3_page.html', 'oral_reading'),
             'lesson-17-18-gawain-5': ('prescribed_picture_syllable_matching_page.html', 'oral_reading'),
         }
         for key, (template, first_phase) in scenarios.items():
@@ -401,10 +638,11 @@ class PrescribedLesson16ActivityTests(TestCase):
                 payload = response.context['prescribed_activity_data']
                 self.assertTrue(payload['intro_enabled'])
                 self.assertEqual(payload['progress']['state']['phase'], 'intro')
-                self.assertContains(response, 'SIMULAN')
                 self.assertContains(response, 'session6_intro_modal.js')
                 self.assertContains(response, 'session6-modal-handoff-1')
-                self.assertContains(response, 'lesson-start-ready')
+                if key != 'lesson-16-gawain-3':
+                    self.assertContains(response, 'SIMULAN')
+                    self.assertContains(response, 'lesson-start-ready')
                 if key == 'lesson-16-gawain-1':
                     self.assertContains(response, '04_item_01_gumamela_missing_syllable_prompt.mp3')
                     self.assertContains(response, 'const audioKey = itemAudio?.word;')
@@ -414,11 +652,9 @@ class PrescribedLesson16ActivityTests(TestCase):
                     self.assertContains(response, 'const audioKey = itemAudio?.word;')
                     self.assertNotContains(response, 'const audioKey = itemAudio?.prompt;')
                 elif key == 'lesson-16-gawain-3':
-                    self.assertContains(response, '01_item_01_sanga_match_prompt.mp3')
-                    self.assertContains(response, 'lesson16Gawain3Items[oralIndex]?.word')
-                    self.assertContains(response, 'lesson16Gawain3Audio.matchingStart')
-                    self.assertContains(response, 'matchingItemPrompt(targetId)')
-                    self.assertNotContains(response, 'lesson16Gawain3Items[oralIndex]?.prompt); return;')
+                    self.assertContains(response, 'lesson_16_gawain_3.js')
+                    self.assertContains(response, 'session6_intro_modal.js')
+                    self.assertNotContains(response, 'activityStart')
 
                 progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
                 state = (
@@ -431,6 +667,8 @@ class PrescribedLesson16ActivityTests(TestCase):
                     body['answers'] = []
                 else:
                     body['matches'] = {}
+                if key == 'lesson-16-gawain-3':
+                    body = {'action': 'start'}
                 started = self.client.post(progress_url, data=json.dumps(body), content_type='application/json')
                 self.assertEqual(started.status_code, 200)
                 self.assertEqual(started.json()['progress']['state']['phase'], first_phase)
@@ -438,8 +676,7 @@ class PrescribedLesson16ActivityTests(TestCase):
     def test_remaining_session6_intro_resumes_reset_and_stays_out_of_completed_state(self):
         self.login_student()
         keys = (
-            'lesson-16-gawain-1', 'lesson-16-gawain-2',
-            'lesson-16-gawain-3', 'lesson-17-18-gawain-5',
+            'lesson-16-gawain-1', 'lesson-16-gawain-2', 'lesson-17-18-gawain-5',
         )
         for key in keys:
             with self.subTest(activity_key=key):

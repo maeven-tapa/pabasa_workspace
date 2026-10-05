@@ -13727,6 +13727,94 @@ def _is_oral_before_matching_activity(activity_key):
     return activity_key in {'lesson-16-gawain-3', 'lesson-17-18-gawain-5'}
 
 
+def _lesson16_gawain3_initial_state(activity, picture_order=None):
+    ids = [item['id'] for item in activity['items']]
+    if isinstance(picture_order, list) and len(picture_order) == len(ids) and set(picture_order) == set(ids):
+        order = list(picture_order)
+    else:
+        random.shuffle(ids)
+        order = ids
+    return {
+        'schema_version': 1, 'started': False, 'phase': 'intro', 'oral_index': 0,
+        'oral_verified_count': 0, 'matching_index': 0,
+        'picture_order': order, 'matched_picture_ids': [],
+        'choice_tokens': {uuid.uuid4().hex: item_id for item_id in order},
+        'stt_attempts': {}, 'match_attempts': 0, 'state_version': 0,
+        'pending_reading_nonce': '',
+    }
+
+
+def _lesson16_gawain3_state(activity, raw_state):
+    raw = raw_state if isinstance(raw_state, dict) else {}
+    # Old client-authored oral counts are not proof of reading. Preserve only
+    # the server-validated picture work from the former implementation.
+    if raw.get('schema_version') != 1:
+        state = _lesson16_gawain3_initial_state(activity, raw.get('picture_order'))
+        try:
+            legacy_matches = _normalized_prescribed_matches(activity, raw.get('matches') or {})
+        except ValueError:
+            legacy_matches = {}
+        state['matched_picture_ids'] = list(legacy_matches)
+        state['matching_index'] = len(legacy_matches)
+        state['started'] = bool(raw)
+        if len(legacy_matches) == len(activity['items']):
+            state['phase'] = 'matching'
+        return state
+    base = _lesson16_gawain3_initial_state(activity, raw.get('picture_order'))
+    tokens = raw.get('choice_tokens') if isinstance(raw.get('choice_tokens'), dict) else {}
+    if set(tokens.values()) != set(base['picture_order']) or len(tokens) != len(base['picture_order']):
+        tokens = base['choice_tokens']
+    try:
+        oral = max(0, min(len(activity['items']), int(raw.get('oral_verified_count', 0))))
+        matched = raw.get('matched_picture_ids') if isinstance(raw.get('matched_picture_ids'), list) else []
+        matched = list(dict.fromkeys(value for value in matched if value in base['picture_order']))
+        # The list of server-accepted picture IDs is the sole source of truth.
+        match_index = len(matched)
+        attempts = max(0, min(99, int(raw.get('match_attempts') or 0)))
+        version = max(0, min(1_000_000_000, int(raw.get('state_version') or 0)))
+    except (TypeError, ValueError):
+        oral, matched, match_index, attempts, version = 0, [], 0, 0, 0
+    phase = 'matching' if oral == len(activity['items']) else 'oral_reading'
+    if raw.get('phase') == 'intro' and oral == 0 and not matched:
+        phase = 'intro'
+    return {**base, 'schema_version': 1, 'started': bool(raw.get('started')),
+            'phase': phase,
+            'oral_index': oral, 'oral_verified_count': oral,
+            'matching_index': min(len(matched), len(activity['word_bank'])),
+            'matched_picture_ids': matched, 'choice_tokens': tokens, 'match_attempts': attempts,
+            'state_version': version,
+            'stt_attempts': raw.get('stt_attempts') if isinstance(raw.get('stt_attempts'), dict) else {},
+            'pending_reading_nonce': str(raw.get('pending_reading_nonce') or '')}
+
+
+def _lesson16_gawain3_screen(activity, state):
+    by_id = {item['id']: item for item in activity['items']}
+    choices = [by_id[item_id] for item_id in state['picture_order']
+               if item_id not in set(state['matched_picture_ids'])]
+    if state['phase'] == 'oral_reading':
+        current = activity['items'][min(state['oral_index'], len(activity['items']) - 1)]
+        return {'current_word': current['word'], 'oral_image_url': static(current['image_path']), 'picture_choices': []}
+    if state['phase'] == 'matching' and state['matching_index'] < len(activity['word_bank']):
+        target = activity['word_bank'][state['matching_index']]
+        return {'current_word': target, 'oral_image_url': '',
+                'picture_choices': [{'id': next((token for token, picture_id in state['choice_tokens'].items()
+                                                if picture_id == item['id']), ''),
+                                    'image_url': static(item['image_path'])} for item in choices]}
+    return {'current_word': '', 'oral_image_url': '', 'picture_choices': []}
+
+
+def _lesson16_gawain3_progress_json(progress, activity):
+    raw = progress.state if progress and isinstance(progress.state, dict) else {}
+    state = _lesson16_gawain3_state(activity, raw)
+    return {'current_index': progress.current_index if progress else 0,
+            'completed_items': progress.completed_items if progress else len(state['matched_picture_ids']),
+            'correct_items': progress.correct_items if progress else len(state['matched_picture_ids']),
+            'total_items': len(activity['items']),
+            'activity_completed': bool(progress and progress.activity_completed),
+            'state': {key: value for key, value in state.items()
+                      if key not in {'schema_version', 'pending_reading_nonce', 'picture_order', 'matched_picture_ids', 'choice_tokens'}}}
+
+
 def _normalized_oral_picture_match_state(activity, raw_state):
     """Strict, correct-only resume state for Lesson 17 at 18 Gawain 7."""
     raw = raw_state if isinstance(raw_state, dict) else {}
@@ -16244,6 +16332,25 @@ def prescribed_activity_page(request, activity_key):
                          'state': state},
         }
         return render(request, 'pabasa_app/prescribed_oral_picture_word_write_page.html', context)
+    if activity_key == 'lesson-16-gawain-3':
+        state = _lesson16_gawain3_state(activity, raw_state)
+        screen = _lesson16_gawain3_screen(activity, state)
+        context = _dashboard_context(request)
+        context['prescribed_activity_data'] = {
+            'activity_key': activity_key, 'session_key': 'session-6',
+            'lesson_number': 16, 'gawain_number': 3,
+            'title': 'Piliin ang Larawang Katugma ng Salita',
+            'instruction': activity['instruction'], 'intro_enabled': True,
+            # Matching picture tokens are attempt-scoped and opaque. Correct
+            # picture identifiers and the full answer map stay server-side.
+            'picture_choices': screen['picture_choices'], 'screen': screen,
+            'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity_key}),
+            'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity_key}),
+            'transcribe_url': reverse('reading_transcribe_api'),
+            'back_url': reverse('assessment'),
+            'progress': _lesson16_gawain3_progress_json(progress, activity),
+        }
+        return render(request, 'pabasa_app/lesson_16_gawain_3_page.html', context)
     if activity['interaction'] in {'picture_word_match', 'picture_syllable_match'}:
         try:
             matches = _normalized_prescribed_matches(activity, raw_state.get('matches') or {})
@@ -16289,17 +16396,6 @@ def prescribed_activity_page(request, activity_key):
                 'items': [{'id': i['id'], 'label': i['label'], 'alt_text': i['alt_text'], 'image_url': static(i['image_path'])} for i in activity['items']]
             })
             return render(request, 'pabasa_app/prescribed_picture_syllable_matching_page.html', context)
-        if activity_key == 'lesson-16-gawain-3':
-            context['prescribed_activity_data']['intro_enabled'] = True
-            context['prescribed_activity_data']['intro_steps'] = [
-                'Basahin nang malakas ang bawat salita.',
-                'Hanapin ang katumbas na larawan.',
-                'Iugnay ang salita sa larawan.',
-            ]
-            context['prescribed_activity_data']['read_aloud_url'] = reverse('reading_read_aloud_api')
-            context['prescribed_activity_data']['transcribe_url'] = reverse('reading_transcribe_api')
-            for payload_item, source_item in zip(context['prescribed_activity_data']['items'], activity['items']):
-                payload_item['read_word'] = source_item['word']
         return render(request, 'pabasa_app/prescribed_picture_word_matching_page.html', context)
     answers = raw_state.get('answers') if isinstance(raw_state.get('answers'), list) else []
     context = _dashboard_context(request)
@@ -16668,6 +16764,97 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Prescribed activities are not currently available.'}, status=403)
     if not _student_can_open_prescribed_activity(student, activity_key):
         return JsonResponse({'success': False, 'error': 'Complete the previous activity first.'}, status=403)
+    if activity_key == 'lesson-16-gawain-3':
+        try:
+            data = json.loads(request.body or '{}')
+            if not isinstance(data, dict):
+                raise ValueError('Hindi wasto ang kahilingan.')
+            total = len(activity['items'])
+            query = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key)
+            action = data.get('action')
+            accepted = None
+            if data.get('reset') is True:
+                query.delete()
+                state = _lesson16_gawain3_initial_state(activity)
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
+                    'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+                    'total_items': total, 'activity_completed': False, 'state': state,
+                })
+            else:
+                with transaction.atomic():
+                    progress = query.select_for_update().first()
+                    if progress and progress.activity_completed and action != 'start':
+                        raise ValueError('Natapos na ang gawaing ito.')
+                    if action == 'start':
+                        if not progress:
+                            state = _lesson16_gawain3_initial_state(activity)
+                            state['started'] = True
+                            state['phase'] = 'oral_reading'
+                            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
+                                'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+                                'total_items': total, 'activity_completed': False, 'state': state,
+                            })
+                        elif not progress.activity_completed:
+                            state = _lesson16_gawain3_state(activity, progress.state)
+                            if state['phase'] == 'intro': state['phase'] = 'oral_reading'
+                            state['started'] = True
+                            progress.state = state
+                            progress.save(update_fields=['state', 'updated_at'])
+                    elif action == 'advance_oral':
+                        if not progress:
+                            raise ValueError('Hindi pa nasisimulan ang pagbasa.')
+                        token = str(data.get('verification_token') or '')
+                        try:
+                            proof = signing.loads(token, salt='lesson16-gawain3-reading', max_age=300)
+                        except signing.BadSignature:
+                            raise ValueError('Hindi wasto o paso na ang pagpapatunay ng pagbasa. Basahin muli ang salita.')
+                        state = _lesson16_gawain3_state(activity, progress.state)
+                        expected = state['oral_index']
+                        nonce = state.get('pending_reading_nonce')
+                        if (proof.get('student') != student.pk or proof.get('activity') != activity_key
+                                or proof.get('progress') != progress.pk or proof.get('item') != expected
+                                or not nonce or proof.get('nonce') != nonce or state['phase'] != 'oral_reading'):
+                            raise ValueError('Hindi wasto, nagamit na, o wala sa ayos ang pagpapatunay. Basahin muli ang salita.')
+                        state['oral_verified_count'] = expected + 1
+                        state['oral_index'] = expected + 1
+                        state['pending_reading_nonce'] = ''
+                        state['state_version'] += 1
+                        state['phase'] = 'matching' if state['oral_index'] == total else 'oral_reading'
+                        progress.state = state
+                        progress.current_index = state['oral_index']
+                        progress.save(update_fields=['state', 'current_index', 'updated_at'])
+                    elif action == 'match_picture':
+                        if not progress:
+                            raise ValueError('Hindi pa nasisimulan ang pagtutugma.')
+                        state = _lesson16_gawain3_state(activity, progress.state)
+                        if state['phase'] != 'matching' or state['oral_verified_count'] != total:
+                            raise ValueError('Basahin muna ang lahat ng salita bago pumili ng larawan.')
+                        if state['matching_index'] >= len(activity['word_bank']):
+                            raise ValueError('Natapos na ang pagtutugma.')
+                        picture_token = str(data.get('picture_id') or '')
+                        picture_id = state['choice_tokens'].get(picture_token, '')
+                        picture = next((item for item in activity['items'] if item['id'] == picture_id), None)
+                        expected_word = activity['word_bank'][state['matching_index']]
+                        accepted = bool(picture and picture['word'] == expected_word
+                                        and picture_id not in state['matched_picture_ids'])
+                        state['match_attempts'] += 1
+                        if accepted:
+                            state['matched_picture_ids'].append(picture_id)
+                            state['matching_index'] += 1
+                        state['state_version'] += 1
+                        progress.state = state
+                        progress.completed_items = state['matching_index']
+                        progress.correct_items = state['matching_index']
+                        progress.current_index = state['matching_index']
+                        progress.save(update_fields=['state', 'completed_items', 'correct_items', 'current_index', 'updated_at'])
+                    else:
+                        raise ValueError('Hindi wasto ang hakbang sa gawain.')
+            state = _lesson16_gawain3_state(activity, progress.state)
+            screen = _lesson16_gawain3_screen(activity, state)
+            return JsonResponse({'success': True, 'accepted': accepted if action == 'match_picture' else None,
+                                 'progress': _lesson16_gawain3_progress_json(progress, activity), 'screen': screen})
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity_key == 'session-4-gawain-5':
         try:
             data = json.loads(request.body or '{}')
@@ -16971,7 +17158,7 @@ def prescribed_activity_progress(request, activity_key):
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity_key in {
-        'lesson-16-gawain-1', 'lesson-16-gawain-2', 'lesson-16-gawain-3',
+        'lesson-16-gawain-1', 'lesson-16-gawain-2',
         'session-6-lesson-16-gawain-4', 'lesson-17-18-gawain-5',
         'lesson-17-18-gawain-6', 'lesson-17-18-gawain-7',
         'lesson-17-18-gawain-8', 'lesson-17-18-gawain-9',
@@ -16987,7 +17174,7 @@ def prescribed_activity_progress(request, activity_key):
                 reset_state = _normalized_prescribed_state(
                     activity, {'phase': 'intro'}, 0, allow_intro=True,
                 )
-            elif activity_key in {'lesson-16-gawain-3', 'lesson-17-18-gawain-5'}:
+            elif activity_key == 'lesson-17-18-gawain-5':
                 reset_state = _normalized_oral_matching_state(
                     activity, {'phase': 'intro'}, allow_intro=True,
                 )
@@ -19768,6 +19955,22 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Prescribed activities are not currently available.'}, status=403)
     if not _student_can_open_prescribed_activity(student, activity_key):
         return JsonResponse({'success': False, 'error': 'Complete the previous activity first.'}, status=403)
+    if activity_key == 'lesson-16-gawain-3':
+        progress = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
+        state = _lesson16_gawain3_state(activity, progress.state if progress else {})
+        total = len(activity['items'])
+        if (not progress or state['oral_verified_count'] != total
+                or state['phase'] != 'matching' or state['matching_index'] != total):
+            return JsonResponse({'success': False, 'error': 'Kumpletuhin muna nang tama ang lahat ng pagbasa at pagtutugma.'}, status=400)
+        state['phase'] = 'complete'
+        state['pending_reading_nonce'] = ''
+        state['state_version'] += 1
+        progress.current_index = progress.completed_items = progress.correct_items = total
+        progress.total_items = total
+        progress.activity_completed = True
+        progress.state = state
+        progress.save(update_fields=['current_index', 'completed_items', 'correct_items', 'total_items', 'activity_completed', 'state', 'updated_at'])
+        return JsonResponse({'success': True, 'result': {'items_completed': total, 'correct_items': total, 'accuracy': 100.0}})
     if activity_key == 'lesson-13-gawain-2':
         existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         total = len(activity['items'])
@@ -23936,6 +24139,24 @@ def reading_transcribe_api(request):
     if not target_text:
         return JsonResponse({'success': False, 'error': 'Reading text is required.'}, status=400)
 
+    g3_reading_context = None
+    if request.POST.get('prescribed_activity_key') == 'lesson-16-gawain-3':
+        student = _active_prescribed_student(request)
+        if not student:
+            return JsonResponse({'success': False, 'error': 'Hindi pinahintulutan ang pagbasa.'}, status=403)
+        lifecycle = _current_learning_context(student)
+        activity = prescribed_activity('lesson-16-gawain-3')
+        progress = _current_progress_queryset(student, lifecycle).filter(activity_key='lesson-16-gawain-3').first()
+        state = _lesson16_gawain3_state(activity, progress.state if progress else {})
+        if (not progress or progress.activity_completed or state['phase'] != 'oral_reading'
+                or language_code_for(request.POST.get('language', ''), request.POST.get('mode', '')) != 'fil-PH'
+                or str(request.POST.get('mode') or '').strip().lower() != 'reading'):
+            return JsonResponse({'success': False, 'error': 'Wala sa kasalukuyang salita ang pagbasa. Ipagpatuloy muna ang gawain.'}, status=400)
+        expected_word = activity['items'][state['oral_index']]['word']
+        if ReadingMatcher.normalize_spoken_words(target_text) != ReadingMatcher.normalize_spoken_words(expected_word):
+            return JsonResponse({'success': False, 'error': 'Hindi tugma ang target sa kasalukuyang salita.'}, status=400)
+        g3_reading_context = (student, lifecycle, progress.pk, state['oral_index'])
+
     try:
         current_syllable_index = int(request.POST.get('current_syllable_index') or 0)
     except (TypeError, ValueError):
@@ -24214,6 +24435,23 @@ def reading_transcribe_api(request):
             'stt_fallback_reason': fallback_reason,
             **stt_word_metadata(words, model_used),
         })
+        if g3_reading_context and analysis.get('complete') is True:
+            student, lifecycle, progress_id, item_index = g3_reading_context
+            nonce = uuid.uuid4().hex
+            with transaction.atomic():
+                progress = _current_progress_queryset(student, lifecycle).select_for_update().filter(
+                    activity_key='lesson-16-gawain-3', pk=progress_id,
+                ).first()
+                if progress:
+                    state = _lesson16_gawain3_state(prescribed_activity('lesson-16-gawain-3'), progress.state)
+                    if state['phase'] == 'oral_reading' and state['oral_index'] == item_index:
+                        state['pending_reading_nonce'] = nonce
+                        progress.state = state
+                        progress.save(update_fields=['state', 'updated_at'])
+                        analysis['verification_token'] = signing.dumps({
+                            'student': student.pk, 'activity': 'lesson-16-gawain-3',
+                            'progress': progress.pk, 'item': item_index, 'nonce': nonce,
+                        }, salt='lesson16-gawain3-reading')
         logger.warning(
             "FREE_MODE_STT_DIAGNOSTIC final_json raw_transcript=%r transcript=%r",
             analysis.get('raw_transcript'),

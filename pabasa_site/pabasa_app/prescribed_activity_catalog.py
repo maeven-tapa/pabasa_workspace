@@ -831,9 +831,9 @@ PRESCRIBED_ACTIVITIES = {
         'session_key': 'session-6', 'session_number': 6,
         'lesson_number': 16,
         'gawain_number': 3,
-        'title': 'Ikabit ang Wastong Salita',
-        'description': 'Ikabit ang bawat larawan sa wastong salita.',
-        'instruction': 'Ikabit ang wastong salita para sa mga larawan.',
+        'title': 'Piliin ang Larawang Katugma ng Salita',
+        'description': 'Basahin nang malakas ang salita, pagkatapos piliin ang katugmang larawan.',
+        'instruction': 'Tingnan ang larawan at basahin nang malakas ang salita.',
         'interaction': 'picture_word_match', 'total_items': 5,
         'thumbnail': 'pabasa_app/images/lesson_16/sanga.png',
         # The word-bank order follows the numbered workbook list.  The image

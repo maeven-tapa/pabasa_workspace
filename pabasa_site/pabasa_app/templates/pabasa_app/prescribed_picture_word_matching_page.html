@@ -6,22 +6,10 @@
   <title>Pag-uugnay ng Salita at Larawan | PABASA</title>
   <style>
     :root{--ink:#16465d;--blue:#1f6f8b;--gold:#e6a33a;--paper:#fffdf7;--line:#bfdde4;--success:#2d8b78;--error:#a63b3b}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(135deg,#e1f5f7,#fff3d8);color:var(--ink);font-family:Nunito,"Segoe UI",sans-serif}.page{width:min(1040px,calc(100% - 28px));margin:auto;padding:20px 0 38px}.back{display:inline-flex;padding:11px 15px;border:2px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);font-weight:900;text-decoration:none}.card{margin-top:18px;padding:clamp(22px,5vw,42px);border-radius:30px;background:var(--paper);box-shadow:0 20px 54px #2d697326;text-align:center}.eyebrow{margin:0;color:#997124;font-size:.78rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.card h1{margin:.3rem 0 .65rem;font-size:clamp(2rem,5vw,3.2rem);line-height:1.05}.instruction{margin:0 auto 18px;max-width:660px;color:#526e78;font-size:1.08rem;font-weight:700;line-height:1.45}.count{font-weight:900}.track{height:12px;margin:12px auto 26px;max-width:760px;overflow:hidden;border-radius:999px;background:#dcebed}.track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--gold),#f6cb55)}.matching-board{display:grid;grid-template-columns:minmax(180px,.72fr) minmax(280px,1.35fr);gap:clamp(18px,4vw,54px);align-items:start;max-width:900px;margin:auto;text-align:left}.board-heading{margin:0 0 10px;font-size:.88rem;font-weight:1000;letter-spacing:.06em;text-transform:uppercase}.word-bank,.picture-list{display:grid;gap:11px}.word,.picture{font:inherit;font-weight:900}.word{min-height:58px;border:2px solid var(--line);border-radius:15px;background:#fff;color:var(--ink);font-size:1.2rem;cursor:grab}.word:hover,.word:focus-visible,.word.is-selected{border-color:var(--blue);outline:3px solid #d7eff4}.word.is-selected{background:#edf9fb}.word.is-used{opacity:.48;cursor:not-allowed;text-decoration:line-through}.picture{display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:center;min-height:116px;padding:10px;border:2px dashed var(--line);border-radius:18px;background:#fff;cursor:pointer}.picture:hover,.picture:focus-visible{border-color:var(--blue);outline:3px solid #d7eff4}.picture.is-matched{border-style:solid;border-color:#8dcdbd;background:#effbf3;cursor:default}.image-frame{position:relative;display:grid;place-items:center;width:110px;height:92px;border-radius:12px;background:#edf6f4;overflow:hidden}.image-frame img{display:block;width:100%;height:100%;object-fit:contain}.image-placeholder{display:none;padding:10px;color:#526e78;font-size:.78rem;font-weight:900;line-height:1.25;text-align:center}.image-frame.is-placeholder img{display:none}.image-frame.is-placeholder .image-placeholder{display:block}.picture-status{font-size:1.05rem}.picture-status small{display:block;margin-top:4px;color:#526e78;font-size:.8rem;font-weight:800}.picture.is-matched .picture-status{color:var(--success)}.hint{min-height:1.5em;margin:19px 0 0;color:#526e78;font-weight:800}.hint.error{color:var(--error)}.complete{padding:18px}.complete .star{font-size:3rem}.score{margin:18px auto;padding:14px;border:2px solid #c9e2d3;border-radius:16px;max-width:340px;background:#effbf3;font-weight:900}.button{display:inline-flex;justify-content:center;align-items:center;min-height:54px;padding:12px 22px;border:0;border-radius:16px;background:var(--blue);box-shadow:0 5px 0 #155369;color:#fff;font:900 1rem Nunito,"Segoe UI",sans-serif;text-decoration:none;cursor:pointer}@media(max-width:650px){.page{width:calc(100% - 18px);padding-top:10px}.card{border-radius:23px}.matching-board{grid-template-columns:1fr}.picture{grid-template-columns:92px 1fr}.image-frame{width:92px;height:78px}}
-    /* Lesson 16 · Gawain 3 keeps its matching renderer. These rules only
-       apply the standard prescribed visual treatment to that activity. */
-    body.lesson-16-gawain-3-page{min-height:100dvh;height:100dvh;overflow:hidden;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover no-repeat;color:#183e63;font-family:Fredoka,Nunito,"Segoe UI",sans-serif}
-    .lesson-16-gawain-3-page .page{position:relative;display:grid;place-items:center;width:min(1180px,calc(100% - 32px));height:100dvh;margin:auto;padding:16px 0}
-    .lesson-16-gawain-3-page .back{position:absolute;top:16px;left:0;z-index:2;display:inline-flex;align-items:center;justify-content:center;min-height:60px;padding:11px 25px;border:0;border-radius:999px;background:#fffffff0;color:#183e63;font-size:1.06rem;line-height:1.15;text-align:center;box-shadow:0 8px 17px #145ca744}.lesson-16-gawain-3-page .back:hover{background:#fff;transform:translateY(-1px)}
-    .lesson-16-gawain-3-page .card{display:flex;flex-direction:column;justify-content:center;width:100%;max-height:calc(100dvh - 102px);margin:28px 0 0;padding:clamp(16px,2.8vh,30px) clamp(18px,5vw,66px);overflow:hidden;border:2px solid #ffffffaa;border-radius:40px;background:#ffffff63;backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35}
-    .lesson-16-gawain-3-page .eyebrow{width:max-content;max-width:100%;margin:0 auto 8px;padding:7px 21px;border-radius:999px;background:#277f82;color:#fff;font-size:clamp(.7rem,1.1vw,.9rem);letter-spacing:.04em}.lesson-16-gawain-3-page .card h1{margin:0 0 7px;color:#183e63;font-size:clamp(1.7rem,3.2vw,3rem);line-height:1.08;font-weight:900}.lesson-16-gawain-3-page .instruction{margin:0 auto 6px;max-width:760px;color:#456876;font-size:clamp(.9rem,1.35vw,1.1rem);line-height:1.28}.lesson-16-gawain-3-page .count{color:#55727e;font-size:.88rem}.lesson-16-gawain-3-page .track{height:8px;max-width:720px;margin:7px auto 10px;background:#e1eeee}.lesson-16-gawain-3-page .track i{background:linear-gradient(90deg,#299e9a,#72c8d5)}
-    .lesson-16-gawain-3-page .matching-board{grid-template-columns:minmax(145px,.58fr) minmax(270px,1.2fr);gap:clamp(16px,3.5vw,42px);max-width:900px;max-height:calc(100dvh - 278px);margin:0 auto}.lesson-16-gawain-3-page .board-heading{margin:0 0 6px;color:#277f82;font-size:.78rem;letter-spacing:.07em}.lesson-16-gawain-3-page .word-bank,.lesson-16-gawain-3-page .picture-list{gap:7px}.lesson-16-gawain-3-page .word{min-height:47px;border:3px solid #94d9d6;border-radius:999px;background:#fffffff0;color:#187b7a;font-size:clamp(.96rem,1.55vw,1.15rem);box-shadow:0 3px 0 #b7d6dc}.lesson-16-gawain-3-page .word:hover,.lesson-16-gawain-3-page .word:focus-visible,.lesson-16-gawain-3-page .word.is-selected{border-color:#e7af45;background:#fff8e7;outline:0;transform:translateY(-1px)}.lesson-16-gawain-3-page .word.is-used{border-color:#a9ded1;background:#effbf3;color:#2d8b78;box-shadow:none}
-    .lesson-16-gawain-3-page .picture{grid-template-columns:82px 1fr;gap:10px;min-height:61px;padding:5px 9px;border:3px dashed #94d9d6;border-radius:18px;background:#fffffff0}.lesson-16-gawain-3-page .picture:hover,.lesson-16-gawain-3-page .picture:focus-visible{border-color:#e7af45;background:#fff8e7;outline:0}.lesson-16-gawain-3-page .picture.is-matched{border-style:solid;border-color:#8dcdbd;background:#effbf3}.lesson-16-gawain-3-page .image-frame{width:82px;height:55px;border-radius:12px;background:#edf6f4}.lesson-16-gawain-3-page .picture-status{color:#183e63;font-size:clamp(.85rem,1.35vw,1rem);line-height:1.15}.lesson-16-gawain-3-page .picture-status small{margin-top:2px;color:#456876;font-size:.68rem}.lesson-16-gawain-3-page .hint{min-height:1.2em;margin:8px 0 0;color:#456876;font-size:.88rem}.lesson-16-gawain-3-page .hint.error{color:#a63b3b}.lesson-16-gawain-3-page .button{min-height:56px;border-radius:999px;background:#299e9a;box-shadow:0 6px 0 #187b7a,0 10px 20px #187b7a40;font-family:inherit;font-size:1.05rem}.lesson-16-gawain-3-page .complete{padding:0}.lesson-16-gawain-3-page .complete .star{font-size:clamp(2.5rem,6vh,4rem)}.lesson-16-gawain-3-page .score{margin:12px auto;padding:11px 16px;border-color:#a9ded1;border-radius:999px;background:#effbf3}
-    .lesson-16-gawain-3-page .oral-image{display:block;width:min(280px,62vw);height:min(180px,27vh);margin:6px auto;object-fit:contain}.lesson-16-gawain-3-page .oral-word{margin:4px 0 8px;color:#183e63;font-size:clamp(2.4rem,6vw,4.6rem);font-weight:900;letter-spacing:.05em;line-height:1.05}.lesson-16-gawain-3-page .oral-status{min-height:1.3em;margin:8px 0 0;color:#456876;font-weight:900}
-    @media(max-width:680px){.lesson-16-gawain-3-page .page{width:calc(100% - 20px);padding:10px 0}.lesson-16-gawain-3-page .back{top:10px;min-height:50px;padding:9px 18px;font-size:.9rem}.lesson-16-gawain-3-page .card{max-height:calc(100dvh - 76px);margin:22px 0 0;padding:14px 10px;border-radius:28px}.lesson-16-gawain-3-page .eyebrow{margin-bottom:6px;padding:5px 12px}.lesson-16-gawain-3-page .instruction{font-size:.82rem}.lesson-16-gawain-3-page .matching-board{grid-template-columns:minmax(92px,.6fr) minmax(170px,1.2fr);gap:9px;max-height:none}.lesson-16-gawain-3-page .board-heading{font-size:.65rem}.lesson-16-gawain-3-page .word-bank,.lesson-16-gawain-3-page .picture-list{gap:5px}.lesson-16-gawain-3-page .word{min-height:43px;border-width:2px;font-size:.86rem}.lesson-16-gawain-3-page .picture{grid-template-columns:62px 1fr;gap:6px;min-height:51px;padding:4px 5px;border-width:2px;border-radius:14px}.lesson-16-gawain-3-page .image-frame{width:62px;height:43px;border-radius:9px}.lesson-16-gawain-3-page .picture-status{font-size:.72rem}.lesson-16-gawain-3-page .picture-status small{font-size:.57rem}.lesson-16-gawain-3-page .hint{margin-top:6px;font-size:.75rem}}
-    @media(max-height:620px){.lesson-16-gawain-3-page .back{min-height:44px;padding:7px 16px}.lesson-16-gawain-3-page .card{max-height:calc(100dvh - 60px);margin-top:17px;padding:9px 14px}.lesson-16-gawain-3-page .eyebrow{margin-bottom:3px;padding:3px 11px}.lesson-16-gawain-3-page .card h1{font-size:1.4rem}.lesson-16-gawain-3-page .instruction{font-size:.75rem}.lesson-16-gawain-3-page .track{margin:4px auto 5px}.lesson-16-gawain-3-page .matching-board{gap:14px}.lesson-16-gawain-3-page .word-bank,.lesson-16-gawain-3-page .picture-list{gap:4px}.lesson-16-gawain-3-page .word{min-height:37px;font-size:.8rem}.lesson-16-gawain-3-page .picture{min-height:43px;padding:3px 6px}.lesson-16-gawain-3-page .image-frame{height:37px}.lesson-16-gawain-3-page .picture-status{font-size:.73rem}.lesson-16-gawain-3-page .picture-status small{display:none}.lesson-16-gawain-3-page .hint{font-size:.7rem}}
      .activity-intro{display:flex;flex-direction:column;align-items:center;gap:12px}.activity-intro h1{margin:0}.activity-intro .instruction{margin:0}.intro-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:min(760px,100%);margin:4px auto 2px;padding:0;list-style:none;counter-reset:intro-step}.intro-steps li{padding:12px 10px;border:2px solid #94d9d6;border-radius:18px;background:#ffffffe8;color:#456876;font-weight:900;counter-increment:intro-step}.intro-steps li::before{display:block;margin-bottom:4px;color:#e7af45;font-size:1.35rem;content:counter(intro-step)}.intro-preview{display:flex;justify-content:center;gap:10px;width:100%;margin:2px 0}.intro-preview-item{display:grid;place-items:center;gap:4px;width:92px;padding:7px;border:3px solid #94d9d6;border-radius:18px;background:#ffffffe8;color:#187b7a;font-weight:900}.intro-preview-item img{width:64px;height:52px;object-fit:contain}.intro-error{min-height:1.2em;margin:0;color:#a63b3b;font-weight:900}@media(max-width:680px){.intro-steps{grid-template-columns:1fr;gap:6px}.intro-steps li{padding:8px}.intro-steps li::before{display:inline;margin-right:6px}.intro-preview-item{width:76px;padding:5px}.intro-preview-item img{width:52px;height:42px}}
    </style>
 </head>
-<body{% if prescribed_activity_data.activity_key == 'lesson-16-gawain-3' %} class="lesson-16-gawain-3-page"{% endif %}>
+<body>
   <main class="page"><a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a><section id="app" class="card" aria-live="polite"></section></main>
   {{ prescribed_activity_data|json_script:"prescribed-activity-data" }}
   <script>
@@ -37,33 +25,11 @@
     let matches = data.progress?.matches && typeof data.progress.matches === 'object' ? {...data.progress.matches} : {};
      let selectedWord = null, matchAttempts = Math.max(0, Number(restored.match_attempts) || 0);
      const introEnabled = Boolean(data.intro_enabled);
-     let stateVersion = Math.max(0, Number(restored.state_version) || 0), requestVersion = 0, attemptVersion = 0, activeAttemptController = null, activeAttemptSnapshot = null, activeAttemptCommitted = false, matchVersion = 0, activeMatchController = null, activeMatchCommitted = false, busy = false, startedAt = Date.now(), phase = introEnabled && restored.phase === 'intro' && !Object.keys(matches).length ? 'intro' : restored.phase === 'matching' ? 'matching' : 'oral_reading', oralIndex = Math.max(0, Math.min(items.length, Number(restored.oral_index) || 0)), readingAttempts = 0, aloudAttempts = 0, oralMode = 'read', oralStatus = '', stream = null, oralAudio = null, announcedOralIndex = -1, announcedMatching = false, mappedAudioQueue = Promise.resolve();
-     let introInstructionPlayed = false;
+     let stateVersion = Math.max(0, Number(restored.state_version) || 0), requestVersion = 0, attemptVersion = 0, activeAttemptController = null, activeAttemptSnapshot = null, activeAttemptCommitted = false, matchVersion = 0, activeMatchController = null, activeMatchCommitted = false, busy = false, startedAt = Date.now(), phase = restored.phase === 'matching' ? 'matching' : 'oral_reading', oralIndex = Math.max(0, Math.min(items.length, Number(restored.oral_index) || 0)), readingAttempts = 0, aloudAttempts = 0, oralMode = 'read', oralStatus = '', stream = null, oralAudio = null, announcedOralIndex = -1, announcedMatching = false;
     let sttAttempts = restored.stt_attempts && typeof restored.stt_attempts === 'object' ? {...restored.stt_attempts} : {};
     let ttsPlays = restored.tts_plays && typeof restored.tts_plays === 'object' ? {...restored.tts_plays} : {};
     const restoreOralAttempts = () => { readingAttempts = Math.max(0, Number(sttAttempts[String(oralIndex)]) || 0); aloudAttempts = Math.max(0, Number(ttsPlays[String(oralIndex)]) || 0); oralMode = readingAttempts >= 3 ? 'aloud' : 'read'; };
     restoreOralAttempts();
-    const isLesson16Gawain3 = data.activity_key === 'lesson-16-gawain-3';
-    const lesson16Gawain3Audio = {
-      readingCorrect: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/11_feedback_reading_correct.mp3' %}",
-      readingRetry: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/12_feedback_reading_retry.mp3' %}",
-      subTry: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_7/subukan_mong_basahin_salita_tts.mp3' %}",
-      matchingStart: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/13_matching_start_prompt.mp3' %}",
-      matchingCorrect: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/14_feedback_matching_correct.mp3' %}",
-      matchingRetry: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/15_feedback_matching_retry.mp3' %}",
-      completion: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/16_feedback_completion.mp3' %}",
-    };
-     const lesson16Gawain3Items = [
-      {prompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/01_item_01_sanga_match_prompt.mp3' %}", word: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/02_item_01_sanga_word.mp3' %}"},
-      {prompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/03_item_02_goma_match_prompt.mp3' %}", word: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/04_item_02_goma_word.mp3' %}"},
-      {prompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/05_item_03_bunga_match_prompt.mp3' %}", word: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/06_item_03_bunga_word.mp3' %}"},
-      {prompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/07_item_04_panga_match_prompt.mp3' %}", word: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/08_item_04_panga_word.mp3' %}"},
-      {prompt: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/09_item_05_gamot_match_prompt.mp3' %}", word: "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/10_item_05_gamot_word.mp3' %}"},
-    ];
-    // The activity-owned instruction clip is played once after the lesson
-    // modal closes, while the activity intro page is still visible. The
-    // per-item prompt clips are reserved for their corresponding word items.
-    const lesson16IntroAudio = "{% static 'pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_3/00_activity_intro.mp3' %}";
 
     const state = () => ({match_attempts: matchAttempts, phase, oral_index: oralIndex, stt_attempts: sttAttempts, tts_plays: ttsPlays, state_version: ++stateVersion});
     const completed = () => Object.keys(matches).length;
@@ -108,24 +74,11 @@
       if (!response.ok || !result.success || !result.audio_content || result.tts_language !== 'fil-PH' || result.voice_name !== 'fil-PH-Wavenet-A') throw Error(result.error || 'Hindi available ang Filipino audio.');
       if (oralAudio) oralAudio.pause(); oralAudio = new Audio(URL.createObjectURL(new Blob([Uint8Array.from(atob(result.audio_content), char => char.charCodeAt(0))], {type:result.mime_type || 'audio/mpeg'}))); await oralAudio.play(); await new Promise((resolve, reject) => { oralAudio.onended = resolve; oralAudio.onerror = () => reject(Error('Hindi ma-play ang audio.')); });
     }
-    function playMappedAudio(source) {
-      if (!source) return Promise.resolve();
-      mappedAudioQueue = mappedAudioQueue.then(() => new Promise((resolve, reject) => {
-        if (oralAudio) { oralAudio.pause(); oralAudio = null; }
-        const audio = new Audio(source); oralAudio = audio;
-        const clear = () => { if (oralAudio === audio) oralAudio = null; };
-        audio.onended = () => { clear(); resolve(); };
-        audio.onerror = () => { clear(); reject(Error('Hindi ma-play ang nakatalagang audio.')); };
-        audio.play().catch(error => { clear(); reject(error); });
-      })).catch(() => {});
-      return mappedAudioQueue;
-    }
-    const narrateFeedback = async (message, mappedAudio = '') => { try { if (isLesson16Gawain3) await playMappedAudio(lesson16Gawain3Audio[mappedAudio]); else await playPrescribedReadAloud(message); } catch (error) { const status = app.querySelector('.oral-status, .hint'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; } };
+    const narrateFeedback = async message => { try { await playPrescribedReadAloud(message); } catch (error) { const status = app.querySelector('.oral-status, .hint'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; } };
     // Each oral item starts with its dedicated word recording. Match prompts
     // are reserved for the matching phase and feedback remains separate.
-    const announceOralItem = () => { const item = items[oralIndex]; if (!item || announcedOralIndex === oralIndex) return; announcedOralIndex = oralIndex; if (isLesson16Gawain3) { void playMappedAudio(lesson16Gawain3Items[oralIndex]?.word); return; } void playPrescribedReadAloud(`${data.instruction} Basahin ang salita: ${item.read_word}.`).catch(error => { const status = app.querySelector('.oral-status'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; }); };
-    const announceMatching = () => { if (announcedMatching) return; announcedMatching = true; if (isLesson16Gawain3) { void playMappedAudio(lesson16Gawain3Audio.matchingStart); return; } void playPrescribedReadAloud(data.instruction).catch(error => { const status = app.querySelector('.hint'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; }); };
-    const matchingItemPrompt = targetId => { if (!isLesson16Gawain3) return ''; const itemIndex = items.findIndex(item => item.id === targetId); return itemIndex >= 0 ? lesson16Gawain3Items[itemIndex]?.prompt : ''; };
+    const announceOralItem = () => { const item = items[oralIndex]; if (!item || announcedOralIndex === oralIndex) return; announcedOralIndex = oralIndex; void playPrescribedReadAloud(`${data.instruction} Basahin ang salita: ${item.read_word}.`).catch(error => { const status = app.querySelector('.oral-status'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; }); };
+    const announceMatching = () => { if (announcedMatching) return; announcedMatching = true; void playPrescribedReadAloud(data.instruction).catch(error => { const status = app.querySelector('.hint'); if (status) status.textContent = error.message || 'Hindi available ang Filipino audio.'; }); };
      function renderOral(message = '', kind = '') {
       const item = items[oralIndex];
       const actionLabel = oralMode === 'aloud' ? '🔊 Pakinggan muna' : oralStatus || '🎙 Basahin ngayon';
@@ -135,20 +88,6 @@
       else window.Basahin.bindActivity(oralAction, readCurrentWord);
        announceOralItem();
      }
-      async function playIntroInstruction() {
-        if (!introEnabled || introInstructionPlayed || !lesson16IntroAudio) return;
-        introInstructionPlayed = true;
-        announcedOralIndex = 0;
-        await playMappedAudio(lesson16IntroAudio);
-      }
-     function resumeAfterIntroModal() {
-       if (!introEnabled) return;
-       if (phase === 'intro' && oralIndex === 0 && !Object.keys(matches).length) { void playIntroInstruction(); return; }
-       announcedOralIndex = -1;
-       announcedMatching = false;
-       render();
-     }
-     addEventListener('lesson-start-ready', resumeAfterIntroModal);
      async function readCurrentWord() {
       if (busy) return;
       const attempt = ++attemptVersion;
@@ -170,7 +109,7 @@
         const form = new FormData(); form.append('audio', recording, 'lesson16-gawain3-reading.webm'); form.append('target_text', item.read_word); form.append('language', 'Filipino'); form.append('mode', 'reading');
         const response = await fetch(data.transcribe_url, {method:'POST', credentials:'same-origin', headers:{'X-CSRFToken':csrf()}, body:form, signal:controller.signal}), result = await response.json().catch(() => ({}));
         if (attempt !== attemptVersion || controller.signal.aborted) return;
-        if (!response.ok || !result.success || !String(result.transcript || '').toLowerCase().includes(item.read_word.toLowerCase())) throw Error('Hindi pa. Subukan muli.');
+        if (!response.ok || !result.success || result.complete !== true) throw Error('Hindi pa. Subukan muli.');
         sttAttempts[String(oralIndex)] = 0; ttsPlays[String(oralIndex)] = 0;
         oralIndex += 1; phase = oralIndex >= items.length ? 'matching' : 'oral_reading'; restoreOralAttempts();
         await save(undefined, controller.signal); if (attempt !== attemptVersion || controller.signal.aborted) return; activeAttemptCommitted = true; oralStatus = ''; await narrateFeedback('Tama ang pagbasa!', 'readingCorrect');
@@ -194,8 +133,8 @@
       if (busy) return;
       const item = items[oralIndex], button = app.querySelector('#oral-action'); busy = true;
       try {
-        button.disabled = true; button.textContent = 'Nilo-load...'; if (isLesson16Gawain3) await playMappedAudio(lesson16Gawain3Items[oralIndex]?.word); else await playPrescribedReadAloud(item.read_word);
-        aloudAttempts = Math.min(3, aloudAttempts + 1); const completedListeningCycle = aloudAttempts === 3; ttsPlays[String(oralIndex)] = aloudAttempts; if (completedListeningCycle) { readingAttempts = 0; aloudAttempts = 0; sttAttempts[String(oralIndex)] = 0; ttsPlays[String(oralIndex)] = 0; oralMode = 'read'; if (isLesson16Gawain3) await playMappedAudio(lesson16Gawain3Audio.subTry); } await save(); renderOral(completedListeningCycle ? 'Subukan mong basahin ang salita.' : 'Pakinggan muli kung kailangan.');
+        button.disabled = true; button.textContent = 'Nilo-load...'; await playPrescribedReadAloud(item.read_word);
+        aloudAttempts = Math.min(3, aloudAttempts + 1); const completedListeningCycle = aloudAttempts === 3; ttsPlays[String(oralIndex)] = aloudAttempts; if (completedListeningCycle) { readingAttempts = 0; aloudAttempts = 0; sttAttempts[String(oralIndex)] = 0; ttsPlays[String(oralIndex)] = 0; oralMode = 'read'; } await save(); renderOral(completedListeningCycle ? 'Subukan mong basahin ang salita.' : 'Pakinggan muli kung kailangan.');
       } catch (error) { renderOral(error.message || 'Hindi available ang Read Aloud.', 'error'); }
       finally {
         stopOral();
@@ -209,7 +148,6 @@
       if (!items.length || !words.length) { app.innerHTML = '<p class="hint error">Walang laman ang gawaing ito.</p>'; return; }
       if (data.progress?.activity_completed) { showDone(); return; }
       if (phase === 'matching' && completed() >= items.length) { complete(); return; }
-      if (introEnabled && phase === 'intro' && oralIndex === 0 && !Object.keys(matches).length) { renderIntro(); return; }
        if (phase === 'matching' && oralIndex < items.length) { phase = 'oral_reading'; restoreOralAttempts(); }
        if (phase === 'oral_reading') { renderOral(); return; }
       const usedWords = new Set(Object.values(matches));
@@ -229,8 +167,6 @@
       activeMatchCommitted = false;
       busy = true; matchAttempts++; hint.textContent = 'Sinusuri ang pagkakabit…'; hint.className = 'hint';
       try {
-        await playMappedAudio(matchingItemPrompt(targetId));
-        if (operation !== matchVersion || controller.signal.aborted) return;
         const validation = await request(data.progress_url, {matches, state:state(), candidate_match:{target_id:targetId, word}, validate_only:true}, controller.signal);
         if (operation !== matchVersion || controller.signal.aborted) return;
         if (validation.accepted) {
@@ -275,7 +211,6 @@
         activeMatchController?.abort();
         activeMatchController = null;
         activeMatchCommitted = false;
-        mappedAudioQueue = Promise.resolve();
       } else if (oralAudio) {
         oralAudio.pause();
         ttsPaused = true;

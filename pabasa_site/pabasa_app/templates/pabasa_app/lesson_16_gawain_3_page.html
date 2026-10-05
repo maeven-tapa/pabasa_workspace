@@ -1,0 +1,18 @@
+{% load static %}<!doctype html>
+<html lang="fil">
+<head>
+  {% include 'pabasa_app/basahin_script.html' %}
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Piliin ang Larawang Katugma ng Salita | PABASA</title>
+  <link rel="stylesheet" href="{% static 'pabasa_app/css/lesson_16_gawain_3.css' %}">
+</head>
+<body class="l16g3-page">
+  <a class="l16g3-back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a>
+  <main class="l16g3-shell">
+    <section id="l16g3-app" class="l16g3-card" aria-labelledby="l16g3-title"></section>
+  </main>
+  {{ prescribed_activity_data|json_script:"prescribed-activity-data" }}
+  <script src="{% static 'pabasa_app/js/lesson_16_gawain_3.js' %}?v=1" defer></script>
+  {% include "pabasa_app/includes/session6_prescribed_controls.html" %}
+</body>
+</html>
