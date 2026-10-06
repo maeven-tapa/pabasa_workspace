@@ -188,7 +188,8 @@
     addEventListener('session6-prescribed-cancel',()=>{request++;stopMic();stopAudio();busy=false});
     addEventListener('pagehide',()=>{stopMic();stopAudio()});
     render();
-  })();
+  if(data.activity_key==='lesson-17-18-gawain-9')window.__session6LeaveAdapter={saveCurrentProgress:()=>save()};
+    })();
   </script>
   {% include "pabasa_app/includes/session6_prescribed_controls.html" %}
 </body>

@@ -50,7 +50,8 @@
       if(!response.ok||!data.success)throw Error(data.error||'Hindi na-save ang progress. Subukan muli.');
       if(mine!==requestId)return null;state=data.progress.state;return data;
     }
-    function render(message='',kind=''){
+    const saveUnqueued=save;let activitySaveQueue=Promise.resolve();save=(...args)=>{const pending=activitySaveQueue.then(()=>saveUnqueued(...args));activitySaveQueue=pending.then(()=>undefined,()=>undefined);return pending};
+function render(message='',kind=''){
       if(d.progress?.activity_completed||state.phase==='completion'){app.innerHTML=`<div class="done"><h1>Magaling!</h1><p>Natapos mo ang Lesson 20 at 21: Gawain 1.</p><a class="button" href="{% url 'assessment' %}">Balik sa Aking Aralin</a></div>`;return}
       const index=current(),item=items[index];
       if(state.phase==='intro'){
@@ -110,6 +111,7 @@
     addEventListener('prescribed-session-paused',()=>{requestId++;busy=false;stopMedia()});
     listen=async function(index){if(busy)return;busy=true;const mine=++requestId,button=app.querySelector('#oral');try{button.disabled=true;button.textContent='Nilo-load...';const word=String(items[index].word||'').toLocaleLowerCase('fil-PH');audio=new Audio(localAudioRoot+localAudioFiles.words[word]);button.textContent='Pinakikinggan...';await audio.play();await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=()=>reject(Error('Hindi ma-play ang audio.'))});if(mine!==requestId)return;const counterKey=itemKey(index),plays=Math.min(3,(state.tts_plays[counterKey]||0)+1),third=plays===3;state.tts_plays[counterKey]=third?0:plays;if(third)state.stt_attempts[counterKey]=0;state.phase='oral_reading';await save();const message='Subukan mong basahin ang salita.';render(third?message:'');if(third)await playReadAloud(message)}catch(error){if(mine===requestId){const message=error.message||'Hindi available ang audio. Subukan muli.';render(message,'bad')}}finally{busy=false}};
     addEventListener('pagehide',()=>{requestId++;busy=false;stopMedia()});render();
+    window.__session7LeaveAdapter={saveCurrentProgress:()=>save(),cleanup:()=>{requestId++;stopMedia()}};
   })();
   </script>
 {% include 'pabasa_app/session8_11_prescribed_controls.html' with prefix='prescribed-s7-l20-21-g1' help_text='Basahin ang salita, pagkatapos bilugan ang pantig na may klaster. Maaari kang mag-pause o magbukas ng Audio Settings anumang oras.' %}
