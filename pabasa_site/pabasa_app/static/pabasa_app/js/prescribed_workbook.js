@@ -161,7 +161,9 @@
   let audioRun = 0, instructionSpoken = false, pendingSpeech = '', g6CompletionPromise = null;
   const instructionText = a.instruction;
   const l22StartupTtsText = 'Letrang C. Handa kana?';
-  const L22_G1_MAPPED_TEXT = new Set([l22StartupTtsText, 'cac', 'ce', 'ca', 'bu', 'com', 'pu', 'ga', 'tus', 'ter', 'yan', 'Car', 'do', 'bi', 'net', 'te', 'Ce', 'les', 'Handa ka na?', 'Subukan muli.', 'Tama!', 'Magaling! Nabasa mo nang tama ang lahat ng pantig.']);
+  const L22_G1_MAPPED_TEXT = new Set([l22StartupTtsText, 'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita mula rito.', 'cac', 'ce', 'ca', 'bu', 'com', 'pu', 'ga', 'tus', 'ter', 'yan', 'Car', 'do', 'bi', 'net', 'te', 'Ce', 'les', 'Handa ka na?', 'Subukan muli.', 'Tama!', 'Magaling! Nabasa mo nang tama ang lahat ng pantig.', 'Magaling! Natapos mo ang Gawain 1.', 'Bumuo muna ng kahit isang wastong salita.', 'Bumuo ng ibang salita.', 'Gumamit ng mga pantig sa Big Box.', 'Hindi available ang audio', 'Hindi available ang audio.', 'Hindi available ang mikropono sa browser na ito.', 'Hindi available ang panuto.', 'Hindi ko malinaw na narinig. Subukan muli.', 'Hindi magamit ang mikropono. Subukan muli.', 'Hindi nakuha ang iyong boses. Subukan muli.', 'Hindi wastong mga pantig.', 'Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.', 'Pakinggan muna ang tamang pagbigkas.', 'Subukan muli. Hindi pa matiyak ang salitang ito.', 'Walang nakuha sa recording. Subukan muli.']);
+  const L22_G1_OPERATIONAL_FEEDBACK = new Set(['Handa ka na?', 'Nakikinig...', 'Sinusuri ang iyong pagbasa...', 'Hindi magamit ang mikropono ngayon. Subukan muli mamaya.']);
+  const l22G1ShouldHideResult = text => l22G1 && Boolean(text) && L22_G1_MAPPED_TEXT.has(text) && !L22_G1_OPERATIONAL_FEEDBACK.has(text);
   const session9Activity = s9Family || s9Helping;
   const session9SaveError = 'Could not save your work. Try again.';
   const session9AudioError = 'Audio is not available. Try again.';
@@ -211,7 +213,7 @@
   const oral = () => state.oral[item()?.id] || {passed:false,attempts:0,listens:0,phase:a.model_first?'model':'read'};
   const message = (text, error=false) => {
     status.textContent=text;status.className=error?'wb-error':'wb-save';status.hidden=specializedBuilder||prescribedWordReading||jSyllables||g5Syllables||g6Search;
-    if(specializedBuilder){const primary=content.querySelector('.wb-phase-status');if(primary){primary.textContent=text;primary.classList.toggle('wb-feedback-error',error);}}
+    if(specializedBuilder){const primary=content.querySelector('.wb-phase-status');if(primary){primary.textContent=text;primary.classList.toggle('wb-feedback-error',error);primary.classList.toggle('wb-audio-only-result',l22G1ShouldHideResult(text));}}
   };
   const stopReadAloud = () => {
     audioRun += 1;
@@ -220,9 +222,13 @@
     if(activeReadAloud){activeReadAloud.pause();activeReadAloud.currentTime=0;activeReadAloud=null;}
     if(activeAudioSource){try{activeAudioSource.stop();}catch(_){ }activeAudioSource.disconnect?.();activeAudioSource=null;}
   };
-  const localAudioUrl = text => text === instructionText ? localAudio.instruction
-    : (localAudio.words || {})[text] || (localAudio.syllables || {})[text] || (localAudio.feedback || {})[text]
-    || (localAudio.completion || {})[text] || null;
+  const localAudioUrl = text => {
+    const playbackText = l22G1 && state.completed && text === 'Magaling! Nabasa mo nang tama ang lahat ng pantig.'
+      ? 'Magaling! Natapos mo ang Gawain 1.' : text;
+    return playbackText === instructionText ? localAudio.instruction
+      : (localAudio.words || {})[playbackText] || (localAudio.syllables || {})[playbackText] || (localAudio.feedback || {})[playbackText]
+      || (localAudio.completion || {})[playbackText] || null;
+  };
   async function playPrescribedAudio(text,allowBusy=false){
     if(pictureReading&&!activityStarted&&text===instructionText)return;
     if(g5Syllables&&!activityStarted&&text===instructionText)return;
@@ -678,7 +684,7 @@
     const current=Math.min(Number(state.index||0),a.items.length-1), phase=state.reading_phase||'read';
     const buildingAttempts=Math.max(0,Math.min(3,Number(state.building_attempts||0))), buildingLocked=readDone&&buildingAttempts>=3;
      const inActivityInstruction=l22G1?'':`<div class="wb-l22-banner"><span class="wb-speaker-icon" aria-hidden="true">🔊</span><strong>${instructionText}</strong><button type="button" id="wb-l22-instruction-replay" aria-label="Pakinggan muli ang panuto">Pakinggan muli</button></div>`;
-     content.innerHTML=`${inActivityInstruction}<section class="wb-bigbox"><h2>BIG BOX</h2><p class="wb-box-help">Sundan ang dilaw na highlight.</p><div class="wb-bigbox-grid">${boxCells.map(row=>`<div class="wb-bigbox-row">${row.map(()=>'<div class="wb-bigbox-cell"></div>').join('')}</div>`).join('')}</div></section><section class="wb-reading-panel"><h2>${readDone?'BUMUO NG SALITA':'BASAHIN'}</h2><p class="wb-phase-status" role="status">${readDone?'Magaling! Nabasa mo nang tama ang lahat ng pantig.':state.last_feedback==='Tama!'?'Tama!':'Handa ka na?'}</p><div id="wb-l22-reading-action"></div><p class="wb-reading-tip"><span aria-hidden="true">💡</span><span>${readDone?'Piliin ang mga pantig sa Big Box upang bumuo ng salita.':'Pindutin ang button kapag handa ka nang magbasa.'}</span></p></section><section class="wb-word-panel ${readDone?'':'is-locked'}" aria-disabled="${!readDone}"><h2>${readDone?'NABUONG SALITA':'BUMUO NG SALITA'}</h2>${readDone?`<p>Piliin ang mga pantig sa Big Box.</p><div class="wb-selected-parts" id="wb-selected-parts" aria-live="polite"></div><div class="wb-tools"><button type="button" id="wb-erase">Burahin ang napili</button><button type="button" id="wb-retry">Subukan muli</button></div><p class="wb-builder-feedback" aria-live="polite">${esc(state.last_feedback||'')}</p>${state.found_words?.length?`<div class="wb-builder-words"><strong>Nabuo mo na:</strong><ul>${state.found_words.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:''}`:'<p class="wb-locked-note"><span class="wb-lock-icon">🔒</span><span>Basahin muna ang lahat ng pantig.</span></p>'}</section>`;
+     content.innerHTML=`${inActivityInstruction}<section class="wb-bigbox"><h2>BIG BOX</h2><p class="wb-box-help">Sundan ang dilaw na highlight.</p><div class="wb-bigbox-grid">${boxCells.map(row=>`<div class="wb-bigbox-row">${row.map(()=>'<div class="wb-bigbox-cell"></div>').join('')}</div>`).join('')}</div></section><section class="wb-reading-panel"><h2>${readDone?'BUMUO NG SALITA':'BASAHIN'}</h2><p class="wb-phase-status" role="status">${readDone?'Magaling! Nabasa mo nang tama ang lahat ng pantig.':state.last_feedback==='Tama!'?'Tama!':'Handa ka na?'}</p><div id="wb-l22-reading-action"></div><p class="wb-reading-tip"><span aria-hidden="true">💡</span><span>${readDone?'Piliin ang mga pantig sa Big Box upang bumuo ng salita.':'Pindutin ang button kapag handa ka nang magbasa.'}</span></p></section><section class="wb-word-panel ${readDone?'':'is-locked'}" aria-disabled="${!readDone}"><h2>${readDone?'NABUONG SALITA':'BUMUO NG SALITA'}</h2>${readDone?`<p>Piliin ang mga pantig sa Big Box.</p><div class="wb-selected-parts" id="wb-selected-parts" aria-live="polite"></div><div class="wb-tools"><button type="button" id="wb-erase">Burahin ang napili</button><button type="button" id="wb-retry">Subukan muli</button></div><p class="wb-builder-feedback${l22G1ShouldHideResult(state.last_feedback)?' wb-audio-only-result':''}" aria-live="polite">${esc(state.last_feedback||'')}</p>${state.found_words?.length?`<div class="wb-builder-words"><strong>Nabuo mo na:</strong><ul>${state.found_words.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>`:''}`:'<p class="wb-locked-note"><span class="wb-lock-icon">🔒</span><span>Basahin muna ang lahat ng pantig.</span></p>'}</section>`;
     if(l23G1)content.querySelector('.wb-l22-banner')?.remove();
     if(readDone){
       const wordPanel=content.querySelector('.wb-word-panel');
@@ -693,8 +699,9 @@
     if(replay)replay.onclick=()=>{if(!busy&&!activeStream)l22G1?playL22G1Instruction():playPrescribedAudio(instructionText).catch(e=>message(e.message||'Hindi available ang panuto.',true));};
     if(!preview&&activityStarted&&!l22G1&&!instructionSpoken){instructionSpoken=true;setTimeout(()=>playPrescribedAudio(instructionText).catch(e=>console.error('Lesson 22 instruction audio failed',e)),0);}
     const readingPanel=content.querySelector('.wb-reading-panel');
-    const phaseStatus=readingPanel.querySelector('.wb-phase-status');
-    phaseStatus.textContent=readDone?'Magaling! Nabasa mo nang tama ang lahat ng pantig.':state.last_feedback||(l22G1?'Basahin ang pantig na nasa itaas.':'Basahin muna ang mga pantig sa Big Box.');
+     const phaseStatus=readingPanel.querySelector('.wb-phase-status');
+     phaseStatus.textContent=readDone?'Magaling! Nabasa mo nang tama ang lahat ng pantig.':state.last_feedback||(l22G1?'Basahin ang pantig na nasa itaas.':'Basahin muna ang mga pantig sa Big Box.');
+     phaseStatus.classList.toggle('wb-audio-only-result',l22G1ShouldHideResult(state.last_feedback));
     const readingAttempts=readDone?0:Math.max(0,Math.min(3,Number(state.reading_attempts||0)));
     phaseStatus.insertAdjacentHTML('beforebegin',`<p class="wb-reading-target-label">Pantig na babasahin</p><strong class="wb-reading-target">${esc(readDone?'Natapos na ang pagbasa.':a.items[current]?.text||'')}</strong><p class="wb-reading-attempts">Pagsubok: ${readingAttempts} / 3 <span class="wb-attempt-circles" aria-hidden="true">${[0,1,2].map(i=>`<i class="${i<readingAttempts?'is-filled':''}"></i>`).join('')}</span></p>`);
     readingPanel.querySelector('.wb-reading-tip')?.remove();

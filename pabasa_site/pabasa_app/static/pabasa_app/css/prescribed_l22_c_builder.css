@@ -482,3 +482,5 @@ body.wb-l22-g1-page.wb-l22-g1-instruction #wb-content.wb-l22-g1-active.wb-l22-g1
 body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active>.wb-reading-panel.wb-l22-g1-fade-in{opacity:0}
 body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active>.wb-reading-panel{transition:opacity 300ms ease}
 @media(prefers-reduced-motion:reduce){body.wb-l22-g1-page.wb-l22-g1-instruction #wb-content.wb-l22-g1-active.wb-l22-g1-fade-out>.wb-bigbox,body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active>.wb-reading-panel{transition:none!important}}
+/* Target result feedback remains available to assistive technology while audio carries the visible result. */
+.wb-l22-g1-page .wb-audio-only-result{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
