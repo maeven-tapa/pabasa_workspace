@@ -1,13 +1,24 @@
 {% load static %}<style id="session2-l4-g2-layout-override">
+#instruction{display:none!important}
 html body .page>.card{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important}
 html body .page>.card>.focus{overflow:visible!important}
-html body .page{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:flex-start!important;gap:18px!important;width:100%!important;height:100dvh!important;min-height:0!important;overflow:visible!important;padding:18px 16px 28px!important;box-sizing:border-box!important}
+html body .page{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:flex-start!important;gap:18px!important;width:100%!important;height:100dvh!important;min-height:0!important;overflow:visible!important;padding:18px 16px 46px!important;box-sizing:border-box!important}
 html body .page>.activity-topbar{position:static!important;inset:auto!important;width:min(1250px,100%)!important;flex:0 0 auto!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;margin:0!important}
 html body .page>.activity-topbar .back{flex:0 0 auto!important;width:auto!important}
 html body .page>.card{width:min(1250px,100%)!important;flex:0 0 auto!important;align-self:center!important;margin:0!important;padding-top:0!important;padding-bottom:42px!important}
+html body .page>.card{padding-top:18px!important;margin-bottom:18px!important}
 html body .page>.card>.head{margin-top:0!important}
 html body .page>.card .progress-number{position:static!important;transform:none!important}
 html body .page>.card .image-card,html body .page>.card .actions{top:0!important;transform:none!important}
+body:has(#picture[hidden])>.page{display:grid!important;place-items:center!important;width:100%!important;height:100dvh!important;min-height:100dvh!important;padding:0!important;overflow:hidden!important}
+body:has(#picture[hidden])>.page>.card{position:relative!important;width:min(540px,calc(100vw - 40px))!important;height:auto!important;min-height:0!important;max-height:none!important;flex:none!important;margin:0!important;padding:42px 38px 40px!important;background:transparent!important;border:0!important;box-shadow:none!important;display:block!important;overflow:visible!important}
+body:has(#picture[hidden])>.page>.card>.head,body:has(#picture[hidden])>.page>.card>.activity-topbar,body:has(#picture[hidden])>.page>.card>.focus:before,body:has(#picture[hidden])>.page>.card .image-card,body:has(#picture[hidden])>.page>.card .word,body:has(#picture[hidden])>.page>.card .prompt,body:has(#picture[hidden])>.page>.card .attempt,body:has(#picture[hidden])>.page>.card .numbered-progress{display:none!important}
+body:has(#picture[hidden])>.page>.card>.instruction{display:block!important;width:100%!important;min-height:0!important;margin:0!important;padding:42px 38px 40px!important;border:2px solid #ffffffc7!important;border-radius:32px!important;background:#fffffff2!important;color:#183e63!important;box-shadow:0 22px 60px #173f6340!important;text-align:center!important}
+body:has(#picture[hidden])>.page>.card>.focus{display:block!important;min-height:0!important}
+body:has(#picture[hidden])>.page>.card>.focus>.actions{display:flex!important;width:100%!important;min-height:0!important;margin:24px 0 0!important;position:relative!important;z-index:2!important}
+html body:has(#picture[hidden])>.page>.card{position:fixed!important;top:50vh!important;left:50vw!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;width:min(540px,calc(100vw - 40px))!important;height:auto!important;min-height:0!important;margin:0!important}
+html body:has(#picture[hidden])>.page>.card{background:#fffffff2!important;border:2px solid #ffffffc7!important;border-radius:32px!important;box-shadow:0 22px 60px #173f6340!important;padding:42px 38px 40px!important}
+html body:has(#picture[hidden])>.page>.card>.instruction{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
 </style><!doctype html>
 <html lang="fil"><head>{% include 'pabasa_app/basahin_script.html' %}<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ prescribed_activity_data.title }}</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"><style>
 @font-face{font-family:Fredoka;src:url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');font-display:swap}*{box-sizing:border-box}html,body{min-height:100%;margin:0}body{min-height:100dvh;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover no-repeat fixed;color:#183e63;font-family:Fredoka,Nunito,"Segoe UI",sans-serif}.page{min-height:100dvh;padding:16px clamp(16px,4vw,42px) 22px;display:grid;place-items:center}.card{position:relative;width:min(1250px,100%);min-height:min(650px,calc(100dvh - 32px));padding:clamp(24px,3.3vh,42px) clamp(20px,6vw,80px) 26px;border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63;backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35;display:flex;flex-direction:column;gap:18px;overflow:hidden}.activity-topbar{position:absolute;top:16px;left:clamp(20px,6vw,80px);right:clamp(20px,6vw,80px);z-index:2;display:flex;align-items:center;justify-content:space-between;gap:16px}.back{display:inline-flex;align-items:center;justify-content:center;min-width:280px;min-height:64px;padding:10px 20px;border-radius:999px;background:#fff;color:#183e63;font-family:inherit;font-size:1.2rem;line-height:1.15;text-align:center;text-decoration:none;box-shadow:0 8px 17px #145ca744;transition:transform .16s,box-shadow .16s}.back:hover{color:#183e63;transform:translateY(-2px);box-shadow:0 11px 22px #145ca755}.progress-label{padding:10px 18px;border-radius:999px;background:#ffffffb8;color:#187b7a;font-size:1rem;font-weight:900;box-shadow:0 5px 12px #1e5b7a1f}.head{margin-top:48px;display:flex;align-items:center;justify-content:space-between;gap:20px;text-align:center}.head>div{flex:1;text-align:center}.eyebrow{width:max-content;max-width:100%;margin:0 auto 10px;padding:9px 24px;border-radius:999px;background:#277f82;color:#fff;font-family:inherit;font-size:clamp(.8rem,1.3vw,1.05rem);letter-spacing:.02em}.head h1{margin:0;color:#183e63;font-family:inherit;font-size:clamp(2rem,4vw,3.5rem);font-weight:900;line-height:1.08}.progress-number{min-width:58px;padding:10px 14px;border-radius:999px;background:#fff;color:#187b7a;font-size:1rem;font-weight:900;box-shadow:0 5px 12px #1e5b7a1f}.instruction{width:min(820px,100%);margin:0 auto;padding:14px 22px;border:2px solid #94d9d6;border-radius:20px;background:#ffffffe8;color:#355977;font-family:inherit;font-size:clamp(1.05rem,1.7vw,1.35rem);font-weight:800;line-height:1.4;text-align:center;box-shadow:0 8px 18px #1e5b7a1c}.focus{flex:1;width:min(820px,100%);margin:0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:0;text-align:center}.image-card{width:min(100%,440px);height:clamp(210px,35dvh,320px);padding:18px;border:5px solid #94d9d6;border-radius:34px;background:#ffffffe8;box-shadow:0 12px 28px #1e5b7a25;display:grid;place-items:center;overflow:hidden}.image-card img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 7px 8px #422a1938)}.word{min-height:1.25em;color:#183e63;font-family:inherit;font-size:clamp(2rem,5vw,4rem);font-weight:900;line-height:1.12}.prompt{min-height:1.4em;color:#355977;font-family:inherit;font-size:clamp(1.05rem,1.7vw,1.35rem);font-weight:900}.actions{display:flex;justify-content:center;gap:18px;width:min(100%,700px);min-height:76px}.actions button,.actions a{flex:1;min-width:0;min-height:76px;padding:14px 24px;border:0;border-radius:999px;background:#299e9a;color:#fff;box-shadow:0 7px 0 #187b7a,0 10px 20px #187b7a40;cursor:pointer;font-family:inherit;font-size:clamp(1.1rem,1.8vw,1.45rem);font-weight:900;line-height:1.1;text-decoration:none;transition:transform .16s,filter .16s}.actions a{display:inline-flex;align-items:center;justify-content:center}.actions .oral-button:nth-child(2){background:#fffffff0;color:#187b7a;border:4px solid #94d9d6;box-shadow:0 5px 0 #b7d6dc,0 8px 16px #187b7a20}.actions button:hover,.actions a:hover{filter:none;background:#38b0aa;transform:translateY(-2px)}.actions .oral-button:nth-child(2):hover{background:#f4fffe}.actions button:active,.actions a:active{transform:translateY(3px)}.actions button:disabled:not(.is-recording){background:#b5c5c7!important;color:#edf3f4!important;border-color:transparent!important;box-shadow:none!important;cursor:not-allowed!important;transform:none!important;filter:none!important}.actions .good{background:#4abf86!important;box-shadow:0 7px 0 #27865a}.feedback,.status{min-height:1.35em;margin:0;font-family:inherit;font-size:1rem;font-weight:900}.feedback.good,.status.good{color:#26784e}.feedback.bad,.status.bad{color:#b95f57}@media(max-width:800px){.card{border-radius:30px}.head h1{white-space:normal}}@media(max-width:600px){body{background-attachment:scroll}.page{padding:12px}.card{min-height:calc(100dvh - 24px);padding:78px 14px 20px;gap:12px}.activity-topbar{top:12px;left:14px;right:14px;gap:8px}.back{min-width:230px;min-height:58px;font-size:1rem}.progress-label{padding:8px 12px;border-radius:999px;background:#ffffffb8;color:#187b7a;font-size:.85rem}.head{margin-top:0;gap:8px}.instruction{font-size:1rem;padding:12px 16px}.image-card{height:clamp(180px,31dvh,260px);padding:14px}.actions{gap:10px}.actions button{min-height:64px;padding:12px 10px;font-size:1rem}}
@@ -93,6 +104,9 @@ body:has(#picture[hidden]) .actions a{height:auto!important;min-height:64px!impo
 <script>window.Session2PrescribedDebug.init({prefix:'prescribed-s2l4g2',expected:(()=>{const d=JSON.parse(document.getElementById('activity-data').textContent||'{}');return d.items?.[Number(d.progress?.completed_items)||0]?.word||''})(),normalize:value=>String(value||'').toLowerCase().replace(/[^a-z]/g,''),transcript:result=>result?.transcript||'',evaluateResult:result=>Boolean(result?.success&&result?.complete===true)});</script>
 <style>
 /* Session 2 Lesson 4 Gawain 2 only: remove the redundant top-bar label and lower the action row slightly. */
+.page>.card:has(.complete-screen){display:grid!important;place-items:center!important;align-content:center!important;padding:24px!important;min-height:0!important}
+.page>.card:has(.complete-screen)>.numbered-progress{display:none!important}
+.page>.card:has(.complete-screen)>.complete-screen{position:fixed!important;top:50%!important;left:50%!important;right:auto!important;bottom:auto!important;width:min(540px,calc(100vw - 40px))!important;min-height:0!important;margin:0!important;transform:translate(-50%,-50%)!important}
 .progress-label{display:none!important}
 body:not(:has(#picture[hidden])) .card .actions{position:relative!important;top:22px!important;transform:none!important}
 body:not(:has(#picture[hidden])) .card .focus{overflow:visible!important}
@@ -107,7 +121,35 @@ body:not(:has(#picture[hidden])) .card .image-card{position:relative!important;t
 })();
 </script>
 <style>
+body:has(.complete-screen) .page>.card>.complete-screen{position:fixed!important;top:50vh!important;left:50vw!important;right:auto!important;bottom:auto!important;inset-block:auto!important;inset-inline:auto!important;transform:translate(-50%,-50%)!important;margin:0!important}
+</style>
+<style>
+/* Final completion-state override: center against the viewport, not the activity card. */
+body:has(.complete-screen) .complete-screen{position:fixed!important;inset:50% auto auto 50%!important;width:min(540px,calc(100vw - 40px))!important;height:auto!important;margin:0!important;transform:translate(-50%,-50%)!important;z-index:999!important}
+body:has(.complete-screen) .numbered-progress{display:none!important}
+</style>
+<style>
+body:has(.complete-screen)>.page>.card{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;display:grid!important;place-items:center!important;overflow:visible!important}
+body:has(.complete-screen)>.page>.card>.complete-screen{position:static!important;inset:auto!important;top:auto!important;left:auto!important;width:min(540px,calc(100vw - 40px))!important;transform:none!important;margin:0!important}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+    const card=document.querySelector('.page>.card');
+    if(!card)return;
+    const normalize=()=>{
+        const done=card.querySelector('.complete-screen');
+        if(!done)return;
+        card.querySelectorAll('.numbered-progress').forEach(node=>node.remove());
+        Object.assign(done.style,{position:'fixed',top:'50%',left:'50%',right:'auto',bottom:'auto',margin:'0',transform:'translate(-50%, -50%)',zIndex:'999'});
+    };
+    new MutationObserver(normalize).observe(card,{childList:true,subtree:true});
+    normalize();
+});
+</script>
+<style>
 /* Session 2 Lesson 4 Gawain 2: keep navigation in normal page flow and tighten only the card top boundary. */
+.page>.card>.numbered-progress{position:static!important;top:auto!important;left:auto!important;z-index:auto!important;transform:none!important;order:initial!important}
+.page>.card>.focus>.numbered-progress{display:flex!important;position:static!important;width:100%!important;margin:26px auto 0!important;transform:none!important;order:initial!important}
 .page{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:flex-start!important;gap:18px!important;min-height:100dvh!important;height:auto!important;padding:18px 16px 28px!important}
 .page>.activity-topbar{position:static!important;inset:auto!important;width:min(1250px,100%)!important;flex:0 0 auto!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;margin:0!important}
 .page>.activity-topbar .back{flex:0 0 auto!important;width:auto!important}
@@ -120,3 +162,16 @@ html body .page>.card{height:auto!important;min-height:0!important;max-height:no
 html body .page>.card .image-card,html body .page>.card .actions{top:0!important;transform:none!important}
 @media(max-width:600px){.page{gap:12px!important;padding:12px 12px 22px!important}.page>.activity-topbar{width:100%!important}.page>.card{width:100%!important;margin-top:0!important;padding-top:0!important}}
 </style>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+    const card=document.querySelector('.page>.card');
+    if(!card)return;
+    const placeProgress=()=>{
+        const progress=card.querySelector('.numbered-progress');
+        const focus=card.querySelector('.focus'),actions=focus?.querySelector('.actions');
+        if(progress&&focus&&actions&&progress.parentElement!==focus)actions.insertAdjacentElement('afterend',progress);
+    };
+    new MutationObserver(placeProgress).observe(card,{childList:true,subtree:true});
+    placeProgress();
+});
+</script>
