@@ -1,4 +1,4 @@
-{% load static %}{% include 'pabasa_app/session3_lesson_start_bootstrap.html' %}<script>
+{% load static %}{% include 'pabasa_app/session3_lesson_start_bootstrap.html' %}<script src="{% static 'pabasa_app/js/lesson7_gawain1_audio_state.js' %}?v=2" defer></script><style>.lesson-7-responsive .back{font-size:0}.lesson-7-responsive .back::after{content:'Bumalik sa Aking Aralin'!important;font-size:.95rem}</style><script>
 (() => {
   const originalRunWhenStarted = window.__runWhenLessonStarted;
   window.__runWhenLessonStarted = callback => {
@@ -62,6 +62,7 @@ setInterval(function(){
   if(!old||!oldDone||old.dataset.lesson7CompletionBound)return;
   old.dataset.lesson7CompletionBound='1';
   old.className='lesson7-completion';
+  document.body.appendChild(old);
   old.innerHTML='<div class="lesson7-completion-card"><div class="lesson7-completion-stars" aria-hidden="true">★ ★ ★</div><h1>Magaling!</h1><p>Natapos mo ang gawain!</p><div class="lesson7-completion-score">'+score+'<small>/ '+total+' tamang sagot</small></div><button class="done" id="done">TAPUSIN</button></div>';
   document.getElementById('done').onclick=async function(){const b=this;b.disabled=true;b.textContent='Sine-save...';try{await save(true);location.href="{% url 'assessment' %}"}catch(e){console.error('Lesson 7 completion save failed',e);b.disabled=false;b.textContent='TAPUSIN'}};
 },50);
@@ -96,7 +97,7 @@ new MutationObserver(()=>{if(window.__lessonStartReady)setup()}).observe(app,{ch
 </script>
 {% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g1' help_text='Tingnan ang larawan, basahin ang salita, at piliin ang tamang sagot.' %}
 <style>
-  .lesson7-completion{inset:0!important;padding:0!important;background:transparent!important}
+  .lesson7-completion{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;min-height:100dvh!important;padding:24px!important;background:transparent!important;display:grid!important;place-items:center!important;z-index:40!important;box-sizing:border-box!important}
   .lesson7-completion-card{width:min(540px,92vw)!important;padding:42px 38px 40px!important;border-radius:32px!important;background:#fff!important;box-shadow:0 14px 30px #1e5b7a25!important}
   .lesson7-completion-stars,.lesson7-completion-score{display:none!important}
   .lesson7-completion-card h1,.lesson7-completion-card p,.lesson7-completion-card .done{font-size:0!important}
@@ -105,6 +106,8 @@ new MutationObserver(()=>{if(window.__lessonStartReady)setup()}).observe(app,{ch
   .lesson7-completion-card .done{display:inline-flex!important;align-items:center;justify-content:center;width:100%!important;min-height:58px;padding:14px 24px;margin:20px auto 0!important;border-radius:999px;background:#299e9a;color:#fff;box-shadow:0 7px #187b7a}
   .lesson7-completion-card .done:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}
   body:has(.lesson7-completion)>.page>a{display:none}
+  body:has(.lesson7-completion) .numbered-progress,body:has(.lesson7-completion) .progress{display:none!important}
+  body:has(.lesson7-completion)>.page>#app.card{transform:none!important;background:transparent!important;border:0!important;outline:none!important;box-shadow:none!important;padding:0!important;min-height:0!important}
   body:has(.lesson7-completion) a[href*="assessment"]{display:none!important}
 </style>
 <style>.done,.done-card,.complete{display:grid;place-items:center;width:min(100%,540px);margin:auto;padding:42px 38px;border-radius:32px;background:#fff;color:#183e63;text-align:center;box-shadow:0 14px 30px #1e5b7a25;overflow:visible}.done h1,.done p,.done a,.done-card h1,.done-card p,.done-card a,.complete h1,.complete p,.complete a{font-size:0}.done h1:after,.done-card h1:after,.complete h1:after{content:'Tapos na ang gawain! 🎉';font-size:2rem}.done p:after,.done-card p:after,.complete p:after{content:'Mahusay! Nakumpleto mo na ang aktibidad.';font-size:1.15rem}.done a,.done-card a,.complete a{display:inline-flex;padding:14px 24px;border-radius:999px;background:#299e9a;color:#fff;text-decoration:none;box-shadow:0 7px #187b7a}.done a:after,.done-card a:after,.complete a:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}.done .button,.complete .done{font-size:0}.done .button:after,.complete .done:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}</style>
@@ -129,11 +132,11 @@ window.record=async function(){
     if(result.success&&result.complete===true){phase='classify';render();return}
     tries++;
     if(tries>=3){pakingganUnlocked=true;listen.hidden=false;tries=0}
-    read.disabled=false;
+    read.disabled=Boolean(window.lesson7PakingganPlaying);
     read.textContent=window.BasahinButton.LABEL;
   }catch(error){
     document.getElementById('status').textContent=error.message||'Hindi nakuha ang iyong boses. Subukan muli.';
-    read.disabled=false;
+    read.disabled=Boolean(window.lesson7PakingganPlaying);
     read.textContent=window.BasahinButton.LABEL;
   }finally{
     busy=false;
@@ -145,8 +148,8 @@ window.record=async function(){
 body.lesson-start-open.lesson-7-responsive #app .lesson7-overview h2,body.lesson-start-open.lesson-7-responsive #app .lesson7-overview>p{display:none!important}
 body.lesson-7-responsive{overflow:visible!important}
 body.lesson-7-responsive>.page{box-sizing:border-box!important;height:100dvh!important;min-height:0!important;display:flex!important;flex-direction:column!important;align-items:center!important;gap:6px!important;padding:8px 16px!important}
-body.lesson-7-responsive>.page>a{position:static!important;align-self:flex-start!important;width:fit-content!important;flex:0 0 auto!important;min-height:0!important;box-sizing:border-box!important}
-body.lesson-7-responsive>.page>#app.card{position:static!important;transform:none!important;width:min(880px,calc(100% - 24px))!important;max-width:880px!important;height:auto!important;max-height:none!important;min-height:0!important;margin:0 auto!important;padding:16px 28px 20px!important;overflow:visible!important}
+body.lesson-7-responsive>.page>a{position:static!important;align-self:flex-start!important;width:fit-content!important;flex:0 0 auto!important;min-height:0!important;box-sizing:border-box!important;transform:translateY(6px)!important;padding:14px 28px!important}
+body.lesson-7-responsive>.page>#app.card{position:static!important;transform:translateY(18px)!important;width:min(880px,calc(100% - 24px))!important;max-width:880px!important;height:auto!important;max-height:none!important;min-height:0!important;margin:8px auto 0!important;padding:16px 28px 20px!important;overflow:visible!important}
 body.lesson-7-responsive>.page>#app.card .layout{height:auto!important;min-height:0!important}
-@media(max-width:760px){body.lesson-7-responsive>.page{padding:10px 12px 14px!important;gap:8px!important}body.lesson-7-responsive>.page>#app.card{width:100%!important;max-width:100%!important;padding:18px 16px 20px!important}}
+@media(max-width:760px){body.lesson-7-responsive>.page{padding:10px 12px 14px!important;gap:8px!important}body.lesson-7-responsive>.page>#app.card{transform:translateY(14px)!important;width:100%!important;max-width:100%!important;margin-top:6px!important;padding:18px 16px 20px!important}}
 </style>
