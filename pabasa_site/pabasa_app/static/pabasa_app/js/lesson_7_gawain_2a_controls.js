@@ -116,7 +116,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (instruction && instruction.textContent.trim() !== part2Instruction) instruction.textContent = part2Instruction;
     if (!part2InstructionPlayed && !part2InstructionBusy && !feedbackBusy) narratePart2(part2Instruction, 'instruction');
     const status = app.querySelector('#status');
-    if (status && status.textContent.trim() === part2InvalidFeedback && !part2FeedbackBusy) narratePart2(part2InvalidFeedback, 'feedback');
+    if (status && status.textContent.trim() === 'Tingnan ang lahat ng larawan, pagkatapos ay isumite ang iyong mga sagot.') status.textContent = '';
+    if (status && status.textContent.trim() === part2InvalidFeedback && !part2FeedbackBusy && !window.lesson7G2ASuppressGenericFeedback) narratePart2(part2InvalidFeedback, 'feedback');
   };
 
   const bindReading = reading => {
@@ -124,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!read) return;
     read.dataset.basahinButton = 'true';
     const instruction = app.querySelector('.instruction');
-    if (instruction && instruction.textContent !== 'Tingnan ang larawang nasa ibaba. Ano ito?') instruction.textContent = 'Tingnan ang larawang nasa ibaba. Ano ito?';
+    if (instruction) instruction.textContent = '';
     let actions = reading.querySelector('.lesson7-g2a-reading-actions');
     let listen = reading.querySelector('#listen');
     if (!actions) {
@@ -224,5 +225,25 @@ document.addEventListener('DOMContentLoaded', function () {
     syncPart2();
   };
   sync();
+  const wrongLetterText = 'Maling letra ang iyong isinulat. Subukan ito muli! Isulat ang letrang I.';
+  const isWrittenI = lines => {
+    const info = (lines || []).map(line => { const xs=line.map(p=>p.x), ys=line.map(p=>p.y); return {y:ys.reduce((a,b)=>a+b,0)/ys.length, span:Math.max(...ys)-Math.min(...ys), count:line.length}; }).filter(item => item.count);
+    if (info.length < 2) return false;
+    const stem = info.reduce((a,b)=>b.span>a.span?b:a);
+    const dot = info.find(item => item !== stem && item.y < stem.y);
+    return Boolean(stem && dot && stem.span > 8);
+  };
+  document.addEventListener('click', event => {
+    if (!event.target.closest('#submit') || !app.querySelector('.grid')) return;
+    const wrongLetter = [...app.querySelectorAll('.grid canvas.canvas')].some((canvas, index) => {
+      const written = canvas.__lines?.length || 0;
+      return activityData.items?.[index]?.target && written && !isWrittenI(canvas.__lines);
+    });
+    if (wrongLetter) {
+      window.lesson7G2ASuppressGenericFeedback = true;
+      narratePart2(wrongLetterText, 'feedback');
+      queueMicrotask(() => { window.lesson7G2ASuppressGenericFeedback = false; });
+    }
+  }, true);
   new MutationObserver(sync).observe(app, {childList: true, subtree: true, characterData: true});
 });

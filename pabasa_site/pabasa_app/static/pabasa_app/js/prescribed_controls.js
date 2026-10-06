@@ -17,6 +17,7 @@
         'prescribed-s2l5g1': '← Bumalik sa Aking Aralin',
         'prescribed-s2l6g1': '← Bumalik sa Aking Aralin',
         'prescribed-s3l7g1': '← Bumalik sa Aking Aralin',
+        'prescribed-s3l7g2a': '← Bumalik sa Aking Aralin',
         'prescribed-s3l9g1': '← Bumalik sa Aking Aralin',
         'prescribed-s3l9g2': '← Bumalik sa Aking Aralin',
         'prescribed-s3l9g3': '← Bumalik sa Aking Aralin',
