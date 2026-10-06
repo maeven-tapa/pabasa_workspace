@@ -13,6 +13,22 @@
   *, *::before, *::after {
     box-sizing: border-box;
   }
+  /* The waiting room is a focused student screen, so reclaim the desktop
+     sidebar space only while this page is mounted. */
+  body:has(.waiting-room-page) .dashboard-app-shell {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0;
+  }
+  body:has(.waiting-room-page) .dashboard-app-shell > .dashboard-sidebar,
+  body:has(.waiting-room-page) #dashboardSidebar {
+    display: none !important;
+  }
+  body:has(.waiting-room-page) .dashboard-main {
+    width: 100% !important;
+    min-width: 0;
+    margin-left: 0 !important;
+  }
   .waiting-room-page {
     width: 100%;
     max-width: 100%;
