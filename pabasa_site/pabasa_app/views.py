@@ -29466,6 +29466,7 @@ def students(request):
     section = _teacher_current_sections(teacher).order_by('class_name', 'id').first()
     live_crla_material = None
     assessment_week_students = []
+    show_student_assessment_requests = False
     aral_students = []
     aral_review_students = []
     aral_exit_students = []
@@ -29603,9 +29604,14 @@ def students(request):
                     continue
                 eligible_students.append(student_payload)
             assessment_week_students = eligible_students
+            show_student_assessment_requests = bool(
+                _section_assessment_week_status(section) == 'after'
+                and assessment_week_students
+            )
 
     return render(request, 'pabasa_app/students.html', _dashboard_context(request, 'teacher', {
         'assessment_week_section': section,
+        'show_student_assessment_requests': show_student_assessment_requests,
         'assessment_week_toggle_available': bool(
             section and _section_assessment_week_status(section) == 'during'
         ),

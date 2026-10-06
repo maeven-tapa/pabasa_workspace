@@ -33,7 +33,7 @@
     .student-assessment-request-card p { margin:.25rem 0 0; color:#58676f; font-size:.88rem; }
     @media (max-width:575.98px) { .student-assessment-request-card { align-items:flex-start; flex-direction:column; } }
 
-    .aral-exit-readiness-card { display:grid; grid-template-columns:minmax(0, 1.95fr) minmax(18rem, 1fr); margin:0 0 1.15rem; overflow:hidden; border:1px solid rgba(16,70,110,.13); border-radius:20px; background:#fff; box-shadow:0 14px 32px rgba(15,78,100,.09); }
+    .aral-exit-readiness-card { display:grid; grid-template-columns:minmax(0, 1.95fr) minmax(18rem, 1fr); margin:1rem 0 1.15rem; overflow:hidden; border:1px solid rgba(16,70,110,.13); border-radius:20px; background:#fff; box-shadow:0 14px 32px rgba(15,78,100,.09); }
     .aral-performance-panel, .aral-ready-panel { min-width:0; padding:1.35rem 1.45rem; }
     .aral-performance-panel { border-right:1px solid #e3edf2; }
     .aral-card-eyebrow { margin:0 0 .3rem; color:#2b87b5; font-size:.7rem; font-weight:900; letter-spacing:.1em; text-transform:uppercase; }
@@ -1457,10 +1457,12 @@
 
 {% block dashboard_header_after %}
 {% include "pabasa_app/partials/_assessment_week_card.html" %}
+{% if show_student_assessment_requests %}
 <section class="student-assessment-request-card" aria-labelledby="studentAssessmentRequestTitle">
     <div><h2 id="studentAssessmentRequestTitle">Student Requests to Take Assessment</h2><p id="studentAssessmentRequestCount">0 requests</p></div>
     <button class="btn btn-primary btn-sm" type="button" id="viewStudentAssessmentRequests">View</button>
 </section>
+{% endif %}
 <section class="aral-exit-readiness-card" aria-labelledby="aralStoryPerformanceTitle">
     <div class="aral-performance-panel">
         <p class="aral-card-eyebrow">ARAL Program</p>
