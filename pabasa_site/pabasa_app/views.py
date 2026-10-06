@@ -16965,6 +16965,69 @@ def prescribed_activity_progress(request, activity_key):
                 result = is_recognizable_lesson13_pair(group, target)
                 diagnostic = {'stroke_count': len(group), 'point_count': len(points), 'bbox': bbox,
                               'recognizable': result, 'reason': None if result else 'target geometry not recognized'}
+                if grouping_branch == 'lesson13-two-stroke-L' and len(group) == 2:
+                    first, second = group
+                    first_x = [point['x'] for point in first]
+                    first_y = [point['y'] for point in first]
+                    second_x = [point['x'] for point in second]
+                    second_y = [point['y'] for point in second]
+                    first_width = max(first_x) - min(first_x)
+                    first_height = max(first_y) - min(first_y)
+                    second_width = max(second_x) - min(second_x)
+                    second_height = max(second_y) - min(second_y)
+                    gap = ((first[-1]['x'] - second[0]['x']) ** 2 + (first[-1]['y'] - second[0]['y']) ** 2) ** .5
+                    reasons = []
+                    if first_height < .16 or first_width > first_height / 1.8:
+                        reasons.append('vertical-too-short-or-wide')
+                    if first[-1]['y'] <= first[0]['y']:
+                        reasons.append('not-downward')
+                    if second_width < .05 or second_width < second_height * 1.5:
+                        reasons.append('horizontal-too-short-or-tall')
+                    if second[-1]['x'] <= second[0]['x']:
+                        reasons.append('not-left-to-right')
+                    if gap > .20:
+                        reasons.append('endpoint-gap-too-large')
+                    diagnostic.update({'stroke_1_orientation': 'vertical' if first_height > first_width else 'horizontal',
+                                       'stroke_1_direction': 'down' if first[-1]['y'] > first[0]['y'] else 'up',
+                                       'stroke_1_height': first_height,
+                                       'stroke_2_orientation': 'horizontal' if second_width > second_height else 'vertical',
+                                       'stroke_2_direction': 'right' if second[-1]['x'] > second[0]['x'] else 'left',
+                                       'stroke_2_width': second_width, 'endpoint_gap': gap,
+                                       'rejection_reason': ';'.join(reasons) or ('target geometry not recognized' if not result else None)})
+                if target in {'K', 'k'} and len(group) == 3:
+                    stem, upper, lower = group
+                    shapes = []
+                    for stroke_points in group:
+                        sx = [point['x'] for point in stroke_points]
+                        sy = [point['y'] for point in stroke_points]
+                        shapes.append({'width': max(sx) - min(sx), 'height': max(sy) - min(sy),
+                                       'start': stroke_points[0], 'end': stroke_points[-1],
+                                       'mid_x': (min(sx) + max(sx)) / 2,
+                                       'mid_y': (min(sy) + max(sy)) / 2})
+                    stem_shape, upper_shape, lower_shape = shapes
+                    stem_mid = (stem_shape['mid_x'], stem_shape['mid_y'])
+                    upper_gap = min(((stem_mid[0] - upper[0]['x']) ** 2 + (stem_mid[1] - upper[0]['y']) ** 2) ** .5,
+                                    ((stem_mid[0] - upper[-1]['x']) ** 2 + (stem_mid[1] - upper[-1]['y']) ** 2) ** .5)
+                    lower_gap = min(((stem_mid[0] - lower[0]['x']) ** 2 + (stem_mid[1] - lower[0]['y']) ** 2) ** .5,
+                                    ((stem_mid[0] - lower[-1]['x']) ** 2 + (stem_mid[1] - lower[-1]['y']) ** 2) ** .5)
+                    reasons = []
+                    if stem_shape['height'] < .12: reasons.append('stem-too-short')
+                    if stem_shape['height'] < stem_shape['width'] * 1.5: reasons.append('stem-too-wide')
+                    if stem_shape['end']['y'] <= stem_shape['start']['y']: reasons.append('stem-not-downward')
+                    if upper_shape['width'] < .025 or upper_shape['height'] < .018: reasons.append('upper-diagonal-too-short-or-flat')
+                    if lower_shape['width'] < .025 or lower_shape['height'] < .018: reasons.append('lower-diagonal-too-short-or-flat')
+                    if upper_gap > .45: reasons.append('upper-gap-too-large')
+                    if lower_gap > .45: reasons.append('lower-gap-too-large')
+                    diagnostic.update({'stem_height': stem_shape['height'],
+                                       'stem_orientation': 'vertical' if stem_shape['height'] > stem_shape['width'] else 'horizontal',
+                                       'stem_direction': 'down' if stem_shape['end']['y'] > stem_shape['start']['y'] else 'up',
+                                       'upper_diagonal_width': upper_shape['width'], 'upper_diagonal_height': upper_shape['height'],
+                                       'upper_diagonal_direction': 'geometry-only',
+                                       'upper_connection_gap': upper_gap, 'lower_diagonal_width': lower_shape['width'],
+                                       'lower_diagonal_height': lower_shape['height'],
+                                       'lower_diagonal_direction': 'geometry-only',
+                                       'lower_connection_gap': lower_gap,
+                                       'rejection_reason': ';'.join(reasons) or ('target geometry not recognized' if not result else None)})
                 if target == 'L' and len(group) == 1 and group[0]:
                     stroke = group[0]
                     lowest = max(range(len(stroke)), key=lambda index: stroke[index]['y'])

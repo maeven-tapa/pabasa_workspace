@@ -4,7 +4,10 @@ from math import hypot
 
 def is_scribble_like(value):
     """Reject excessive looping/overdrawn strokes without banning normal curves."""
-    strokes = normalize_strokes(value)
+    strokes = value if isinstance(value, list) and all(
+        isinstance(stroke, list) and all(isinstance(point, tuple) and len(point) == 2 for point in stroke)
+        for stroke in value
+    ) else normalize_strokes(value)
     if strokes is None:
         return False
     for stroke in strokes:
@@ -370,6 +373,71 @@ def is_recognizable_session4_pair(value, letter):
     return (len(strokes) >= 2 and max_x - min_x >= .08 and max_y - min_y >= .06)
 
 
+def _lesson13_stroke_shape(stroke):
+    xs, ys = zip(*stroke)
+    return {
+        'min_x': min(xs), 'max_x': max(xs), 'min_y': min(ys), 'max_y': max(ys),
+        'width': max(xs) - min(xs), 'height': max(ys) - min(ys),
+        'start': stroke[0], 'end': stroke[-1],
+    }
+
+
+def _lesson13_near(point, other, tolerance=.20):
+    return hypot(point[0] - other[0], point[1] - other[1]) <= tolerance
+
+
+def _lesson13_strict_group(value, target):
+    """Validate one approximate guide-shaped L/l/K/k writing group."""
+    strokes = value if isinstance(value, list) and all(
+        isinstance(stroke, list) and all(isinstance(point, tuple) and len(point) == 2 for point in stroke)
+        for stroke in value
+    ) else normalize_strokes(value)
+    if strokes is None or is_scribble_like(strokes):
+        return False
+    shapes = [_lesson13_stroke_shape(stroke) for stroke in strokes]
+    target = str(target or '')[:1]
+    if target == 'l':
+        if len(strokes) != 1:
+            return False
+        shape = shapes[0]
+        return (shape['height'] >= .16 and shape['width'] <= .12
+                and shape['start'][1] < shape['end'][1])
+    if target == 'L':
+        if len(strokes) != 2:
+            return False
+        stem, foot = shapes
+        return (stem['height'] >= .16 and stem['height'] >= stem['width'] * 1.8
+                and stem['start'][1] < stem['end'][1]
+                and foot['width'] >= .035 and foot['width'] >= foot['height'] * 1.5
+                and foot['start'][0] <= foot['end'][0]
+                and _lesson13_near(strokes[0][-1], strokes[1][0]))
+    if target in {'K', 'k'}:
+        if len(strokes) != 3:
+            return False
+        stem, upper, lower = shapes
+        stem_mid_y = (stem['min_y'] + stem['max_y']) / 2
+        stem_mid_x = (stem['min_x'] + stem['max_x']) / 2
+        upper_mid_y = (upper['min_y'] + upper['max_y']) / 2
+        lower_mid_y = (lower['min_y'] + lower['max_y']) / 2
+        # Diagonal strokes are shape/region features, not ordered gestures.
+        # Children may draw either endpoint first, so validate both possible
+        # endpoint orders and measure the connection from the nearest endpoint.
+        def diagonal_reaches_region(shape, stroke, upper_region):
+            if shape['width'] < .018 or shape['height'] < .018:
+                return False
+            # Require only visible movement in both axes and a generally
+            # rightward placement. Endpoint order, exact angle, region,
+            # midpoint, and connection distance are intentionally tolerant.
+            return shape['max_x'] >= stem_mid_x + .005
+        return (stem['height'] >= .12 and stem['height'] >= stem['width'] * 1.5
+                and stem['start'][1] < stem['end'][1]
+                and diagonal_reaches_region(upper, strokes[1], True)
+                and diagonal_reaches_region(lower, strokes[2], False)
+                and upper['width'] >= .018 and upper['height'] >= .018
+                and lower['width'] >= .018 and lower['height'] >= .018)
+    return False
+
+
 def is_recognizable_lesson13_pair(value, letter):
     """Conservative, target-aware geometry gate for Lesson 13 Gawain 4."""
     strokes = normalize_strokes(value)
@@ -383,6 +451,10 @@ def is_recognizable_lesson13_pair(value, letter):
     width, height = max(xs) - min(xs), max(ys) - min(ys)
     if height < .10 or (width < .012 and target != 'l'):
         return False
+    # Lesson 13's visible guide describes a stem-first, direction-aware
+    # structure. Keep this target-specific gate ahead of the legacy tolerant
+    # geometry branches below so the backend remains the source of truth.
+    return _lesson13_strict_group(strokes, target)
     if target == 'l':
         return width <= max(.08, height * .55) and sum(len(stroke) for stroke in strokes) >= 3
     if target == 'k':
@@ -552,9 +624,21 @@ def segment_lesson13_trace_groups(value, letter, group_count=3):
     target-specific recognizer to decide whether each pair is a real letter.
     Other shapes continue through the established spatial grouping helper.
     """
-    strokes = normalize_strokes(value)
+    strokes = value if isinstance(value, list) and all(
+        isinstance(stroke, list) and all(isinstance(point, tuple) and len(point) == 2 for point in stroke)
+        for stroke in value
+    ) else normalize_strokes(value)
     if strokes is None or not strokes:
         return None
+    if str(letter or '') == 'L' and len(strokes) == group_count * 2:
+        # The worksheet teaches each L as vertical-down, release, then
+        # horizontal-right. Preserve that input order and pair adjacent
+        # strokes; spatial sorting can incorrectly pair neighboring letters.
+        return [
+            [[{'x': point[0], 'y': point[1]} for point in stroke]
+             for stroke in strokes[offset:offset + 2]]
+            for offset in range(0, len(strokes), 2)
+        ]
     if str(letter or '') in {'L', 'l'} and len(strokes) == group_count:
         indexed = []
         for index, stroke in enumerate(strokes):

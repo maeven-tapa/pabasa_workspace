@@ -1,0 +1,25 @@
+.g4-writing-layout{display:flex;align-items:stretch;justify-content:center;gap:clamp(12px,2vw,24px);width:min(100%,980px)}
+.g4-writing-layout .g4-board{width:auto;flex:1 1 78%;margin:0;min-width:0}
+.g4-stroke-guide{flex:0 1 22%;min-width:150px;padding:12px 10px;border:3px solid #94d9d6;border-radius:24px;background:#fffffff2;box-shadow:0 8px 18px #187b7a18;color:#183e63;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.g4-stroke-guide::before{content:attr(data-letter);display:block;color:#183e63;font-size:clamp(2.2rem,4vw,3.5rem);font-weight:900;line-height:.85;margin-bottom:2px}
+.g4-stroke-guide h2{margin:0 0 4px;color:#187b7a;font-size:clamp(.8rem,1.4vw,1rem);font-weight:900;letter-spacing:.06em;text-transform:uppercase}
+.g4-stroke-guide .guide-letter{width:100%;height:clamp(120px,18vh,170px)}
+.g4-stroke-guide .guide-number{font:900 18px Fredoka,Nunito,"Segoe UI",sans-serif;fill:#df8b2d}
+.g4-stroke-guide .guide-stroke{fill:none;stroke:#df8b2d;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#g4-guide-arrow)}
+.g4-stroke-guide p{margin:3px 0 0;color:#55727e;font-size:.78rem;font-weight:700;text-align:center;line-height:1.15}
+@media(max-width:600px){.g4-writing-layout{gap:8px}.g4-stroke-guide{min-width:92px;padding:8px 5px;border-width:2px;border-radius:18px}.g4-stroke-guide h2{font-size:.68rem}.g4-stroke-guide .guide-letter{height:120px}.g4-stroke-guide p{font-size:.65rem}.g4-writing-layout .g4-board{flex-basis:78%}}
+
+/* The guide is visually inside the writing pad, not a separate card. */
+.g4-writing-layout{position:relative;display:block;width:min(100%,850px);height:clamp(175px,24vh,215px)}
+.g4-writing-layout .g4-board{width:100%;height:100%;margin:0}
+.g4-writing-layout .g4-stroke-guide{position:absolute;z-index:2;left:3%;top:8%;width:18%;height:84%;min-width:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;pointer-events:none;justify-content:center;opacity:1}
+.g4-writing-layout .g4-stroke-guide h2,.g4-writing-layout .g4-stroke-guide p{display:none}
+.g4-writing-layout .g4-stroke-guide::before{position:absolute;inset:0;display:grid;place-items:center;content:attr(data-letter);font-size:clamp(7rem,15vh,10rem);line-height:.82;margin:0;color:#6d9da2;opacity:.28;z-index:0}
+.g4-writing-layout .g4-stroke-guide .guide-letter{position:relative;z-index:1;height:100%;width:100%;transform:scaleY(1.08);transform-origin:center}
+.g4-writing-layout .g4-stroke-guide .guide-stroke{stroke:#df8b2d;stroke-width:5;opacity:.9}
+.g4-writing-layout .g4-stroke-guide[data-letter="L"] .guide-letter > path:nth-of-type(1),.g4-writing-layout .g4-stroke-guide[data-letter="l"] .guide-letter > path:nth-of-type(1),.g4-writing-layout .g4-stroke-guide[data-letter="K"] .guide-letter > path:nth-of-type(1),.g4-writing-layout .g4-stroke-guide[data-letter="k"] .guide-letter > path:nth-of-type(1){transform:translateX(-24px)}
+.g4-writing-layout .g4-stroke-guide[data-letter="L"] .guide-letter > text:nth-of-type(1),.g4-writing-layout .g4-stroke-guide[data-letter="l"] .guide-letter > text:nth-of-type(1),.g4-writing-layout .g4-stroke-guide[data-letter="K"] .guide-letter > text:nth-of-type(1),.g4-writing-layout .g4-stroke-guide[data-letter="k"] .guide-letter > text:nth-of-type(1){transform:translate(-26px,12px)}
+.g4-writing-layout .g4-stroke-guide[data-letter="L"] .guide-letter > path:nth-of-type(2){transform:translateY(12px)}.g4-writing-layout .g4-stroke-guide[data-letter="L"] .guide-letter > text:nth-of-type(2){transform:translate(8px,10px)}
+.g4-writing-layout .g4-stroke-guide[data-letter="K"] .guide-letter > path:nth-of-type(2),.g4-writing-layout .g4-stroke-guide[data-letter="k"] .guide-letter > path:nth-of-type(2){transform:translate(18px,-8px)}.g4-writing-layout .g4-stroke-guide[data-letter="K"] .guide-letter > text:nth-of-type(2),.g4-writing-layout .g4-stroke-guide[data-letter="k"] .guide-letter > text:nth-of-type(2){transform:translate(22px,-8px)}
+.g4-writing-layout .g4-stroke-guide[data-letter="K"] .guide-letter > path:nth-of-type(3),.g4-writing-layout .g4-stroke-guide[data-letter="k"] .guide-letter > path:nth-of-type(3){transform:translate(18px,8px)}.g4-writing-layout .g4-stroke-guide[data-letter="K"] .guide-letter > text:nth-of-type(3),.g4-writing-layout .g4-stroke-guide[data-letter="k"] .guide-letter > text:nth-of-type(3){transform:translate(22px,8px)}
+@media(max-width:600px){.g4-writing-layout{width:100%;height:205px}.g4-writing-layout .g4-stroke-guide{left:2%;width:20%}}
