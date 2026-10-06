@@ -76,16 +76,17 @@
       function formatPart2Instruction(){const instruction=app.querySelector('.instruction');if(instruction)instruction.innerHTML=instruction.innerHTML.replace('. I-type ang ','.<br>I-type ang ')}
       function written(){
         const items=d.items||[];
-        app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 4B</p><h1>Letrang Oo</h1><p class="instruction">'+PART2_INSTRUCTION+'</p><div class="items">'+items.map((item,index)=>'<label class="item"><img src="'+item.image_url+'" alt="Larawan '+(index+1)+'"><input maxlength="1" aria-label="Sagot sa larawan '+(index+1)+'" value="'+(state.answers?.[index]||'')+'"></label>').join('')+'</div><p id="status" class="status">Isulat ang i o o sa bawat larawan.</p><button class="button" id="submit" type="button">Isumite</button>';
+        const resetPart2Answers=()=>{state.answers=items.map(()=>'' );app.querySelectorAll('.item input').forEach(input=>{input.value=''})};
+        app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 4B</p><h1>Letrang Oo</h1><p class="instruction part2-instruction">'+PART2_INSTRUCTION+'</p><div class="items">'+items.map((item,index)=>'<label class="item"><img src="'+item.image_url+'" alt="Larawan '+(index+1)+'"><input maxlength="1" aria-label="Sagot sa larawan '+(index+1)+'" value="'+(state.answers?.[index]||'')+'"></label>').join('')+'</div><p id="status" class="status">Isulat ang i o o sa bawat larawan.</p><button class="button" id="submit" type="button">Isumite</button>';
         app.querySelectorAll('.item input').forEach((input,index)=>{input.addEventListener('input',()=>{input.value=input.value.slice(-1).toLowerCase();state.answers[index]=input.value})});
         app.querySelector('#submit').onclick=async()=>{
           const answers=[...app.querySelectorAll('.item input')].map(input=>input.value.trim().toLowerCase());
           state.answers=answers;
           await save();
-          if(!answers.every((answer,index)=>answer===String(items[index].answer||'').toLowerCase())){document.getElementById('status').textContent=PART2_WRONG;return}
+          if(!answers.every((answer,index)=>answer===String(items[index].answer||'').toLowerCase())){resetPart2Answers();await save();document.getElementById('status').textContent=PART2_WRONG;return}
           const completion=await fetch(d.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});
           const result=await completion.json().catch(()=>null);
-          if(!completion.ok||!result?.success){document.getElementById('status').textContent=PART2_WRONG;return}
+          if(!completion.ok||!result?.success){resetPart2Answers();await save();document.getElementById('status').textContent=PART2_WRONG;return}
           d.progress.activity_completed=true;
           render();
         };
