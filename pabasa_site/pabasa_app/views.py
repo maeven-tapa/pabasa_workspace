@@ -17791,7 +17791,7 @@ def prescribed_activity_progress(request, activity_key):
                 accepted = answer == target
                 state['completed_correct_words'] = old['completed_correct_words'] + [target] if accepted else old['completed_correct_words']
                 state['completed_oral_reads'] = old_oral
-                state['selected_tile_order'] = [] if accepted else []
+                state['selected_tile_order'] = [] if accepted else incoming['selected_tile_order']
                 state['phase'] = 'feedback' if accepted else 'letter_ordering'
             else:
                 state['completed_correct_words'] = old['completed_correct_words']

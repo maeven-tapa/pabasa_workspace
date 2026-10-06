@@ -1,0 +1,345 @@
+/* Focused layout refinements for Session 7 · Lesson 19 · Gawain 4. */
+.session7-g4-start-copy {
+  margin: 10px auto 18px;
+  color: #466a79;
+  font-size: 1.08rem;
+  font-weight: 850;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.session7-l19-g4 .page {
+  width: min(1250px, 100%) !important;
+  height: 100dvh !important;
+  padding: 16px clamp(16px, 4vw, 42px) !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+.session7-l19-g4 .card {
+  width: 100% !important;
+  min-height: 0 !important;
+  max-height: calc(100dvh - 108px) !important;
+  overflow: auto !important;
+  padding: clamp(16px, 2.5vh, 28px) clamp(18px, 5vw, 72px) !important;
+  border: 2px solid #ffffffaa !important;
+  border-radius: 38px !important;
+  background: #ffffff75 !important;
+  backdrop-filter: blur(10px) !important;
+  text-align: center !important;
+}
+
+.session7-l19-g4 .card h1 {
+  margin: 0 !important;
+  color: #183e63 !important;
+  font-size: clamp(1.65rem, 3.4vw, 2.8rem) !important;
+  line-height: 1.08 !important;
+}
+
+.session7-l19-g4 .card h2 {
+  margin: 6px 0 0 !important;
+  color: #277f82 !important;
+  font-size: clamp(1.05rem, 2vw, 1.5rem) !important;
+  line-height: 1.15 !important;
+}
+
+.session7-l19-g4 .instruction,
+.session7-l19-g4 .hint {
+  margin: 8px auto !important;
+  color: #466a79 !important;
+  font-size: clamp(.92rem, 1.4vw, 1.12rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.25 !important;
+}
+
+.session7-l19-g4 .track {
+  width: min(620px, 84%) !important;
+  height: 10px !important;
+  margin: 9px auto 10px !important;
+  overflow: hidden !important;
+  border-radius: 999px !important;
+  background: #dcebea !important;
+}
+
+.session7-l19-g4 .track i {
+  display: block !important;
+  height: 100% !important;
+  background: linear-gradient(90deg, #299e9a, #72c8d5) !important;
+}
+
+.session7-l19-g4 .picture {
+  display: block !important;
+  width: min(440px, 75vw) !important;
+  height: clamp(160px, 25vh, 210px) !important;
+  margin: 8px auto !important;
+  padding: 8px !important;
+  border: 4px solid #94d9d6 !important;
+  border-radius: 26px !important;
+  background: #fffffff0 !important;
+  object-fit: contain !important;
+}
+
+.session7-l19-g4 .button {
+  display: inline-flex !important;
+  min-width: min(300px, 82vw) !important;
+  min-height: 56px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 6px !important;
+  padding: 10px 24px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #299e9a !important;
+  box-shadow: 0 6px 0 #187b7a, 0 9px 18px #187b7a35 !important;
+  color: #fff !important;
+  font: 900 clamp(1rem, 1.6vw, 1.25rem) Fredoka, Nunito, "Segoe UI", sans-serif !important;
+  cursor: pointer !important;
+}
+
+.session7-l19-g4 .button.secondary {
+  min-width: 116px !important;
+  min-height: 42px !important;
+  margin: 3px !important;
+  padding: 8px 16px !important;
+  border: 2px solid #94d9d6 !important;
+  background: #ffffffd9 !important;
+  box-shadow: none !important;
+  color: #277f82 !important;
+  font-size: .92rem !important;
+}
+
+.session7-l19-g4 .button.primary {
+  min-width: min(300px, 82vw) !important;
+  min-height: 56px !important;
+  font-size: clamp(1rem, 1.6vw, 1.25rem) !important;
+}
+
+.session7-l19-g4 .slots + .tiles + div .button.secondary {
+  min-width: 116px !important;
+  min-height: 42px !important;
+  margin: 3px !important;
+  padding: 8px 16px !important;
+  font-size: .92rem !important;
+}
+
+.session7-l19-g4 .oral-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 22px !important;
+}
+
+.session7-l19-g4 .oral-actions .button {
+  width: min(240px, 40vw) !important;
+  min-width: 0 !important;
+  min-height: 52px !important;
+  margin: 4px !important;
+  padding: 8px 12px !important;
+  border-radius: 999px !important;
+  background: #299e9a !important;
+  box-shadow: 0 5px 0 #187b7a, 0 8px 16px #187b7a30 !important;
+  color: #fff !important;
+  font-size: 1.05rem !important;
+}
+
+.session7-l19-g4 .button.gold {
+  background: #299e9a !important;
+  box-shadow: 0 6px 0 #187b7a, 0 9px 18px #187b7a35 !important;
+}
+
+.session7-l19-g4 .button:disabled,
+.session7-l19-g4 .tile:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.session7-l19-g4 .word {
+  margin: 10px auto 0 !important;
+  color: #183e63 !important;
+  font-size: clamp(2.2rem, 5.5vw, 4rem) !important;
+  font-weight: 900 !important;
+  letter-spacing: .05em !important;
+  line-height: 1.08 !important;
+}
+
+.session7-l19-g4 .slots,
+.session7-l19-g4 .tiles {
+  display: flex !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+  margin: 8px auto !important;
+}
+
+.session7-l19-g4 .slot,
+.session7-l19-g4 .tile {
+  display: grid !important;
+  width: clamp(44px, 7vw, 58px) !important;
+  height: clamp(50px, 8vw, 62px) !important;
+  place-items: center !important;
+  border-radius: 15px !important;
+  font: 900 clamp(1.5rem, 4.8vw, 2rem) Fredoka, Nunito, "Segoe UI", sans-serif !important;
+  text-transform: lowercase !important;
+}
+
+.session7-l19-g4 .slot {
+  border: 3px dashed #7ba6b3 !important;
+  background: #fffffff0 !important;
+}
+
+.session7-l19-g4 .tile {
+  border: 3px solid #5a9fb2 !important;
+  background: #dff4f7 !important;
+  color: #183e63 !important;
+  box-shadow: 0 4px 0 #4c8ba0 !important;
+  cursor: pointer !important;
+}
+
+.session7-l19-g4 .tile.used {
+  visibility: hidden !important;
+}
+
+.session7-l19-g4 .slots + .tiles + .letter-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.session7-l19-g4 .intro-steps {
+  display: grid;
+  width: min(650px, 100%);
+  gap: 7px;
+  margin: 10px auto;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.session7-l19-g4 .intro-steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: #ffffffb8;
+  color: #365c60;
+  font-size: clamp(.86rem, 1.3vw, 1rem);
+  font-weight: 850;
+}
+
+.session7-l19-g4 .intro-steps span {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  place-items: center;
+  border-radius: 50%;
+  background: #299e9a;
+  color: #fff;
+}
+
+.session7-l19-g4 .intro-art {
+  display: flex;
+  justify-content: center;
+  gap: 8px !important;
+  flex-wrap: wrap;
+  margin: 9px auto !important;
+}
+
+.session7-l19-g4 .intro-art img {
+  width: clamp(54px, 7vw, 76px) !important;
+  height: clamp(48px, 7vh, 62px) !important;
+  padding: 4px !important;
+  border-radius: 13px !important;
+  background: #fffffff0 !important;
+  object-fit: contain !important;
+}
+
+.session7-l19-g4 .step-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 4px auto 8px;
+  color: #466a79;
+  font-size: .9rem;
+  font-weight: 900;
+}
+
+.session7-l19-g4 .step-progress i {
+  width: 11px;
+  height: 11px;
+  border: 2px solid #299e9a;
+  border-radius: 50%;
+  background: #ffffffa8;
+}
+
+.session7-l19-g4 .step-progress i.is-done,
+.session7-l19-g4 .step-progress i.is-current {
+  background: #299e9a;
+}
+
+.session7-l19-g4 .status {
+  min-height: 24px;
+  margin: 6px 0 0;
+  font-size: clamp(.9rem, 1.35vw, 1.05rem);
+  font-weight: 900;
+}
+
+.session7-l19-g4 .good { color: #26784e; }
+.session7-l19-g4 .bad { color: #a93232; }
+
+.session7-l19-g4 :focus-visible {
+  outline: 4px solid #e7af45;
+  outline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+  .session7-l19-g4 .page { padding: 12px !important; }
+  .session7-l19-g4 .card { max-height: calc(100dvh - 86px) !important; padding: 14px !important; border-radius: 28px !important; }
+  .session7-l19-g4 .picture { width: min(380px, 84vw) !important; height: clamp(150px, 23vh, 185px) !important; }
+  .session7-l19-g4 .intro-art { gap: 5px !important; }
+  .session7-l19-g4 .intro-art img { width: 48px !important; height: 44px !important; }
+  .session7-l19-g4 .button { min-height: 52px !important; }
+}
+
+@media (max-height: 680px) {
+  .session7-l19-g4 .card { padding-top: 10px !important; padding-bottom: 10px !important; }
+  .session7-l19-g4 .picture { height: clamp(150px, 23vh, 180px) !important; margin: 5px auto !important; }
+  .session7-l19-g4 .intro-art,
+  .session7-l19-g4 .slots,
+  .session7-l19-g4 .tiles { margin: 4px auto; }
+  .session7-l19-g4 .intro-steps { gap: 4px !important; margin: 6px auto !important; }
+  .session7-l19-g4 .intro-steps li { padding: 5px 9px !important; }
+  .session7-l19-g4 .button { min-height: 44px !important; }
+}
+
+/* Activity specific final sizing and board treatment. */
+.session7-l19-g4 .card { width: min(720px, 100%) !important; padding: clamp(20px, 3vh, 32px) clamp(22px, 4vw, 42px) !important; }
+.session7-l19-g4 .progress-row { display:flex; align-items:center; justify-content:center; gap:12px; width:min(660px,100%); margin:0 auto; }
+.session7-l19-g4 .progress-row .track { flex:1; width:auto !important; margin:9px 0 10px !important; }
+.session7-l19-g4 .step-progress-label { flex:0 0 auto; color:#365c60; font-size:.96rem; font-weight:900; white-space:nowrap; }
+.session7-l19-g4 .picture { width:min(420px,100%) !important; height:clamp(200px,32vh,280px) !important; margin:12px auto !important; }
+.session7-l19-g4 .oral-actions { margin:14px auto 0 !important; }
+.session7-l19-g4 .oral-actions .button { width:min(260px,44%) !important; min-height:62px !important; font-size:clamp(1.05rem,1.8vw,1.3rem) !important; }
+.session7-l19-g4 .button.secondary { color:#277f82 !important; background:#fff !important; border:2px solid #69b7b5 !important; box-shadow:none !important; }
+.session7-l19-g4 .board { width:min(620px,100%); margin:12px auto 0; padding:14px 16px; border:2px solid #b9dfe1; border-radius:22px; background:#ffffffb8; }
+.session7-l19-g4 .board .slots { margin:0 auto 10px !important; }
+.session7-l19-g4 .board .tiles { margin:0 auto !important; }
+.session7-l19-g4 .slot, .session7-l19-g4 .tile { width:clamp(54px,7vw,68px) !important; height:clamp(60px,8vw,74px) !important; }
+.session7-l19-g4 .letter-actions { margin:12px auto 0; }
+.session7-l19-g4 .letter-actions .button { min-width:136px !important; }
+.session7-l19-g4 .letter-actions .primary { min-width:min(300px,82vw) !important; }
+.session7-l19-g4 .status:empty { display:none; }
+@media(max-width:700px) {
+ .session7-l19-g4 .card { width:100% !important; padding:15px 13px !important; }
+ .session7-l19-g4 .picture { width:min(380px,86vw) !important; height:clamp(165px,27vh,220px) !important; }
+ .session7-l19-g4 .oral-actions { display:grid; grid-template-columns:1fr; width:min(360px,100%); }
+ .session7-l19-g4 .oral-actions .button { width:100% !important; min-height:54px !important; }
+ .session7-l19-g4 .board { padding:10px 8px; }
+ .session7-l19-g4 .slot, .session7-l19-g4 .tile { width:clamp(44px,11vw,58px) !important; height:clamp(50px,12vw,64px) !important; }
+ .session7-l19-g4 .step-progress-label { font-size:.82rem; }
+}
