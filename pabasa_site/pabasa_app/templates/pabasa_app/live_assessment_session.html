@@ -637,7 +637,12 @@
         #liveAssessmentModal.live-assessment-cancel-modal #liveAssessmentModalClose { position: absolute; top: .85rem; right: 1rem; }
         #liveAssessmentModal.live-assessment-cancel-modal .modal-body { padding: .55rem 1.5rem .9rem !important; color: #304a63 !important; font-size: 1rem !important; line-height: 1.5 !important; text-align: center; }
         #liveAssessmentModal.live-assessment-cancel-modal .cancel-session-copy { margin: 0; }
-        #liveAssessmentModal.live-assessment-cancel-modal .cancel-session-info { margin: .55rem 0 0; color: #71818d; font-size: .9rem; line-height: 1.4; }
+        #liveAssessmentModal.live-assessment-cancel-modal .cancel-session-info,
+        #liveAssessmentModal.live-assessment-end-modal .end-session-info,
+        #liveAssessmentModal.live-assessment-save-exit-modal .save-exit-info { display: flex; align-items: flex-start; gap: .5rem; width: 100%; margin: .8rem auto 0; padding: .7rem .8rem; border: 1px solid #c9e0f2; border-radius: 10px; color: #2f5f83; background: #f0f8ff; font-size: .9rem; line-height: 1.4; text-align: left; }
+        #liveAssessmentModal.live-assessment-cancel-modal .cancel-session-info .bi,
+        #liveAssessmentModal.live-assessment-end-modal .end-session-info .bi,
+        #liveAssessmentModal.live-assessment-save-exit-modal .save-exit-info .bi { flex: 0 0 auto; margin-top: .1rem; color: #2f80d9; }
         #liveAssessmentModal.live-assessment-cancel-modal .modal-footer { justify-content: center !important; padding: 0 1.5rem 1.2rem !important; gap: .7rem !important; }
         #liveAssessmentModal.live-assessment-cancel-modal .modal-footer .btn { min-width: 7.5rem; padding: .6rem 1rem; border-radius: 10px; font-size: .92rem; font-weight: 700; }
         #liveAssessmentModal.live-assessment-cancel-modal .modal-footer .btn-danger { background: #dc3545; border-color: #dc3545; color: #fff; }
@@ -647,10 +652,28 @@
         #liveAssessmentModal.live-assessment-end-modal #liveAssessmentModalClose { position: absolute; top: .85rem; right: 1rem; }
         #liveAssessmentModal.live-assessment-end-modal .modal-body { padding: .55rem 1.5rem .9rem !important; color: #304a63 !important; font-size: 1rem !important; line-height: 1.5 !important; text-align: center; }
         #liveAssessmentModal.live-assessment-end-modal .end-session-copy { margin: 0; }
-        #liveAssessmentModal.live-assessment-end-modal .end-session-info { margin: .55rem 0 0; color: #71818d; font-size: .9rem; line-height: 1.4; }
         #liveAssessmentModal.live-assessment-end-modal .modal-footer { justify-content: center !important; padding: 0 1.5rem 1.2rem !important; gap: .7rem !important; }
         #liveAssessmentModal.live-assessment-end-modal .modal-footer .btn { min-width: 7.5rem; padding: .6rem 1rem; border-radius: 10px; font-size: .92rem; font-weight: 700; }
         #liveAssessmentModal.live-assessment-end-modal .modal-footer .btn-danger { background: #dc3545; border-color: #dc3545; color: #fff; }
+        #liveAssessmentModal.live-assessment-save-exit-modal .modal-content { background: #fff !important; border: 1px solid #cbd8e2 !important; border-radius: 18px !important; color: #102746 !important; box-shadow: 0 24px 70px rgba(15,45,69,.2) !important; }
+        #liveAssessmentModal.live-assessment-save-exit-modal .modal-header { position: relative; justify-content: center !important; padding: 1.15rem 3.25rem .55rem !important; text-align: center; }
+        #liveAssessmentModal.live-assessment-save-exit-modal .modal-title { color: #102746 !important; font-size: 1.3rem !important; line-height: 1.3; }
+        #liveAssessmentModal.live-assessment-save-exit-modal #liveAssessmentModalClose { position: absolute; top: .85rem; right: 1rem; }
+        #liveAssessmentModal.live-assessment-save-exit-modal .modal-body { padding: .55rem 1.5rem .9rem !important; color: #304a63 !important; font-size: 1rem !important; line-height: 1.5 !important; text-align: center; }
+        #liveAssessmentModal.live-assessment-save-exit-modal .save-exit-copy { margin: 0; }
+        #liveAssessmentModal.live-assessment-save-exit-modal .modal-footer { justify-content: center !important; padding: 0 1.5rem 1.2rem !important; gap: .7rem !important; }
+        #liveAssessmentModal.live-assessment-save-exit-modal .modal-footer .btn { min-width: 7.5rem; padding: .6rem 1rem; border-radius: 10px; font-size: .92rem; font-weight: 700; }
+        #liveAssessmentModal.live-assessment-save-exit-modal .modal-footer .btn-primary { background: #2f80d9; border-color: #2f80d9; color: #fff; }
+        #liveAssessmentModal.live-assessment-save-exit-modal .modal-footer .btn-primary:hover { background: #246bb8; border-color: #246bb8; color: #fff; }
+        #liveAssessmentModal.live-assessment-save-transition-modal .modal-content { background: #fff !important; border: 1px solid #cbd8e2 !important; border-radius: 18px !important; color: #102746 !important; box-shadow: 0 24px 70px rgba(15,45,69,.2) !important; }
+        #liveAssessmentModal.live-assessment-save-transition-modal .modal-header { justify-content: center !important; padding: 1rem 1.5rem .45rem !important; text-align: center; }
+        #liveAssessmentModal.live-assessment-save-transition-modal .modal-title { color: #102746 !important; font-size: 1.3rem !important; line-height: 1.3; }
+        #liveAssessmentModal.live-assessment-save-transition-modal .modal-body { padding: .45rem 1.5rem 1.15rem !important; color: #304a63 !important; font-size: 1rem !important; line-height: 1.45 !important; text-align: center; }
+        #liveAssessmentModal.live-assessment-save-transition-modal .save-transition-icon { display: block; margin: 0 auto .65rem; color: #198754; font-size: 2rem; line-height: 1; }
+        #liveAssessmentModal.live-assessment-save-transition-modal .save-transition-copy,
+        #liveAssessmentModal.live-assessment-save-transition-modal .save-transition-return { margin: 0; }
+        #liveAssessmentModal.live-assessment-save-transition-modal .save-transition-return { margin-top: .35rem; color: #71818d; font-size: .9rem; }
+        #liveAssessmentModal.live-assessment-save-transition-modal .save-transition-countdown { margin-top: .7rem; color: #198754; font-size: 1.8rem; font-weight: 800; line-height: 1; }
         .teacher-control .session-actions {
             display: grid;
             gap: 0.5rem;
@@ -1154,7 +1177,7 @@
                 liveModal.style.display = 'none';
                 document.body.style.overflow = '';
                 liveModal.setAttribute('aria-hidden', 'true');
-                liveModal.classList.remove('live-assessment-start-modal', 'live-assessment-cancel-modal', 'live-assessment-end-modal');
+                liveModal.classList.remove('live-assessment-start-modal', 'live-assessment-cancel-modal', 'live-assessment-end-modal', 'live-assessment-save-exit-modal', 'live-assessment-save-transition-modal');
                 // remove keydown handler
                 if (activeKeydownHandler) { document.removeEventListener('keydown', activeKeydownHandler); activeKeydownHandler = null; }
                 // remove backdrop handler
@@ -1231,9 +1254,11 @@
         const isStartAssessment = title === 'Start Live Assessment?';
         const isCancelSession = title === 'Cancel Live Session?';
         const isEndSession = title === 'End Live Session?';
+        const isSaveAndExit = title === 'Save & Exit?';
         liveModal.classList.toggle('live-assessment-start-modal', isStartAssessment);
         liveModal.classList.toggle('live-assessment-cancel-modal', isCancelSession);
         liveModal.classList.toggle('live-assessment-end-modal', isEndSession);
+        liveModal.classList.toggle('live-assessment-save-exit-modal', isSaveAndExit);
         if (isStartAssessment) {
             const body = document.createElement('div');
             const main = document.createElement('p');
@@ -1254,12 +1279,13 @@
             const main = document.createElement('p');
             main.className = 'cancel-session-copy';
             main.textContent = message.main;
-            const info = document.createElement('p');
+            const info = document.createElement('div');
             info.className = 'cancel-session-info';
-            info.textContent = message.info;
+            info.innerHTML = '<i class="bi bi-arrow-return-left" aria-hidden="true"></i><span></span>';
+            info.querySelector('span').textContent = message.info;
             body.append(main, info);
             return showModal({ title, body, buttons: [
-                { label: 'Keep Session', value: false, className: 'btn btn-outline-secondary' },
+                { label: 'Go Back', value: false, className: 'btn btn-outline-secondary' },
                 { label: 'Cancel Session', value: true, className: 'btn btn-danger' }
             ]});
         }
@@ -1268,13 +1294,29 @@
             const main = document.createElement('p');
             main.className = 'end-session-copy';
             main.textContent = message.main;
-            const info = document.createElement('p');
+            const info = document.createElement('div');
             info.className = 'end-session-info';
-            info.textContent = message.info;
+            info.innerHTML = '<i class="bi bi-stop-circle" aria-hidden="true"></i><span></span>';
+            info.querySelector('span').textContent = message.info;
             body.append(main, info);
             return showModal({ title, body, buttons: [
-                { label: 'Keep Session', value: false, className: 'btn btn-outline-secondary' },
+                { label: 'Go Back', value: false, className: 'btn btn-outline-secondary' },
                 { label: 'End Session', value: true, className: 'btn btn-danger' },
+            ]});
+        }
+        if (isSaveAndExit) {
+            const body = document.createElement('div');
+            const main = document.createElement('p');
+            main.className = 'save-exit-copy';
+            main.textContent = message.main;
+            const info = document.createElement('div');
+            info.className = 'save-exit-info';
+            info.innerHTML = '<i class="bi bi-save" aria-hidden="true"></i><span></span>';
+            info.querySelector('span').textContent = message.info;
+            body.append(main, info);
+            return showModal({ title, body, buttons: [
+                { label: 'Continue Session', value: false, className: 'btn btn-outline-secondary' },
+                { label: 'Save & Exit', value: true, className: 'btn btn-primary' },
             ]});
         }
         return showModal({ title, body: message, buttons: [
@@ -1285,15 +1327,16 @@
 
     function showTeacherSaveTransition() {
         const body = document.createElement('div');
-        body.style.textAlign = 'center';
         body.innerHTML = `
-            <p style="font-size:1rem;margin-bottom:.35rem">Your students' reading progress is saved.</p>
-            <p style="margin-bottom:1rem">Returning to ARAL Program...</p>
-            <div data-save-countdown aria-live="assertive" aria-atomic="true" style="font-size:3.5rem;line-height:1;font-weight:800;color:#8fc5ff">3</div>
+            <i class="bi bi-check-circle-fill save-transition-icon" aria-hidden="true"></i>
+            <p class="save-transition-copy">Your students' reading progress has been saved.</p>
+            <p class="save-transition-return">Returning to ARAL Program...</p>
+            <div class="save-transition-countdown" data-save-countdown aria-live="assertive" aria-atomic="true">3</div>
         `;
         const countdown = body.querySelector('[data-save-countdown]');
+        liveModal.classList.add('live-assessment-save-transition-modal');
         const transition = showModal({
-            title: 'Reading session saved',
+            title: 'Reading Session Saved!',
             body,
             buttons: [],
             closable: false,
@@ -1920,8 +1963,8 @@
     document.getElementById('resumeBtn').addEventListener('click', () => sendAction('resume'));
     document.getElementById('closeAndSaveBtn').addEventListener('click', async () => {
         const confirmed = await showConfirm(
-            'Save & Exit',
-            'The student\'s current Live CRLA progress will be saved, the student will leave the active reader, and the assessment can be resumed later.'
+            'Save & Exit?',
+            { main: 'The student’s current progress will be saved.', info: 'The assessment can be continued later.' }
         );
         if (!confirmed) return;
         const result = await sendAction('close_and_save');
