@@ -78,7 +78,7 @@
 .lesson7-gawain4a-page .card h1 {
   margin: 0;
   color: #183e63;
-  font-size: clamp(2rem, 4vw, 3.7rem);
+  font-size: clamp(3rem, 5.5vw, 5rem);
   line-height: 1.08;
   font-weight: 900;
 }
@@ -90,7 +90,7 @@
   border-radius: 999px;
   background: #277f82;
   color: #fff;
-  font-size: clamp(.8rem, 1.3vw, 1.05rem);
+  font-size: clamp(1.25rem, 2.2vw, 1.65rem);
   font-weight: 900;
   letter-spacing: .02em;
 }
@@ -279,13 +279,13 @@
   }
 
   .lesson7-gawain4a-page .card h1 {
-    font-size: clamp(1.55rem, 4vw, 2.2rem);
+    font-size: clamp(2.5rem, 7vw, 3.8rem);
   }
 
   .lesson7-gawain4a-page .card > .eyebrow {
     margin-bottom: 5px;
     padding: 5px 18px;
-    font-size: .78rem;
+    font-size: 1.3rem;
   }
 
   .lesson7-gawain4a-page .instruction {
