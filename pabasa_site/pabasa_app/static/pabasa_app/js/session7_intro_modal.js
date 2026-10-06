@@ -68,11 +68,12 @@
 
   window.__session7IntroReady = false;
   window.__session7IntroModalOpen = true;
+  if (key === 'session-7-lesson-19-gawain-2') document.body.classList.add('session7-g2-start-open');
   window.dispatchEvent(new Event('session7-prescribed-cancel'));
 
   const stylesheet = document.createElement('link');
   stylesheet.rel = 'stylesheet';
-  stylesheet.href = '/static/pabasa_app/css/lesson_start_modal.css';
+  stylesheet.href = '/static/pabasa_app/css/lesson_start_modal.css?v=s7-gawain2-flow';
   document.head.appendChild(stylesheet);
 
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -83,30 +84,65 @@
   const gawain = String(data.gawain_number ?? '').toUpperCase();
   const label = `SESSION 7 \u00b7 LESSON ${lesson} \u00b7 GAWAIN ${gawain}`;
   const title = data.title || data.display_title || 'Gawain';
+  const lesson19Gawain1 = key === 'session-7-lesson-19-gawain-1';
+  const lesson19Gawain2 = key === 'session-7-lesson-19-gawain-2';
+  const introAudio = lesson19Gawain2
+      ? new Audio('/static/pabasa_app/prescribed/audio/SESSION_7/LESSON_19/GAWAIN_2/basahin_ngalan_isulat_nawawalang_pantig_tts.mp3')
+      : null;
+  if (introAudio) window.__session7G2IntroAudio = introAudio;
+  const stopIntroAudio = () => {
+    if (!introAudio) return;
+    introAudio.pause();
+    introAudio.currentTime = 0;
+  };
+  const playIntroAudio = () => {
+    if (!introAudio) return;
+    stopIntroAudio();
+    introAudio.play().catch(() => {});
+  };
 
   const backdrop = document.createElement('div');
-  backdrop.className = 'lesson-start-backdrop lesson-13-start-backdrop';
+  backdrop.className = `lesson-start-backdrop lesson-13-start-backdrop${lesson19Gawain1 ? ' session7-g1-start' : ''}${lesson19Gawain2 ? ' session7-g2-start' : ''}`;
   backdrop.id = `session7-start-${safeKey}`;
   backdrop.dataset.resume = hasSavedProgress ? 'true' : 'false';
   backdrop.setAttribute('role', 'dialog');
   backdrop.setAttribute('aria-modal', 'true');
   backdrop.setAttribute('aria-labelledby', `${backdrop.id}-title`);
-  backdrop.innerHTML = `<div class="lesson-start-modal lesson-13-start-modal">
-    <p class="lesson-start-label lesson-13-start-label">${hasSavedProgress ? 'MAY NA-SAVE KANG PROGRESO!' : escapeHtml(label)}</p>
-    <h2 class="lesson-start-title lesson-13-start-title" id="${backdrop.id}-title">${hasSavedProgress ? 'May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?' : escapeHtml(title)}</h2>
-    <div class="lesson-start-actions lesson-13-start-actions">
-      <button type="button" data-session7-start>${hasSavedProgress ? 'IPAGPATULOY' : 'SIMULAN'}</button>
-      <button type="button" data-session7-later>${hasSavedProgress ? 'SIMULAN ULIT' : 'MAMAYA NA LANG'}</button>
-    </div>
-  </div>`;
+  backdrop.innerHTML = lesson19Gawain2
+    ? `<div class="lesson-start-modal lesson-13-start-modal session7-g2-start-card">
+        <p class="lesson-start-label lesson-13-start-label">${escapeHtml(label)}</p>
+        <div class="session7-g2-start-art" aria-hidden="true">📚</div>
+        <h2 class="lesson-start-title lesson-13-start-title" id="${backdrop.id}-title">${hasSavedProgress ? 'Handa ka na bang magpatuloy?' : 'Handa ka na bang magbasa at kumumpleto ng salita?'}</h2>
+        <div class="lesson-start-actions lesson-13-start-actions">
+          <button type="button" data-session7-start>${hasSavedProgress ? 'Ipagpatuloy' : 'Magsimula'}</button>
+          ${hasSavedProgress ? '<button type="button" data-session7-later>Simulan ulit</button>' : ''}
+        </div>
+      </div>`
+    : lesson19Gawain1
+    ? `<div class="lesson-start-modal lesson-13-start-modal session7-g1-start-card">
+        <h2 class="lesson-start-title lesson-13-start-title" id="${backdrop.id}-title">${hasSavedProgress ? 'Handa ka na bang magpatuloy?' : 'Handa ka na?'}</h2>
+        <div class="lesson-start-actions lesson-13-start-actions">
+          <button type="button" data-session7-start>${hasSavedProgress ? 'IPAGPATULOY' : 'SIMULAN'}</button>
+          ${hasSavedProgress ? '<button type="button" data-session7-later>SIMULAN ULIT</button>' : ''}
+        </div>
+      </div>`
+    : `<div class="lesson-start-modal lesson-13-start-modal">
+        <p class="lesson-start-label lesson-13-start-label">${hasSavedProgress ? 'MAY NA-SAVE KANG PROGRESO!' : escapeHtml(label)}</p>
+        <h2 class="lesson-start-title lesson-13-start-title" id="${backdrop.id}-title">${hasSavedProgress ? 'May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?' : escapeHtml(title)}</h2>
+        <div class="lesson-start-actions lesson-13-start-actions">
+          <button type="button" data-session7-start>${hasSavedProgress ? 'IPAGPATULOY' : 'SIMULAN'}</button>
+          <button type="button" data-session7-later>${hasSavedProgress ? 'SIMULAN ULIT' : 'MAMAYA NA LANG'}</button>
+        </div>
+      </div>`;
   document.body.prepend(backdrop);
   document.body.classList.add('lesson-start-open');
-
-  const close = () => {
+  const close = (keepIntroAudio = false) => {
+    if (!keepIntroAudio) stopIntroAudio();
     window.__session7IntroReady = true;
     window.__session7IntroModalOpen = false;
     backdrop.remove();
     document.body.classList.remove('lesson-start-open');
+    document.body.classList.remove('session7-g2-start-open');
     window.dispatchEvent(new Event('lesson-start-ready'));
     window.dispatchEvent(new Event('session7-prescribed-resume'));
   };
@@ -115,7 +151,8 @@
     const button = backdrop.querySelector('[data-session7-start]');
     if (button.disabled) return;
     button.disabled = true;
-    close();
+    if (lesson19Gawain2 && state.phase === 'intro') playIntroAudio();
+    close(lesson19Gawain2 && state.phase === 'intro');
   });
 
   backdrop.querySelector('[data-session7-later]')?.addEventListener('click', async () => {

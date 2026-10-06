@@ -1,0 +1,204 @@
+/* Focused Grade 2 layout for Session 7, Lesson 19, Gawain 1. */
+body.session7-g1-page {
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+body.session7-g1-page .page {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch;
+  justify-content: flex-start;
+  width: min(1250px, calc(100% - 36px)) !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  margin: auto !important;
+  padding: 12px 0 16px !important;
+  overflow: visible !important;
+}
+
+body.session7-g1-page .back {
+  position: relative !important;
+  inset: auto !important;
+  align-self: center;
+  width: 280px !important;
+  min-height: 58px;
+  margin: 0;
+  padding: 10px 20px;
+  font-size: 1rem;
+}
+
+body.session7-g1-page .card {
+  position: relative !important;
+  inset: auto !important;
+  transform: none !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 28px 0 0 !important;
+  padding: clamp(18px, 3vh, 32px) clamp(18px, 4vw, 56px) !important;
+  overflow: hidden !important;
+  border: 2px solid #ffffffc7 !important;
+  border-radius: 38px !important;
+  background: #dff4fbe6 !important;
+  box-shadow: 0 18px 45px #1e5b7a35 !important;
+  text-align: center;
+}
+
+body.session7-g1-page .eyebrow {
+  margin-bottom: 8px;
+  padding: 7px 19px;
+}
+
+body.session7-g1-page h1 {
+  margin: 0 0 2px;
+  font-size: clamp(1.6rem, 3.1vw, 2.65rem);
+  line-height: 1.08;
+}
+
+body.session7-g1-page h2 {
+  margin: 0 0 8px;
+  color: #277f82;
+  font-size: clamp(1.08rem, 2vw, 1.42rem);
+}
+
+body.session7-g1-page .instruction,
+body.session7-g1-page .hint {
+  max-width: 680px;
+  color: #456876;
+  font-size: clamp(.96rem, 1.5vw, 1.12rem);
+  line-height: 1.35;
+}
+
+body.session7-g1-page .hint {
+  margin: 2px auto 0;
+}
+
+body.session7-g1-page .progress-label {
+  margin: 10px auto 5px;
+  color: #456876;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+body.session7-g1-page .progress-label { display: none; }
+
+body.session7-g1-page .progress-dots {
+  display: flex;
+  justify-content: center;
+  gap: 9px;
+  margin: 0 auto 10px;
+}
+
+body.session7-g1-page .progress-dot {
+  width: 13px;
+  height: 13px;
+  border: 2px solid #73c5c1;
+  border-radius: 50%;
+  background: #ffffffd9;
+}
+
+body.session7-g1-page .progress-dot.is-current {
+  width: 19px;
+  border-radius: 999px;
+  background: #299e9a;
+}
+
+body.session7-g1-page .progress-dot.is-done {
+  border-color: #299e9a;
+  background: #299e9a;
+}
+
+body.session7-g1-page .picture {
+  width: min(370px, 72vw);
+  height: clamp(180px, 31vh, 280px);
+  margin: 8px auto 10px;
+  padding: 10px;
+  border-radius: 28px;
+  background: #fff;
+}
+
+body.session7-g1-page .status:empty { display: none; }
+body.session7-g1-page .status { min-height: 1.25em; }
+body.session7-g1-page #oral,
+body.session7-g1-page #oral-retry,
+body.session7-g1-page #check,
+body.session7-g1-page #next,
+body.session7-g1-page #try-again { flex: 0 0 auto; }
+
+body.session7-g1-page .instruction-replay {
+  min-height: 42px;
+  margin: 4px auto 8px;
+  padding: 8px 16px;
+  border: 2px solid #94d9d6;
+  border-radius: 999px;
+  background: #ffffffdd;
+  color: #187b7a;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+body.session7-g1-page .instruction-replay:hover { background: #fff; }
+body.session7-g1-page .instruction-replay:focus-visible { outline: 4px solid #e7af45; outline-offset: 3px; }
+
+body.session7-g1-page .button {
+  display: block;
+  width: min(650px, 100%);
+  min-height: 62px;
+  margin: 12px auto 6px;
+  font-family: Fredoka, Nunito, "Segoe UI", sans-serif;
+  font-weight: 900;
+}
+
+body.session7-g1-page .choices { margin: 10px auto 4px; }
+body.session7-g1-page .choice {
+  width: clamp(82px, 10vw, 104px);
+  min-height: clamp(82px, 10vw, 104px);
+  font-family: Fredoka, Nunito, "Segoe UI", sans-serif;
+}
+
+body.session7-g1-page .intro-example {
+  width: min(245px, 62vw);
+  height: clamp(130px, 22vh, 190px);
+  margin: 12px auto 8px;
+  padding: 10px;
+  border: 3px solid #94d9d6;
+  border-radius: 26px;
+  background: #fff;
+}
+
+body.session7-g1-page .intro-example img { width: 100%; height: 100%; object-fit: contain; }
+body.session7-g1-page .feedback-symbol { margin: 2px auto 4px; font-size: clamp(2.6rem, 7vh, 4.2rem); line-height: 1; }
+body.session7-g1-page .feedback-title { margin: 0 auto 4px; font-size: clamp(1.4rem, 3vw, 2rem); }
+body.session7-g1-page .feedback-copy { max-width: 620px; margin: 4px auto; color: #456876; font-size: 1.08rem; font-weight: 800; }
+body.session7-g1-page .done .completion-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
+body.session7-g1-page .done .completion-actions .button { width: min(310px, 100%); margin: 4px; }
+body.session7-g1-page .done .button.secondary { border: 2px solid #94d9d6; background: #fff; color: #187b7a; box-shadow: 0 4px 0 #b7d6dc; }
+
+@media (max-width: 680px) {
+  body.session7-g1-page .page { width: calc(100% - 20px) !important; padding: 10px 0 !important; }
+  body.session7-g1-page .back { width: min(260px, 72vw) !important; min-height: 50px; }
+  body.session7-g1-page .card { margin-top: 18px !important; padding: 17px 14px !important; border-radius: 28px !important; }
+  body.session7-g1-page .picture { width: min(330px, 82vw); height: clamp(160px, 27vh, 220px); margin: 6px auto; border-width: 3px; }
+  body.session7-g1-page .button { min-height: 54px; }
+  body.session7-g1-page .choice { width: 76px; min-height: 76px; border-width: 3px; }
+  body.session7-g1-page .progress-dots { gap: 7px; }
+}
+
+@media (max-width: 500px) {
+  body.session7-g1-page .back { align-self: flex-start; width: min(210px, calc(100vw - 195px)) !important; min-height: 46px; margin-left: 4px; padding: 7px 12px; font-size: .82rem; }
+  body.session7-g1-page .prescribed-session-tools { top: 12px; right: 10px; gap: 5px; }
+  body.session7-g1-page .prescribed-session-tool { width: 44px; height: 44px; border-radius: 14px; font-size: 1.25rem; }
+}
+
+@media (max-height: 640px) {
+  body.session7-g1-page .card { margin-top: 14px !important; padding-top: 12px !important; padding-bottom: 12px !important; overflow-y: auto !important; }
+  body.session7-g1-page .picture { height: min(180px, 28vh); margin: 5px auto; }
+  body.session7-g1-page .progress-label { margin-top: 5px; }
+  body.session7-g1-page .button { min-height: 48px; margin-top: 7px; }
+  body.session7-g1-page .intro-example { height: min(120px, 21vh); margin-top: 7px; }
+}

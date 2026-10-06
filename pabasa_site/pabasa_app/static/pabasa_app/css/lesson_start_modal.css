@@ -13,3 +13,22 @@ body.lesson-start-open{overflow:hidden}
 @media(max-width:600px){.lesson-start-modal,.lesson-13-start-modal{padding:30px 22px 24px}}
 .wb-l22-g1-start .lesson-start-title{margin-bottom:10px}.wb-l22-g1-start-question{margin:0 0 26px;color:#183e63;font-size:clamp(1.1rem,2.4vw,1.35rem);line-height:1.3}
 .wb-l22-g1-start-audio-retry{margin:0 auto 18px;padding:8px 18px;border:2px solid #94d9d6;border-radius:999px;color:#187b7a;background:#fff;font:inherit;font-size:1rem;font-weight:900;cursor:pointer}.wb-l22-g1-start-audio-retry:hover{background:#e9fbfa}.wb-l22-g1-start-audio-retry:focus-visible{outline:4px solid #f5d47c;outline-offset:4px}
+.session7-g1-start{z-index:1001;background:#173f637a}
+.session7-g1-start-card{width:min(540px,calc(100vw - 32px));padding:clamp(24px,5vw,38px);border-radius:34px}
+.session7-g1-start-card .lesson-start-label{margin-bottom:12px;font-size:.84rem}
+.session7-g1-start-art{display:block;width:clamp(100px,21vw,150px);height:clamp(88px,17vh,125px);margin:0 auto 12px;padding:8px;border:3px solid #94d9d6;border-radius:24px;background:#eefaff;object-fit:contain}
+.session7-g1-start-card .lesson-start-title{margin:0 0 8px;font-size:clamp(1.8rem,4.5vw,2.5rem)}
+.session7-g1-start-copy{max-width:400px;margin:0 auto 12px;color:#456876;font-size:clamp(1rem,2.5vw,1.16rem);font-weight:800;line-height:1.4}
+.session7-g1-start-replay{min-height:44px;margin:0 auto 14px;padding:8px 16px;border:2px solid #94d9d6;border-radius:999px;background:#fff;color:#187b7a;font:inherit;font-weight:900;cursor:pointer}
+.session7-g1-start-replay:hover{background:#e9fbfa}.session7-g1-start-replay:focus-visible{outline:4px solid #f5d47c;outline-offset:3px}
+.session7-g1-start-card .lesson-start-actions{max-width:360px;margin:0 auto}
+.session7-g1-start-card .lesson-start-actions button{min-height:58px;font-size:1.15rem}
+.session7-g2-start{z-index:1001;background:#173f637a}
+.session7-g2-start-card{width:min(560px,calc(100vw - 32px));padding:clamp(24px,4vw,36px);border-radius:30px}
+.session7-g2-start-card .lesson-start-label{margin-bottom:10px;font-size:.82rem}
+.session7-g2-start-card .lesson-start-title{max-width:460px;margin:0 auto 20px;font-size:clamp(1.8rem,4.5vw,2.45rem)}
+.session7-g2-start-art{display:grid;place-items:center;width:clamp(96px,17vw,132px);height:clamp(88px,15vh,112px);margin:0 auto 14px;border:3px solid #94d9d6;border-radius:26px;background:#eefaff;font-size:clamp(2.8rem,6vw,4rem)}
+.session7-g2-start-card .lesson-start-actions{max-width:360px;margin:0 auto}
+.session7-g2-start-card .lesson-start-actions button{min-height:56px;font-size:1.12rem}
+@media(max-width:600px){.session7-g2-start-card{padding:23px 20px}.session7-g2-start-art{height:86px;margin-bottom:10px}}
+body.session7-g2-start-open #app{visibility:hidden}
