@@ -5,6 +5,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Letrang Aa</title>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+    const back=document.querySelector('.page>.card>.back'),card=document.querySelector('.page>.card');
+    if(!back||!card)return;
+    document.body.appendChild(back);
+    Object.assign(back.style,{position:'fixed',top:'32px',left:'clamp(18px,5vw,80px)',right:'auto',bottom:'auto',zIndex:'999'});
+});
+</script>
 <style>
 @font-face{font-family:Fredoka;src:url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');font-display:swap}
 *{box-sizing:border-box}html,body{height:100%;margin:0;overflow:hidden}
@@ -15,9 +23,12 @@ body{color:#183e63;font-family:Fredoka,"Segoe UI",sans-serif;background:url("{% 
 #app{height:100%;min-height:0;padding-top:48px;display:flex;flex-direction:column;align-items:center}h1{margin:0;color:#183e63;font-size:clamp(2rem,4vw,3.7rem);line-height:1.08}
 .eyebrow{width:max-content;max-width:100%;margin:0 auto 14px;padding:10px 30px;border-radius:999px;background:#277f82;color:#fff;font-size:clamp(.85rem,1.4vw,1.15rem);letter-spacing:.02em}
 .head{position:relative;width:100%;text-align:center}.head>b{position:absolute;right:0;top:6px;padding:10px 18px;border-radius:999px;background:#fff;color:#277f82;font-size:1.05rem;box-shadow:0 6px 14px #145ca733}
-.instruction{width:min(820px,100%);margin:20px auto 18px;padding:14px 22px;border:2px solid #94d9d6;border-radius:18px;background:#ffffffe8;color:#315875;font-size:clamp(1rem,1.8vw,1.25rem);line-height:1.3}
+.instruction{width:min(820px,100%);margin:20px auto 18px;padding:14px 22px;border:2px solid #94d9d6;border-radius:18px;background:#ffffffe8;color:#315875;font-size:clamp(1rem,1.8vw,1.25rem);line-height:1.3;display:none!important}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:min(720px,100%);margin:14px auto 18px}.tile{padding:6px;border:3px solid #94d9d6;border-radius:18px;background:#ffffffe8}.tile img{display:block;width:100%;height:clamp(58px,11vh,122px);object-fit:contain}
-#app:has(#start){padding-top:38px}#app:has(#start) .instruction{margin-top:14px;margin-bottom:12px}#app:has(#start) .grid{margin-top:10px;margin-bottom:12px}#app:has(#start) #start{min-height:58px;margin-top:10px;flex:0 0 auto}
+#app:has(#start){padding-top:0!important}#app:has(#start) .instruction{margin-top:14px;margin-bottom:12px}#app:has(#start) .grid{margin-top:10px;margin-bottom:12px}#app:has(#start) #start{min-height:58px;margin-top:10px;flex:0 0 auto}body:has(#start) .card{height:auto!important;min-height:0!important;margin-top:140px!important;padding-top:0!important;overflow:visible!important;transform:none!important}
+body:has(#start) .page .back{position:fixed!important;top:16px!important;left:clamp(18px,5vw,80px)!important;right:auto!important;bottom:auto!important;z-index:999!important;transform:none!important}
+body.lesson-start-open .card{height:auto!important;min-height:0!important;margin-top:140px!important;padding-top:0!important;overflow:visible!important}
+body.lesson-start-open #app{padding-top:0!important}
 #app:has(#finish) #finish{margin-top:18px}
 .focus{width:min(760px,100%);min-height:0;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;margin:0 auto;padding:12px 20px;border:4px solid #94d9d6;border-radius:32px;background:#ffffffe8;overflow:hidden}
  .focus img{display:block;width:min(52vw,330px);height:min(29vh,220px);object-fit:contain}.status{min-height:30px;color:#315875;font-size:1.1rem;font-weight:900}.feedback{margin:0}.feedback.bad{color:#cf5e5e}.response-feedback{visibility:hidden!important}
@@ -32,7 +43,7 @@ body{color:#183e63;font-family:Fredoka,"Segoe UI",sans-serif;background:url("{% 
 (()=>{const wrap=()=>{document.querySelectorAll('#app .focus>img').forEach(image=>{const box=document.createElement('div');box.className='lesson5-golden-picture-box';image.replaceWith(box);box.appendChild(image)})};const app=()=>document.getElementById('app');const start=()=>{const root=app();if(root){new MutationObserver(wrap).observe(root,{childList:true,subtree:true});wrap()}};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start()})();
 </script></head>
 <body>
-<div class="page"><main class="card"><a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a><div id="app"></div></main></div>
+<div class="page"><a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a><main class="card"><div id="app"></div></main></div>
 {{ lesson_5_data|json_script:"lesson-five-data" }}
 <script>
 // Passive real-UI preview only; activity startup remains gated below.
@@ -85,11 +96,26 @@ render();
 }, { once: true });
 </script><script>window.__lessonStartProgress={activityKey:'lesson-5-gawain-1',activityTitle:'Letrang Aa',progress:JSON.parse(document.getElementById('lesson-five-data').textContent||'{}').progress||null,totalItems:9,progressUrl:'{{ lesson_5_progress_url }}',storageKeys:[]};</script><script src="{% static 'pabasa_app/js/lesson_start_modal.js' %}?v=6"></script>
 <style>
+/* Match the Lesson 5 intro's prescribed sky/glass visual language. */
+.lesson-start-backdrop.lesson-13-start-backdrop{background:transparent!important;padding:16px!important}
+.lesson-start-backdrop .lesson-start-modal{border:2px solid #ffffffaa!important;border-radius:42px!important;background:#ffffff63!important;backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important;box-shadow:0 18px 45px #1e5b7a35!important;color:#183e63!important}
+body:has(#app .completion-state) .card{border-color:transparent!important}
+</style>
+<style>
 body:has(#app .completion-state) .back,body:has(#app .completion-state) .lesson-start-backdrop{display:none!important}body:has(#app .completion-state) .card{display:grid;place-items:center;align-content:center;background:transparent!important;box-shadow:none!important}body:has(#app .completion-state) .completion-state{width:min(540px,calc(100vw - 48px));padding:42px 38px 40px;background:#fffffff2;border:2px solid #ffffffc7;border-radius:32px;box-shadow:0 22px 60px #173f6340;text-align:center}body:has(#app .completion-state) .completion-state h1{margin:0;color:#183e63;font:900 clamp(1.75rem,3vw,2rem)/1.2 Fredoka,Nunito,"Segoe UI",sans-serif}body:has(#app .completion-state) .completion-state p{margin:18px 0 28px;color:#183e63;font:700 clamp(1.1rem,2vw,1.25rem)/1.4 Fredoka,Nunito,"Segoe UI",sans-serif}body:has(#app .completion-state) .completion-state .action{background:#299e9a;color:#fff;border-radius:999px;text-decoration:none;font:900 clamp(1.05rem,1.8vw,1.25rem)/1.2 Fredoka,Nunito,"Segoe UI",sans-serif;box-shadow:0 5px 0 #187b7a}
 </style></body>
 {% include 'pabasa_app/session4_prescribed_controls.html' with prefix='prescribed-s2l5g1' help_text='Tingnan ang larawan at tukuyin kung nagsisimula ito sa tunog /a/.' %}
 <script>(function(){const e=document.getElementById('lesson-five-data');if(!e)return;const d=JSON.parse(e.textContent||'{}');d.progress_url='{% url "lesson_5_activity_progress" %}';e.textContent=JSON.stringify(d)})();</script>
 {% include 'pabasa_app/session4_prescribed_bootstrap.html' with prefix='prescribed-s2l5g1' speech=False data_id='lesson-five-data' %}
+<style>
+/* Main activity shell: the back link is a sibling above the shortened card. */
+body:not(.lesson-start-open) .page{display:flex!important;flex-direction:column!important;align-items:center!important;gap:12px!important;padding:16px clamp(10px,4vw,42px) 22px!important}
+body:not(.lesson-start-open) .page>.back{position:static!important;align-self:flex-start!important;margin:0 0 0 clamp(8px,3vw,38px)!important;flex:0 0 auto!important}
+body:not(.lesson-start-open) .page>.card{height:calc(100dvh - 112px)!important;min-height:0!important;margin:0 auto!important;padding-top:14px!important;flex:1 1 auto!important}
+body:not(.lesson-start-open) #app{padding-top:20px!important}
+body:has(#start)>.page>.card{height:auto!important;min-height:0!important;margin:90px auto 0!important;padding-top:24px!important;flex:0 0 auto!important}
+body:has(#start) #app{padding-top:0!important}
+</style>
 </body>
 <script src="{% static 'pabasa_app/js/session2_prescribed_debug.js' %}?v=1"></script>
 <script>window.Session2PrescribedDebug.init({prefix:'prescribed-s2l5g1',expected:(()=>{const d=JSON.parse(document.getElementById('lesson-five-data').textContent||'{}');return d.items?.[Number(d.progress?.current_index)||0]?.word||''})(),normalize:value=>String(value||'').toLowerCase().replace(/[^a-z]/g,''),transcript:result=>result?.transcript||'',evaluateResult:result=>Boolean(result?.success&&result?.complete===true)});</script>
