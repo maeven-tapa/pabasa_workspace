@@ -31,41 +31,43 @@
     justify-content: center;
   }
   .waiting-room-card {
-    width: min(100%, 760px);
+    width: min(100%, 620px);
     margin: 0 auto;
     border: 1px solid rgba(15, 23, 42, 0.08);
     border-radius: clamp(20px, 4vw, 28px);
-    padding: clamp(20px, 3.5vw, 32px);
+    padding: clamp(18px, 3vw, 28px);
     box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08), 0 4px 16px rgba(15, 23, 42, 0.04);
     background: var(--panel, #ffffff);
   }
   .waiting-room-top {
     position: relative;
-    padding-top: clamp(2rem, 3vw, 2.5rem);
-    padding-bottom: clamp(2rem, 3vw, 2.5rem);
+    padding: 0;
   }
   .waiting-room-badge-wrapper {
-    position: absolute;
-    right: clamp(1rem, 2vw, 1.5rem);
-    top: clamp(1rem, 2vw, 1.5rem);
+    position: static;
+    display: flex;
+    justify-content: center;
+    margin-top: 0.9rem;
   }
   .waiting-room-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
-    padding: 0.9rem 1.1rem;
+    padding: 0.55rem 0.95rem;
     border-radius: 999px;
     font-size: clamp(0.95rem, 2.4vw, 1rem);
     font-weight: 700;
     white-space: normal;
     max-width: 100%;
-    box-shadow: 0 6px 18px rgba(31, 111, 139, 0.12);
+    background: #e7f7ef !important;
+    color: #176b45 !important;
+    box-shadow: 0 6px 18px rgba(23, 107, 69, 0.1);
   }
   .waiting-room-top-content {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: clamp(16px, 2.5vw, 20px);
+    gap: clamp(10px, 2vw, 14px);
     min-width: 0;
     max-width: 600px;
     margin: 0 auto;
@@ -74,12 +76,12 @@
   .waiting-room-icon {
     display: grid;
     place-items: center;
-    width: clamp(5rem, 12vw, 7rem);
-    height: clamp(5rem, 12vw, 7rem);
-    border-radius: 1.5rem;
-    background: rgba(31, 111, 139, 0.08);
+    width: clamp(6rem, 14vw, 8rem);
+    height: clamp(6rem, 14vw, 8rem);
+    border-radius: 2rem;
+    background: #fff5cc;
     color: var(--dash-primary, #1f6f8b);
-    font-size: clamp(2.5rem, 8vw, 3.6rem);
+    font-size: clamp(3rem, 9vw, 4.2rem);
     animation: waitingFloat 6s ease-in-out infinite;
     box-shadow: inset 0 0 0 1px rgba(31, 111, 139, 0.08);
   }
@@ -96,21 +98,21 @@
   }
   .waiting-room-description {
     font-size: clamp(1rem, 2.5vw, 1.05rem);
-    line-height: 1.75;
+    line-height: 1.55;
     color: var(--muted, #5d6d7a);
     max-width: 34rem;
     margin: 0;
   }
   .waiting-room-description {
     font-size: clamp(1rem, 2.5vw, 1.05rem);
-    line-height: 1.75;
+    line-height: 1.55;
     color: var(--muted, #5d6d7a);
     max-width: 46ch;
     margin: 0;
   }
   .waiting-room-divider {
     height: 1px;
-    margin: clamp(22px, 3vw, 28px) 0;
+    margin: clamp(18px, 3vw, 22px) 0;
     background: rgba(15, 23, 42, 0.08);
   }
   .waiting-room-bottom {
@@ -120,27 +122,31 @@
   .waiting-room-info-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: clamp(18px, 3vw, 24px);
+    gap: clamp(10px, 2vw, 14px);
     align-items: stretch;
   }
   .info-column {
     display: grid;
-    gap: clamp(14px, 2vw, 18px);
+    gap: 0;
     min-width: 0;
   }
   .info-row {
     display: grid;
-    gap: 0.35rem;
+    gap: 0.25rem;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid rgba(31, 111, 139, 0.12);
+    border-radius: 16px;
+    background: #f4fbfd;
     min-width: 0;
   }
   .info-label {
     font-size: clamp(0.82rem, 2vw, 0.95rem);
     font-weight: 600;
-    color: var(--muted, #6b7280);
+    color: var(--dash-primary, #1f6f8b);
     letter-spacing: 0.02em;
   }
   .info-value {
-    font-size: clamp(1.05rem, 2.4vw, 1.12rem);
+    font-size: clamp(0.98rem, 2.4vw, 1.05rem);
     font-weight: 700;
     color: var(--text, #0f172a);
     line-height: 1.45;
@@ -162,6 +168,18 @@
     align-items: center;
     justify-content: flex-start;
   }
+  .waiting-room-simple-status {
+    background: #e7f7ef !important;
+    color: #176b45 !important;
+    padding: 0.45rem 0.8rem;
+  }
+  .waiting-room-helper {
+    max-width: 32rem;
+    margin: 0;
+    color: var(--muted, #5d6d7a);
+    font-size: clamp(0.95rem, 2.3vw, 1rem);
+    line-height: 1.45;
+  }
   @media (max-width: 600px) {
     .waiting-room-page {
       padding: clamp(16px, 4vw, 24px);
@@ -170,15 +188,11 @@
       width: 100%;
       padding: clamp(20px, 4vw, 24px);
     }
-    .waiting-room-top {
-      padding-top: clamp(1.5rem, 3vw, 2rem);
-      padding-bottom: clamp(1.5rem, 3vw, 2rem);
-    }
     .waiting-room-badge-wrapper {
       position: static;
       display: flex;
       justify-content: center;
-      margin-bottom: clamp(16px, 3vw, 20px);
+      margin-top: 0.75rem;
     }
     .waiting-room-top-content {
       gap: clamp(14px, 2.5vw, 18px);
@@ -209,15 +223,13 @@
   <div class="waiting-room-shell">
     <div class="card waiting-room-card">
       <div class="waiting-room-top">
-        <div class="waiting-room-badge-wrapper">
-          <div class="waiting-room-badge badge bg-primary text-white">Status: <span id="wrStatus">{{ live_session.status|title }}</span></div>
-        </div>
         <div class="waiting-room-top-content">
           <div id="waitingAnimation" class="waiting-room-icon">
             <i class="bi bi-hourglass-split"></i>
           </div>
-          <h2 id="waitingMessage" class="waiting-room-message">Waiting for your teacher to start the assessment.</h2>
-          <p class="waiting-room-description">You’re connected and ready. Please stay on this page and your teacher will begin the activity when everyone is set.</p>
+          <div class="waiting-room-badge waiting-room-simple-status badge"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <span id="wrStatus">Handa na!</span></div>
+          <h2 id="waitingMessage" class="waiting-room-message">Hintayin muna si Teacher</h2>
+          <p class="waiting-room-description waiting-room-helper">Magsisimula ang assessment kapag handa na si Teacher.</p>
         </div>
       </div>
 
@@ -227,29 +239,16 @@
         <div class="waiting-room-info-grid">
           <div class="info-column">
             <div class="info-row">
-              <span class="info-label">Course</span>
-              <span class="info-value">{{ live_session.course.title|default:'Reading Assessment' }}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Reading material</span>
+              <span class="info-label"><i class="bi bi-book-half me-1" aria-hidden="true"></i>Assessment</span>
               <span class="info-value">{{ live_session.material.title }}</span>
             </div>
           </div>
           <div class="info-column">
             <div class="info-row">
-              <span class="info-label">Teacher</span>
+              <span class="info-label"><i class="bi bi-person-heart me-1" aria-hidden="true"></i>Teacher</span>
               <span class="info-value">{{ teacher_name }}</span>
             </div>
-            <div class="info-row">
-              <span class="info-label">Session ID</span>
-              <span class="info-value">{{ live_session.id }}</span>
-            </div>
           </div>
-        </div>
-
-        <div class="waiting-room-footer">
-          <span>Connection: <strong id="connectionStatus">Connected</strong></span>
-          <span>Last sync: <strong id="footerLastSync">—</strong></span>
         </div>
       </div>
     </div>
@@ -370,11 +369,12 @@
       return;
     }
 
-    setText('wrStatus', state.status?.charAt(0).toUpperCase() + state.status?.slice(1));
-    setText('footerLastSync', new Date().toLocaleTimeString());
+    setText('wrStatus', state.status === 'waiting'
+      ? 'Handa na'
+      : state.status?.charAt(0).toUpperCase() + state.status?.slice(1));
 
     if (state.status === 'waiting') {
-      setText('waitingMessage', 'Waiting for your teacher to start the assessment.');
+      setText('waitingMessage', 'Hintayin muna si Teacher');
       return;
     }
 
