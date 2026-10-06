@@ -18,7 +18,7 @@
     .task{display:flex;flex-direction:column;align-items:center;justify-content:center;width:min(760px,100%);min-height:min(500px,calc(100vh - 200px));margin:auto}
     .eyebrow{margin:0 auto 12px;padding:10px 30px;width:max-content;max-width:100%;border-radius:999px;background:#277f82;color:#fff;font-size:clamp(.78rem,1.4vw,1rem);font-weight:900;letter-spacing:.04em}
     .title{margin:0;font-size:clamp(2rem,4.7vw,3.7rem);line-height:1.08;font-weight:900}.instruction{margin:10px auto 18px;font-size:clamp(1rem,1.9vw,1.3rem);font-weight:900}
-    .item{display:grid;place-items:center;width:min(620px,100%);min-height:clamp(150px,26vh,230px);margin:4px auto 18px;padding:clamp(18px,4vw,38px);border:5px solid #94d9d6;border-radius:34px;background:#ffffffe8;font-size:clamp(2.7rem,7vw,5.2rem);font-weight:900;line-height:1.12;overflow-wrap:anywhere}
+    .item{display:grid;place-items:center;align-items:center;justify-items:center;align-content:center;justify-content:center;width:min(620px,100%);min-height:clamp(150px,26vh,230px);margin:4px auto 18px;padding:clamp(18px,4vw,38px);border:5px solid #e7af45;border-radius:28px;background:#fffdf0;box-shadow:0 0 0 8px #f8dfb0,0 8px 0 #c9902d,0 14px 24px #187b7a25;font-size:clamp(2.7rem,7vw,5.2rem);font-weight:900;line-height:1.12;overflow-wrap:anywhere}
     .status{min-height:24px;margin:0 0 16px;font-size:clamp(.9rem,1.6vw,1rem);font-weight:900}
     .action{display:inline-flex;align-items:center;justify-content:center;gap:15px;min-width:min(330px,80vw);min-height:76px;padding:14px 24px;border:0;border-radius:999px;background:var(--teal);color:#fff;font:inherit;font-size:clamp(1.1rem,1.8vw,1.45rem);font-weight:900;cursor:pointer;box-shadow:0 7px 0 var(--dark),0 10px 20px #187b7a40}.action:active{transform:translateY(4px);box-shadow:0 3px 0 var(--dark)}.action:focus-visible{outline:4px solid #e7af4588;outline-offset:4px}.action.listening{background:#d64c55;box-shadow:0 7px 0 #a93432,0 10px 20px #a9343240;animation:pulse 1.2s ease-in-out infinite}.action.processing{background:#e7a345;box-shadow:0 7px 0 #b77b1b;cursor:wait}.action:disabled{background:#b5c5c7;box-shadow:none;cursor:not-allowed}
     .done{font-size:clamp(1.2rem,2.2vw,1.55rem);font-weight:900;color:#26784e}.done h1{margin:.3rem 0;color:var(--ink);font-size:clamp(2.2rem,5vw,3.6rem)}.done p{margin:0 0 1.5rem;color:var(--ink)}.done .action{text-decoration:none}@keyframes pulse{50%{transform:scale(1.025);box-shadow:0 0 0 11px #f5d47c55,0 7px 0 #a93432}}.bi-arrow-left:before{content:"\f12f"}.bi-mic:before{content:"\f490"}
@@ -39,7 +39,7 @@
   const listen=document.getElementById('listen');
   if(listen){listen.dataset.activityBusy='true';listen.disabled=true;listen.setAttribute('aria-disabled','true');}
  try{
-  const result=await window.Basahin.read({target_text:item.word,language:'Filipino',mode:'word'},{button,url:'{% url "reading_transcribe_api" %}'});
+  const result=await window.Basahin.read({target_text:item.word,language:'Filipino',mode:'word',prescribed_activity_key:'lesson9-gawain3'},{button,url:'{% url "reading_transcribe_api" %}'});
   if(id!==requestId)return;
   if(result.success&&result.complete===true){
    state.attempts=0;status.textContent='Magaling!';
@@ -82,6 +82,18 @@
     fixCompletion();
     new MutationObserver(fixCompletion).observe(app,{childList:true,subtree:true});
   });
+</script>
+<script>
+  (() => {
+    const removeInstruction = () => document.querySelectorAll('#app .instruction').forEach(node => {
+      if (node.textContent.trim() === 'Basahin ang salitang nakapaloob sa puting kahon.') node.remove();
+    });
+    const app = document.getElementById('app');
+    if (app) {
+      new MutationObserver(removeInstruction).observe(app, {childList: true, subtree: true});
+      removeInstruction();
+    }
+  })();
 </script>
 <style>
   .card:has(.done) .done h1,
@@ -178,13 +190,17 @@
   });
 </script>
 <style>
-  #app.card{height:calc(100vh - 110px);min-height:0}
-  #app .task{height:100%;min-height:0;justify-content:flex-start}
-  #app .item{flex:1 1 0;min-height:0;max-height:none;white-space:normal;text-align:center;overflow:hidden}
+  /* Keep feedback text from changing the vertical anchor of the controls. */
+  #app .status{display:none!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
+  #app .action{flex:0 0 auto}
+  #app.card{top:calc(50% - 20px)!important;height:calc(100vh - 150px)!important;min-height:0!important}
+  #app .task{height:calc(100% - 52px)!important;min-height:0;justify-content:flex-start}
+  #app .item{flex:0 0 clamp(150px,26vh,230px);min-height:0;max-height:none;white-space:normal;text-align:center;overflow:hidden}
   #app .reading-actions{flex:0 0 auto;margin-top:0}
+  #app .numbered-progress{margin-top:-28px}
   #app .item.item-long{font-size:clamp(1.9rem,5vw,3.8rem)}
   #app .item.item-very-long{font-size:clamp(1.35rem,3.6vw,2.7rem);line-height:1.08}
-  @media(max-width:520px){#app.card{height:calc(100vh - 92px)}#app .item.item-long{font-size:clamp(1.55rem,7vw,2.8rem)}#app .item.item-very-long{font-size:clamp(1.15rem,5.6vw,2.1rem)}}
+  @media(max-width:520px){#app.card{top:calc(50% - 15px)!important;height:calc(100vh - 120px)!important}#app .task{height:calc(100% - 36px)!important}#app .numbered-progress{margin-top:-18px}#app .item{flex-basis:135px}#app .item.item-long{font-size:clamp(1.55rem,7vw,2.8rem)}#app .item.item-very-long{font-size:clamp(1.15rem,5.6vw,2.1rem)}}
 </style>
 <script>
   document.addEventListener('DOMContentLoaded',()=>{

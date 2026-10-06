@@ -19918,6 +19918,18 @@ def reading_transcribe_api(request):
                 'analyzed_recognized_text': analysis_transcript,  # After stitching if applied
                 'stitching_applied': stitching_applied,
             }
+
+        # Lesson 9 Gawain 3: expose the same canonical token used for
+        # matching in the Free Mode response. Keep the provider result in
+        # raw_transcript for diagnostics, but do not return the raw ``C`` as
+        # the processed/final transcript when it represents target ``se``.
+        if (
+            request.POST.get('prescribed_activity_key') == 'lesson9-gawain3'
+            and mode == 'word'
+            and ReadingMatcher.normalize_word(target_text) == 'se'
+            and str(transcript or '').strip() == 'C'
+        ):
+            analysis['transcript'] = target_text
         
         analysis.update({
             'success': True,

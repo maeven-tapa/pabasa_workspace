@@ -24256,6 +24256,14 @@ def reading_transcribe_api(request):
             transcript,
             fallback_reason,
         )
+        logger.warning(
+            'LESSON9_G3_CONTEXT activity=%r mode=%r target=%r transcript=%r language_code=%r',
+            request.POST.get('prescribed_activity_key') or request.POST.get('activity_key'),
+            mode,
+            target_text,
+            transcript,
+            language_code,
+        )
         l22_c_pronunciation = request.POST.get('l22_c_pronunciation') == '1'
         # English prescribed activities contain very short words, for which
         # speech-to-text commonly returns these phonetic spellings. Canonicalize
@@ -24329,12 +24337,31 @@ def reading_transcribe_api(request):
             '',
             unicodedata.normalize('NFKD', str(transcript or '')).encode('ascii', 'ignore').decode('ascii').lower(),
         )
+        g3_c_to_se = (
+            request.POST.get('prescribed_activity_key') == 'lesson9-gawain3'
+            and ReadingMatcher.normalize_word(target_text) == 'se'
+            and str(transcript or '').strip().casefold() == 'c'
+        )
+        if request.POST.get('prescribed_activity_key') == 'lesson9-gawain3':
+            logger.warning('LESSON9_G3_NORMALIZE_INPUT repr=%r target_repr=%r mode=%r function=%s', transcript, target_text, mode, 'g3_c_to_se')
+            logger.warning('LESSON9_G3_NORMALIZE_OUTPUT repr=%r applied=%s', 'se' if g3_c_to_se else transcript, g3_c_to_se)
         if (
-            request.POST.get('prescribed_activity_key') == 'lesson9-gawain1'
-            and language_code.lower() == 'fil-ph'
-            and mode == 'reading'
+            request.POST.get('prescribed_activity_key') in {'lesson9-gawain1', 'lesson9-gawain3'}
+            and (language_code.lower() == 'fil-ph' or request.POST.get('prescribed_activity_key') == 'lesson9-gawain3')
+            and (mode == 'reading' or (request.POST.get('prescribed_activity_key') == 'lesson9-gawain3' and mode == 'word'))
             and ReadingMatcher.normalize_word(target_text) == 'si'
-            and si_stt_variant in {'si', 'c'}
+            and si_stt_variant in {'si', 'c', 'cc'}
+            and not (
+                request.POST.get('prescribed_activity_key') == 'lesson9-gawain3'
+                and str(transcript or '').strip() == 'C'
+            )
+        ):
+            matching_transcript = target_text
+        # Lesson 9 Gawain 3: Chirp 3 can return the exact provider token ``C``
+        # for the Filipino target ``se``. Keep the raw token for diagnostics;
+        # only the matching transcript is canonicalized.
+        if (
+            g3_c_to_se
         ):
             matching_transcript = target_text
         # Chirp 3 may return the Spanish spelling ``elefante`` for the
@@ -24435,10 +24462,12 @@ def reading_transcribe_api(request):
             and not salitang_magkatugma_exact
         ):
             analysis['transcript'] = target_text
+        if g3_c_to_se:
+            analysis['transcript'] = target_text
         logger.warning(
             "FREE_MODE_STT_DIAGNOSTIC processed_transcript=%r raw_transcript=%r",
-            transcript,
             analysis.get('transcript'),
+            transcript,
         )
         analysis['syllable_context'] = next_syllable_context
         analysis['syllable_stitching_applied'] = stitching_applied
