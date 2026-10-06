@@ -245,7 +245,7 @@
           </div>
           <div class="waiting-room-badge waiting-room-simple-status badge"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <span id="wrStatus">Handa na!</span></div>
           <h2 id="waitingMessage" class="waiting-room-message">Hintayin muna si Teacher</h2>
-          <p class="waiting-room-description waiting-room-helper">Magsisimula ang assessment kapag handa na si Teacher.</p>
+          <p class="waiting-room-description waiting-room-helper">Kapag handa na si Teacher, tuloy na tayo.</p>
         </div>
       </div>
 
@@ -429,7 +429,8 @@
     if (state.status === 'countdown' || state.status === 'started') {
       const participationStatus = String(state.viewer_student_state?.participation_status || '').toLowerCase();
       if (participationStatus === 'saved') {
-        setText('waitingMessage', 'Your reading work is saved. Please wait for your teacher to continue.');
+        setText('waitingMessage', 'Saved na ang ginawa mo! Hintayin muna si Teacher para magpatuloy.');
+        document.querySelector('.waiting-room-description').textContent = 'Kapag handa na si Teacher, tuloy na tayo.';
         return;
       }
       if (state.reader_url) {
