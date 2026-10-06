@@ -13,6 +13,9 @@
     .card>div{width:100%}h1{margin:4px;font-size:clamp(1.6rem,4vw,2.4rem)}
     .eyebrow{color:#997124;font-size:.75rem;font-weight:900}
     .instruction{margin:8px auto;padding:8px 14px;border-radius:14px;background:#eef8fb;font-weight:800;max-width:620px}
+    .reading-intro-instruction{display:none!important}
+    .part2-instruction{display:none!important}
+    .part2-status{display:none!important}
     .reading img{width:min(80vw,360px);height:min(48vh,330px);object-fit:contain;padding:12px;border:3px solid #dce8ed;border-radius:24px;background:#fff;box-shadow:0 8px 18px #2d69731f}
     .progress{color:#71828a;margin:10px;font-weight:800;white-space:nowrap;display:block;line-height:1.5}
     .button{border:0;border-radius:14px;padding:13px 28px;background:#2b83bd;color:#fff;font-size:1.05rem;font-weight:900;box-shadow:0 4px 0 #155369;cursor:pointer}
@@ -79,7 +82,7 @@
       if(d.progress?.activity_completed){app.innerHTML='<div class="done"><h1>Tapos na ang gawain! 🎉</h1><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><a class="button" href="{% url "assessment" %}">BALIK SA AKING ARALIN</a></div>';app.inert=false;return}
       if(!s.oral_reading_completed){
         const i=s.current_reading_item,it=d.items[i];
-        app.innerHTML='<div><p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 3</p><h1>'+d.title+'</h1><p class="instruction">Tingnan ang larawang nasa kahon. Ano ito?</p><div class="reading"><img src="'+it.image_url+'" alt="Larawan"></div><p class="progress">Larawan '+(i+1)+' / '+d.items.length+'</p><p id="status" class="status">Handa ka na? Sabihin ang salita.</p><div class="reading-actions"><button class="button" id="read" type="button">Basahin</button><button class="button" id="listen" type="button">Pakinggan</button></div></div>';
+        app.innerHTML='<div><p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 3</p><h1>'+d.title+'</h1><p class="instruction reading-intro-instruction">Tingnan ang larawang nasa kahon. Ano ito?</p><div class="reading"><img src="'+it.image_url+'" alt="Larawan"></div><p class="progress">Larawan '+(i+1)+' / '+d.items.length+'</p><p id="status" class="status">Handa ka na? Sabihin ang salita.</p><div class="reading-actions"><button class="button" id="read" type="button">Basahin</button><button class="button" id="listen" type="button">Pakinggan</button></div></div>';
         const read=document.getElementById('read'),listenButton=document.getElementById('listen');
         const listen=async()=>{if(audioBusy||read.disabled)return;const audioFile=wordAudioFiles[String(it.word||'').toLowerCase()];if(!audioFile)return;audioBusy=true;setReadingButtonsDisabled(true);try{const audio=new Audio(wordAudioBase+audioFile);await new Promise(resolve=>{audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)})}finally{audioBusy=false;setReadingButtonsDisabled(false)}};
         const record=async function(){
@@ -95,7 +98,7 @@
         return
       }
       const t=d.targets[s.current_target],sel=s.selections[s.current_target],instructionText='Saan sa mga larawang ito ang nagsisimula sa tunog '+String(t.letter).toLowerCase()+'?';
-      app.innerHTML='<div><p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 3</p><h1>'+t.letter+'</h1><p class="instruction">'+instructionText+'</p><div class="choices">'+t.items.map((x,i)=>'<button class="choice '+(sel===i?'selected':'')+'" data-i="'+i+'"><img src="'+x.image_url+'" alt="Larawan"></button>').join('')+'</div><p class="progress">'+(('● '.repeat(s.current_target+1))+('○ '.repeat(4-s.current_target)))+'<br>'+(s.current_target+1)+' / 5</p><p id="status" class="status">Pumili ng isang larawan.</p><button class="button" id="next" type="button">'+(s.current_target===4?'TAPUSIN':'SUSUNOD')+'</button></div>';
+      app.innerHTML='<div><p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 3</p><h1>'+t.letter+'</h1><p class="instruction part2-instruction">'+instructionText+'</p><div class="choices">'+t.items.map((x,i)=>'<button class="choice '+(sel===i?'selected':'')+'" data-i="'+i+'"><img src="'+x.image_url+'" alt="Larawan"></button>').join('')+'</div><p class="progress">'+(('● '.repeat(s.current_target+1))+('○ '.repeat(4-s.current_target)))+'<br>'+(s.current_target+1)+' / 5</p><p id="status" class="status part2-status">Pumili ng isang larawan.</p><button class="button" id="next" type="button">'+(s.current_target===4?'TAPUSIN':'SUSUNOD')+'</button></div>';
       const next=document.getElementById('next');
       document.querySelectorAll('.choice').forEach(button=>button.onclick=()=>{s.selections[s.current_target]=+button.dataset.i;render()});
       next.onclick=async()=>{if(audioBusy)return;const answer=t.answer;if(s.selections[s.current_target]!==answer){delete s.selections[s.current_target];app.querySelectorAll('.choice').forEach(choice=>choice.classList.remove('selected'));setStatus(PART2_WRONG);await narratePart2(PART2_WRONG,next);return}setStatus(CORRECT);await narratePart2(CORRECT,next);s.correct_count++;if(s.current_target===4){await save();const response=await fetch(d.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});if(response.ok){d.progress.activity_completed=true;render()}return}s.current_target++;await save();render()};
