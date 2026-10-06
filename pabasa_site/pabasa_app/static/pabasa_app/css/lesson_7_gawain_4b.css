@@ -181,16 +181,20 @@
 }
 
 .lesson7-gawain4b-page .item input {
-  width: 58px;
-  height: 44px;
+  width: 76px;
+  height: 56px;
   border: 3px solid #bfdde4;
   border-radius: 12px;
   background: #fff;
   color: #183e63;
   font: inherit;
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   font-weight: 900;
   text-align: center;
+}
+
+.lesson7-gawain4b-page .part2-instruction {
+  display: none !important;
 }
 
 .lesson7-gawain4b-page .item input:disabled {

@@ -84,10 +84,10 @@ window.__prescribedNarrationAudio = {
         if(window.__lessonStartReady&&!introPlayed)narrateIntro();
         return
       }
-      app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 2B</p><h1>Letrang Ii</h1><p>'+PART2_INSTRUCTION+'</p><div class="grid">'+d.items.map((x,i)=>'<button class="choice '+(s.selections.includes(i)?'selected':'')+'" data-i="'+i+'"><img src="'+x.image_url+'" alt="Larawan"></button>').join('')+'</div><p id="status">Piliin ang mga larawan, pagkatapos ay isumite.</p><button class="button" id="submit">ISUMITE</button>';
+      app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 2B</p><h1>Letrang Ii</h1><p class="part2-instruction">'+PART2_INSTRUCTION+'</p><div class="grid">'+d.items.map((x,i)=>'<button class="choice '+(s.selections.includes(i)?'selected':'')+'" data-i="'+i+'"><img src="'+x.image_url+'" alt="Larawan"></button>').join('')+'</div><p id="status">Piliin ang mga larawan, pagkatapos ay isumite.</p><button class="button" id="submit">ISUMITE</button>';
       if(window.__lessonStartReady&&!part2InstructionPlayed){part2InstructionPlayed=true;narratePart2(PART2_INSTRUCTION)}
       document.querySelectorAll('.choice').forEach(b=>b.onclick=async()=>{let i=+b.dataset.i;s.selections=s.selections.includes(i)?s.selections.filter(x=>x!==i):[...s.selections,i];await save();render()});
-      document.getElementById('submit').onclick=async()=>{let want=d.items.map((x,i)=>x.target?i:null).filter(x=>x!==null).sort(),got=[...s.selections].sort(),ok=want.length===got.length&&want.every((x,i)=>x===got[i]);s.correct_count=ok?6:0;await save();if(ok){let r=await fetch(d.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});if(r.ok){d.progress.activity_completed=true;render();return}}s.selections=s.selections.filter(x=>want.includes(x));document.querySelectorAll('.choice').forEach(b=>{if(!s.selections.includes(+b.dataset.i))b.classList.remove('selected')});await save();document.getElementById('status').textContent=PART2_WRONG;await narratePart2(PART2_WRONG)};
+      document.getElementById('submit').onclick=async()=>{let want=d.items.map((x,i)=>x.target?i:null).filter(x=>x!==null).sort(),got=[...s.selections].sort(),ok=want.length===got.length&&want.every((x,i)=>x===got[i]);s.correct_count=ok?6:0;await save();if(ok){let r=await fetch(d.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});if(r.ok){d.progress.activity_completed=true;render();return}}s.selections=[];await save();render();document.getElementById('status').textContent=PART2_WRONG;await narratePart2(PART2_WRONG)};
     }
     document.addEventListener('DOMContentLoaded',()=>{render();app.inert=true;window.addEventListener('lesson-start-ready',()=>{app.inert=false},{once:true})});
     __runWhenLessonStarted(() => render());
@@ -100,6 +100,22 @@ window.__prescribedNarrationAudio = {
   body:has(.done) .session3-controls-tools,
   body:has(.done) .session3-controls-debug{display:none!important}
   body:has(.done) .card{background:transparent!important;border:0!important;box-shadow:none!important}
+</style>
+<style>#app .instruction{display:none!important}</style>
+<style>#app .part2-instruction{display:none!important}</style>
+<style>
+/* Part 2 selection: the choice container itself becomes the golden capsule. */
+#app .choice.selected{
+  border:5px solid #e7af45!important;
+  border-radius:999px!important;
+  box-shadow:0 0 0 6px #f8dfb0,0 10px 20px #1e5b7a1c!important;
+}
+</style>
+<style>
+/* Keep the existing direct-child activity layout. Feedback status is removed
+   from normal flow so narration cannot create a temporary row or move controls. */
+#app>#status{position:absolute!important;inset:auto 0 0;width:100%;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;line-height:0!important;pointer-events:none!important}
+#app>.reading-actions{position:relative!important;z-index:1!important}
 </style>
 <style>.done,.done-card,.complete{display:grid;place-items:center;width:min(100%,540px);margin:auto;padding:42px 38px;border-radius:32px;background:#fff;color:#183e63;text-align:center;box-shadow:0 14px 30px #1e5b7a25;overflow:visible}.done h1,.done p,.done a,.done-card h1,.done-card p,.done-card a,.complete h1,.complete p,.complete a{font-size:0}.done h1:after,.done-card h1:after,.complete h1:after{content:'Tapos na ang gawain! 🎉';font-size:2rem}.done p:after,.done-card p:after,.complete p:after{content:'Mahusay! Nakumpleto mo na ang aktibidad.';font-size:1.15rem}.done a,.done-card a,.complete a{display:inline-flex;padding:14px 24px;border-radius:999px;background:#299e9a;color:#fff;text-decoration:none;box-shadow:0 7px #187b7a}.done a:after,.done-card a:after,.complete a:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}.done .button,.complete .done{font-size:0}.done .button:after,.complete .done:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}</style>
 <script>document.querySelectorAll('style').forEach(style=>{if(style.textContent.includes('.done,.done-card,.complete'))style.remove()})</script>
@@ -186,6 +202,9 @@ html body .page>#app.card{
   margin:0 auto!important;
   padding:16px 24px!important;
   overflow:visible!important;
+}
+html body:has(.done) .page{
+  justify-content:center!important;
 }
 @media(max-width:760px){
   html body .page{padding:28px 12px 12px!important}

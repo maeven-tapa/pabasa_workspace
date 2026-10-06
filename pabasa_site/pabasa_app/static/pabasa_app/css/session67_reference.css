@@ -54,6 +54,24 @@ body.session67-activity .back {
   min-height: 64px;
 }
 
+body.session6-leave-enabled .back.leave-back,
+.l16g3-back.leave-back {
+  transition: transform .16s, box-shadow .16s, background .16s;
+}
+
+body.session6-leave-enabled .back.leave-back:hover,
+.l16g3-back.leave-back:hover {
+  background: #e5f5f2;
+  box-shadow: 0 11px 22px #145ca755;
+  transform: translateY(-2px);
+}
+
+body.session6-leave-enabled .back.leave-back:focus-visible,
+.l16g3-back.leave-back:focus-visible {
+  outline: 3px solid #e7af45;
+  outline-offset: 3px;
+}
+
 body.session67-activity .card {
   position: static !important;
   inset: auto !important;

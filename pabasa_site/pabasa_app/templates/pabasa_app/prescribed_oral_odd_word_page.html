@@ -231,7 +231,8 @@
     addEventListener('session6-prescribed-cancel', event => { stopAudio(); lastHandoff = ''; if (event.detail?.reason === 'pause' && s.phase === 'intro') introPlayed = false; token++; stream?.getTracks().forEach(track => track.stop()); stream = null; busy = false; });
     addEventListener('pagehide', () => { stopAudio(); stream?.getTracks().forEach(track => track.stop()); });
     render();
-  })();
+  if(d.activity_key==='lesson-17-18-gawain-8')window.__session6LeaveAdapter={saveCurrentProgress:()=>save(),cleanup:()=>window.dispatchEvent(new CustomEvent('session6-prescribed-cancel',{detail:{reason:'navigation'}}))};
+    })();
   </script>
   {% include "pabasa_app/includes/session6_prescribed_controls.html" %}
   <script>

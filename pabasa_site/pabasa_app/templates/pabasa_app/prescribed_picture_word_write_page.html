@@ -97,7 +97,8 @@
     addEventListener('session6-prescribed-ui-reset',()=>{oralStatus='';feedback='';const status=app.querySelector('.oral-status');if(status)status.textContent='';const action=app.querySelector('#oral-action');if(action){action.disabled=false;action.textContent=oralMode==='aloud'?'Pakinggan muna':'Basahin ngayon';}});
     const renderOralWithRetryMessage=renderOral;renderOral=(message='',kind='')=>renderOralWithRetryMessage(oralMode==='read'&&kind==='error'&&String(message).includes('malinaw')?'Hindi pa tama, subukan muli.':message,kind);
     addEventListener('session6-prescribed-cancel',()=>window.dispatchEvent(new CustomEvent('session6-prescribed-ui-reset')));
-  })();
+  if(isLesson16Gawain4)window.__session6LeaveAdapter={saveCurrentProgress:()=>persist(),cleanup:()=>{stopOral();activeAudio?.pause();activeAudio=null;}};
+    })();
   </script>
 {% include "pabasa_app/includes/session6_prescribed_controls.html" %}
 </body>

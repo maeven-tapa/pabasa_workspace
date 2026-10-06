@@ -15,6 +15,7 @@
   let state = progress.state || {};
   let screen = data.screen || {};
   let busy = false, paused = false, generation = 0, stream = null, controller = null;
+  let pendingProgressSave = Promise.resolve();
   let restartPending = false;
   let audioPlayer = null;
   const total = 5;
@@ -24,7 +25,11 @@
     if (!response.ok || !result.success) throw new Error(result.error || 'Hindi na-save ang iyong progreso. Subukang muli.');
     return result;
   };
-  const send = body => request(data.progress_url, body, controller?.signal);
+  const send = body => {
+    const operation = request(data.progress_url, body, controller?.signal);
+    pendingProgressSave = operation;
+    return operation;
+  };
   const cancelWork = () => {
     generation += 1;
     controller?.abort(); controller = null;
@@ -211,6 +216,14 @@
   };
   window.addEventListener('lesson-start-ready', startOrResume);
   window.addEventListener('session6-prescribed-cancel', event => {
+    if (event.detail?.reason === 'cleanup') {
+      generation += 1;
+      stream?.getTracks().forEach(track => track.stop()); stream = null;
+      if (audioPlayer) { audioPlayer.pause(); audioPlayer.currentTime = 0; audioPlayer = null; }
+      window.Basahin?.cancelAll?.();
+      busy = false;
+      return;
+    }
     cancelWork(); busy = false;
     if (event.detail?.reason === 'pause') paused = true;
     if (event.detail?.reason === 'pause' || event.detail?.reason === 'navigation' || event.detail?.reason === 'restart') render();
@@ -225,5 +238,14 @@
     render('Hindi na-reset ang gawain. Subukang muli sa menu ng paghinto.','is-error');
   });
   window.addEventListener('pagehide', cancelWork,{once:true});
+  window.__session6LeaveAdapter = {
+    saveCurrentProgress: () => pendingProgressSave,
+    cleanup: () => {
+      generation += 1;
+      stream?.getTracks().forEach(track => track.stop()); stream = null;
+      if (audioPlayer) { audioPlayer.pause(); audioPlayer.currentTime = 0; audioPlayer = null; }
+      window.Basahin?.cancelAll?.();
+    },
+  };
   render();
 })();

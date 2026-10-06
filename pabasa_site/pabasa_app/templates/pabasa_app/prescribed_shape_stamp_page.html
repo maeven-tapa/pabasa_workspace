@@ -36,12 +36,15 @@
     <link rel="stylesheet" href="{% static 'pabasa_app/css/lesson_7_gawain_4a.css' %}?v=20260918-1">
     <style>
       body.lesson7-gawain4a-page:has(.done) .back{display:none!important}
+      body.lesson7-gawain4a-page:has(.done) .page{justify-content:center!important}
+      body.lesson7-gawain4a-page:has(.done) .done{position:fixed!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important}
       body.lesson7-gawain4a-page:has(.done) .card{display:grid!important;place-items:center!important;height:auto!important;min-height:0!important;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;padding:0!important;overflow:visible!important}
       body.lesson7-gawain4a-page:has(.done) .done{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:18px!important;width:min(540px,92vw)!important;height:auto!important;min-height:0!important;margin:auto!important;padding:40px 38px!important;border:0!important;border-radius:32px!important;background:#fff!important;color:#183e63!important;box-shadow:0 14px 30px rgba(30,91,122,.16)!important;overflow:visible!important}
       body.lesson7-gawain4a-page:has(.done) .done-mark,body.lesson7-gawain4a-page:has(.done) .done:before,body.lesson7-gawain4a-page:has(.done) .done:after,body.lesson7-gawain4a-page:has(.done) .done h1:after,body.lesson7-gawain4a-page:has(.done) .done p:after{display:none!important;content:none!important}
       body.lesson7-gawain4a-page:has(.done) .done h1{font-size:clamp(1.6rem,3vw,1.9rem)!important;line-height:1.15!important;color:#183e63!important}
       body.lesson7-gawain4a-page:has(.done) .done p{font-size:1.15rem!important;line-height:1.35!important;color:#183e63!important}
       body.lesson7-gawain4a-page:has(.done) .done a{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:330px!important;min-height:58px!important;padding:14px 28px!important;border-radius:999px!important;background:#299e9a!important;color:#fff!important;text-decoration:none!important;box-shadow:0 7px #187b7a!important;pointer-events:auto!important;position:relative!important;z-index:3!important}
+      body.lesson7-gawain4a-page .instruction{display:none!important}
     </style>
   {% endif %}
 </head>

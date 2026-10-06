@@ -24337,6 +24337,28 @@ def reading_transcribe_api(request):
             and si_stt_variant in {'si', 'c'}
         ):
             matching_transcript = target_text
+        # Chirp 3 may return the Spanish spelling ``elefante`` for the
+        # prescribed Filipino target ``elepante``. Keep the provider/raw
+        # transcript unchanged; only canonicalize the value used for matching.
+        if (
+            request.POST.get('prescribed_activity_key') in {'lesson7-gawain3', 'lesson8-gawain1a'}
+            and language_code.lower() == 'fil-ph'
+            and mode == 'reading'
+            and target_text.strip().lower() == 'elepante'
+            and ReadingMatcher.normalize_word(transcript) == 'elefante'
+        ):
+            matching_transcript = target_text
+        # Chirp 3 may return ``cellphone`` for the prescribed Filipino target
+        # ``selpon``. Preserve the provider/raw value and canonicalize only the
+        # transcript used by the activity matcher.
+        if (
+            request.POST.get('prescribed_activity_key') == 'lesson8-gawain1a'
+            and language_code.lower() == 'fil-ph'
+            and mode == 'reading'
+            and target_text.strip().lower() == 'selpon'
+            and ReadingMatcher.normalize_word(transcript) == 'cellphone'
+        ):
+            matching_transcript = target_text
         analysis_transcript, next_syllable_context, stitching_applied = target_aware_syllable_stitching(
             target_text,
             current_syllable_index,

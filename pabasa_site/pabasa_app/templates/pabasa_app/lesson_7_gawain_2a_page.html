@@ -1,5 +1,12 @@
 {% load static %}{% include 'pabasa_app/basahin_script.html' %}<script src="{% static 'pabasa_app/js/session3_visual_feedback_suppression.js' %}" data-activity-key="lesson7-gawain2a" data-feedback-messages='["Subukan muli. Sabihin ang salita nang malinaw.","Hindi narinig. Subukan muli.","May mga larawan na nagsisimula sa /i/. Isulat ang i sa tamang kahon, pagkatapos ay isumite muli.","Magaling!","Natapos mo ang Gawain 2A."]'></script><link rel="stylesheet" href="/static/pabasa_app/css/lesson_7_gawain_2a.css?v=20260918-13">
-<script src="/static/pabasa_app/js/lesson_7_gawain_2a_controls.js?v=20260924-2"></script>
+<script src="/static/pabasa_app/js/lesson_7_gawain_2a_controls.js?v=20261006-3"></script>
+<script src="{% static 'pabasa_app/js/lesson7_gawain2a_progress_stability.js' %}?v=20261006-1" defer></script>
+<style>
+#session-3-start.lesson-start-backdrop{padding:16px clamp(16px,4vw,42px);background:#173f6330;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+#session-3-start .lesson-start-modal{width:min(500px,calc(100vw - 32px));padding:34px clamp(24px,3vw,34px) 30px;border:2px solid #ffffffc7;border-radius:30px;background:#fffffff2;box-shadow:0 22px 60px #173f6340}
+#session-3-start .lesson-start-label{margin:0 0 16px;color:#277f82;font:900 1.05rem/1.2 Fredoka,Nunito,"Segoe UI",sans-serif;letter-spacing:.04em}
+#session-3-start .lesson-start-title{margin:0 auto 26px;max-width:430px;color:#183e63;font:900 clamp(1.65rem,3.2vw,2.2rem)/1.2 Fredoka,Nunito,"Segoe UI",sans-serif}
+</style>
 <script>
 window.__prescribedNarrationAudio = {
   'tukuyin ang larawan': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2A/OTHERS/tukuyin_ang_larawan.mp3' %}",
@@ -8,6 +15,7 @@ window.__prescribedNarrationAudio = {
   'subukan muli': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2A/OTHERS/subukan_muli.mp3' %}",
   'isulat ang i sa kahon ng bagay na nagsisimula sa i': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2A/OTHERS/isulat_ang_i_sa_kahon_ng_bagay_na_nagsisimula_sa_i.mp3' %}",
   'may mga larawan na nagsisimula sa /i/. isulat ang i sa tamang kahon, pagkatapos ay isumite muli': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2A/OTHERS/may_mga_larawan_na_nagsisimula_sa_i_isulat_ang_i_sa_tamang_kahon_pagkatapos_ay_isumite_muli.mp3' %}",
+  'maling letra ang iyong isinulat. subukan ito muli! isulat ang letrang i': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2A/OTHERS/maling_letra_subukan_muli_letrang_i.mp3' %}",
 };
 </script><script src="{% static 'pabasa_app/js/prescribed_narration_resolver.js' %}?v=20260924-2" defer></script>
 {% load static %}<!doctype html><html lang="fil"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gawain 2A: Letrang Ii</title><style>
@@ -21,6 +29,7 @@ document.getElementById('clear').onclick=async()=>{strokes=Array.from({length:6}
 document.getElementById('submit').onclick=async()=>{if(busy)return;busy=true;let score=0;mainItems.forEach((it,n)=>{let c=document.querySelectorAll('canvas')[n],p=(strokes[n]||[]).flat(),written=hasMark(c),ok=it.target?validI(c,strokes[n]):!written;if(ok)score++});s.answers=mainItems.map((it,n)=>{let c=document.querySelectorAll('canvas')[n],written=hasMark(c);return it.target&&written&&validI(c,strokes[n])?'i':(!it.target&&!written?'':'')});s.correct_count=score;s.submission_count=Number(s.submission_count||0)+1;s.handwriting_strokes=strokes;await save();if(score===6){let r=await fetch(d.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});if(r.ok){d.progress.activity_completed=true;busy=false;render();return}}document.getElementById('status').textContent='May mga larawan na nagsisimula sa /i/. Isulat ang i sa tamang kahon, pagkatapos ay isumite muli.';busy=false};};window.__session3SaveAdapters=window.__session3SaveAdapters||{};window.__session3SaveAdapters['prescribed-s3l7g2a']=async()=>{const response=await save();if(!response.ok)throw Error('Progress save failed: HTTP '+response.status);return response};window.lesson7G2ARender=next=>{s=Object.assign(s,next||{});render()};document.addEventListener('DOMContentLoaded',()=>{render();app.inert=true;window.addEventListener('lesson-start-ready',()=>{app.inert=false},{once:true})});try{__runWhenLessonStarted(()=>{app.inert=false;render()})}catch(error){console.error(error);app.innerHTML="<p class=\"status\">Hindi maihanda ang gawain. Pakisubukan muli.</p>"}})();</script>{% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g2a' help_text='Sabihin ang salita, pagkatapos ay isulat ang letrang i.' %}</body></html>
 <style>.done{display:grid;place-items:center;width:min(100%,540px);margin:auto;padding:42px 38px 40px;border-radius:32px;background:#fff;color:#183e63;text-align:center;box-shadow:0 14px 30px #1e5b7a25}.done h1{margin:0;font-size:2rem}.done p{font-size:1.15rem}.done a{display:inline-flex;padding:14px 24px;border-radius:999px;background:#299e9a;color:#fff;font-size:1.15rem;text-decoration:none;box-shadow:0 7px #187b7a}</style>
 <style>
+#app .instruction{display:none!important}
   .done{width:min(540px,92vw)!important;padding:42px 38px 40px!important;border-radius:32px!important;background:#fff!important;color:#183e63!important;text-align:center!important;box-shadow:0 14px 30px #1e5b7a25!important}
   .done-badge,.done-eyebrow{display:none!important}
   .done h1,.done p,.done a{font-size:0!important}
@@ -42,6 +51,9 @@ document.getElementById('submit').onclick=async()=>{if(busy)return;busy=true;let
   @media(prefers-reduced-motion:reduce){#app .reading #read.is-listening{animation:none}}
 </style>
 <style>.done h1,.done .done-message{visibility:visible!important}</style>
+<style>
+.page>#app.card:has(.done){min-height:0!important;height:auto!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+</style>
 <script src="{% static 'pabasa_app/js/session3_visual_feedback_suppression.js' %}" data-feedback-messages='["Subukan Muli","Magaling"]'></script>
 </html><script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -64,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <script>
 (()=>{const wrap=()=>{document.querySelectorAll('#app .reading>img').forEach(image=>{if(image.parentElement.classList.contains('lesson7-golden-picture-box'))return;const box=document.createElement('div');box.className='lesson7-golden-picture-box';image.replaceWith(box);box.appendChild(image)})};const app=document.getElementById('app');if(app){new MutationObserver(wrap).observe(app,{childList:true,subtree:true});wrap()}})();
 </script>
-<style>#app .reading button{margin-top:8px}#app .numbered-progress{margin-top:20px}</style>
+<style>#app .reading #status{height:28px;min-height:28px;max-height:28px;margin:0 auto;overflow:hidden;line-height:28px}#app .reading button{margin-top:8px}#app .numbered-progress{margin-top:20px}</style>
 <style>
 .page:has(#activity-data){box-sizing:border-box;width:min(1120px,calc(100% - 24px));min-height:100dvh;padding:10px 0 18px;display:flex;flex-direction:column;align-items:center;gap:10px}
 .page:has(#activity-data)>.back{align-self:flex-start;width:fit-content;flex:0 0 auto}
@@ -75,5 +87,13 @@ document.addEventListener('DOMContentLoaded', function () {
 .page:has(#activity-data)>#app.card .reading img{width:min(64vw,360px);height:min(44vh,300px);margin:14px auto}
 .page:has(#activity-data)>#app.card .reading button,.page:has(#activity-data)>#app.card .actions button{min-width:150px;padding:14px 24px;font-size:1.05rem}
 .page:has(#activity-data)>#app.card .numbered-progress{margin-top:18px}
+body:has(#activity-data)>.page>#app.card{min-height:0!important;height:auto!important}
+body:has(#activity-data)>.page>#app.card .reading{display:flex;flex-direction:column;align-items:center}
+body:has(#activity-data)>.page>#app.card .reading #status{flex:0 0 28px;height:28px;min-height:28px;max-height:28px;overflow:hidden;line-height:28px}
+body:has(#activity-data)>.page>#app.card .reading .lesson7-g2a-reading-actions{min-height:58px;display:flex;align-items:center;justify-content:center;gap:10px}
+body:has(#activity-data)>.page>#app.card .reading{position:relative;display:grid;grid-template-columns:1fr;grid-template-rows:minmax(190px,300px) 58px;row-gap:8px;justify-items:center;align-items:center}
+body:has(#activity-data)>.page>#app.card .reading>.lesson7-golden-picture-box{grid-row:1;align-self:center}
+body:has(#activity-data)>.page>#app.card .reading>#status{position:absolute;inset:auto 0 66px;height:28px;min-height:28px;max-height:28px;overflow:hidden;line-height:28px;margin:0;pointer-events:none}
+body:has(#activity-data)>.page>#app.card .reading>.lesson7-g2a-reading-actions{grid-row:2;align-self:center}
 @media(max-width:700px){.page:has(#activity-data){width:calc(100% - 20px);padding:8px 0 14px}.page:has(#activity-data)>#app.card{padding:20px 16px}.page:has(#activity-data)>#app.card .reading img{width:min(78vw,320px);height:min(38vh,250px)}.page:has(#activity-data)>#app.card .reading button,.page:has(#activity-data)>#app.card .actions button{min-width:0;flex:1;padding:12px 14px}}
 </style>
