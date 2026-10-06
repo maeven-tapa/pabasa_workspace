@@ -101,6 +101,13 @@
         color: #263f4f !important;
     }
 
+    /* The privacy step has a fixed document viewport. Release it while the
+       registration form is replaced by the small OTP sending state. */
+    .account-card.is-otp-loading {
+        height: auto !important;
+        max-height: none !important;
+    }
+
     .password-field {
         position: relative;
     }
@@ -1360,6 +1367,22 @@
 <script>
     (() => {
         const form = document.getElementById("teacherSignupForm");
+        const nameInputs = ["first_name", "middle_initial", "last_name"]
+            .map((name) => form.elements[name])
+            .filter(Boolean);
+        const capitalizeFirstCharacter = (input) => {
+            const value = input.value;
+            const capitalizedValue = value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+            if (value === capitalizedValue) return;
+
+            const selectionStart = input.selectionStart;
+            const selectionEnd = input.selectionEnd;
+            input.value = capitalizedValue;
+            if (document.activeElement === input && selectionStart !== null && selectionEnd !== null) {
+                input.setSelectionRange(selectionStart, selectionEnd);
+            }
+        };
+        nameInputs.forEach((input) => input.addEventListener("input", () => capitalizeFirstCharacter(input)));
         const sectionSelect = document.getElementById('teacherSection');
         const sectionIsLockedText = (section) => `${section} \u2014 not available \uf47a`;
         const hasDisabledSelection = (select) => Boolean(select?.selectedOptions?.[0]?.disabled);
@@ -1562,6 +1585,7 @@
 
         const otpStage = document.getElementById("teacherOtpStage");
         const otpLoading = document.getElementById("teacherOtpLoading");
+        const signupCard = form.closest(".account-card");
         const otpForm = document.getElementById("otpForm");
         const otpEmailSpan = document.getElementById("otpEmail");
         const otpErrorMessage = document.getElementById("otpErrorMessage");
@@ -1570,6 +1594,7 @@
 
         const showOtpStage = (email) => {
             otpLoading.classList.add("d-none");
+            signupCard.classList.remove("is-otp-loading");
             otpEmailSpan.textContent = email;
             otpStage.classList.remove("d-none");
             otpErrorMessage.classList.add("d-none");
@@ -1579,6 +1604,7 @@
 
         const showSignupForm = () => {
             otpLoading.classList.add("d-none");
+            signupCard.classList.remove("is-otp-loading");
             otpStage.classList.add("d-none");
             form.classList.remove("d-none");
             errorMessage.classList.add("d-none");
@@ -1645,6 +1671,7 @@
 
         form.addEventListener("submit", async (event) => {
             event.preventDefault();
+            nameInputs.forEach(capitalizeFirstCharacter);
             updateValidation();
 
             if (hasDisabledSelection(sectionSelect)) {
@@ -1663,6 +1690,7 @@
             errorMessage.classList.add("d-none");
             form.classList.add("d-none");
             otpStage.classList.add("d-none");
+            signupCard.classList.add("is-otp-loading");
             otpLoading.classList.remove("d-none");
 
             try {
@@ -1678,6 +1706,7 @@
                     otpStage.scrollIntoView({ behavior: "smooth", block: "nearest" });
                 } else {
                     otpLoading.classList.add("d-none");
+                    signupCard.classList.remove("is-otp-loading");
                     form.classList.remove("d-none");
                     errorMessage.textContent = data.error || 'Registration failed. Please try again.';
                     errorMessage.classList.remove("d-none");
@@ -1686,6 +1715,7 @@
                 }
             } catch (error) {
                 otpLoading.classList.add("d-none");
+                signupCard.classList.remove("is-otp-loading");
                 form.classList.remove("d-none");
                 errorMessage.textContent = 'An error occurred. Please try again.';
                 errorMessage.classList.remove("d-none");
