@@ -176,8 +176,13 @@
             color: var(--ink, #1b1a17);
             font-size: clamp(14px, 1.95vw, 15px);
             line-height: 1.55;
-            padding: clamp(0.75rem, 2.6vw, 1.25rem) 0 1.25rem;
+            padding: clamp(0.65rem, 1.8vw, 1rem) 0 1rem;
         }
+        body:has(.teacher-control) .dashboard-main,
+        body:has(.teacher-control) .dashboard-page-wrap,
+        body:has(.teacher-control) .dashboard-content-wrap,
+        body:has(.teacher-control) .teacher-control { min-width: 0; }
+        body:has(.teacher-control) .dashboard-page-wrap { width: 100%; max-width: 100%; }
 
         .teacher-control h1.h4 {
             font-size: clamp(1.15rem, 3.4vw, 1.5rem);
@@ -229,6 +234,8 @@
 
         #activityTimeline .mb-2 { padding: 6px 0; border-bottom: 1px dashed rgba(31,111,139,0.03); }
         #activityTimeline .small.text-muted { font-size: 0.82rem; }
+        #activityTimeline > .mb-2 { height: auto; min-height: 0; overflow: visible; }
+        #activityTimeline > .mb-2 > div:last-child { height: auto; max-height: none; overflow: visible; white-space: normal; overflow-wrap: anywhere; word-break: break-word; text-overflow: clip; line-height: 1.45; }
 
         .participant-row { font-size: 0.95rem; }
 
@@ -447,7 +454,7 @@
             align-items: flex-start;
             justify-content: space-between;
             gap: clamp(0.75rem, 2.5vw, 1rem);
-            margin-bottom: clamp(0.75rem, 3vw, 1rem);
+            margin-bottom: clamp(0.65rem, 2vw, 0.85rem);
         }
         .teacher-control .live-page-heading {
             flex: 1 1 0;
@@ -473,6 +480,177 @@
             max-width: 100%;
         }
         .teacher-control .control-panel-card { top: 16px; }
+        .teacher-control .live-session-top-row { align-items: stretch; min-width: 0; width: 100%; }
+        .teacher-control .live-session-top-row > [class*="col-"] { display: flex; min-width: 0; }
+        .teacher-control .live-session-top-row .live-monitor-card > *,
+        .teacher-control .live-session-top-row .control-panel-card > *,
+        .teacher-control .control-card-header,
+        .teacher-control .control-card-header > * { min-width: 0; max-width: 100%; }
+        .teacher-control .control-panel-card h5,
+        .teacher-control .control-panel-card .small { overflow-wrap: anywhere; }
+        .teacher-control .live-session-top-row .live-monitor-card,
+        .teacher-control .live-session-top-row .control-panel-card { padding: 0.85rem !important; }
+        .teacher-control .live-session-top-row .live-monitor-card,
+        .teacher-control .live-session-top-row .control-panel-card { display: flex; flex: 1 1 auto; flex-direction: column; height: auto; margin-bottom: 0 !important; min-height: 0; overflow: visible; }
+        .teacher-control .live-session-top-row .live-monitor-card .table-responsive { flex: 0 1 auto; min-height: 0; overflow-x: auto; overflow-y: visible; }
+        .teacher-control .live-session-top-row .live-monitor-card .table-monitor thead th { position: sticky; top: 0; z-index: 1; background: var(--dash-panel, #fff); }
+        .teacher-control .live-session-top-row .activity-timeline-section { display: flex; flex: 0 1 auto; flex-direction: column; min-height: 0; }
+        .teacher-control .live-session-top-row #activityTimeline { flex: 0 1 auto; min-height: 0; max-height: none !important; overflow-x: hidden !important; overflow-y: visible !important; }
+        .teacher-control .live-session-top-row .live-monitor-card:has(#studentsTableBody tr:nth-child(11)) { max-height: 40rem; overflow: hidden; }
+        .teacher-control .live-session-top-row .live-monitor-card:has(#studentsTableBody tr:nth-child(11)) .table-responsive { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+        .teacher-control .session-setup { padding: 0.65rem 0.75rem; border: 1px solid rgba(31, 111, 139, 0.12); border-radius: 12px; background: var(--dash-bg); }
+        .teacher-control .active-countdown-display { padding: 0.65rem 0.75rem; border: 1px solid rgba(31, 111, 139, 0.12); border-radius: 12px; background: var(--dash-bg); }
+        .teacher-control .active-countdown-display .active-countdown-value { font-size: 1.8rem; font-weight: 800; line-height: 1; color: var(--accent-deep, #155e75); }
+        .teacher-control .session-setup-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+        .teacher-control .session-status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.18rem 0.65rem; margin: 0 0 0.35rem !important; }
+        .teacher-control .session-status-grid .session-status-item { min-width: 0; margin: 0 !important; font-size: 0.82rem; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .teacher-control .session-recovery-status { margin: 0 0 0.35rem !important; font-size: 0.82rem; line-height: 1.25; }
+        .teacher-control .activity-timeline-section > hr { margin: 0.35rem 0 0.5rem !important; }
+
+        @media (max-width: 575.98px) {
+            .teacher-control .session-status-grid { grid-template-columns: 1fr; }
+            .teacher-control .session-status-grid .session-status-item { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+        }
+
+        @media (min-width: 1200px) {
+            .teacher-control .live-session-top-row > .col-xl-9 { flex: 0 0 68%; width: 68%; }
+            .teacher-control .live-session-top-row > .col-xl-3 { flex: 0 0 32%; width: 32%; }
+        }
+
+        @media (min-width: 992px) {
+            body:has(.teacher-control) .dashboard-content-wrap { padding-top: 0.2rem !important; }
+            .teacher-control { --live-card-height: min(46rem, calc(100vh - 11rem)); min-height: 0; font-size: 14px; line-height: 1.45; padding-top: 0; padding-bottom: 0.25rem; }
+            .teacher-control h1.h4 { font-size: 1.25rem; }
+            .teacher-control h5 { font-size: 1rem; }
+            .teacher-control h6 { font-size: 0.9rem; }
+            .teacher-control .small { font-size: 0.84rem; }
+            .teacher-control .live-page-header { margin-top: 0; margin-bottom: 0.3rem; }
+            .teacher-control .live-page-heading .text-muted { margin-top: 0.15rem !important; line-height: 1.15; }
+            .teacher-control .live-page-status-pill { padding: 0.2rem 0.55rem !important; line-height: 1.2; }
+            .teacher-control .live-page-status-pill strong { font-size: 0.88rem; }
+            .teacher-control .live-session-top-row { row-gap: 0.5rem; }
+            .teacher-control .live-session-top-row { margin-top: 0 !important; margin-bottom: 0 !important; }
+            .teacher-control .monitor-card-header,
+            .teacher-control .control-card-header { margin-bottom: 0.4rem !important; }
+            .teacher-control .live-session-top-row .live-monitor-card,
+            .teacher-control .live-session-top-row .control-panel-card { padding: 0.55rem !important; border-radius: 16px; }
+            .teacher-control .live-monitor-card .table-monitor th { padding: 0.55rem 0.6rem; font-size: 0.72rem; }
+            .teacher-control .live-monitor-card .table-monitor td { padding: 0.55rem 0.6rem; font-size: 0.88rem; }
+            .teacher-control .live-monitor-card .student-avatar { width: 1.85rem; height: 1.85rem; line-height: 1.85rem; font-size: 0.74rem; }
+            .teacher-control .live-monitor-card .status-pill { padding: 0.2rem 0.45rem; font-size: 0.76rem; }
+            .teacher-control .btn.btn-lg { min-height: 38px; padding: 0.5rem 0.8rem; font-size: 0.9rem; }
+            .teacher-control .session-setup,
+            .teacher-control .active-countdown-display { padding: 0.4rem 0.55rem; }
+            .teacher-control .session-setup .form-label { margin-bottom: 0.15rem !important; font-size: 0.84rem; }
+            .teacher-control .session-setup .text-muted { margin-bottom: 0.35rem !important; }
+            .teacher-control .countdown-controls { gap: 0.35rem; }
+            .teacher-control .session-actions { gap: 0.3rem; margin-bottom: 0.35rem !important; }
+            .teacher-control .session-status-grid { gap: 0.12rem 0.55rem; margin-bottom: 0.25rem !important; }
+            .teacher-control .session-status-grid .session-status-item,
+            .teacher-control .session-recovery-status { font-size: 0.78rem; line-height: 1.2; }
+            .teacher-control .session-recovery-status { margin-bottom: 0.5rem !important; }
+            .teacher-control .activity-timeline-section > hr { margin: 0.35rem 0 0.55rem !important; }
+            .teacher-control .activity-timeline-section h6 { margin-bottom: 0.5rem !important; }
+            #activityTimeline .mb-2 { padding: 3px 0; margin-bottom: 0.25rem !important; }
+            #activityTimeline .small.text-muted { font-size: 0.76rem; }
+            #activityTimeline > .mb-2 > div:last-child { line-height: 1.35; font-size: 0.84rem; }
+            .teacher-control #batchProgressPanel,
+            .teacher-control #allSelectedStudentsCompletedBanner { padding: 0.45rem 0.65rem !important; margin-bottom: 0.55rem !important; }
+            .teacher-control .live-session-top-row { align-items: stretch; }
+            .teacher-control .live-session-top-row .live-monitor-card,
+            .teacher-control .live-session-top-row .control-panel-card {
+                height: var(--live-card-height);
+                min-height: 0;
+                max-height: none;
+                overflow: hidden;
+            }
+            .teacher-control .live-session-top-row .live-monitor-card .table-responsive {
+                flex: 1 1 0;
+                min-height: 0;
+                overflow-x: auto;
+                overflow-y: hidden;
+            }
+            .teacher-control .live-session-top-row .student-monitor-table { display: block; height: 100%; }
+            .teacher-control .live-session-top-row .student-monitor-table thead,
+            .teacher-control .live-session-top-row .student-monitor-table tbody { display: block; width: 100%; }
+            .teacher-control .live-session-top-row .student-monitor-table thead tr,
+            .teacher-control .live-session-top-row .student-monitor-table tbody tr { display: table; width: 100%; table-layout: fixed; }
+            .teacher-control .live-session-top-row .student-monitor-table tbody { height: calc(100% - 3rem); min-height: 0; overflow-y: auto; }
+            .teacher-control .live-session-top-row .activity-timeline-section {
+                display: flex;
+                flex: 1 1 auto;
+                flex-direction: column;
+                min-height: 0;
+                overflow: hidden;
+            }
+            .teacher-control .live-session-top-row #activityTimeline {
+                flex: 1 1 auto;
+                min-height: 0;
+                max-height: none !important;
+                height: auto !important;
+                overflow-x: hidden !important;
+                overflow-y: auto !important;
+            }
+        }
+
+        @media (min-width: 992px) {
+            .teacher-control .live-session-top-row .activity-timeline-section {
+                display: flex;
+                flex: 1 1 0;
+                flex-direction: column;
+                min-height: 0;
+                overflow: hidden;
+            }
+            .teacher-control .live-session-top-row #activityTimeline {
+                flex: 1 1 0;
+                min-height: 0;
+                height: auto !important;
+                max-height: none !important;
+                overflow-x: hidden !important;
+                overflow-y: auto !important;
+            }
+        }
+
+        @media (max-width: 991.98px) {
+            .teacher-control .live-session-top-row { align-items: initial; }
+            .teacher-control .live-session-top-row > [class*="col-"] { display: block; }
+            .teacher-control .live-session-top-row .live-monitor-card,
+            .teacher-control .live-session-top-row .control-panel-card { display: block; height: auto; min-height: 0; margin-bottom: 1rem !important; overflow: visible; }
+            .teacher-control .live-session-top-row .live-monitor-card .table-responsive { overflow-y: visible; }
+            .teacher-control .live-session-top-row .activity-timeline-section { min-height: 14rem; }
+            .teacher-control .live-session-top-row #activityTimeline { max-height: none !important; overflow-y: auto !important; }
+        }
+        #liveAssessmentModal.live-assessment-start-modal .modal-content { background: #fff !important; border: 1px solid #cbd8e2 !important; border-radius: 18px !important; color: #102746 !important; box-shadow: 0 24px 70px rgba(15,45,69,.2) !important; }
+        #liveAssessmentModal.live-assessment-start-modal .modal-header { position: relative; justify-content: center !important; padding: 1.15rem 3.25rem .65rem !important; text-align: center; }
+        #liveAssessmentModal.live-assessment-start-modal .modal-title { color: #102746 !important; font-size: 1.3rem !important; line-height: 1.3; }
+        #liveAssessmentModal.live-assessment-start-modal #liveAssessmentModalClose { position: absolute; top: .85rem; right: 1rem; }
+        #liveAssessmentModal.live-assessment-start-modal .modal-body { padding: .55rem 1.5rem 1rem !important; color: #304a63 !important; font-size: 1rem !important; line-height: 1.5 !important; text-align: center; }
+        #liveAssessmentModal.live-assessment-start-modal .start-assessment-copy { margin: 0; }
+        #liveAssessmentModal.live-assessment-start-modal .start-assessment-info { display: flex; align-items: flex-start; gap: .5rem; width: 100%; margin: .8rem auto 0; padding: .7rem .8rem; border: 1px solid #c9e0f2; border-radius: 10px; color: #2f5f83; background: #f0f8ff; font-size: .9rem; line-height: 1.4; text-align: left; }
+        #liveAssessmentModal.live-assessment-start-modal .start-assessment-info .bi { flex: 0 0 auto; margin-top: .1rem; color: #2f80d9; }
+        #liveAssessmentModal.live-assessment-start-modal .modal-footer { justify-content: center !important; padding: 0 1.5rem 1.2rem !important; gap: .7rem !important; }
+        #liveAssessmentModal.live-assessment-start-modal .modal-footer .btn { min-width: 6rem; padding: .6rem 1rem; border-radius: 10px; font-size: .92rem; font-weight: 700; }
+        #liveAssessmentModal.live-assessment-start-modal .modal-footer .btn-primary { min-width: 7rem; }
+        #liveAssessmentModal.live-assessment-cancel-modal .modal-content { background: #fff !important; border: 1px solid #cbd8e2 !important; border-radius: 18px !important; color: #102746 !important; box-shadow: 0 24px 70px rgba(15,45,69,.2) !important; }
+        #liveAssessmentModal.live-assessment-cancel-modal .modal-header { position: relative; justify-content: center !important; padding: 1.15rem 3.25rem .55rem !important; text-align: center; }
+        #liveAssessmentModal.live-assessment-cancel-modal .modal-title { color: #102746 !important; font-size: 1.3rem !important; line-height: 1.3; }
+        #liveAssessmentModal.live-assessment-cancel-modal #liveAssessmentModalClose { position: absolute; top: .85rem; right: 1rem; }
+        #liveAssessmentModal.live-assessment-cancel-modal .modal-body { padding: .55rem 1.5rem .9rem !important; color: #304a63 !important; font-size: 1rem !important; line-height: 1.5 !important; text-align: center; }
+        #liveAssessmentModal.live-assessment-cancel-modal .cancel-session-copy { margin: 0; }
+        #liveAssessmentModal.live-assessment-cancel-modal .cancel-session-info { margin: .55rem 0 0; color: #71818d; font-size: .9rem; line-height: 1.4; }
+        #liveAssessmentModal.live-assessment-cancel-modal .modal-footer { justify-content: center !important; padding: 0 1.5rem 1.2rem !important; gap: .7rem !important; }
+        #liveAssessmentModal.live-assessment-cancel-modal .modal-footer .btn { min-width: 7.5rem; padding: .6rem 1rem; border-radius: 10px; font-size: .92rem; font-weight: 700; }
+        #liveAssessmentModal.live-assessment-cancel-modal .modal-footer .btn-danger { background: #dc3545; border-color: #dc3545; color: #fff; }
+        #liveAssessmentModal.live-assessment-end-modal .modal-content { background: #fff !important; border: 1px solid #cbd8e2 !important; border-radius: 18px !important; color: #102746 !important; box-shadow: 0 24px 70px rgba(15,45,69,.2) !important; }
+        #liveAssessmentModal.live-assessment-end-modal .modal-header { position: relative; justify-content: center !important; padding: 1.15rem 3.25rem .55rem !important; text-align: center; }
+        #liveAssessmentModal.live-assessment-end-modal .modal-title { color: #102746 !important; font-size: 1.3rem !important; line-height: 1.3; }
+        #liveAssessmentModal.live-assessment-end-modal #liveAssessmentModalClose { position: absolute; top: .85rem; right: 1rem; }
+        #liveAssessmentModal.live-assessment-end-modal .modal-body { padding: .55rem 1.5rem .9rem !important; color: #304a63 !important; font-size: 1rem !important; line-height: 1.5 !important; text-align: center; }
+        #liveAssessmentModal.live-assessment-end-modal .end-session-copy { margin: 0; }
+        #liveAssessmentModal.live-assessment-end-modal .end-session-info { margin: .55rem 0 0; color: #71818d; font-size: .9rem; line-height: 1.4; }
+        #liveAssessmentModal.live-assessment-end-modal .modal-footer { justify-content: center !important; padding: 0 1.5rem 1.2rem !important; gap: .7rem !important; }
+        #liveAssessmentModal.live-assessment-end-modal .modal-footer .btn { min-width: 7.5rem; padding: .6rem 1rem; border-radius: 10px; font-size: .92rem; font-weight: 700; }
+        #liveAssessmentModal.live-assessment-end-modal .modal-footer .btn-danger { background: #dc3545; border-color: #dc3545; color: #fff; }
         .teacher-control .session-actions {
             display: grid;
             gap: 0.5rem;
@@ -487,6 +665,43 @@
         .teacher-control .session-actions > .btn,
         .teacher-control .session-secondary-actions > .btn {
             width: 100%;
+        }
+        .teacher-control #startBtn.btn-primary {
+            background-color: #198754 !important;
+            border-color: #198754 !important;
+            color: #fff !important;
+        }
+        .teacher-control #startBtn.btn-primary:hover,
+        .teacher-control #startBtn.btn-primary:focus-visible,
+        .teacher-control #startBtn.btn-primary:focus {
+            background-color: #157347 !important;
+            border-color: #146c43 !important;
+            color: #fff !important;
+            box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25) !important;
+        }
+        .teacher-control #startBtn.btn-primary:active,
+        .teacher-control #startBtn.btn-primary.active {
+            background-color: #146c43 !important;
+            border-color: #13653f !important;
+            color: #fff !important;
+            box-shadow: none !important;
+        }
+        .teacher-control #cancelBtn.btn-outline-secondary {
+            background-color: #fff;
+            border-color: #dc3545;
+            color: #dc3545;
+        }
+        .teacher-control #cancelBtn.btn-outline-secondary:hover,
+        .teacher-control #cancelBtn.btn-outline-secondary:focus-visible {
+            background-color: #fff5f5;
+            border-color: #dc3545;
+            color: #b02a37;
+        }
+        .teacher-control #startBtn.btn-primary:disabled {
+            color: #fff;
+        }
+        .teacher-control #cancelBtn.btn-outline-secondary:disabled {
+            color: #dc3545;
         }
         .teacher-control .session-secondary-actions > .btn {
             flex: 1 1 10rem;
@@ -583,6 +798,13 @@
             }
             .teacher-control > .row { margin-left: 0; margin-right: 0; }
             .teacher-control > .row > [class*="col-"] { padding-left: 0; padding-right: 0; }
+            .teacher-control .live-session-top-row { align-items: initial; }
+            .teacher-control .live-session-top-row > [class*="col-"] { display: block; }
+            .teacher-control .live-session-top-row .live-monitor-card,
+            .teacher-control .live-session-top-row .control-panel-card { display: block; height: auto; min-height: 0; margin-bottom: 1rem !important; overflow: visible; }
+            .teacher-control .live-session-top-row .live-monitor-card .table-responsive { overflow-y: visible; }
+            .teacher-control .live-session-top-row .activity-timeline-section { min-height: 14rem; }
+            .teacher-control .live-session-top-row #activityTimeline { max-height: none !important; overflow-y: auto !important; }
             .teacher-control .live-page-header {
                 align-items: stretch !important;
                 flex-direction: column;
@@ -721,10 +943,10 @@
         }
     </style>
 
-    <div class="row g-3 mb-3">
-        <div class="col-lg-8 order-2 order-lg-1">
-            <div class="card live-monitor-card monitor-card p-3 mb-3">
-                <div class="monitor-card-header d-flex align-items-start justify-content-between mb-3">
+    <div class="row g-2 g-lg-3 mb-1 live-session-top-row">
+        <div class="col-12 col-lg-8 col-xl-9 order-1">
+            <div class="card live-monitor-card monitor-card p-3 mb-2">
+                <div class="monitor-card-header d-flex align-items-start justify-content-between mb-2">
                     <div>
                         <h5 class="mb-1">Student Monitor</h5>
                         <div class="small text-muted">Monitor selected participants in real time</div>
@@ -805,19 +1027,53 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-4 order-1 order-lg-2">
-            <div class="card control-panel-card p-3 mb-3 sticky-top">
-                <div class="control-card-header d-flex align-items-center justify-content-between mb-3">
+        <div class="col-12 col-lg-4 col-xl-3 order-2">
+            <div class="card control-panel-card p-3 mb-2 sticky-top">
+                <div class="control-card-header d-flex align-items-center justify-content-between mb-2">
                     <div>
                         <h5 class="mb-1">Session Controls</h5>
                         <div class="small text-muted">Teacher command center</div>
                     </div>
-                    <button id="exitBtnTop" class="btn btn-link text-decoration-none p-0">← Exit Live Session</button>
+                    <button id="exitBtnTop" class="btn btn-link text-decoration-none p-0">← Leave Session</button>
                 </div>
+                <div id="countdownSetupArea" class="session-setup mb-2">
+                    <label class="form-label small fw-semibold mb-1" for="countdownTrigger">Countdown</label>
+                    <div class="small text-muted mb-2">Choose a countdown before the assessment begins.</div>
+                    <div class="countdown-controls">
+                        <div class="profile-surface-dropdown" id="countdownDropdown">
+                            <button type="button" class="profile-surface-trigger" id="countdownTrigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="countdownMenu">
+                                <span class="profile-surface-trigger-text"><span class="profile-surface-value" id="countdownValue">None</span></span>
+                                <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                            </button>
+                            <select id="countdown" class="profile-surface-select" tabindex="-1" aria-hidden="true">
+                                <option value="0" selected>None</option>
+                                <option value="3">3s</option>
+                                <option value="5">5s</option>
+                                <option value="10">10s</option>
+                                <option value="15">15s</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                            <div class="profile-surface-menu" id="countdownMenu" role="listbox" aria-label="Countdown"></div>
+                        </div>
+                        <input id="countdownCustom" type="number" min="1" class="form-control form-control-sm d-none countdown-custom-input" placeholder="sec">
+                    </div>
+                </div>
+                <div id="activeCountdownDisplay" class="active-countdown-display mb-2 d-none" aria-live="polite">
+                    <div class="small text-muted mb-1">Countdown</div>
+                    <div id="activeCountdownValue" class="active-countdown-value">0</div>
+                </div>
+                <div id="participantList" class="d-none" aria-hidden="true">
+                    {% for student in student_profiles %}
+                        <label class="participant-row" data-custom-id="{{ student.custom_id|default:'' }}">
+                            <input type="checkbox" class="participant-checkbox" data-student-id="{{ student.id }}" data-custom-id="{{ student.custom_id|default:'' }}" checked disabled aria-label="{{ student.crla_display_name|default:student.full_name }} is a selected participant">
+                        </label>
+                    {% endfor %}
+                </div>
+                <div id="participantEmptyState" class="d-none" aria-hidden="true"></div>
                 <div id="saveNotice" class="alert alert-info py-2 px-3 small mb-3 d-none"></div>
-                <div class="session-actions d-grid gap-2 mb-3">
-                    <button id="startBtn" class="btn btn-success btn-lg">▶ Start Session</button>
-                    <button id="cancelBtn" class="btn btn-outline-danger btn-lg">Cancel</button>
+                <div class="session-actions d-grid gap-2 mb-2">
+                    <button id="startBtn" class="btn btn-primary btn-lg">▶ Start Session</button>
+                    <button id="cancelBtn" class="btn btn-outline-secondary btn-lg">Cancel Session</button>
                     <div class="session-secondary-actions d-flex gap-2">
                         <button id="pauseBtn" class="btn btn-outline-warning btn-lg flex-fill">⏸ Pause</button>
                         <button id="resumeBtn" class="btn btn-outline-primary btn-lg flex-fill">▶ Resume</button>
@@ -825,131 +1081,28 @@
                     <button id="endBtn" class="btn btn-outline-danger btn-lg">⏹ End Session</button>
                     <button id="closeAndSaveBtn" class="btn btn-outline-primary btn-lg d-none">Save &amp; Exit</button>
                 </div>
-                <div class="small text-muted mb-2">Status: <span id="controlStatus">{{ live_session.status|title }}</span></div>
-                <div class="small text-muted mb-2">Last sync: <span id="lastUpdated">—</span></div>
-                <div class="small text-muted mb-2">Selected participants: <span id="selectedCount">{{ live_session.student_count }}</span></div>
-                <div class="small text-muted mb-3">Countdown: <span id="currentCountdown">{{ live_session.countdown_seconds }}s</span></div>
-                <div class="small text-muted mb-3"><i class="bi bi-shield-check me-1" aria-hidden="true"></i><span id="crlaRecoveryStatus">Recovery protection ready</span></div>
-                <hr>
-                <h6 class="mb-2">Activity Timeline</h6>
-                <div id="activityTimeline" style="max-height:320px; overflow:auto;"> 
-                    <!-- events inserted here -->
+                <div class="session-status-grid">
+                    <div class="small text-muted session-status-item">Status: <span id="controlStatus">{{ live_session.status|title }}</span></div>
+                    <div class="small text-muted session-status-item">Last sync: <span id="lastUpdated">—</span></div>
+                    <div class="small text-muted session-status-item">Selected participants: <span id="selectedCount">{{ live_session.student_count }}</span></div>
+                    <div class="small text-muted session-status-item">Countdown: <span id="currentCountdown">{{ live_session.countdown_seconds }}s</span></div>
+                </div>
+                <div class="small text-muted session-recovery-status"><i class="bi bi-shield-check me-1" aria-hidden="true"></i><span id="crlaRecoveryStatus">Recovery protection ready</span></div>
+                <div class="d-none" aria-hidden="true">
+                    <div id="summaryPreStartFields"><span id="summaryStudentsSelected">0</span><span id="summaryCountdown">None</span><span id="summaryAssessment">{{ live_session.material.title|default:'Not selected' }}</span><span id="summaryStartStatusBadge">Ready to Start</span></div>
+                    <div id="summaryLiveFields"><span id="summaryActive">0</span><span id="summaryCompleted">0</span><span id="summaryWaiting">0</span><span id="summaryProgress">0 / 0 Completed</span><span id="summaryLiveStatusBadge">Running</span></div>
+                </div>
+                <div class="activity-timeline-section">
+                    <hr class="my-2">
+                    <h6 class="mb-2">Activity Timeline</h6>
+                    <div id="activityTimeline">
+                        <!-- events inserted here -->
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row g-3">
-        <div class="col-12">
-            <div class="card configuration-card p-3">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <div>
-                        <h5 class="mb-1">Session Configuration</h5>
-                        <div class="small text-muted">Selected Live CRLA participants are locked for this session.</div>
-                    </div>
-                </div>
-                <div class="row gy-3">
-                    <div class="col-lg-5">
-                        <div class="mb-3">
-                            <label class="form-label mb-2">Participants</label>
-                            <div class="border rounded p-2" style="max-height:220px; overflow:auto; background:var(--dash-bg);">
-                                <div id="participantList" class="participant-list">
-                                    {% for student in student_profiles %}
-                                        <label class="d-flex align-items-center gap-2 mb-1 participant-row" data-custom-id="{{ student.custom_id|default:'' }}">
-                                            <input type="checkbox" class="participant-checkbox" data-student-id="{{ student.id }}" data-custom-id="{{ student.custom_id|default:'' }}" checked disabled aria-label="{{ student.crla_display_name|default:student.full_name }} is a selected participant">
-                                            <div class="flex-grow-1">
-                                                <div class="small fw-semibold">{{ student.crla_display_name|default:student.full_name }}</div>
-                                                <div class="small text-muted">Grade {{ student.grade|default:"—" }}</div>
-                                            </div>
-                                        </label>
-                                    {% empty %}
-                                        <div class="small text-muted">No participants are assigned to this live session.</div>
-                                    {% endfor %}
-                                </div>
-                                <div id="participantEmptyState" class="small text-muted mt-2 d-none">No students found.</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-3">
-                        <div>
-                            <label class="form-label mb-2">Countdown</label>
-                            <div class="countdown-controls">
-                                <div class="profile-surface-dropdown" id="countdownDropdown">
-                                    <button type="button" class="profile-surface-trigger" id="countdownTrigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="countdownMenu">
-                                        <span class="profile-surface-trigger-text">
-                                            <span class="profile-surface-value" id="countdownValue">None</span>
-                                        </span>
-                                        <i class="bi bi-chevron-down" aria-hidden="true"></i>
-                                    </button>
-                                    <select id="countdown" class="profile-surface-select" tabindex="-1" aria-hidden="true">
-                                        <option value="0" selected>None</option>
-                                        <option value="3">3s</option>
-                                        <option value="5">5s</option>
-                                        <option value="10">10s</option>
-                                        <option value="15">15s</option>
-                                        <option value="custom">Custom</option>
-                                    </select>
-                                    <div class="profile-surface-menu" id="countdownMenu" role="listbox" aria-label="Countdown"></div>
-                                </div>
-                                <input id="countdownCustom" type="number" min="1" class="form-control form-control-sm d-none countdown-custom-input" placeholder="sec">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4">
-                            <div class="mb-3">
-                                <label class="form-label mb-2">Live Session Summary</label>
-                                <div class="border rounded p-3 live-session-summary-card">
-                                    <div id="summaryPreStartFields">
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <div class="text-muted small">Students Selected</div>
-                                            <div id="summaryStudentsSelected" class="fw-semibold">0</div>
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <div class="text-muted small">Countdown</div>
-                                            <div id="summaryCountdown" class="fw-semibold">None</div>
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-start mb-2" style="gap:0.75rem;">
-                                            <div class="text-muted small">Assessment</div>
-                                            <div id="summaryAssessment" class="fw-semibold text-end" style="min-width:0;">{{ live_session.material.title|default:'Not selected' }}</div>
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div class="text-muted small">Status</div>
-                                            <div><span id="summaryStartStatusBadge" class="badge bg-secondary">Ready to Start</span></div>
-                                        </div>
-                                    </div>
-                                    <div id="summaryLiveFields" class="d-none">
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <div class="text-muted small">Active</div>
-                                            <div id="summaryActive" class="fw-semibold">0</div>
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <div class="text-muted small">Completed</div>
-                                            <div id="summaryCompleted" class="fw-semibold">0</div>
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <div class="text-muted small">Waiting</div>
-                                            <div id="summaryWaiting" class="fw-semibold">0</div>
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <div class="text-muted small">Progress</div>
-                                            <div id="summaryProgress" class="fw-semibold">0 / 0 Completed</div>
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div class="text-muted small">Status</div>
-                                            <div><span id="summaryLiveStatusBadge" class="badge bg-success">Running</span></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="d-grid">
-                                <button id="saveSettingsBtn" class="btn btn-primary btn-sm">Save settings</button>
-                                <div class="small text-muted mt-2">Save configuration to keep your selections and send students to the waiting room</div>
-                            </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <form class="d-none">{% csrf_token %}</form>
@@ -977,7 +1130,7 @@
                 </div>
             </div>
         </div>`;
-        document.body.insertAdjacentHTML('beforeend', modalHtml + '\n<div id="liveAssessmentToastContainer" style="position:fixed;left:12px;right:12px;top:12px;z-index:1075;display:flex;flex-direction:column;gap:8px;pointer-events:none;max-width:100%;"></div>');
+        document.body.insertAdjacentHTML('beforeend', modalHtml + '\n<div id="liveAssessmentToastContainer" style="position:fixed;right:16px;top:16px;z-index:1075;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:none;max-width:min(300px,calc(100% - 32px));"></div>');
         // ensure modal starts hidden and aria state set
         try { const _m = document.getElementById('liveAssessmentModal'); if (_m) { _m.style.display = 'none'; _m.setAttribute('aria-hidden', 'true'); } } catch (e) {}
         const liveModal = document.getElementById('liveAssessmentModal');
@@ -1001,6 +1154,7 @@
                 liveModal.style.display = 'none';
                 document.body.style.overflow = '';
                 liveModal.setAttribute('aria-hidden', 'true');
+                liveModal.classList.remove('live-assessment-start-modal', 'live-assessment-cancel-modal', 'live-assessment-end-modal');
                 // remove keydown handler
                 if (activeKeydownHandler) { document.removeEventListener('keydown', activeKeydownHandler); activeKeydownHandler = null; }
                 // remove backdrop handler
@@ -1074,6 +1228,55 @@
         }
 
     function showConfirm(title, message) {
+        const isStartAssessment = title === 'Start Live Assessment?';
+        const isCancelSession = title === 'Cancel Live Session?';
+        const isEndSession = title === 'End Live Session?';
+        liveModal.classList.toggle('live-assessment-start-modal', isStartAssessment);
+        liveModal.classList.toggle('live-assessment-cancel-modal', isCancelSession);
+        liveModal.classList.toggle('live-assessment-end-modal', isEndSession);
+        if (isStartAssessment) {
+            const body = document.createElement('div');
+            const main = document.createElement('p');
+            main.className = 'start-assessment-copy';
+            main.textContent = message.main;
+            const info = document.createElement('div');
+            info.className = 'start-assessment-info';
+            info.innerHTML = '<i class="bi bi-hourglass-split" aria-hidden="true"></i><span></span>';
+            info.querySelector('span').textContent = message.info;
+            body.append(main, info);
+            return showModal({ title, body, buttons: [
+                { label: 'Cancel', value: false, className: 'btn btn-outline-secondary' },
+                { label: 'Start', value: true, className: 'btn btn-primary' }
+            ]});
+        }
+        if (isCancelSession) {
+            const body = document.createElement('div');
+            const main = document.createElement('p');
+            main.className = 'cancel-session-copy';
+            main.textContent = message.main;
+            const info = document.createElement('p');
+            info.className = 'cancel-session-info';
+            info.textContent = message.info;
+            body.append(main, info);
+            return showModal({ title, body, buttons: [
+                { label: 'Keep Session', value: false, className: 'btn btn-outline-secondary' },
+                { label: 'Cancel Session', value: true, className: 'btn btn-danger' }
+            ]});
+        }
+        if (isEndSession) {
+            const body = document.createElement('div');
+            const main = document.createElement('p');
+            main.className = 'end-session-copy';
+            main.textContent = message.main;
+            const info = document.createElement('p');
+            info.className = 'end-session-info';
+            info.textContent = message.info;
+            body.append(main, info);
+            return showModal({ title, body, buttons: [
+                { label: 'Keep Session', value: false, className: 'btn btn-outline-secondary' },
+                { label: 'End Session', value: true, className: 'btn btn-danger' },
+            ]});
+        }
         return showModal({ title, body: message, buttons: [
             { label: 'Cancel', value: false, className: 'btn btn-outline-secondary' },
             { label: 'Confirm', value: true, className: 'btn btn-primary' }
@@ -1124,17 +1327,50 @@
                 const container = document.getElementById('liveAssessmentToastContainer');
                 if (!container) return resolve();
                 const toast = document.createElement('div');
+                toast.className = `live-assessment-toast live-assessment-toast-${type}`;
                 toast.style.pointerEvents = 'auto';
-                toast.style.background = type === 'success' ? '#d1fae5' : '#fff';
-                toast.style.borderLeft = type === 'success' ? '4px solid #16a34a' : '4px solid #6b7280';
-                toast.style.color = '#064e3b';
-                toast.style.padding = '10px 14px';
-                toast.style.borderRadius = '8px';
-                toast.style.boxShadow = '0 8px 20px rgba(2,6,23,0.08)';
-                toast.style.maxWidth = '320px';
-                toast.style.fontWeight = '700';
-                toast.textContent = message;
+                toast.style.background = type === 'success' ? '#fbfffc' : '#fff';
+                toast.style.color = type === 'success' ? '#285c3c' : '#7f1d1d';
+                toast.style.padding = '8px 12px';
+                toast.style.borderRadius = '10px';
+                toast.style.border = type === 'success' ? '1px solid #cce8d4' : '1px solid #fecaca';
+                toast.style.borderLeft = type === 'success' ? '3px solid #62a875' : '1px solid #fecaca';
+                toast.style.boxShadow = '0 6px 16px rgba(15,78,100,0.10)';
+                toast.style.maxWidth = 'min(280px, 100%)';
+                toast.style.fontSize = '13px';
+                toast.style.fontWeight = '600';
+                toast.style.lineHeight = '1.35';
+                toast.style.display = 'flex';
+                toast.style.alignItems = 'center';
+                toast.style.gap = '0.45rem';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-6px)';
+                toast.style.transition = 'opacity 180ms ease, transform 180ms ease';
+                if (type === 'success') {
+                    const icon = document.createElement('span');
+                    icon.textContent = '✓';
+                    icon.setAttribute('aria-hidden', 'true');
+                    icon.style.display = 'inline-flex';
+                    icon.style.alignItems = 'center';
+                    icon.style.justifyContent = 'center';
+                    icon.style.flex = '0 0 20px';
+                    icon.style.width = '20px';
+                    icon.style.height = '20px';
+                    icon.style.borderRadius = '50%';
+                    icon.style.background = '#e6f5e9';
+                    icon.style.color = '#3f8654';
+                    icon.style.fontSize = '13px';
+                    icon.style.fontWeight = '700';
+                    icon.style.lineHeight = '1';
+                    toast.append(icon, document.createTextNode(message));
+                } else {
+                    toast.textContent = message;
+                }
                 container.appendChild(toast);
+                requestAnimationFrame(() => {
+                    toast.style.opacity = '1';
+                    toast.style.transform = 'translateY(0)';
+                });
                 setTimeout(() => {
                     toast.style.transition = 'opacity 300ms ease, transform 300ms ease';
                     toast.style.opacity = '0';
@@ -1260,6 +1496,20 @@
         return Math.max(0, Math.ceil((deadlineMs - nowMs) / 1000));
     }
 
+    function getCountdownDisplaySeconds(session = lastSessionState) {
+        const configured = Number(session?.countdown_seconds);
+        const duration = Number.isFinite(configured) && configured > 0 ? configured : 0;
+        const deadlineRemaining = getLiveSessionCountdownRemainingSeconds();
+        if (deadlineRemaining != null && deadlineRemaining <= duration + 1) {
+            return Math.min(duration, deadlineRemaining);
+        }
+        const backendRemaining = Number(session?.start_countdown_seconds);
+        if (Number.isFinite(backendRemaining) && backendRemaining >= 0 && backendRemaining <= duration + 1) {
+            return Math.min(duration, Math.ceil(backendRemaining));
+        }
+        return duration;
+    }
+
     function setSummaryLiveFields(session) {
         const totalSelected = session.student_count || getSelectedStudentCount();
         const states = session.student_states || {};
@@ -1303,7 +1553,9 @@
         if (summarySessionStartAtMs != null) {
             const countdownRemaining = getLiveSessionCountdownRemainingSeconds();
             if (countdownRemaining != null && sessionStatus === 'countdown') {
-                setText('#currentCountdown', `${countdownRemaining}s`);
+                const displaySeconds = getCountdownDisplaySeconds(lastSessionState);
+                setText('#currentCountdown', `${displaySeconds}s`);
+                setText('#activeCountdownValue', displaySeconds);
             } else if (sessionStatus !== 'countdown' && summaryCountdownSeconds != null) {
                 setText('#currentCountdown', `${summaryCountdownSeconds}s`);
             }
@@ -1381,6 +1633,20 @@
         time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
+    function renderCountdownArea(session) {
+        const setup = document.getElementById('countdownSetupArea');
+        const active = document.getElementById('activeCountdownDisplay');
+        if (!setup || !active) return;
+        const statusKey = (session?.status || 'waiting').toLowerCase();
+        const isWaiting = statusKey === 'waiting' || statusKey === 'batch_loaded';
+        const isCountdown = statusKey === 'countdown';
+        setup.classList.toggle('d-none', !isWaiting);
+        active.classList.toggle('d-none', !isCountdown);
+        if (isCountdown) {
+            setText('#activeCountdownValue', getCountdownDisplaySeconds(session));
+        }
+    }
+
     function updateButtonStates(status, session = null, allSelectedStudentsCompleted = false) {
         const startBtn = document.getElementById('startBtn');
         const pauseBtn = document.getElementById('pauseBtn');
@@ -1422,6 +1688,29 @@
         endBtn.classList.toggle('btn-danger', Boolean(isLoading));
     }
 
+    function syncCountdownControlFromSession(session) {
+        if (!session || countdownSaveInFlight || session.status !== 'waiting') return;
+        const select = document.getElementById('countdown');
+        const custom = document.getElementById('countdownCustom');
+        if (!select || session.countdown_seconds == null) return;
+        const seconds = Number(session.countdown_seconds) || 0;
+        const option = Array.from(select.options).find((item) => Number(item.value) === seconds);
+        if (option) {
+            select.value = option.value;
+            if (custom) custom.value = '';
+        } else if (seconds > 0) {
+            select.value = 'custom';
+            if (custom) custom.value = String(seconds);
+        } else {
+            select.value = '0';
+            if (custom) custom.value = '';
+        }
+        custom?.classList.toggle('d-none', select.value !== 'custom');
+        syncCustomDropdownValue('countdown', 'countdownValue');
+        lastSavedCountdownValue = select.value;
+        lastSavedCountdownCustomValue = custom?.value || '';
+    }
+
     function updateFromState(session) {
         if (!session) return;
         if (session.status === 'ended' || session.status === 'cancelled') {
@@ -1457,15 +1746,19 @@
         setText('#statCompleted', counts.completed);
         setText('#statOffline', counts.offline);
         const localSelectedCount = selectedStudentIds.size;
-        setText('#selectedCount', summaryCurrentStatus === 'waiting' ? (localSelectedCount || session.student_count || 0) : (session.student_count || localSelectedCount || 0));
+        const displaySelectedCount = summaryCurrentStatus === 'waiting' ? (localSelectedCount || session.student_count || 0) : (session.student_count || localSelectedCount || 0);
+        setText('#selectedCount', displaySelectedCount);
+        setText('#setupSelectedCount', displaySelectedCount);
 
-        setText('#currentCountdown', session.start_countdown_seconds != null ? `${session.start_countdown_seconds}s` : (session.countdown_seconds != null ? `${session.countdown_seconds}s` : '0s'));
+        setText('#currentCountdown', session.countdown_seconds != null ? `${session.countdown_seconds}s` : '0s');
+        syncCountdownControlFromSession(session);
 
         lastSessionState = session;
         summarySessionStartAtMs = getSessionStartTimestamp(session);
 
         summaryCountdownSeconds = Number.isFinite(Number(session.countdown_seconds)) ? Number(session.countdown_seconds) : null;
         summaryCurrentStatus = (session.status || 'waiting').toLowerCase();
+        renderCountdownArea(session);
 
         const statusKey = summaryCurrentStatus;
         if (statusKey === 'waiting' || statusKey === 'batch_loaded') {
@@ -1564,7 +1857,7 @@
         }
     }
 
-    async function sendAction(action, payload={}) {
+    async function sendAction(action, payload={}, options={}) {
         try {
             const body = Object.assign({ action }, payload);
             const r = await fetch(actionUrl, {
@@ -1576,12 +1869,15 @@
             updateFromState(j.session);
             return j.session;
         } catch (e) {
-            await showAlert('Action failed', String(e.message || e));
+            if (!options.silent) await showAlert('Action failed', String(e.message || e));
             return null;
         }
     }
 
     let settingsSaved = false;
+    let countdownSaveInFlight = false;
+    let lastSavedCountdownValue = null;
+    let lastSavedCountdownCustomValue = '';
 
     function setSaveNotice(message, type='info') {
         const el = document.getElementById('saveNotice');
@@ -1607,7 +1903,11 @@
             settingsSaved = true;
         }
 
-        const confirmed = await showConfirm('Start Live Assessment', `You are about to begin this session for ${selected.length} selected student(s).\n\nStudents will automatically move into the assessment countdown once the teacher starts.`);
+        const selectedNoun = selected.length === 1 ? 'student' : 'students';
+        const confirmed = await showConfirm('Start Live Assessment?', {
+            main: `You’re about to start the assessment for ${selected.length} selected ${selectedNoun}.`,
+            info: 'Students will enter the countdown first, then the assessment will begin.',
+        });
         if (!confirmed) return;
 
         await sendAction('start', {
@@ -1633,7 +1933,10 @@
         }
     });
     document.getElementById('cancelBtn').addEventListener('click', async () => {
-        const confirmed = await showConfirm('Cancel session', 'Cancel this waiting session and return all selected students to Getting Ready?');
+        const confirmed = await showConfirm('Cancel Live Session?', {
+            main: 'This will end the current waiting session.',
+            info: 'Selected students will return to Getting Ready.',
+        });
         if (!confirmed) return;
         const result = await sendAction('cancel');
         if (result?.status === 'cancelled') {
@@ -1701,7 +2004,10 @@
         }
     });
     document.getElementById('endBtn').addEventListener('click', async () => {
-        const ok = await showConfirm('End session', 'End session for all students?');
+        const ok = await showConfirm('End Live Session?', {
+            main: 'This will end the live assessment for all selected students.',
+            info: 'Students will no longer be able to continue this session.',
+        });
         if (ok) {
             window.__pabasaLiveCrlaFinalizing = true;
             setEndSessionLoading(true);
@@ -1731,11 +2037,11 @@
         }
 
         const confirmed = await showModal({
-            title: 'Leave Live CRLA Session?',
-            body: 'Are you sure you want to go back? The current progress for this batch has not been officially saved. Leaving without ending the session will discard the unsaved assessment progress.',
+            title: 'Leave Live Session?',
+            body: 'You’re leaving this live session without cancelling it. The current session will remain separate from the Cancel Session workflow.',
             buttons: [
-                { label: 'Stay in Session', value: false, className: 'btn btn-outline-secondary' },
-                { label: 'Leave Without Saving', value: true, className: 'btn btn-danger' },
+                { label: 'Stay', value: false, className: 'btn btn-outline-secondary' },
+                { label: 'Leave Session', value: true, className: 'btn btn-danger' },
             ],
         });
         if (!confirmed) return;
@@ -2158,41 +2464,50 @@
 
     const countdownSelect = document.getElementById('countdown');
 
+    async function saveCountdownSelection() {
+        const customInput = document.getElementById('countdownCustom');
+        const selected = Array.from(document.querySelectorAll('.participant-checkbox'))
+            .filter((checkbox) => checkbox.checked)
+            .map((checkbox) => parseInt(checkbox.dataset.studentId, 10));
+        const countdown = countdownSelect.value === 'custom'
+            ? parseInt(customInput?.value || 0, 10)
+            : parseInt(countdownSelect.value || 0, 10);
+        if (countdownSelect.value === 'custom' && (!countdown || countdown <= 0)) {
+            await showToast('Couldn’t save countdown. Try again.', 'error');
+            return;
+        }
+        countdownSaveInFlight = true;
+        settingsSaved = false;
+        const saved = await sendAction('save_settings', {
+            selected_student_ids: selected,
+            countdown_seconds: countdown,
+        }, { silent: true });
+        countdownSaveInFlight = false;
+        if (!saved) {
+            if (lastSavedCountdownValue != null) {
+                countdownSelect.value = lastSavedCountdownValue;
+                if (customInput) customInput.value = lastSavedCountdownCustomValue;
+                customInput?.classList.toggle('d-none', countdownSelect.value !== 'custom');
+                syncCustomDropdownValue('countdown', 'countdownValue');
+            }
+            await showToast('Couldn’t save countdown. Try again.', 'error');
+            return;
+        }
+        settingsSaved = true;
+        lastSavedCountdownValue = countdownSelect.value;
+        lastSavedCountdownCustomValue = customInput?.value || '';
+        const message = countdown === 0 ? 'Countdown disabled' : `Countdown set to ${countdown} second${countdown === 1 ? '' : 's'}`;
+        await showToast(message, 'success');
+    }
+
     countdownSelect.addEventListener('change', (e) => {
         syncCustomDropdownValue('countdown', 'countdownValue');
         document.getElementById('countdownCustom').classList.toggle('d-none', e.target.value !== 'custom');
+        if (e.target.value !== 'custom') saveCountdownSelection();
     });
+    document.getElementById('countdownCustom').addEventListener('change', saveCountdownSelection);
 
     syncCustomDropdownValue('countdown', 'countdownValue');
-
-    async function validateSessionSettings() {
-        const selected = Array.from(document.querySelectorAll('.participant-checkbox')).filter(c => c.checked).map(c => parseInt(c.dataset.studentId));
-            if (!selected || selected.length === 0) {
-            await showToast('Please select at least one participant before saving settings.', 'success');
-            return null;
-        }
-        const countdownValue = document.getElementById('countdown').value;
-        const countdown = countdownValue === 'custom' ? parseInt(document.getElementById('countdownCustom').value || 0) : parseInt(countdownValue || 0);
-        if (countdownValue === 'custom' && (!countdown || countdown <= 0)) {
-            await showAlert('Invalid countdown', 'Please enter a valid custom countdown length.');
-            return null;
-        }
-        return { selected, countdown };
-    }
-
-    document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
-        const validated = await validateSessionSettings();
-        if (!validated) return;
-        const payload = {
-            selected_student_ids: validated.selected,
-            countdown_seconds: validated.countdown,
-        };
-        const s = await sendAction('save_settings', payload);
-        if (s) {
-            settingsSaved = true;
-            setSaveNotice('Session configuration saved successfully.', 'success');
-        }
-    });
 
     async function poll() {
         const s = await fetchState();

@@ -32,11 +32,13 @@
 
 <form id="assessmentWeekForm" class="d-none">{% csrf_token %}</form>
 <div class="assessment-confirm-modal" id="assessmentConfirmModal" role="presentation" aria-hidden="true">
-    <div class="assessment-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="assessmentConfirmTitle" aria-describedby="assessmentConfirmCopy">
+    <div class="assessment-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="assessmentConfirmTitle" aria-describedby="assessmentConfirmCopy assessmentConfirmInfo assessmentConfirmSecondary">
         <div class="assessment-confirm-body">
             <span class="assessment-confirm-icon" aria-hidden="true"><i class="bi bi-clipboard2-check"></i></span>
             <h2 class="assessment-confirm-title" id="assessmentConfirmTitle">Enable Assessment Week?</h2>
             <p class="assessment-confirm-copy" id="assessmentConfirmCopy"></p>
+            <div class="assessment-confirm-info" id="assessmentConfirmInfo"><i class="bi bi-calendar3" aria-hidden="true"></i><span>Students can only take assessments when they become available on the schedule.</span></div>
+            <p class="assessment-confirm-secondary" id="assessmentConfirmSecondary">Other sections won’t be affected.</p>
             <p class="assessment-confirm-error" id="assessmentConfirmError" role="alert" hidden></p>
             <div class="assessment-confirm-actions"><button type="button" class="btn assessment-confirm-cancel" id="assessmentConfirmCancel">Cancel</button><button type="button" class="btn assessment-confirm-submit" id="assessmentConfirmSubmit">Confirm</button></div>
         </div>
@@ -92,6 +94,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const modal = document.getElementById('assessmentConfirmModal');
     const title = document.getElementById('assessmentConfirmTitle');
     const copy = document.getElementById('assessmentConfirmCopy');
+    const info = document.getElementById('assessmentConfirmInfo');
+    const secondary = document.getElementById('assessmentConfirmSecondary');
     const error = document.getElementById('assessmentConfirmError');
     const cancel = document.getElementById('assessmentConfirmCancel');
     const submit = document.getElementById('assessmentConfirmSubmit');
@@ -102,12 +106,14 @@ document.addEventListener('DOMContentLoaded', function () {
     let modalMode = 'confirm';
     let isUpdating = false;
     function closeModal(restore = true) { if (restore) toggle.checked = previousState; modal.classList.remove('is-visible'); modal.setAttribute('aria-hidden', 'true'); lastFocused?.focus(); }
-    function openModal() { modalMode = 'confirm'; requestedState = toggle.checked; title.textContent = requestedState ? 'Enable Assessment Week?' : 'Disable Assessment Week?'; copy.textContent = requestedState ? 'Students in this section will only be able to access assessments while Assessment Week is enabled. Other sections will not be affected.' : 'Students in this section will return to the normal learning and prompt flow.'; error.hidden = true; cancel.hidden = false; submit.textContent = 'Confirm'; lastFocused = document.activeElement; modal.classList.add('is-visible'); modal.setAttribute('aria-hidden', 'false'); submit.focus(); }
+    function openModal() { modalMode = 'confirm'; requestedState = toggle.checked; title.textContent = requestedState ? 'Enable Assessment Week?' : 'Disable Assessment Week?'; copy.textContent = requestedState ? 'Put this section in Assessment Week mode.' : 'Students in this section will return to the normal learning and prompt flow.'; info.hidden = !requestedState; secondary.hidden = !requestedState; error.hidden = true; cancel.hidden = false; submit.textContent = 'Confirm'; lastFocused = document.activeElement; modal.classList.add('is-visible'); modal.setAttribute('aria-hidden', 'false'); submit.focus(); }
     function showFailureModal(message, resultsRecorded = false) {
         toggle.checked = previousState;
         modalMode = 'error';
         title.textContent = resultsRecorded ? 'Cannot Turn Off Assessment Week' : 'Assessment Week Could Not Be Updated';
         copy.textContent = resultsRecorded ? 'This Assessment Week can no longer be turned off because one or more student CRLA results have already been recorded. Assessment data must remain active to preserve the recorded student results.' : (message || 'The Assessment Week status was not changed. Please try again.');
+        info.hidden = true;
+        secondary.hidden = true;
         error.hidden = true;
         cancel.hidden = true;
         submit.textContent = 'OK';
