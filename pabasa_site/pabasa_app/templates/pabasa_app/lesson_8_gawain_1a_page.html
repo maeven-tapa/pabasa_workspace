@@ -58,3 +58,15 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(app){new MutationObserver(wrapPicture).observe(app,{childList:true,subtree:true});wrapPicture()}
 })();
 </script>
+<script>
+(()=>{const removeInstruction=()=>document.querySelectorAll('#app .instruction').forEach(node=>{if(node.textContent.trim()==='Tingnan ang larawang nasa kahon. Ano ito?')node.remove()});const app=document.getElementById('app');if(app){new MutationObserver(removeInstruction).observe(app,{childList:true,subtree:true});removeInstruction()}})();
+</script>
+<script>
+(()=>{const removePart2Text=()=>document.querySelectorAll('#app .instruction,#app .status').forEach(node=>{const text=node.textContent.trim();if(text==='I-click ang mga larawang nagsisimula sa titik Ee.'||text==='Piliin ang mga larawan, pagkatapos ay pindutin ang ISUMITE.')node.remove()});const app=document.getElementById('app');if(app){new MutationObserver(removePart2Text).observe(app,{childList:true,subtree:true,characterData:true});removePart2Text()}})();
+</script>
+<script>
+(()=>{const removePart3Title=()=>document.querySelectorAll('#app h1').forEach(node=>{if(node.textContent.trim()==='Bigkasin ang mga larawang nilagyan ng ekis')node.remove()});const app=document.getElementById('app');if(app){new MutationObserver(removePart3Title).observe(app,{childList:true,subtree:true,characterData:true});removePart3Title()}})();
+</script>
+<script>
+(()=>{const app=document.getElementById('app');if(!app)return;const normalize=()=>{const done=app.querySelector('.done');if(!done||done.dataset.normalized==='true')return;done.dataset.normalized='true';done.innerHTML='<h1>Tapos na ang gawain! 🎉</h1><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><a class="return" href="{% url "assessment" %}">BALIK SA AKING ARALIN</a>';app.inert=false};new MutationObserver(normalize).observe(app,{childList:true,subtree:true});normalize()})();
+</script>
