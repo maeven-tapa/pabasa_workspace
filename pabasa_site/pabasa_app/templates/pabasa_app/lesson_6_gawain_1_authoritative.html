@@ -17,18 +17,19 @@
 </style>
 <style>
 body{font-family:Fredoka,"Segoe UI",sans-serif;background:#bce8eb url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed no-repeat;color:#183e63}
-.page{position:relative;height:100dvh;padding:16px clamp(10px,4vw,42px) 22px;overflow:hidden}
-.card{width:min(1250px,100%);height:calc(100dvh - 38px);max-width:1250px;margin:0 auto;padding:clamp(76px,9vh,96px) clamp(18px,6vw,80px) 20px;border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63;backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35}
-.back{position:absolute;top:16px;left:clamp(18px,calc(50% - 545px),80px);z-index:2;display:inline-flex;align-items:center;justify-content:center;width:auto;min-height:58px;padding:12px 24px;border-radius:999px;background:#fff;color:#183e63;font-family:Fredoka,"Segoe UI",sans-serif;font-size:1.1rem;text-decoration:none;box-shadow:0 8px 17px #145ca744}
+.page{position:relative;height:100dvh;padding:10px clamp(10px,4vw,42px) 22px;overflow:hidden;display:flex;flex-direction:column;gap:8px}
+.card{width:min(1250px,100%);height:calc(100dvh - 92px);max-width:1250px;margin:0 auto;padding:clamp(50px,6vh,68px) clamp(18px,6vw,80px) 20px;border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63;backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35}
+.back{position:static;align-self:flex-start;margin-left:clamp(8px,3vw,38px);z-index:2;display:inline-flex;align-items:center;justify-content:center;width:auto;min-height:58px;padding:12px 24px;border-radius:999px;background:#fff;color:#183e63;font-family:Fredoka,"Segoe UI",sans-serif;font-size:1.1rem;text-decoration:none;box-shadow:0 8px 17px #145ca744}
 .head{position:relative;justify-content:center;text-align:center}.head>div{text-align:center}.head h1,#app>h1{margin:4px 0;color:#183e63;font-family:Fredoka,"Segoe UI",sans-serif;font-size:clamp(2rem,4vw,3.7rem);line-height:1.08}.eyebrow{width:max-content;max-width:100%;margin:0 auto 14px;padding:10px 30px;border-radius:999px;background:#277f82;color:#fff;font-family:Fredoka,"Segoe UI",sans-serif;letter-spacing:.02em}.head>b{position:absolute;right:0;top:6px;padding:10px 18px;border-radius:999px;background:#fff;color:#277f82;box-shadow:0 6px 14px #145ca733}
 .instruction{width:min(820px,100%);margin:20px auto 18px;padding:14px 22px;border:2px solid #94d9d6;border-radius:18px;background:#ffffffe8;color:#315875;font-family:Fredoka,"Segoe UI",sans-serif;font-size:clamp(1rem,1.8vw,1.25rem);line-height:1.3}
-.focus{height:calc(100% - 150px);min-height:0;padding:16px 20px;border:4px solid #94d9d6;border-radius:32px;background:#ffffffe8;overflow:hidden}.picture{display:grid;place-items:center;padding:14px;border:4px solid #94d9d6;border-radius:28px;background:#fff}.picture img{display:block;width:min(43vw,360px);height:min(38vh,280px);object-fit:contain}.wordbox{color:#183e63;font-family:Fredoka,"Segoe UI",sans-serif}.status{color:#315875;font-family:Fredoka,"Segoe UI",sans-serif}.choices{gap:16px}.choice,.action{min-height:64px;border:0;border-radius:999px;background:#299e9a;color:#fff;font-family:Fredoka,"Segoe UI",sans-serif;box-shadow:0 7px 0 #187b7a,0 10px 20px #187b7a40}.choice:disabled,.action:disabled{background:#b5c5c7!important;color:#edf3f4!important;border-color:transparent!important;box-shadow:none!important;opacity:1}
+.focus{height:calc(100% - 150px);min-height:0;padding:16px 20px;border:4px solid #94d9d6;border-radius:32px;background:#ffffffe8;overflow:hidden}.picture{display:grid;place-items:center;padding:14px;border:5px solid #e7af45;border-radius:28px;background:#fffdf0;box-shadow:0 0 0 8px #f8dfb0,0 8px 0 #c9902d,0 14px 24px #187b7a25}.picture img{display:block;width:min(43vw,360px);height:min(38vh,280px);object-fit:contain}.wordbox{color:#183e63;font-family:Fredoka,"Segoe UI",sans-serif}.status{color:#315875;font-family:Fredoka,"Segoe UI",sans-serif}.choices{gap:16px}.choice,.action{min-height:64px;border:0;border-radius:999px;background:#299e9a;color:#fff;font-family:Fredoka,"Segoe UI",sans-serif;box-shadow:0 7px 0 #187b7a,0 10px 20px #187b7a40}.choice:disabled,.action:disabled{background:#b5c5c7!important;color:#edf3f4!important;border-color:transparent!important;box-shadow:none!important;opacity:1}
 @media(max-width:650px){.page{padding:10px 8px 12px}.card{height:calc(100dvh - 22px);padding:68px 14px 14px;border-radius:28px}.back{top:12px;left:14px;min-height:48px;padding:10px 16px;font-size:.92rem}.head>b{top:2px;padding:8px 12px}.instruction{margin:14px auto 12px;padding:11px 14px}.focus{height:calc(100% - 120px);padding:10px 12px;border-radius:24px}.picture img{height:min(27vh,180px)}.actions{gap:10px}}
 </style>
 <style>
 body,.back,.head h1,#app>h1,.eyebrow,.instruction,.wordbox,.status,.choice,.action{font-family:'Fredoka One',"Segoe UI",sans-serif}
 .focus{border:0;background:transparent;padding:0;overflow:visible}
-.picture{border:4px solid #94d9d6;border-radius:28px;background:#fff;box-shadow:0 8px 20px #187b7a18}
+.picture{border:5px solid #e7af45;border-radius:28px;background:#fffdf0;box-shadow:0 0 0 8px #f8dfb0,0 8px 0 #c9902d,0 14px 24px #187b7a25}
+.picture{width:min(100%,400px);max-width:100%;min-width:0;box-sizing:border-box;margin-inline:auto;overflow:hidden}.picture img{max-width:100%;max-height:100%;}
 .instruction{box-shadow:0 8px 18px #187b7a15}
 .actions{margin-top:12px}
 .back{top:30px}
@@ -41,7 +42,7 @@ body.lesson-6-responsive #aloud{display:inline-flex!important;align-items:center
 <style>
 .card{display:flex;flex-direction:column;min-height:0}
 .card>.head,.card>.instruction{flex:0 0 auto}
-.focus{height:auto;flex:1;min-height:0;box-sizing:border-box;overflow:hidden}
+.focus{height:auto;flex:1;min-height:0;box-sizing:border-box;overflow:visible}
 .focus>div:last-child{min-width:0;text-align:center}
 #aloud{display:inline-flex!important;align-items:center;justify-content:center;width:min(220px,44%);margin:8px 4px 0;vertical-align:middle}
 #aloud[hidden]{display:inline-flex!important}
@@ -94,4 +95,16 @@ async function record(){if(busy||phase!=='identify')return;const button=document
 <script src="{% static 'pabasa_app/js/session2_prescribed_debug.js' %}?v=1"></script>
 <script>window.Session2PrescribedDebug.init({prefix:'prescribed-s2l6g1',expected:(()=>{const d=JSON.parse(document.getElementById('lesson-six-data').textContent||'{}');return d.items?.[Number(d.progress?.current_index)||0]?.word||''})(),normalize:value=>String(value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,''),evaluateResult:result=>Boolean(result?.success&&result?.complete===true)});</script>
 </body>
-</html>
+<style>.instruction--identify,.instruction--classify{display:none!important}
+/* Compact shell: external back link above the card, with redistributed card space. */
+.page{gap:8px!important;padding-top:10px!important}
+.page>.back{align-self:flex-start!important;margin-left:clamp(8px,3vw,38px)!important;flex:0 0 auto!important}
+.page>.card{box-sizing:border-box;width:100%;height:calc(100dvh - 92px)!important;margin-top:0!important;padding-top:clamp(42px,6vh,64px)!important}
+.page>.card .head{transform:translateY(8px)}
+body.lesson-6-responsive .choices{width:min(100%,520px);flex-wrap:nowrap;gap:10px;margin-inline:auto}
+body.lesson-6-responsive .choices .choice{flex:1 1 0;min-width:0}
+body.lesson-6-responsive .card:has(#finish){height:auto!important;min-height:0!important;max-height:none!important;padding:34px 24px 30px!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
+body.lesson-6-responsive .card:has(#finish)>h1{margin:0;text-align:center}
+body.lesson-6-responsive .card:has(#finish)>#finish{margin:0}
+@media(max-width:650px){.page{gap:6px!important;padding-top:8px!important}.page>.card{height:calc(100dvh - 70px)!important;padding-top:44px!important}.page>.card .head{transform:translateY(5px)}}
+</style></html>
