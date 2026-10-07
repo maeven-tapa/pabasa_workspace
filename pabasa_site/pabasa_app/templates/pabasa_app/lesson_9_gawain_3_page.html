@@ -85,13 +85,16 @@
 </script>
 <script>
   (() => {
-    const removeInstruction = () => document.querySelectorAll('#app .instruction').forEach(node => {
-      if (node.textContent.trim() === 'Basahin ang salitang nakapaloob sa puting kahon.') node.remove();
+    const hideInstruction = () => document.querySelectorAll('#app .instruction').forEach(node => {
+      if (node.textContent.trim() === 'Basahin ang salitang nakapaloob sa puting kahon.') {
+        node.style.display = 'none';
+        node.setAttribute('aria-hidden', 'true');
+      }
     });
     const app = document.getElementById('app');
     if (app) {
-      new MutationObserver(removeInstruction).observe(app, {childList: true, subtree: true});
-      removeInstruction();
+      new MutationObserver(hideInstruction).observe(app, {childList: true, subtree: true});
+      hideInstruction();
     }
   })();
 </script>
