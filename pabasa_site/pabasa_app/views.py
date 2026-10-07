@@ -14761,7 +14761,13 @@ def prescribed_activity_page(request, activity_key):
                     'Hindi ko malinaw na narinig. Subukan muli.': 'Hindi ko malinaw na narinig. Subukan muli_TTS.mp3',
                     'Handa ka na?': 'Handa ka na_TTS.mp3',
                     'Handa ka na.': 'Handa ka na_TTS.mp3',
+                    # Reuse exact existing recordings; do not synthesize or rename clips.
+                    'Pakinggan ang tamang pagbigkas, pagkatapos ay subukan mong basahin.': '../GAWAIN_6/Pakinggan ang tamang pagbigkas, pagkatapos ay subukan mong basahin._TTS.mp3',
+                    'Hindi available ang audio.': '../../LESSON_24/BAHAGI_2/GAWAIN_3/Hindi available ang audio._TTS.mp3',
+                    'Hindi nakuha ang boses. Subukan muli.': '../../LESSON_24/BAHAGI_2/GAWAIN_2/Hindi nakuha ang boses. Subukan muli._TTS.mp3',
+                    'Hindi pa kailangan ang pag-ulit.': '../GAWAIN_6/Hindi pa kailangan ang pag-ulit._TTS.mp3',
                 },
+                'startup': '../GAWAIN_1/Letrang C. Handa kana_TTS.mp3',
                 'completion': {
                     'Magaling!': 'Magaling!_TTS.mp3',
                     'Natapos mo ang Gawain 2.': 'Natapos mo ang Gawain 2_TTS.mp3',
@@ -14769,6 +14775,7 @@ def prescribed_activity_page(request, activity_key):
             }
             local_audio = {
                 'instruction': static(audio_root + audio_files['instruction']),
+                'startup': static(audio_root + audio_files['startup']),
                 'words': {text: static(audio_root + filename) for text, filename in audio_files['words'].items()},
                 'feedback': {text: static(audio_root + filename) for text, filename in audio_files['feedback'].items()},
                 'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
