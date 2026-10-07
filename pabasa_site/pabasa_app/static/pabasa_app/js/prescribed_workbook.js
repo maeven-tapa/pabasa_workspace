@@ -159,6 +159,7 @@
   }
   let activeRecorder = null, activeStream = null, activeReadAloud = null, activeAudioSource = null, audioController = null;
   let audioRun = 0, instructionSpoken = false, pendingSpeech = '', g6CompletionPromise = null, session9DraftEpoch = 0;
+  let pictureGuidedAttempt = null;
   const instructionText = a.instruction;
   const l22StartupTtsText = 'Letrang C. Handa kana?';
   const L22_G1_MAPPED_TEXT = new Set([l22StartupTtsText, 'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita mula rito.', 'cac', 'ce', 'ca', 'bu', 'com', 'pu', 'ga', 'tus', 'ter', 'yan', 'Car', 'do', 'bi', 'net', 'te', 'Ce', 'les', 'Handa ka na?', 'Subukan muli.', 'Tama!', 'Magaling! Nabasa mo nang tama ang lahat ng pantig.', 'Magaling! Natapos mo ang Gawain 1.', 'Bumuo muna ng kahit isang wastong salita.', 'Bumuo ng ibang salita.', 'Gumamit ng mga pantig sa Big Box.', 'Hindi available ang audio', 'Hindi available ang audio.', 'Hindi available ang mikropono sa browser na ito.', 'Hindi available ang panuto.', 'Hindi ko malinaw na narinig. Subukan muli.', 'Hindi magamit ang mikropono. Subukan muli.', 'Hindi nakuha ang iyong boses. Subukan muli.', 'Hindi wastong mga pantig.', 'Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.', 'Pakinggan muna ang tamang pagbigkas.', 'Subukan muli. Hindi pa matiyak ang salitang ito.', 'Walang nakuha sa recording. Subukan muli.']);
@@ -336,7 +337,7 @@
     }
   }
   let queue = Promise.resolve();
-  function send(event, form=null, announceSaved=true, guardEpoch=null) {
+  function send(event, form=null, announceSaved=true, guardEpoch=null, guardCurrent=null) {
     if(preview) return Promise.resolve();
     const operation = async () => {
       if(s9Family&&event?.action==='draft'&&(state.completed||guardEpoch!==session9DraftEpoch))return;
@@ -346,10 +347,12 @@
       const response=await fetch(endpoint,{method:'POST',credentials:'same-origin',headers:{'Accept':'application/json','X-CSRFToken':token(),...(form?{}:{'Content-Type':'application/json'})},body});
       const result=await responseJson(response,session9Activity?session9SaveError:'Hindi na-save. Subukan muli.');
       if(!response.ok||!result.success) throw Error(result.error||(session9Activity?session9SaveError:'Hindi na-save. Subukan muli.'));
+      if(guardCurrent&&!guardCurrent())return false;
       const latestDraft=state.draft;
       state=result.state;
       if(event?.action==='draft')state.draft=latestDraft;
       if(announceSaved)message(session9Activity?'Work saved.':(fil?'Na-save ang iyong gawain.':'Your work is saved.'));
+      if(guardCurrent)return true;
     };
     const pending=queue.then(operation);queue=pending.catch(()=>{});return pending;
   }
@@ -601,7 +604,7 @@
     document.getElementById('wb-progress').innerHTML=steps;
     content.innerHTML=`${instructionBanner()}<section class="wb-picture-reading">${state.completed?`<div class="wb-picture-complete" role="status">Magaling! Natapos mo ang gawain. 🎉</div>`:`<img class="wb-picture-image" src="${esc(a.images?.[target.id]||'')}" alt="Larawan ng ${esc(target.text)}"><strong class="wb-picture-word">${esc(target.text)}</strong><p class="wb-picture-feedback" id="wb-picture-feedback" role="status" aria-live="polite">${esc(state.last_feedback||'Basahin ang salitang nasa larawan.')}</p>`}</section>`;
     const replay=document.getElementById('wb-instruction-replay');
-    replay.onclick=()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>setPictureFeedback(e.message||'Hindi available ang panuto.',true));};
+    if(replay)replay.onclick=()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>setPictureFeedback(e.message||'Hindi available ang panuto.',true));};
     if(!preview&&!instructionSpoken&&!pictureReading){instructionSpoken=true;setTimeout(async()=>{try{await playPrescribedAudio(instructionText);if(!state.last_feedback)await playPrescribedAudio('Basahin ang salitang nasa larawan.');}catch(e){console.error('Picture activity instruction audio failed',e);}},0);}
     if(preview||state.completed)return;
     const listen=button('🔊 Pakinggan',()=>playPrescribedAudio(target.text).catch(e=>setPictureFeedback(e.message||'Hindi available ang audio.',true)),false);
@@ -613,25 +616,59 @@
   }
   async function recordPictureReading(){
     if(busy||!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){setPictureFeedback('Hindi magamit ang mikropono. Subukan muli.',true);playPrescribedAudio('Hindi magamit ang mikropono. Subukan muli.',true).catch(()=>{});return;}
-    busy=true;lock();let stream=null,recorder=null,timer=null,requestIndex=Number(state.index||0),requestRevision=Number(state.revision||0);
+    busy=true;lock();let stream=null,recorder=null,requestIndex=Number(state.index||0),requestRevision=Number(state.revision||0),attempt=null,modelPromise=null;
+    attempt={id:Symbol('picture-guided-attempt'),controller:new AbortController(),modelAudio:null,modelStartedAt:0,modelEndedAt:0,recordingStartedAt:0,recordingEndedAt:0,submitted:false};
+    pictureGuidedAttempt=attempt;
+    const target=a.items[requestIndex];
+    const playGuidedModel=()=>new Promise(async(resolve,reject)=>{
+      const url=localAudioUrl(target?.text);
+      if(!url){reject(Object.assign(new Error('Hindi available ang audio.'),{code:'mapped_audio_missing'}));return;}
+      const audio=new Audio(url);attempt.modelAudio=audio;activeReadAloud=audio;
+      const finish=(error)=>{audio.onended=audio.onerror=null;if(activeReadAloud===audio)activeReadAloud=null;if(error)reject(error);else resolve();};
+      audio.onplaying=()=>{attempt.modelStartedAt=performance.now();console.info('L24_G4_GUIDED_MODEL_PLAYING',{word:target.text,at:attempt.modelStartedAt,recordingStartedAt:attempt.recordingStartedAt});};
+      audio.onended=()=>{attempt.modelEndedAt=performance.now();console.info('L24_G4_GUIDED_MODEL_END',{word:target.text,at:attempt.modelEndedAt,recordingStartedAt:attempt.recordingStartedAt,recordingEndedAt:attempt.recordingEndedAt});finish();};
+      audio.onerror=()=>finish(Object.assign(new Error('Hindi available ang audio.'),{code:'mapped_audio_playback_failed'}));
+      try{await audio.play();}catch(error){finish(error);}
+    });
     try{
       setPictureFeedback('🎙️ Nakikinig... Basahin ang salita.');
-      stream=activeStream=await window.Basahin.openMicrophone({audio:true});
-      const audio=await window.Basahin.capture({button:document.getElementById('wb-basahin'),stream,onRecorder:value=>{recorder=activeRecorder=value;}});stream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
+      console.info('L24_G4_GUIDED_MIC_REQUEST',{word:target.text,at:performance.now(),secureContext:window.isSecureContext,mediaDevices:Boolean(navigator.mediaDevices?.getUserMedia)});
+      try{
+        stream=activeStream=await window.Basahin.openMicrophone({audio:{echoCancellation:true,noiseSuppression:false,autoGainControl:true}},{signal:attempt.controller.signal});
+        const tracks=stream.getAudioTracks();
+        console.info('L24_G4_GUIDED_MIC_RESOLVED',{word:target.text,at:performance.now(),trackCount:tracks.length,tracks:tracks.map(track=>{const settings=track.getSettings?.()||{};return {readyState:track.readyState,enabled:track.enabled,muted:track.muted,sampleRate:settings.sampleRate||null,channelCount:settings.channelCount||null,echoCancellation:settings.echoCancellation??null,noiseSuppression:settings.noiseSuppression??null,autoGainControl:settings.autoGainControl??null};})});
+      }catch(error){
+        const name=error?.name||'Error',failure=name==='NotAllowedError'||name==='SecurityError'?'permission_denied':name==='NotFoundError'?'no_input_device':name==='NotReadableError'?'device_unreadable':error?.message?.startsWith('Hindi tumugon ang mikropono')?'acquisition_timeout':'acquisition_error';
+        console.info('L24_G4_GUIDED_MIC_FAILED',{word:target.text,at:performance.now(),failure,name});
+        throw error;
+      }
+      const capturePromise=window.Basahin.capture({button:document.getElementById('wb-basahin'),stream,signal:attempt.controller.signal,silenceMs:2200,maxRecordingMs:12000,diagnostics:true,onDiagnostic:(event,detail)=>console.info('L24_G4_GUIDED_RECORDER',{word:target.text,event,...detail}),onRecorder:value=>{recorder=activeRecorder=value;},onRecordingStarted:value=>{recorder=activeRecorder=value;attempt.recordingStartedAt=performance.now();console.info('L24_G4_GUIDED_RECORDING_START',{word:target.text,at:attempt.recordingStartedAt,recorderState:value?.state});modelPromise=playGuidedModel();}});
+      const audio=await capturePromise;
+      attempt.recordingEndedAt=performance.now();console.info('L24_G4_GUIDED_RECORDING_END',{word:target.text,at:attempt.recordingEndedAt,modelStartedAt:attempt.modelStartedAt,modelEndedAt:attempt.modelEndedAt});
+      if(modelPromise)await modelPromise;
+      stream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
       if(requestIndex!==Number(state.index||0)||requestRevision!==Number(state.revision||0))return;
-      setPictureFeedback('Pinoproseso ang iyong pagbasa...');
-      await playPrescribedAudio('Pinoproseso ang iyong pagbasa...',true);
+      if(!audio?.size)throw Error('Hindi nakuha ang boses. Subukan muli.');
       const form=new FormData();form.append('audio',audio,'reading.webm');
-      await send({action:'reading_attempt',item_index:requestIndex},form,false);render();
+      attempt.submitted=true;console.info('L24_G4_GUIDED_SUBMIT',{word:target.text,at:performance.now(),count:1});
+      const saved=await send({action:'reading_attempt',item_index:requestIndex},form,false,null,()=>pictureGuidedAttempt===attempt&&!attempt.controller.signal.aborted&&requestIndex===Number(state.index||0)&&requestRevision===Number(state.revision||0));
+      console.info('L24_G4_GUIDED_API_RESULT',{word:target.text,at:performance.now(),success:Boolean(saved),accepted:saved?state.last_feedback==='Tama! Magaling!'||state.last_feedback==='Magaling! Natapos mo ang gawain.':false});
+      if(!saved||pictureGuidedAttempt!==attempt||attempt.controller.signal.aborted)return;
+      render();
       const feedback=state.completed?'Magaling! Natapos mo ang gawain.':state.last_feedback;
       if(L24_G2_PICTURE_MAPPED_TEXT.has(feedback))await playPrescribedAudio(feedback,true);
     }catch(e){
-      clearTimeout(timer);stream?.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
+      const stillCurrent=pictureGuidedAttempt===attempt&&!attempt.controller.signal.aborted;
+      if(attempt?.submitted)console.info('L24_G4_GUIDED_API_RESULT',{word:target.text,at:performance.now(),success:false,failure:e?.code||e?.name||'request_error'});
+      else console.info('L24_G4_GUIDED_ATTEMPT_FAILED',{word:target.text,at:performance.now(),failure:e?.name==='NoSpeechError'?'no_speech':e?.name||'recording_error'});
+      attempt?.controller.abort();if(recorder&&recorder.state!=='inactive'){try{recorder.stop();}catch(_){}}stream?.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
+      if(attempt?.modelAudio){attempt.modelAudio.pause();attempt.modelAudio.currentTime=0;}if(activeReadAloud===attempt?.modelAudio)activeReadAloud=null;
+      if(!stillCurrent)return;
       const denied=e?.name==='NotAllowedError'||e?.name==='SecurityError';
-      const feedback=denied?'Hindi magamit ang mikropono. Subukan muli.':L24_G2_PICTURE_MAPPED_TEXT.has(e?.message)?e.message:'Hindi nakuha ang boses. Subukan muli.';
+      const feedback=denied?'Hindi magamit ang mikropono. Subukan muli.':e?.code?.startsWith('mapped_audio')?'Hindi magamit ang mikropono. Subukan muli.':L24_G2_PICTURE_MAPPED_TEXT.has(e?.message)?e.message:'Hindi nakuha ang boses. Subukan muli.';
       setPictureFeedback(denied?'Hindi pinayagan ang mikropono. Subukan muli.':e.message||feedback,true);
       playPrescribedAudio(feedback,true).catch(()=>{});
-    }finally{busy=false;lock();}
+    }finally{if(pictureGuidedAttempt===attempt)pictureGuidedAttempt=null;busy=false;lock();}
   }
   function renderJSyllables(){
     const current=Number(state.index||0), item=a.items[current];
@@ -1008,8 +1045,8 @@
     if(busy)return;busy=true;lock();
     await window.PabasaTemplateTts.speak({text:item().text,profile:'word',onEnd:async()=>{try{await send({action:oral().phase==='model'?'model_listened':'listened'});render();}catch(e){message(e.message,true);}finally{busy=false;lock();}},onError:e=>{message(e.message,true);busy=false;lock();}});
   }
-  window.addEventListener('beforeunload',e=>{activeRecorder?.stop();activeStream?.getTracks().forEach(t=>t.stop());stopReadAloud();if(!specializedBuilder&&busy){e.preventDefault();e.returnValue='';}});
-  window.addEventListener('pagehide',stopReadAloud);
+  window.addEventListener('beforeunload',e=>{if(pictureReading)pictureGuidedAttempt?.controller.abort();activeRecorder?.stop();activeStream?.getTracks().forEach(t=>t.stop());stopReadAloud();if(!specializedBuilder&&busy){e.preventDefault();e.returnValue='';}});
+  window.addEventListener('pagehide',()=>{if(pictureReading)pictureGuidedAttempt?.controller.abort();stopReadAloud();});
   if(lesson24Activity&&!preview&&!state.completed){
     const startLesson24=()=>{
       activityStarted=true;render();

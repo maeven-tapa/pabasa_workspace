@@ -71,7 +71,8 @@
    * No network, scoring, attempt counting, or DOM replacement happens here.
    */
   async function capture(options = {}) {
-    const {signal, onRecorder, onState, stream: suppliedStream} = options;
+    const {signal, onRecorder, onRecordingStarted, onDiagnostic, onState, stream: suppliedStream} = options;
+    const diagnostic = (event, detail={}) => { try { onDiagnostic?.(event, detail); } catch (_) {} };
     if (signal?.aborted) throw abortError();
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) throw Object.assign(new Error('Hindi available ang mikropono sa browser na ito.'), {basahinCapture: true});
     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -125,19 +126,28 @@
           try {
             const type = mimeType(), chunks = [];
             recorder = new window.MediaRecorder(stream, type ? {mimeType: type} : undefined);
-            recorder.ondataavailable = event => { if (event.data?.size) chunks.push(event.data); };
-            recorder.onerror = event => finish(event.error || new Error('Hindi naitala ang boses.'));
+            recorder.ondataavailable = event => {
+              if (event.data?.size) chunks.push(event.data);
+              diagnostic('data', {chunkBytes:event.data?.size||0,chunkCount:chunks.length,totalBytes:chunks.reduce((sum,chunk)=>sum+chunk.size,0)});
+            };
+            recorder.onerror = event => {
+              diagnostic('error', {name:event.error?.name||'MediaRecorderError'});
+              finish(event.error || new Error('Hindi naitala ang boses.'));
+            };
             recorder.onstop = () => {
               window.clearTimeout(timer);
               if (settled) return;
               const blob = new Blob(chunks, {type: recorder.mimeType || type || 'audio/webm'});
               vad.takeSpeech();
+              diagnostic('stop', {bytes:blob.size,chunkCount:chunks.length,durationMs:recordingStartedAt?Math.round(performance.now()-recordingStartedAt):0,speechDetected:speechStarted});
               finish(speechStarted && blob.size ? null : noSpeechError(), blob);
             };
             onRecorder?.(recorder);
             recordingStartedAt = performance.now();
             recorder.start();
-          } catch (error) { finish(error); }
+            diagnostic('start', {mimeType:recorder.mimeType||type||'',at:Math.round(recordingStartedAt)});
+            onRecordingStarted?.(recorder);
+          } catch (error) { diagnostic('start_error', {name:error?.name||'Error'}); finish(error); }
         };
         const meter = () => {
           if (ended || settled) return;
@@ -174,7 +184,8 @@
           const waitMs = options.maxWaitMs ?? CHUNK_MS * (options.maxSilentChunks ?? 5);
           timer = window.setTimeout(() => {
             setState('silence', {waitMs});
-            finish(noSpeechError());
+            if (options.diagnostics && recorder?.state === 'recording') recorder.stop();
+            else finish(noSpeechError());
           }, waitMs);
           recordChunk();
           meter();
