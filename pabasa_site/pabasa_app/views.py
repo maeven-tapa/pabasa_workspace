@@ -71,7 +71,7 @@ from .models import PracticeDebugSettings
 from .section_configuration import ensure_salawag_grade_two_sections
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
 from .student_session_lock import (
-    claim_student_session, release_student_session,
+    claim_student_session, release_student_session, takeover_student_session,
 )
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
 from .knowlez_stt import KnowlezSpeechError, transcribe_knowlez_audio, uses_knowlez_stt
@@ -5506,7 +5506,17 @@ def login_user(request):
         session_key = request.session.session_key
         if user.role == 'student':
             if not claim_student_session(user.id, session_key):
-                return JsonResponse({'success': False, 'error': 'Account Already in Use: This student account is currently logged in on another device. Please log out from that device before logging in here.'}, status=409)
+                if request.POST.get('takeover') == '1':
+                    user.refresh_from_db(fields=['active_session_key'])
+                    if not takeover_student_session(user.id, user.active_session_key, session_key):
+                        return JsonResponse({'success': False, 'error': 'The other session changed. Please try logging in again.'}, status=409)
+                else:
+                    return JsonResponse({
+                        'success': False,
+                        'code': 'student_session_conflict',
+                        'can_takeover': True,
+                        'error': 'This student account is active on another device. Continue here and end that session?',
+                    }, status=409)
 
         # Create session
         request.session['user_id'] = user.id

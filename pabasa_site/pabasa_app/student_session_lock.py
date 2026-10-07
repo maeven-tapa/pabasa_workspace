@@ -1,4 +1,5 @@
 from django.contrib.sessions.models import Session
+from django.db import transaction
 
 from .models import User
 from .system_clock import real_now as session_now
@@ -47,3 +48,23 @@ def release_student_session(user_id, session_key):
     User.objects.filter(pk=user_id, role='student', active_session_key=session_key).update(
         active_session_key=None, active_session_created_at=None,
     )
+
+
+def takeover_student_session(user_id, old_session_key, new_session_key):
+    """Atomically end a previously claimed device session after confirmation."""
+    if not old_session_key or not new_session_key or old_session_key == new_session_key:
+        return False
+    with transaction.atomic():
+        user = User.objects.select_for_update().filter(pk=user_id, role='student').first()
+        if not user or user.active_session_key != old_session_key:
+            return False
+        Session.objects.filter(session_key=old_session_key).delete()
+        now = session_now()
+        updated = User.objects.filter(
+            pk=user_id, role='student', active_session_key=old_session_key,
+        ).update(
+            active_session_key=new_session_key,
+            active_session_created_at=now,
+            updated_at=now,
+        )
+        return bool(updated)

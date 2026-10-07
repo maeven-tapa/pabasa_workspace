@@ -43,6 +43,19 @@ class StudentSessionLockTests(TestCase):
         self.assertEqual(self.student.active_session_key, first_key)
         self.assertEqual(self.client.get(reverse('dashboard')).status_code, 200)
 
+    def test_second_session_can_explicitly_take_over_and_invalidates_old_session(self):
+        self.assertEqual(self.login(self.client).status_code, 200)
+        first_key = self.client.session.session_key
+        second_client = self.client_class()
+        response = second_client.post(reverse('login_user'), {
+            'custom_id': 'LOCK-STU', 'password': 'password', 'takeover': '1',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Session.objects.filter(session_key=first_key).exists())
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.active_session_key, second_client.session.session_key)
+        self.assertEqual(self.client.get(reverse('dashboard')).status_code, 302)
+
     def test_logout_clears_claim_and_allows_another_session(self):
         self.assertEqual(self.login(self.client).status_code, 200)
         self.assertEqual(self.client.get(reverse('logout')).status_code, 302)
