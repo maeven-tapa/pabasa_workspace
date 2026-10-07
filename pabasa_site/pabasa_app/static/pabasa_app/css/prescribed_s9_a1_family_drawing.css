@@ -25,6 +25,13 @@
 .wb-s9-family-page .wb-tools label,.wb-s9-family-page .wb-s9-writing-panel>label{color:#416879;font:900 .76rem Nunito,'Segoe UI',sans-serif;letter-spacing:.04em;text-transform:uppercase}
 .wb-s9-family-page .wb-tools input[type=color]{width:40px;height:32px;padding:2px;border:2px solid #afd0d7;border-radius:9px;background:#fff}
 .wb-s9-family-page .wb-tools button{min-height:34px;padding:5px 12px;font-size:.8rem}
+.wb-s9-family-page .wb-s9-a1-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 clamp(6px,.8vh,10px);font:800 .78rem Nunito,'Segoe UI',sans-serif}
+.wb-s9-family-page .wb-s9-a1-tool-group,.wb-s9-family-page .wb-s9-a1-palette,.wb-s9-family-page .wb-s9-a1-sizes{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.wb-s9-family-page .wb-s9-a1-toolbar button{min-height:32px;padding:4px 10px;border-radius:11px;font-size:.78rem}
+.wb-s9-family-page .wb-s9-a1-toolbar .is-active{background:#dff5ef;border-color:#299e9a;color:#146e70;box-shadow:inset 0 0 0 2px #8ed8d4}
+.wb-s9-family-page .wb-s9-a1-color{width:25px;min-width:25px!important;height:25px;min-height:25px!important;padding:0!important;border-radius:50%!important;background:var(--swatch)!important;border:3px solid #fff!important;box-shadow:0 0 0 1px #9fc8d0}
+.wb-s9-family-page .wb-s9-a1-color.is-active{box-shadow:0 0 0 3px #f2bd3e}
+.wb-s9-family-page .wb-s9-a1-size{min-width:30px!important;padding:3px 8px!important}
 .wb-s9-family-page canvas{display:block;width:auto;height:auto;max-width:100%;max-height:100%;aspect-ratio:9/5;min-height:0;margin:auto;border:3px dashed #7fc8c8;border-radius:18px;box-shadow:inset 0 0 0 8px #f3fbfa;background:#fff}
 .wb-s9-writing-panel{text-align:center}
 .wb-s9-sentence{margin:3px 0 8px;color:#187b7a;font-size:clamp(1.05rem,2.2vw,1.45rem);letter-spacing:.02em}
@@ -45,8 +52,20 @@
 .wb-s9-start-button{border:0;background:#299e9a;color:#fff;box-shadow:0 5px 0 #187b7a}
 .wb-s9-later-button{border:3px solid #8ed8d4;background:#fff;color:#187b7a;box-shadow:0 4px 0 #b7d6dc}
 .wb-s9-start-actions button:disabled{opacity:.65;cursor:wait}
+.wb-s9-a1-completion{display:flex;height:100%;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;background:#fff;border:2px solid #8ed8d4;border-radius:22px}
+.wb-s9-a1-completion h2{margin:6px 0;color:#183e63;font-size:clamp(1.5rem,3vw,2.3rem)}
+.wb-s9-a1-completion p{margin:4px 0;color:#587382}
+.wb-s9-a1-kicker{color:#187b7a!important;font:900 .78rem Nunito,'Segoe UI',sans-serif;letter-spacing:.08em}
+.wb-s9-a1-completion-actions,.wb-s9-a1-modal-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:20px}
+.wb-s9-a1-completion-actions a,.wb-s9-a1-completion-actions button,.wb-s9-a1-modal-actions button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:8px 16px;border:2px solid #afd0d7;border-radius:999px;background:#fff;color:#183e63;text-decoration:none;font:800 .85rem Nunito,'Segoe UI',sans-serif}
+.wb-s9-a1-modal{position:fixed;inset:0;z-index:30;display:grid;place-items:center;padding:20px;background:#183e6366}
+.wb-s9-a1-modal-card{width:min(440px,calc(100vw - 32px));padding:25px;text-align:center;background:#fff;border:2px solid #8ed8d4;border-radius:22px;box-shadow:0 20px 50px #183e6340}
+.wb-s9-a1-modal-card h2{margin:0;color:#183e63;font-size:1.35rem}.wb-s9-a1-modal-card p{color:#587382}
 @media(max-width:1439px) and (min-width:1200px){.wb-s9-family-page #wb-progress-track{width:clamp(260px,24vw,320px)}}
 @media(max-width:1199px) and (min-width:1024px){.wb-s9-family-page #wb-progress-track{width:clamp(220px,24vw,280px)}}
 @media(max-height:700px) and (min-width:1024px){.wb-s9-family-page .wb-shell{padding-top:5px;padding-bottom:7px}.wb-s9-family-page .wb-shell header{padding-top:6px;padding-bottom:8px}.wb-s9-activity-stage{padding:8px;gap:6px}.wb-s9-family-page .wb-s9-family-workspace{gap:6px}.wb-s9-family-page .wb-s9-drawing-panel,.wb-s9-family-page .wb-s9-writing-panel{padding:7px 12px}.wb-s9-family-page .wb-s9-writing-panel textarea{min-height:44px}}
+@media(max-height:760px) and (min-width:1024px){.wb-s9-family-page .wb-shell{padding-top:5px;padding-bottom:7px}.wb-s9-family-page .wb-shell header{margin-bottom:3px;padding-top:5px;padding-bottom:6px}.wb-s9-family-page .wb-instruction{font-size:15px;margin-top:2px!important;margin-bottom:3px!important}.wb-s9-family-page #wb-progress-row{gap:8px;margin-bottom:4px}.wb-s9-family-page .wb-s9-activity-stage{padding:8px;gap:6px}.wb-s9-family-page #wb-content{height:100%}.wb-s9-family-page .wb-s9-family-workspace{height:calc(100% - 64px)}.wb-s9-family-page .wb-s9-drawing-panel,.wb-s9-family-page .wb-s9-writing-panel{padding:6px 12px}.wb-s9-family-page .wb-s9-writing-panel textarea{min-height:44px;padding:7px 10px}}
 @media(max-width:1023px){.wb-s9-family-page{height:auto;min-height:100dvh}.wb-s9-family-page .wb-shell{display:block;height:auto;min-height:100dvh;padding-left:12px;padding-right:12px}.wb-s9-family-page #wb-progress-row{width:100%}.wb-s9-family-page #wb-progress-track{width:min(320px,48vw)}.wb-s9-activity-stage{height:auto;padding:14px}.wb-s9-family-page #wb-content{height:auto}.wb-s9-family-page .wb-s9-family-workspace{height:auto;gap:12px}.wb-s9-drawing-panel{display:block}.wb-s9-family-page canvas{width:min(100%,900px);height:auto;max-height:none;min-height:220px}.wb-s9-family-page #wb-action{margin-bottom:4px}}
 @media(max-width:600px){.wb-s9-family-page .wb-shell header{padding:10px 16px 12px}.wb-s9-family-page .wb-instruction{font-size:16px}.wb-s9-family-page #wb-progress-row{gap:12px}.wb-s9-family-page #wb-progress-track{width:min(220px,43vw)}.wb-s9-activity-stage{padding:10px;border-radius:21px}.wb-s9-family-page canvas{min-height:180px}.wb-s9-section-heading h2{font-size:1rem}}
+.wb-s9-family-page .wb-s9-a1-toolbar button:focus-visible,.wb-s9-family-page .wb-s9-a1-completion-actions a:focus-visible,.wb-s9-family-page .wb-s9-a1-completion-actions button:focus-visible{outline:3px solid #f2bd3e;outline-offset:2px}
+@media(max-width:600px){.wb-s9-family-page .wb-s9-a1-toolbar{gap:7px}.wb-s9-family-page .wb-s9-a1-tool-group,.wb-s9-family-page .wb-s9-a1-palette,.wb-s9-family-page .wb-s9-a1-sizes{justify-content:center;width:100%}}

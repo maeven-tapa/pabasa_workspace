@@ -575,6 +575,105 @@ def initial_s9_a2_state():
     }
 
 
+def initial_s9_a1_state():
+    return {
+        'index': 0, 'answers': {},
+        'draft': {'strokes': [], 'text': '', 'tool': 'draw', 'color': '#183e63', 'size': 'medium'},
+        'last_feedback': '', 'completed': False, 'revision': 0,
+    }
+
+
+def _s9_a1_strokes(value):
+    if not isinstance(value, list) or len(value) > 1000:
+        raise ValueError('Draw your picture first.')
+    strokes = []
+    for stroke in value:
+        if (not isinstance(stroke, dict)
+                or not re.fullmatch(r'#[0-9a-fA-F]{6}', str(stroke.get('color')))
+                or not isinstance(stroke.get('points'), list)
+                or not 2 <= len(stroke['points']) <= 3000
+                or type(stroke.get('width', 5)) not in (int, float)
+                or not 2 <= float(stroke.get('width', 5)) <= 40
+                or any(not isinstance(point, list) or len(point) != 2
+                       or any(type(number) not in (int, float) for number in point)
+                       or not 0 <= point[0] <= 900 or not 0 <= point[1] <= 500
+                       for point in stroke['points'])):
+            raise ValueError('This drawing is not valid. Try again.')
+        strokes.append({'color': str(stroke['color']), 'width': float(stroke.get('width', 5)),
+                        'points': [[float(point[0]), float(point[1])] for point in stroke['points']]})
+    return strokes
+
+
+def normalize_s9_a1_state(state):
+    if not isinstance(state, dict):
+        state = initial_s9_a1_state()
+    draft = state.get('draft') if isinstance(state.get('draft'), dict) else {}
+    try:
+        strokes = _s9_a1_strokes(draft.get('strokes', []))
+    except ValueError:
+        strokes = []
+    answers = state.get('answers') if isinstance(state.get('answers'), dict) else {}
+    completed_answer = answers.get('item-1') if isinstance(answers.get('item-1'), dict) else None
+    normalize = lambda value: re.sub(r'[.\s]+$', '', str(value).strip()).replace('’', "'").casefold()
+    completed = bool(state.get('completed')) or bool(
+        completed_answer and normalize(completed_answer.get('text')) == normalize('This is my family.')
+    )
+    state['draft'] = {
+        'strokes': strokes,
+        'text': str(draft.get('text') or '')[:160],
+        'tool': draft.get('tool') if draft.get('tool') in {'draw', 'eraser'} else 'draw',
+        'color': draft.get('color') if re.fullmatch(r'#[0-9a-fA-F]{6}', str(draft.get('color'))) else '#183e63',
+        'size': draft.get('size') if draft.get('size') in {'small', 'medium', 'large'} else 'medium',
+    }
+    state['answers'] = answers
+    state.setdefault('last_feedback', '')
+    state['index'] = 1 if completed else 0
+    state['completed'] = completed
+    state['revision'] = max(0, int(state.get('revision', 0) or 0))
+    return state
+
+
+def _apply_s9_a1_drawing(state, event):
+    normalize_s9_a1_state(state)
+    action = event.get('action')
+    if action == 'restart':
+        state.clear(); state.update(initial_s9_a1_state()); return state
+    if state['completed']:
+        return state
+    if action == 'draft':
+        draft = event.get('draft')
+        if not isinstance(draft, dict) or len(json.dumps(draft)) > 350000:
+            raise ValueError('Could not save your work. Try again.')
+        strokes = _s9_a1_strokes(draft.get('strokes', []))
+        color = str(draft.get('color') or '#183e63')
+        if not re.fullmatch(r'#[0-9a-fA-F]{6}', color):
+            color = '#183e63'
+        state['draft'] = {
+            'strokes': strokes, 'text': str(draft.get('text') or '')[:160],
+            'tool': draft.get('tool') if draft.get('tool') in {'draw', 'eraser'} else 'draw',
+            'color': color, 'size': draft.get('size') if draft.get('size') in {'small', 'medium', 'large'} else 'medium',
+        }
+        return state
+    if action != 'answer':
+        raise ValueError('Unknown action.')
+    answer = event.get('answer')
+    if not isinstance(answer, dict) or len(json.dumps(answer)) > 350000:
+        raise ValueError('Could not save your work. Try again.')
+    strokes = _s9_a1_strokes(answer.get('strokes'))
+    if not strokes:
+        raise ValueError('Draw your picture first.')
+    text = str(answer.get('text') or '').strip()
+    normalize = lambda value: re.sub(r'[.\s]+$', '', value.strip()).replace('’', "'").casefold()
+    if normalize(text) != normalize('This is my family.'):
+        raise ValueError('Write the sentence “This is my family.”')
+    state['answers']['item-1'] = {'strokes': strokes, 'text': text}
+    state['draft'] = {'strokes': [], 'text': '', 'tool': 'draw', 'color': '#183e63', 'size': 'medium'}
+    state['index'] = 1
+    state['completed'] = True
+    state['last_feedback'] = 'Good job! Activity 1 is complete!'
+    return state
+
+
 def _s9_a2_strokes(value):
     if not isinstance(value, list) or len(value) > 1000:
         raise ValueError('Draw in the box first.')
@@ -2192,6 +2291,8 @@ def _apply_l24_g1_builder(state, event, verified_reading):
 
 def apply_event(activity, state, event, verified_reading=None):
     """Advance only the current item's required phases; never trust client scores."""
+    if activity['activity_key'] == 'aral-s9-a1-family-drawing':
+        return _apply_s9_a1_drawing(state, event)
     if activity['activity_key'] == 'aral-s9-a2-helping-drawing':
         return _apply_s9_a2_drawing(state, event)
     if activity['activity_key'] in {'aral-l22-g6-f-word-reading', 'aral-l23-g2-n-word-reading'} and event.get('action') == 'reading':
