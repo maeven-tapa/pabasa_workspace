@@ -340,6 +340,7 @@
   function send(event, form=null, announceSaved=true, guardEpoch=null, guardCurrent=null) {
     if(preview) return Promise.resolve();
     const operation = async () => {
+      if(guardCurrent&&!guardCurrent())return false;
       if(s9Family&&event?.action==='draft'&&(state.completed||guardEpoch!==session9DraftEpoch))return;
       let body;
       if(form) {form.set('revision',state.revision);if(event?.action)form.set('action',event.action);body=form;}
@@ -616,19 +617,25 @@
   }
   async function recordPictureReading(){
     if(busy||!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){setPictureFeedback('Hindi magamit ang mikropono. Subukan muli.',true);playPrescribedAudio('Hindi magamit ang mikropono. Subukan muli.',true).catch(()=>{});return;}
-    busy=true;lock();let stream=null,recorder=null,requestIndex=Number(state.index||0),requestRevision=Number(state.revision||0),attempt=null,modelPromise=null;
+    busy=true;lock();let stream=null,recorder=null,requestIndex=Number(state.index||0),requestRevision=Number(state.revision||0),attempt=null,modelPromise=null,modelError=null;
     attempt={id:Symbol('picture-guided-attempt'),controller:new AbortController(),modelAudio:null,modelStartedAt:0,modelEndedAt:0,recordingStartedAt:0,recordingEndedAt:0,submitted:false};
     pictureGuidedAttempt=attempt;
     const target=a.items[requestIndex];
-    const playGuidedModel=()=>new Promise(async(resolve,reject)=>{
+    const playGuidedModel=()=>new Promise((resolve,reject)=>{
       const url=localAudioUrl(target?.text);
       if(!url){reject(Object.assign(new Error('Hindi available ang audio.'),{code:'mapped_audio_missing'}));return;}
       const audio=new Audio(url);attempt.modelAudio=audio;activeReadAloud=audio;
-      const finish=(error)=>{audio.onended=audio.onerror=null;if(activeReadAloud===audio)activeReadAloud=null;if(error)reject(error);else resolve();};
+      let settled=false;
+      const timer=window.setTimeout(()=>finish(Object.assign(new Error('Hindi available ang audio.'),{code:'mapped_audio_timeout'})),15000);
+      const cleanup=()=>{window.clearTimeout(timer);attempt.controller.signal.removeEventListener('abort',onAbort);audio.onplaying=audio.onended=audio.onerror=null;if(activeReadAloud===audio)activeReadAloud=null;};
+      const finish=(error)=>{if(settled)return;settled=true;cleanup();if(error){try{audio.pause();audio.currentTime=0;}catch(_){}reject(error);}else resolve();};
+      const onAbort=()=>finish(new DOMException('Guided reading canceled.','AbortError'));
+      attempt.controller.signal.addEventListener('abort',onAbort,{once:true});
+      if(attempt.controller.signal.aborted){onAbort();return;}
       audio.onplaying=()=>{attempt.modelStartedAt=performance.now();console.info('L24_G4_GUIDED_MODEL_PLAYING',{word:target.text,at:attempt.modelStartedAt,recordingStartedAt:attempt.recordingStartedAt});};
       audio.onended=()=>{attempt.modelEndedAt=performance.now();console.info('L24_G4_GUIDED_MODEL_END',{word:target.text,at:attempt.modelEndedAt,recordingStartedAt:attempt.recordingStartedAt,recordingEndedAt:attempt.recordingEndedAt});finish();};
       audio.onerror=()=>finish(Object.assign(new Error('Hindi available ang audio.'),{code:'mapped_audio_playback_failed'}));
-      try{await audio.play();}catch(error){finish(error);}
+      try{Promise.resolve(audio.play()).catch(error=>finish(Object.assign(new Error('Hindi available ang audio.'),{code:'mapped_audio_playback_failed',cause:error})));}catch(error){finish(Object.assign(new Error('Hindi available ang audio.'),{code:'mapped_audio_playback_failed',cause:error}));}
     });
     try{
       setPictureFeedback('🎙️ Nakikinig... Basahin ang salita.');
@@ -642,11 +649,13 @@
         console.info('L24_G4_GUIDED_MIC_FAILED',{word:target.text,at:performance.now(),failure,name});
         throw error;
       }
-      const capturePromise=window.Basahin.capture({button:document.getElementById('wb-basahin'),stream,signal:attempt.controller.signal,silenceMs:2200,maxRecordingMs:12000,diagnostics:true,onDiagnostic:(event,detail)=>console.info('L24_G4_GUIDED_RECORDER',{word:target.text,event,...detail}),onRecorder:value=>{recorder=activeRecorder=value;},onRecordingStarted:value=>{recorder=activeRecorder=value;attempt.recordingStartedAt=performance.now();console.info('L24_G4_GUIDED_RECORDING_START',{word:target.text,at:attempt.recordingStartedAt,recorderState:value?.state});modelPromise=playGuidedModel();}});
+      const capturePromise=window.Basahin.capture({button:document.getElementById('wb-basahin'),stream,signal:attempt.controller.signal,silenceMs:2200,maxRecordingMs:12000,diagnostics:true,onDiagnostic:(event,detail)=>console.info('L24_G4_GUIDED_RECORDER',{word:target.text,event,...detail}),onRecorder:value=>{recorder=activeRecorder=value;},onRecordingStarted:value=>{recorder=activeRecorder=value;attempt.recordingStartedAt=performance.now();console.info('L24_G4_GUIDED_RECORDING_START',{word:target.text,at:attempt.recordingStartedAt,recorderState:value?.state});modelPromise=playGuidedModel().catch(error=>{modelError=error;attempt.controller.abort();});}});
       const audio=await capturePromise;
       attempt.recordingEndedAt=performance.now();console.info('L24_G4_GUIDED_RECORDING_END',{word:target.text,at:attempt.recordingEndedAt,modelStartedAt:attempt.modelStartedAt,modelEndedAt:attempt.modelEndedAt});
       if(modelPromise)await modelPromise;
-      stream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
+      if(modelError)throw modelError;
+      if(pictureGuidedAttempt!==attempt||attempt.controller.signal.aborted)return;
+      stream.getTracks().forEach(t=>t.stop());if(activeStream===stream)activeStream=null;if(activeRecorder===recorder)activeRecorder=null;
       if(requestIndex!==Number(state.index||0)||requestRevision!==Number(state.revision||0))return;
       if(!audio?.size)throw Error('Hindi nakuha ang boses. Subukan muli.');
       const form=new FormData();form.append('audio',audio,'reading.webm');
@@ -658,17 +667,26 @@
       const feedback=state.completed?'Magaling! Natapos mo ang gawain.':state.last_feedback;
       if(L24_G2_PICTURE_MAPPED_TEXT.has(feedback))await playPrescribedAudio(feedback,true);
     }catch(e){
-      const stillCurrent=pictureGuidedAttempt===attempt&&!attempt.controller.signal.aborted;
+      if(modelError)e=modelError;
+      const stillCurrent=pictureGuidedAttempt===attempt&&e?.name!=='AbortError';
       if(attempt?.submitted)console.info('L24_G4_GUIDED_API_RESULT',{word:target.text,at:performance.now(),success:false,failure:e?.code||e?.name||'request_error'});
       else console.info('L24_G4_GUIDED_ATTEMPT_FAILED',{word:target.text,at:performance.now(),failure:e?.name==='NoSpeechError'?'no_speech':e?.name||'recording_error'});
-      attempt?.controller.abort();if(recorder&&recorder.state!=='inactive'){try{recorder.stop();}catch(_){}}stream?.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
-      if(attempt?.modelAudio){attempt.modelAudio.pause();attempt.modelAudio.currentTime=0;}if(activeReadAloud===attempt?.modelAudio)activeReadAloud=null;
+      attempt?.controller.abort();if(recorder&&recorder.state!=='inactive'){try{recorder.stop();}catch(_){}}stream?.getTracks().forEach(t=>t.stop());if(activeStream===stream)activeStream=null;if(activeRecorder===recorder)activeRecorder=null;
+      if(attempt?.modelAudio){try{attempt.modelAudio.pause();attempt.modelAudio.currentTime=0;}catch(_){}}if(activeReadAloud===attempt?.modelAudio)activeReadAloud=null;
       if(!stillCurrent)return;
       const denied=e?.name==='NotAllowedError'||e?.name==='SecurityError';
-      const feedback=denied?'Hindi magamit ang mikropono. Subukan muli.':e?.code?.startsWith('mapped_audio')?'Hindi magamit ang mikropono. Subukan muli.':L24_G2_PICTURE_MAPPED_TEXT.has(e?.message)?e.message:'Hindi nakuha ang boses. Subukan muli.';
+      const feedback=denied?'Hindi magamit ang mikropono. Subukan muli.':e?.code?.startsWith('mapped_audio')?null:L24_G2_PICTURE_MAPPED_TEXT.has(e?.message)?e.message:'Hindi nakuha ang boses. Subukan muli.';
       setPictureFeedback(denied?'Hindi pinayagan ang mikropono. Subukan muli.':e.message||feedback,true);
-      playPrescribedAudio(feedback,true).catch(()=>{});
-    }finally{if(pictureGuidedAttempt===attempt)pictureGuidedAttempt=null;busy=false;lock();}
+      if(feedback)playPrescribedAudio(feedback,true).catch(()=>{});
+    }finally{
+      attempt?.controller.abort();
+      if(recorder&&recorder.state!=='inactive'){try{recorder.stop();}catch(_){}}
+      stream?.getTracks().forEach(t=>t.stop());
+      if(attempt?.modelAudio){try{attempt.modelAudio.pause();attempt.modelAudio.currentTime=0;}catch(_){}}
+      if(activeReadAloud===attempt?.modelAudio)activeReadAloud=null;
+      if(activeStream===stream)activeStream=null;if(activeRecorder===recorder)activeRecorder=null;
+      if(pictureGuidedAttempt===attempt){pictureGuidedAttempt=null;busy=false;lock();}
+    }
   }
   function renderJSyllables(){
     const current=Number(state.index||0), item=a.items[current];
