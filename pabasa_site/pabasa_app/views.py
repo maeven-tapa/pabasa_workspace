@@ -163,9 +163,15 @@ def _prescribed_activity_order():
     def natural_parts(value):
         parts = re.findall(r'\d+|[A-Za-z]+', str(value or ''))
         return tuple((0, int(part)) if part.isdigit() else (1, part.lower()) for part in parts) or ((0, 999),)
+    lesson7_order = {'lesson-7-gawain-1': 0, 'lesson7-gawain2c': 1, 'lesson7-gawain2a': 2, 'lesson7-gawain2b': 3, 'lesson7-gawain3': 4}
+    def activity_sort_key(item):
+        key = item['activity_key']
+        if key in lesson7_order:
+            return (3, natural_parts(7), ((0, lesson7_order[key]),))
+        return (int(item.get('session_number') or 999), natural_parts(item.get('lesson_number')), natural_parts(item.get('gawain_number')))
     catalog_keys = [activity['activity_key'] for activity in sorted(
         active_prescribed_activities(),
-        key=lambda item: (int(item.get('session_number') or 999), natural_parts(item.get('lesson_number')), natural_parts(item.get('gawain_number'))),
+        key=activity_sort_key,
     )]
     return list(dict.fromkeys([*legacy_keys, *catalog_keys]))
 

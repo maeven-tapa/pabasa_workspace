@@ -780,7 +780,8 @@ PRESCRIBED_ACTIVITIES = {
         'activity_key': 'lesson7-gawain2c',
         'session_number': 3,
         'lesson_number': 7,
-        'gawain_number': '2C',
+        # Keep the stable key for saved-progress/API compatibility; present it as Gawain 2.
+        'gawain_number': 2,
         'title': 'Letrang Ii',
         'instruction': 'Magsanay Magsulat',
         'interaction': 'handwriting',
