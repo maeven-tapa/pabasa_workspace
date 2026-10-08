@@ -33,8 +33,6 @@ class PrescribedLesson2021ClusterTests(TestCase):
         session = self.client.session
         session.update({'user_id': self.student.id, 'user_role': 'student', 'email': self.student.email})
         session.save()
-        self.student.active_session_key = session.session_key
-        self.student.save(update_fields=['active_session_key', 'updated_at'])
 
     def login_teacher(self):
         session = self.client.session

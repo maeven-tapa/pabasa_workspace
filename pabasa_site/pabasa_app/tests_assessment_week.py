@@ -75,10 +75,6 @@ class AssessmentWeekTests(TestCase):
         session = self.client.session
         session.update({'user_id': user.id, 'user_role': user.role, 'email': user.email})
         session.save()
-        if user.role == 'student':
-            User.objects.filter(pk=user.pk).update(
-                active_session_key=session.session_key,
-            )
 
     def _toggle(self, section_id, enabled):
         return self.client.post(

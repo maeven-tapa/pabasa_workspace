@@ -1,6 +1,5 @@
 """Exercise independent student logins against one disposable SQLite file."""
 from contextlib import closing
-from datetime import timedelta
 import os
 from pathlib import Path
 import sqlite3
@@ -33,12 +32,13 @@ from django.http import JsonResponse
 from django.test import Client
 from django.urls import clear_url_caches, path, reverse
 from django.utils import timezone
-from datetime import timedelta
 from pabasa_app.models import LiveAssessmentSession, User
 from django.contrib.sessions.models import Session
 from pabasa_site import urls
 
 students = list(User.objects.filter(custom_id__startswith='CONCURRENT-LIVE-STUDENT-'))
+login_keys = {int(login.get_decoded()['user_id']): login.session_key
+    for login in Session.objects.all() if login.get_decoded().get('user_role') == 'student'}
 barrier = threading.Barrier(len(students))
 speech_ready = threading.Barrier(len(students) + 1)
 release_speech = threading.Event()
@@ -57,7 +57,7 @@ clear_url_caches()
 def simulate_speech(student):
     close_old_connections()
     client = Client(raise_request_exception=False)
-    client.cookies[settings.SESSION_COOKIE_NAME] = student.active_session_key
+    client.cookies[settings.SESSION_COOKIE_NAME] = login_keys[student.pk]
     try:
         return client.post('/test-blocked-speech/').status_code
     finally:
@@ -66,7 +66,7 @@ def simulate_speech(student):
 def check_login(student):
     close_old_connections()
     client = Client(raise_request_exception=False)
-    client.cookies[settings.SESSION_COOKIE_NAME] = student.active_session_key
+    client.cookies[settings.SESSION_COOKIE_NAME] = login_keys[student.pk]
     try:
         return client.get(reverse('live_assessment_session_state', args=[sys.argv[2]])).status_code
     finally:
@@ -75,7 +75,7 @@ def check_login(student):
 def read_and_publish(student):
     close_old_connections()
     client = Client(raise_request_exception=False)
-    client.cookies[settings.SESSION_COOKIE_NAME] = student.active_session_key
+    client.cookies[settings.SESSION_COOKIE_NAME] = login_keys[student.pk]
     statuses = []
     try:
         barrier.wait(timeout=10)
@@ -116,7 +116,7 @@ assert session.status == 'started'
 assert len(session.student_states) == 10
 assert all(session.student_states[str(student.pk)]['progress'] == 0.3 for student in students)
 assert all(session.student_states[str(student.pk)]['recovery_state']['task1_score'] == student.pk % 10 for student in students)
-assert all(User.objects.get(pk=student.pk).active_session_key == student.active_session_key for student in students)
+assert all(Session.objects.filter(session_key=login_keys[student.pk]).exists() for student in students)
 print('10 student logins preserved; 80 overlapping login, publish, poll and auth checks passed.')
 print('Login checks stayed available while all 10 speech requests were waiting on provider I/O.')
 
@@ -147,7 +147,7 @@ def recognize(*, request, **kwargs):
 def read_sentence_or_story(student, mode):
     close_old_connections()
     client = Client(raise_request_exception=False)
-    client.cookies[settings.SESSION_COOKIE_NAME] = student.active_session_key
+    client.cookies[settings.SESSION_COOKIE_NAME] = login_keys[student.pk]
     audio = f'{student.pk}-{mode}'.encode()
     target = 'Si Ana ay masaya.' if mode == 'sentence' else 'Si Ana ay masaya. May bola si Ana.'
     # Half the students substitute a word; recovery must preserve actual errors.
@@ -183,7 +183,7 @@ assert all(count == 2 for count in attempts.values())
 print('10 simultaneous sentence and 10 story readings recovered provider 500s with isolated, accurate scores.')
 
 # Reconnect after explicit server-side revocation, without any inactivity rule.
-Session.objects.filter(session_key__in=[student.active_session_key for student in students]).delete()
+Session.objects.filter(session_key__in=[login_keys[student.pk] for student in students]).delete()
 
 def sign_in_again(student):
     close_old_connections()
@@ -195,10 +195,11 @@ def sign_in_again(student):
             return (response.status_code, response.json().get('error'))
         new_key = client.session.session_key
         old_client = Client(raise_request_exception=False)
-        old_client.cookies[settings.SESSION_COOKIE_NAME] = student.active_session_key
+        old_client.cookies[settings.SESSION_COOKIE_NAME] = login_keys[student.pk]
         assert old_client.get(reverse('live_assessment_session_state', args=[sys.argv[2]])).status_code == 401
         assert client.get(reverse('live_assessment_session_state', args=[sys.argv[2]])).status_code == 200
-        assert User.objects.get(pk=student.pk).active_session_key == new_key
+        assert new_key != login_keys[student.pk]
+        assert Session.objects.filter(session_key=new_key).exists()
         return 200
     finally:
         close_old_connections()
@@ -206,7 +207,7 @@ def sign_in_again(student):
 with ThreadPoolExecutor(max_workers=thread_count) as executor:
     login_statuses = list(executor.map(sign_in_again, students))
 assert login_statuses == [200] * 10, f'Concurrent sign-in failures: {login_statuses}'
-print('10 concurrent replacement logins kept ownership isolated and recovery intact.')
+print('10 concurrent replacement logins kept sessions isolated and recovery intact.')
 session.refresh_from_db()
 assert all(session.student_states[str(student.pk)]['progress'] == 0.3 for student in students)
 '''
@@ -228,14 +229,11 @@ class LiveCrlaConcurrentRequestsTests(TransactionTestCase):
                 is_system_owned=True, is_official_reading=True, assessment_kind='crla',
                 system_assessment_key='bosy_crla_pretest')
         students = []
-        earlier = timezone.now() - timedelta(days=30)
         for index in range(10):
             student = self.make_user(f'CONCURRENT-LIVE-STUDENT-{index}')
             login = SessionStore()
             login.update({'user_id': student.pk, 'user_role': 'student'})
             login.create()
-            User.objects.filter(pk=student.pk).update(active_session_key=login.session_key,
-                active_session_created_at=earlier)
             students.append(student)
         session = LiveAssessmentSession.objects.create(id='concurrent-live-timeout', teacher=teacher,
             material=material, status='started', start_at=timezone.now(),

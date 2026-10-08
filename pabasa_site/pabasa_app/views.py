@@ -70,9 +70,6 @@ from .system_clock import invalidate_override_cache, now as system_now, real_now
 from .models import PracticeDebugSettings
 from .section_configuration import ensure_salawag_grade_two_sections
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
-from .student_session_lock import (
-    claim_student_session, release_student_session, takeover_student_session,
-)
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
 from .knowlez_stt import KnowlezSpeechError, transcribe_knowlez_audio, uses_knowlez_stt
 from .reading_stt import (
@@ -5501,23 +5498,6 @@ def login_user(request):
             # Students are considered active by default
             pass
             
-        if not request.session.session_key:
-            request.session.save()
-        session_key = request.session.session_key
-        if user.role == 'student':
-            if not claim_student_session(user.id, session_key):
-                if request.POST.get('takeover') == '1':
-                    user.refresh_from_db(fields=['active_session_key'])
-                    if not takeover_student_session(user.id, user.active_session_key, session_key):
-                        return JsonResponse({'success': False, 'error': 'The other session changed. Please try logging in again.'}, status=409)
-                else:
-                    return JsonResponse({
-                        'success': False,
-                        'code': 'student_session_conflict',
-                        'can_takeover': True,
-                        'error': 'This student account is active on another device. Continue here and end that session?',
-                    }, status=409)
-
         # Create session
         request.session['user_id'] = user.id
         request.session['custom_id'] = user.custom_id
@@ -5601,8 +5581,6 @@ def principal_change_temporary_password(request):
 
 def logout_user(request):
     """Logout user and destroy session"""
-    if request.session.get('user_role') == 'student':
-        release_student_session(request.session.get('user_id'), request.session.session_key)
     request.session.flush()
     # Re-authentication uses the normal logout lifecycle, but returns to the
     # login page instead of leaving the student at the home page. Only this

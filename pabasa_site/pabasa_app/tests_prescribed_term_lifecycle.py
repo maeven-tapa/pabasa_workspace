@@ -28,8 +28,6 @@ class PrescribedTermLifecycleTests(TestCase):
         session = self.client.session
         session.update({'user_id': self.student.pk, 'user_role': 'student', 'email': self.student.email})
         session.save()
-        self.student.active_session_key = session.session_key
-        self.student.save(update_fields=['active_session_key', 'updated_at'])
         self.page = reverse('prescribed_activity_page', kwargs={'activity_key': self.key})
         self.progress = reverse('prescribed_activity_progress', kwargs={'activity_key': self.key})
         self.complete = reverse('prescribed_activity_complete', kwargs={'activity_key': self.key})

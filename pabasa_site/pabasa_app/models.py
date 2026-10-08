@@ -118,8 +118,6 @@ class User(models.Model):
     animal_avatar = models.CharField(max_length=20, default="cat", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    active_session_key = models.CharField(max_length=64, null=True, blank=True, db_index=True)
-    active_session_created_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "users"

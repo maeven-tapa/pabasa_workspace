@@ -69,7 +69,6 @@ from .system_clock import invalidate_override_cache, now as system_now, real_now
 from .models import PracticeDebugSettings
 from .section_configuration import ensure_salawag_grade_two_sections
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
-from .student_session_lock import claim_student_session, release_student_session
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
 from .reading_stt import (
     ReadingMatcher,
@@ -5010,16 +5009,11 @@ def login_user(request):
             # Students are considered active by default
             pass
             
-        if not request.session.session_key:
-            request.session.save()
-        session_key = request.session.session_key
         if user.role == 'student':
             # Student auth cookies are browser-session cookies, so a client
             # clock change cannot make the browser discard a valid session.
             # Django's server-side session expiry remains authoritative.
             request.session.set_expiry(0)
-            if not claim_student_session(user.id, session_key):
-                return JsonResponse({'success': False, 'error': 'Account Already in Use: This student account is currently logged in on another device. Please log out from that device before logging in here.'}, status=409)
 
         # Create session
         request.session['user_id'] = user.id
@@ -5100,8 +5094,6 @@ def principal_change_temporary_password(request):
 
 def logout_user(request):
     """Logout user and destroy session"""
-    if request.session.get('user_role') == 'student':
-        release_student_session(request.session.get('user_id'), request.session.session_key)
     request.session.flush()
     return redirect('home')
 

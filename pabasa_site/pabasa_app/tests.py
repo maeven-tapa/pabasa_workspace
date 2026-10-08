@@ -3487,8 +3487,6 @@ class AssessmentPageFlowTests(TestCase):
             self.assertTrue(availability["completed"])
 
             self._login_student(student)
-            student.active_session_key = self.client.session.session_key
-            student.save(update_fields=["active_session_key", "updated_at"])
             self.assertEqual(self.client.session.get("user_id"), student.id)
             first_visit = self.client.get(reverse("assessment"))
             self.assertEqual(first_visit.status_code, 200, getattr(first_visit, "url", ""))
@@ -3511,8 +3509,6 @@ class AssessmentPageFlowTests(TestCase):
         session["user_id"] = student.id
         session["user_role"] = "student"
         session.save()
-        student.active_session_key = fresh_client.session.session_key
-        student.save(update_fields=["active_session_key", "updated_at"])
         with patch("pabasa_app.views._official_crla_assessment_phase", return_value="pretest"), patch(
             "pabasa_app.views._official_crla_material_for_student", return_value=pretest
         ):
@@ -6206,8 +6202,6 @@ class LiveAssessmentStartTests(TestCase):
         student_session['email'] = self.student.email
         student_session['custom_id'] = self.student.custom_id
         student_session.save()
-        from .student_session_lock import claim_student_session
-        self.assertTrue(claim_student_session(self.student.pk, student_session.session_key))
 
         response = student_client.get(reverse("live_assessment_session_state", kwargs={"session_id": session.id}))
         self.assertEqual(response.status_code, 200)
@@ -6342,7 +6336,6 @@ class LiveAssessmentStartTests(TestCase):
         student_session['email'] = self.student.email
         student_session['custom_id'] = self.student.custom_id
         student_session.save()
-        User.objects.filter(pk=self.student.id).update(active_session_key=student_session.session_key)
         update_url = reverse('live_assessment_student_state_update', kwargs={'session_id': session.id})
 
         for stage, label, completed, total in (
@@ -7430,8 +7423,6 @@ class LiveAssessmentStartTests(TestCase):
         student_session['custom_id'] = self.student.custom_id
         student_session['login_at'] = (timezone.now() + timedelta(seconds=5)).isoformat()
         student_session.save()
-        from .student_session_lock import claim_student_session
-        self.assertTrue(claim_student_session(self.student.pk, student_session.session_key))
 
         response = student_client.get(reverse('live_assessment_active_invitation'))
 
@@ -7502,8 +7493,6 @@ class LiveAssessmentStartTests(TestCase):
         student_session['email'] = self.student.email
         student_session['custom_id'] = self.student.custom_id
         student_session.save()
-        from .student_session_lock import claim_student_session
-        self.assertTrue(claim_student_session(self.student.pk, student_session.session_key))
 
         response = student_client.get(reverse('live_assessment_active_invitation'))
 
@@ -10913,7 +10902,6 @@ class LiveAssessmentCloseAndSaveTests(TestCase):
             session['user_id'] = student.id
             session['user_role'] = 'student'
             session.save()
-            User.objects.filter(pk=student.id).update(active_session_key=session.session_key)
             return client
 
         def ended_session(student, state):

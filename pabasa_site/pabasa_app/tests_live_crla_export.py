@@ -13,7 +13,6 @@ from openpyxl import load_workbook
 
 from .models import Assessment, CalendarEvent, LiveAssessmentSession, Material, School, SchoolCalendar, Section, User
 from .scoring import build_assessment_score_payload, crla_task2_kind
-from .student_session_lock import claim_student_session
 from .utils.crla_export import _student_values, export_crla_excel
 from .utils.crla_results import latest_completed_official_crla_results
 from .views import (
@@ -111,7 +110,6 @@ class LiveCrlaWorkbookTests(TestCase):
             auth = client.session
             auth.update({'user_id': student.pk, 'user_role': 'student'})
             auth.save()
-            self.assertTrue(claim_student_session(student.pk, auth.session_key))
             keys[student.pk] = auth.session_key
             students.append(student)
             clients.append(client)
@@ -144,8 +142,6 @@ class LiveCrlaWorkbookTests(TestCase):
                 self.assertEqual(client.post(reverse('reading_transcribe_api')).status_code, 400)
                 self.assertEqual(client.session.get('user_id'), student.pk)
                 self.assertTrue(Session.objects.filter(session_key=keys[student.pk]).exists())
-                student.refresh_from_db()
-                self.assertEqual(student.active_session_key, keys[student.pk])
 
     def test_live_session_polling_never_ends_old_sessions(self):
         student = self.make_user('persistent-live')

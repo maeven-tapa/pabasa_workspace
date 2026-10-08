@@ -22,8 +22,6 @@ class ProtectedActivityRecoveryTests(TestCase):
         session = self.client.session
         session.update({'user_id': self.student.id, 'user_role': 'student', 'email': self.student.email})
         session.save()
-        self.student.active_session_key = session.session_key
-        self.student.save(update_fields=['active_session_key', 'updated_at'])
 
     def test_picture_word_route_renders_protected_template(self):
         material = Material.objects.create(

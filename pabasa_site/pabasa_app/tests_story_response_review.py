@@ -31,8 +31,6 @@ class StoryResponseReviewTests(TestCase):
         session = self.client.session
         session.update({"user_id": user.id, "user_role": user.role, "email": user.email})
         session.save()
-        user.active_session_key = session.session_key
-        user.save(update_fields=['active_session_key', 'updated_at'])
 
     def test_submission_review_and_grade_are_persisted(self):
         self.login_as(self.student)

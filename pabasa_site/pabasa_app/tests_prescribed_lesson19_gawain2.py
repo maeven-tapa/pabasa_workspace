@@ -102,8 +102,6 @@ class PrescribedLesson19Gawain2RestartTests(TestCase):
         session = self.client.session
         session.update({'user_id': self.student.id, 'user_role': 'student', 'email': self.student.email})
         session.save()
-        self.student.active_session_key = session.session_key
-        self.student.save(update_fields=['active_session_key', 'updated_at'])
         prescribed_term_fixture(self.student)
         self.url = reverse('prescribed_activity_progress', kwargs={'activity_key': self.key})
 

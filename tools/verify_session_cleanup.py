@@ -13,7 +13,8 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 PROJECT = ROOT / 'pabasa_site'
 REMOVED = {
-    'users': {'last_activity', 'active_session_last_seen', 'active_session_learning'},
+    'users': {'last_activity', 'active_session_last_seen', 'active_session_learning',
+              'active_session_key', 'active_session_created_at'},
     'live_assessment_sessions': {'timing_mode', 'duration_seconds'},
     'django_session': {'session_data', 'expire_date'},
 }
@@ -82,7 +83,7 @@ def main():
         executor = MigrationExecutor(connection)
         now = timezone.now()
         with redirect_stdout(io.StringIO()):
-            executor.migrate([('pabasa_app', '0024_remove_session_timeout_fields')])
+            executor.migrate([('pabasa_app', '0025_remove_student_device_lock')])
         after = fingerprint(target)
         assert all(after[table] == digest for table, digest in copy_before.items()), 'Existing records changed'
         with connection.cursor() as cursor:
