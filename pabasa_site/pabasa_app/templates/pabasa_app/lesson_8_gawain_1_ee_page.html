@@ -8,9 +8,9 @@
   <title>GAWAIN 1: Letrang Ee</title>
   <link rel="stylesheet" href="{% static 'pabasa_app/css/lesson_7_gawain_4.css' %}?v=20260918-2">
   <style>
-    .lesson8-gawain1-page .model{top:12%;height:76%;align-items:center}
-    .lesson8-gawain1-page .model b{font-size:clamp(3.2rem,6.5vh,4.5rem);transform:none}
-    .lesson8-gawain1-page .model i{margin-top:0;font-size:clamp(2.7rem,5.4vh,3.8rem)}
+    .lesson8-gawain1-page .model{top:0;height:100%;align-items:flex-start}
+    .lesson8-gawain1-page .model b{font-size:clamp(3.45rem,7.5vh,5.3rem);transform:translateY(calc(3px + .11em)) scaleY(1.3);transform-origin:center center}
+    .lesson8-gawain1-page .model i{position:relative;top:calc(88% - .88em);margin-top:0;font-size:clamp(2.9rem,6.2vh,4.4rem)}
     body.lesson8-gawain1-page:has(.done) .back{display:none!important}
     body.lesson8-gawain1-page:has(.done) .card{display:grid!important;place-items:center!important;height:auto!important;min-height:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important}
     body.lesson8-gawain1-page:has(.done) .done{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:18px!important;width:min(540px,92vw)!important;height:auto!important;min-height:0!important;margin:auto!important;padding:40px 38px!important;border:0!important;border-radius:32px!important;background:#fff!important;color:#183e63!important;text-align:center!important;box-shadow:0 14px 30px rgba(30,91,122,.16)!important;overflow:visible!important;font-size:1rem!important;line-height:normal!important}
@@ -109,9 +109,14 @@
 {% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l8g1' help_text='Magsanay sumulat ng letrang Ee.' %}</body>
 </html>
 <style>
+  body.lesson8-gawain1-page .progress,
   body.lesson8-gawain1-page .instruction,
   body.lesson8-gawain1-page .hint{display:none!important}
   body.lesson8-gawain1-page .lesson8-g1-progress .is-completed{display:grid!important;place-items:center!important;width:32px!important;height:32px!important;padding:0!important;border:2px solid #299e9a!important;border-radius:50%!important;background:#299e9a!important;color:#fff!important;font:400 15px/1 BasahinFredoka,Fredoka,Nunito,sans-serif!important}
+  body.lesson8-gawain1-page .lesson8-g1-progress span,
+  body.lesson8-gawain1-page .lesson8-g1-progress .is-completed{width:38px!important;height:38px!important;font-size:17px!important}
+  @media(max-width:800px){body.lesson8-gawain1-page .lesson8-g1-progress span,body.lesson8-gawain1-page .lesson8-g1-progress .is-completed{width:35px!important;height:35px!important;font-size:16px!important}}
+  @media(max-width:520px){body.lesson8-gawain1-page .lesson8-g1-progress span,body.lesson8-gawain1-page .lesson8-g1-progress .is-completed{width:33px!important;height:33px!important;font-size:15px!important}}
 </style>
 <script>
 (()=>{const app=document.getElementById('app');if(!app)return;const rename=()=>app.querySelectorAll('.lesson8-g1-progress .done').forEach(node=>{node.classList.remove('done');node.classList.add('is-completed')});new MutationObserver(rename).observe(app,{childList:true,subtree:true});rename()})();
