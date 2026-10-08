@@ -1,5 +1,6 @@
 .git
 .gitignore
+backups/
 .venv
 venv
 __pycache__

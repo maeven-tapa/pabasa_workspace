@@ -21,6 +21,7 @@ pabasa_site/google-stt-service-account.json
 google-stt-service-account.json
 
 # Environment variables
+backups/
 .env
 .env.*
 !.env.example

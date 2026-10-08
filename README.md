@@ -207,9 +207,14 @@ The repository includes tests for assessment workflows, authorization, enrollmen
 
 ## Deployment
 
-The Docker image installs application dependencies, collects static assets, checks migration readiness, applies migrations, and starts Gunicorn on port `8080` by default. WhiteNoise serves static assets.
+The Docker image installs application dependencies, collects static assets, checks that migrations have already been applied, and starts Gunicorn on port `8080` by default. Run migrations once in a deployment job before switching traffic. WhiteNoise serves static assets.
 
 Review the Django settings before hosting: production mode is currently selected by the Cloud Run `K_SERVICE` environment variable and requires `DJANGO_SECRET_KEY`. Configure the intended hosts, credentials, HTTPS, and persistent storage for the database and uploaded files for your environment.
+
+Cloud Run services and jobs require PostgreSQL configured through `DB_NAME`, `DB_USER`,
+`DB_PASSWORD` (a Secret Manager reference), and `INSTANCE_CONNECTION_NAME` or `DB_HOST`.
+Local development defaults to SQLite. See [the Cloud SQL migration guide](docs/CLOUD_SQL_MIGRATION.md)
+for the backup, secret mapping, verified import, and traffic switch procedure.
 
 ## Research and team
 

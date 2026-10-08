@@ -16,6 +16,8 @@ from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
+from .database import database_config
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = BASE_DIR.parent
@@ -28,8 +30,11 @@ load_dotenv(PROJECT_ROOT / '.env')
 # SECURITY WARNING: keep the production value in Secret Manager.
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
 
-# Cloud Run always provides K_SERVICE. Local runs remain in development mode.
-DJANGO_ENV = 'production' if os.environ.get('K_SERVICE') else 'development'
+# Both Cloud Run services and one-off migration jobs require production secrets.
+DJANGO_ENV = 'production' if (
+    os.environ.get('K_SERVICE') or os.environ.get('CLOUD_RUN_JOB')
+    or os.environ.get('DJANGO_ENV') == 'production'
+) else 'development'
 if not SECRET_KEY:
     if DJANGO_ENV == 'production':
         raise ImproperlyConfigured('DJANGO_SECRET_KEY must be set in production.')
@@ -100,12 +105,7 @@ WSGI_APPLICATION = 'pabasa_site.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+DATABASES = {'default': database_config(os.environ, BASE_DIR, production=DJANGO_ENV == 'production')}
 
 
 # Password validation
@@ -141,6 +141,7 @@ USE_TZ = True
 # Django requires a finite backing expiry; keep account logins persistent.
 SESSION_COOKIE_AGE = 100 * 365 * 24 * 60 * 60
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
 
 # Static files (CSS, JavaScript, Images)

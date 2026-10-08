@@ -1,1 +1,1 @@
-web: gunicorn pabasa_site.wsgi:application --chdir pabasa_site --worker-class gthread --threads 16 --timeout 120
+web: python pabasa_site/manage.py check_migration_readiness --require-recorded && python pabasa_site/manage.py migrate --check && exec gunicorn pabasa_site.wsgi:application --chdir pabasa_site --worker-class gthread --threads 16 --timeout 120
