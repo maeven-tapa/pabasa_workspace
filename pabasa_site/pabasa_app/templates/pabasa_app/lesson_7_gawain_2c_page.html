@@ -146,6 +146,27 @@
   #app.card:not(:has(.done))>.sheet .canvas-wrap:first-child{margin-top:0}
   #app.card:not(:has(.done))>.sheet .canvas-wrap:last-child{margin-bottom:0}
 </style>
+<style>
+  /* Lesson 7 Gawain 2: give the active writing row and controls a little more
+     presence without changing the card size or the canvas interaction code. */
+  #app.card:not(:has(.done))>h1{font-size:clamp(2.15rem,4.2vw,3.9rem)}
+  #app.card:not(:has(.done))>.sheet .canvas-wrap{height:clamp(68px,10.8vh,96px);margin-top:8px}
+  #app.card:not(:has(.done))>.actions{margin-top:10px}
+  #app.card:not(:has(.done))>.actions .button{min-height:72px}
+  #app.card:not(:has(.done)) .numbered-progress__circle{width:38px;height:38px;font-size:17px}
+  @media(max-width:800px){
+    #app.card:not(:has(.done))>.actions .button{min-height:62px}
+    #app.card:not(:has(.done)) .numbered-progress__circle{width:35px;height:35px;font-size:16px}
+  }
+  @media(max-width:520px){
+    #app.card:not(:has(.done))>h1{font-size:1.9rem}
+    #app.card:not(:has(.done))>.sheet .canvas-wrap{height:clamp(60px,11vh,78px)}
+    #app.card:not(:has(.done))>.actions .button{min-height:60px}
+    #app.card:not(:has(.done)) .numbered-progress__circle{width:33px;height:33px;font-size:15px}
+  }
+  #app.card:not(:has(.done))>.sheet .canvas-wrap>.model{font-size:clamp(3.9rem,8vh,5.6rem)}
+  #app.card:not(:has(.done))>p.eyebrow{padding:12px 34px;font-size:clamp(.9rem,1.45vw,1.15rem)}
+</style>
 </html>
 <style>.done,.done-card,.complete{display:grid;place-items:center;width:min(100%,540px);margin:auto;padding:42px 38px;border-radius:32px;background:#fff;color:#183e63;text-align:center;box-shadow:0 14px 30px #1e5b7a25;overflow:visible}.done h1,.done p,.done a,.done-card h1,.done-card p,.done-card a,.complete h1,.complete p,.complete a{font-size:0}.done h1:after,.done-card h1:after,.complete h1:after{content:'Tapos na ang gawain! 🎉';font-size:2rem}.done p:after,.done-card p:after,.complete p:after{content:'Mahusay! Nakumpleto mo na ang aktibidad.';font-size:1.15rem}.done a,.done-card a,.complete a{display:inline-flex;padding:14px 24px;border-radius:999px;background:#299e9a;color:#fff;text-decoration:none;box-shadow:0 7px #187b7a}.done a:after,.done-card a:after,.complete a:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}.done .button,.complete .done{font-size:0}.done .button:after,.complete .done:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}</style>
 <style>.card:has(.done) .done,.card:has(.done) .done-card,.card:has(.complete) .complete{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:18px!important;grid-template-columns:1fr!important;width:min(540px,92vw)!important;min-height:0!important;margin:auto!important;padding:40px 38px!important;border-radius:32px!important;background:#fff!important;color:#183e63!important;text-align:center!important;box-shadow:0 14px 30px rgba(30,91,122,.16)!important;overflow:visible!important}.card:has(.done) .done h1,.card:has(.done) .done-card h1,.card:has(.complete) .complete h1{max-width:100%!important;font-size:clamp(1.6rem,3vw,1.9rem)!important;line-height:1.15!important;white-space:normal!important}.card:has(.done) .done p,.card:has(.done) .done-card p,.card:has(.complete) .complete p{max-width:100%!important;margin:0!important;font-size:1.15rem!important;line-height:1.35!important}.card:has(.done) .done a,.card:has(.done) .done-card a,.card:has(.complete) .complete a,.card:has(.done) .done .button{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:330px!important;min-height:58px!important;padding:14px 28px!important;border-radius:999px!important;background:#299e9a!important;color:#fff!important;text-decoration:none!important;box-shadow:0 7px #187b7a!important;pointer-events:auto!important;position:relative!important;z-index:2!important}@media(max-width:620px){.card:has(.done) .done,.card:has(.done) .done-card,.card:has(.complete) .complete{width:min(540px,92vw)!important;padding:34px 24px!important}.card:has(.done) .done a,.card:has(.done) .done-card a,.card:has(.complete) .complete a,.card:has(.done) .done .button{width:100%!important;min-width:0!important}}</style>
