@@ -1,101 +1,20 @@
 {% extends "pabasa_app/base.html" %}
 {% load static %}
-
 {% block page_title %}What is PABASA?{% endblock %}
-
-{% block extra_head %}
-<link rel="stylesheet" href="{% static 'pabasa_app/pabasa_info.css' %}?v=20260830-full-page-canvas">
-{% endblock %}
-
+{% block extra_head %}<link rel="stylesheet" href="{% static 'pabasa_app/pabasa_info.css' %}?v=20261008-section-redesign">{% endblock %}
 {% block content %}
 <main class="pabasa-info">
-    <section class="info-hero" id="platform-overview" aria-labelledby="info-title">
-        <div class="info-container">
-            <div class="info-hero__card">
-                <div class="info-hero__inner">
-                    <span class="info-kicker">About the platform</span>
-                    <h1 id="info-title">What is PABASA?</h1>
-                    <p>PABASA is a digital reading platform that helps learners practice aloud and gives educators clear guidance for supporting their progress.</p>
-                </div>
-                <div class="info-hero__visual" aria-hidden="true">
-                    <span class="pip-greeting">Hi, I’m Pip! <span>♥</span></span>
-                    <span class="hero-bubble hero-bubble--one">ABC</span>
-                    <span class="hero-bubble hero-bubble--two">123</span>
-                    <span class="hero-spark hero-spark--one">★</span>
-                    <span class="hero-spark hero-spark--two">✦</span>
-                    <img src="{% static 'pabasa_app/images/hero1.png' %}" alt="">
-                </div>
-            </div>
-        </div>
-    </section>
+    <section class="info-hero" id="platform-overview" aria-labelledby="info-title"><div class="info-container"><div class="info-hero__card"><div class="info-hero__inner"><span class="info-kicker">About the platform</span><h1 id="info-title">What is PABASA?</h1><p>PABASA is a digital reading assessment and learning platform designed to help Grade 2 students develop reading skills while giving teachers tools to assess, guide, and monitor their progress.</p></div><div class="info-hero__visual" aria-hidden="true"><span class="pip-greeting">Hi, I’m Pip! <span>♥</span></span><span class="hero-bubble hero-bubble--one">ABC</span><span class="hero-bubble hero-bubble--two">123</span><span class="hero-spark hero-spark--one">★</span><span class="hero-spark hero-spark--two">✦</span><img src="{% static 'pabasa_app/images/hero1.png' %}" alt=""></div></div></div></section>
 
-    <section class="info-section info-section--purpose" id="platform-purpose" aria-labelledby="purpose-title">
-        <div class="info-container info-purpose">
-            <div>
-                <span class="info-kicker">Our focus</span>
-                <h2 id="purpose-title">Purpose</h2>
-            </div>
-            <p>PABASA makes oral reading practice easier to guide, assess, and improve—helping every learner build fluency and confidence.</p>
-        </div>
-    </section>
+    <section class="info-section info-section--purpose" id="platform-purpose" aria-labelledby="purpose-title"><div class="info-container purpose-layout"><div class="purpose-copy"><span class="info-kicker">Our focus</span><h2 id="purpose-title">Purpose</h2><p class="purpose-lead">PABASA brings assessment and daily reading practice into one supportive learning journey—so teachers can see what learners need and help them move forward.</p><ul class="purpose-goals"><li><span>01</span><div><strong>Assess reading skills</strong><small>Understand each learner’s current reading level.</small></div></li><li><span>02</span><div><strong>Support guided learning</strong><small>Connect learners with meaningful practice.</small></div></li><li><span>03</span><div><strong>Monitor progress</strong><small>Use evidence to plan the next step.</small></div></li></ul></div><div class="journey-panel" aria-label="PABASA learning journey"><div class="journey-panel__label">A clearer path to progress</div><div class="journey-flow"><div class="journey-node journey-node--assess"><span class="journey-icon"><i class="bi bi-clipboard2-check"></i></span><strong>Assess</strong><small>See the starting point</small></div><span class="journey-connector" aria-hidden="true"><i class="bi bi-arrow-right"></i></span><div class="journey-node journey-node--practice"><span class="journey-icon"><i class="bi bi-book-half"></i></span><strong>Practice</strong><small>Build skills with ARAL</small></div><span class="journey-connector" aria-hidden="true"><i class="bi bi-arrow-right"></i></span><div class="journey-node journey-node--improve"><span class="journey-icon"><i class="bi bi-graph-up-arrow"></i></span><strong>Improve</strong><small>Guide the next step</small></div></div><div class="journey-panel__note"><i class="bi bi-lightbulb"></i> Every learner’s next step is informed by their progress.</div></div></div></section>
 
-    <section class="info-section info-section--tint info-section--actions" id="platform-tools" aria-labelledby="can-do-title">
-        <div class="info-container">
-            <header class="info-heading">
-                <span class="info-kicker">Built for learning</span>
-                <h2 id="can-do-title">What You Can Do</h2>
-            </header>
-            <div class="action-grid">
-                <article class="info-card action-card">
-                    <span class="card-icon" aria-hidden="true"><i class="bi bi-person-workspace"></i></span>
-                    <h3>As a Teacher</h3>
-                    <ul>
-                        <li>Assign reading activities</li>
-                        <li>Review learner performance</li>
-                        <li>Plan focused follow-up</li>
-                    </ul>
-                </article>
-                <article class="info-card action-card">
-                    <span class="card-icon card-icon--yellow" aria-hidden="true"><i class="bi bi-book"></i></span>
-                    <h3>As a Student</h3>
-                    <ul>
-                        <li>Practice reading aloud</li>
-                        <li>Complete assigned activities</li>
-                        <li>Build fluency and confidence</li>
-                    </ul>
-                </article>
-            </div>
-        </div>
-    </section>
+    <section class="info-section info-section--tint info-section--actions" id="platform-tools" aria-labelledby="can-do-title"><div class="info-container tools-layout"><header class="info-heading tools-heading"><span class="info-kicker">Built for learning</span><h2 id="can-do-title">What You Can Do</h2><p>One platform, with practical tools for the people who make reading growth possible.</p></header><div class="role-showcase"><article class="role-panel role-panel--teacher"><div class="role-panel__top"><span class="role-icon"><i class="bi bi-person-workspace"></i></span><div><span class="role-label">For teachers</span><h3>Lead every learner forward</h3></div></div><p>Make informed decisions from assessment through follow-up support.</p><ul class="role-features"><li><i class="bi bi-check2-circle"></i>Conduct teacher-guided reading assessments</li><li><i class="bi bi-check2-circle"></i>Review classifications and learner performance</li><li><i class="bi bi-check2-circle"></i>Assign ARAL and supplementary activities</li><li><i class="bi bi-check2-circle"></i>Monitor completion and identify support needs</li></ul><div class="role-preview"><span>Teacher view</span><div class="preview-bars"><i></i><i></i><i></i><i></i></div><b>Progress at a glance</b></div></article><article class="role-panel role-panel--student"><div class="role-panel__top"><span class="role-icon"><i class="bi bi-book"></i></span><div><span class="role-label">For students</span><h3>Practice with confidence</h3></div></div><p>Build reading skills through activities that make practice feel achievable.</p><ul class="role-features"><li><i class="bi bi-check2-circle"></i>Take scheduled or approved assessments</li><li><i class="bi bi-check2-circle"></i>Practice letters, sounds, syllables, words, and sentences</li><li><i class="bi bi-check2-circle"></i>Complete prescribed and supplementary activities</li><li><i class="bi bi-check2-circle"></i>Track learning progress along the way</li></ul><div class="role-preview"><span>Student view</span><div class="preview-stars"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star"></i></div><b>Keep going—you’re learning!</b></div></article></div></div></section>
 
-    <section class="info-section info-section--audience" id="platform-audience" aria-labelledby="audience-title">
-        <div class="info-container">
-            <header class="info-heading">
-                <span class="info-kicker">For the school community</span>
-                <h2 id="audience-title">Who Is It For?</h2>
-            </header>
-            <div class="audience-grid">
-                <article class="info-card audience-card"><span class="card-icon" aria-hidden="true"><i class="bi bi-mortarboard"></i></span><h3>Students</h3><p>Build reading skills through guided practice.</p></article>
-                <article class="info-card audience-card"><span class="card-icon card-icon--yellow" aria-hidden="true"><i class="bi bi-person-video3"></i></span><h3>Teachers</h3><p>Guide practice and respond to learner needs.</p></article>
-                <article class="info-card audience-card"><span class="card-icon" aria-hidden="true"><i class="bi bi-people"></i></span><h3>Parents</h3><p>Stay informed about reading development.</p></article>
-                <article class="info-card audience-card"><span class="card-icon card-icon--yellow" aria-hidden="true"><i class="bi bi-building"></i></span><h3>School Administrators</h3><p>Support consistent literacy programs.</p></article>
-            </div>
-        </div>
-    </section>
+    <section class="info-section info-section--audience" id="platform-audience" aria-labelledby="audience-title"><div class="info-container audience-layout"><header class="info-heading audience-heading"><span class="info-kicker">For the school community</span><h2 id="audience-title">Who Is It For?</h2><p>Reading growth is a shared effort. PABASA gives each part of the school community a clear role.</p></header><div class="community-grid"><article class="community-card community-card--students"><span class="community-icon"><i class="bi bi-mortarboard"></i></span><div><h3>Students</h3><p>Practice reading and develop literacy skills through guided activities.</p></div><span class="community-number">01</span></article><article class="community-card community-card--teachers"><span class="community-icon"><i class="bi bi-person-video3"></i></span><div><h3>Teachers</h3><p>Assess learners, assign activities, and monitor reading progress.</p></div><span class="community-number">02</span></article><div class="community-center" aria-hidden="true"><span class="community-center__ring"><i class="bi bi-people-fill"></i></span><strong>Growing readers<br>together</strong><small>Shared support, clearer next steps.</small></div><article class="community-card community-card--parents"><span class="community-icon"><i class="bi bi-house-heart"></i></span><div><h3>Parents and Guardians</h3><p>Support their children’s reading development and learning journey.</p></div><span class="community-number">03</span></article><article class="community-card community-card--admins"><span class="community-icon"><i class="bi bi-building"></i></span><div><h3>School Administrators</h3><p>Help organize assessment schedules and support literacy programs.</p></div><span class="community-number">04</span></article></div></div></section>
 
-    <section class="info-section info-section--tint info-section--steps" id="platform-process" aria-labelledby="works-title">
-        <div class="info-container">
-            <header class="info-heading">
-                <span class="info-kicker">A simple learning loop</span>
-                <h2 id="works-title">How It Works</h2>
-            </header>
-            <ol class="steps-grid">
-                <li class="step-card"><span>01</span><div><h3>Teacher Assigns</h3><p>A teacher selects a reading activity for the learner.</p></div></li>
-                <li class="step-card"><span>02</span><div><h3>Student Reads</h3><p>The learner completes the activity by reading aloud.</p></div></li>
-                <li class="step-card"><span>03</span><div><h3>Progress Is Reviewed</h3><p>Results help identify strengths and areas for practice.</p></div></li>
-                <li class="step-card"><span>04</span><div><h3>Support Continues</h3><p>The next activity is guided by the learner’s needs.</p></div></li>
-            </ol>
-        </div>
-    </section>
+    <section class="info-section info-section--tint info-section--steps" id="platform-process" aria-labelledby="works-title"><div class="info-container process-layout"><header class="info-heading process-heading"><span class="info-kicker">A simple learning loop</span><h2 id="works-title">How It Works</h2><p>Assessment, practice, and teacher support connect to keep learning moving.</p></header><ol class="steps-journey"><li class="step-item"><span class="step-number">01</span><span class="step-icon"><i class="bi bi-mic"></i></span><div><h3>Assess Reading</h3><p>Students participate in a teacher-guided reading assessment to identify their current reading level.</p></div></li><li class="step-item"><span class="step-number">02</span><span class="step-icon"><i class="bi bi-search-heart"></i></span><div><h3>Identify Learning Needs</h3><p>Results help teachers understand reading skills and areas for improvement.</p></div></li><li class="step-item"><span class="step-number">03</span><span class="step-icon"><i class="bi bi-journal-richtext"></i></span><div><h3>Practice and Learn</h3><p>Students complete prescribed and supplementary ARAL activities based on their needs.</p></div></li><li class="step-item"><span class="step-number">04</span><span class="step-icon"><i class="bi bi-bar-chart-line"></i></span><div><h3>Monitor Progress</h3><p>Teachers review performance and subsequent assessments to guide continued support.</p></div></li></ol></div></section>
 </main>
+<script>
+    (() => { const page = document.querySelector('.pabasa-info'); const navigation = document.querySelector('.modern-nav-wrap'); if (!page || !navigation) return; const syncNavigationHeight = () => page.style.setProperty('--info-nav-height', `${navigation.getBoundingClientRect().height}px`); syncNavigationHeight(); if ('ResizeObserver' in window) new ResizeObserver(syncNavigationHeight).observe(navigation); else window.addEventListener('resize', syncNavigationHeight, { passive: true }); })();
+</script>
 {% endblock %}

@@ -85,10 +85,10 @@
             margin: 0;
             padding: 0;
             position: relative;
-            left: 50%;
-            right: 50%;
-            margin-left: -50vw;
-            margin-right: -50vw;
+            left: 0;
+            right: 0;
+            margin-left: 0;
+            margin-right: 0;
             box-shadow: 0 8px 22px rgba(16, 70, 110, 0.08);
         }
 
@@ -1839,6 +1839,7 @@
 
         /* ── end cute pass ── */
     </style>
+    <link rel="stylesheet" href="{% static 'pabasa_app/public_navigation.css' %}?v=20261008-public-nav">
     {% block extra_head %}{% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100{% if request.resolver_match.url_name == 'auth' or request.resolver_match.url_name == 'signup' or request.resolver_match.url_name == 'teacher_signup' or request.resolver_match.url_name == 'student_signup' or request.resolver_match.url_name == 'forgot_password' or request.resolver_match.url_name == 'request_password_reset' or request.resolver_match.url_name == 'forgot_password_otp' or request.resolver_match.url_name == 'verify_forgot_password_otp' or request.resolver_match.url_name == 'forgot_password_reset' or request.resolver_match.url_name == 'reset_password' %} auth-layout{% endif %}">
@@ -1861,8 +1862,16 @@
                         </button>
                         <div class="collapse navbar-collapse" id="mainNavbar">
                             <div class="modern-nav-content">
+                                {% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'pabasa_info' or request.resolver_match.url_name == 'about' or request.resolver_match.url_name == 'faq' or request.resolver_match.url_name == 'terms' or request.resolver_match.url_name == 'privacy' %}
+                                <ul class="global-nav-links navbar-nav" aria-label="Main navigation">
+                                    <li class="nav-item"><a class="nav-link nav-link-modern{% if request.resolver_match.url_name == 'home' %} active{% endif %}"{% if request.resolver_match.url_name == 'home' %} aria-current="page"{% endif %} href="{% url 'home' %}">Home</a></li>
+                                    <li class="nav-item"><a class="nav-link nav-link-modern{% if request.resolver_match.url_name == 'pabasa_info' %} active{% endif %}"{% if request.resolver_match.url_name == 'pabasa_info' %} aria-current="page"{% endif %} href="{% url 'pabasa_info' %}">What Is PABASA?</a></li>
+                                    <li class="nav-item"><a class="nav-link nav-link-modern{% if request.resolver_match.url_name == 'about' %} active{% endif %}"{% if request.resolver_match.url_name == 'about' %} aria-current="page"{% endif %} href="{% url 'about' %}">About</a></li>
+                                    <li class="nav-item"><a class="nav-link nav-link-modern{% if request.resolver_match.url_name == 'faq' %} active{% endif %}"{% if request.resolver_match.url_name == 'faq' %} aria-current="page"{% endif %} href="{% url 'faq' %}">Help</a></li>
+                                </ul>
+                                {% endif %}
                                 {% with current_view=request.resolver_match.url_name %}
-                                <ul class="modern-nav-links navbar-nav">
+                                <ul class="modern-nav-links navbar-nav{% if current_view == 'pabasa_info' or current_view == 'about' %} public-secondary-nav contextual-section-links{% else %} legacy-page-links{% endif %}">
                                     {% if current_view == 'pabasa_info' %}
                                     <li class="nav-item"><a class="nav-link nav-link-modern context-nav-link is-section-active" href="#platform-overview" data-section="platform-overview" aria-current="location">Overview</a></li>
                                     <li class="nav-item"><a class="nav-link nav-link-modern context-nav-link" href="#platform-purpose" data-section="platform-purpose">Purpose</a></li>
@@ -1885,7 +1894,6 @@
                                     {% endif %}
                                 </ul>
                                 {% endwith %}
-                                {% if request.resolver_match.url_name != 'pabasa_info' and request.resolver_match.url_name != 'about' %}
                                 <div class="modern-nav-actions">
                                     <a class="nav-link header-inline-link" href="{% url 'auth' %}">My Account</a>
                                     {% if request.resolver_match.url_name != 'home' %}
@@ -1896,7 +1904,6 @@
                                     {% endif %}
                                     {% endif %}
                                 </div>
-                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -1911,22 +1918,17 @@
     </main>
     {% if request.resolver_match.url_name != 'auth' and request.resolver_match.url_name != 'login_user' and request.resolver_match.url_name != 'signup' and request.resolver_match.url_name != 'teacher_signup' and request.resolver_match.url_name != 'student_signup' and request.resolver_match.url_name != 'forgot_password' and request.resolver_match.url_name != 'request_password_reset' and request.resolver_match.url_name != 'forgot_password_otp' and request.resolver_match.url_name != 'verify_forgot_password_otp' and request.resolver_match.url_name != 'forgot_password_reset' and request.resolver_match.url_name != 'reset_password' %}
     {% with current_view=request.resolver_match.url_name %}
-    {% if current_view == 'pabasa_info' or current_view == 'about' or current_view == 'faq' or current_view == 'terms' or current_view == 'privacy' %}
-    <footer class="editorial-footer">
-        <nav class="editorial-footer__links" aria-label="Footer navigation">
-            <a href="{% url 'home' %}">PABASA</a>
-            {% if current_view == 'pabasa_info' %}
-            <a href="{% url 'about' %}">About</a>
-            {% elif current_view == 'about' %}
-            <a href="{% url 'pabasa_info' %}">What is PABASA</a>
-            {% else %}
-            <a href="{% url 'pabasa_info' %}">What is PABASA</a>
-            <a href="{% url 'about' %}">About</a>
-            {% endif %}
-            <a href="{% url 'faq' %}">Help</a>
-            <a href="{% url 'terms' %}">Terms</a>
-            <a href="{% url 'privacy' %}">Privacy</a>
-        </nav>
+    {% if current_view == 'home' or current_view == 'pabasa_info' or current_view == 'about' or current_view == 'faq' or current_view == 'terms' or current_view == 'privacy' %}
+    <footer class="public-site-footer">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-12 col-lg-5"><a class="public-site-footer__brand" href="{% url 'home' %}" aria-label="PABASA home"><img src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt=""> <span>PABASA</span></a><p class="public-site-footer__copy">A digital reading assessment and learning platform that helps teachers guide learners toward confident reading.</p></div>
+                <div class="col-6 col-md-3 col-lg-2"><div class="public-site-footer__title">Explore</div><ul class="public-site-footer__links"><li><a href="{% url 'home' %}">Home</a></li><li><a href="{% url 'pabasa_info' %}">What Is PABASA?</a></li><li><a href="{% url 'about' %}">About</a></li><li><a href="{% url 'faq' %}">Help</a></li></ul></div>
+                <div class="col-6 col-md-3 col-lg-2"><div class="public-site-footer__title">Legal</div><ul class="public-site-footer__links"><li><a href="{% url 'terms' %}">Terms of Use</a></li><li><a href="{% url 'privacy' %}">Privacy Policy</a></li></ul></div>
+                <div class="col-12 col-md-6 col-lg-3"><div class="public-site-footer__title">Project</div><p class="public-site-footer__project">Technological University of the Philippines – Cavite<br>Salawag Elementary School</p></div>
+            </div>
+            <div class="public-site-footer__bottom"><span>&copy; 2026 PABASA. All rights reserved.</span><span>Developed by the PABASA Research Team.</span></div>
+        </div>
     </footer>
     {% else %}
     <footer class="site-footer mt-auto" id="site-footer">
@@ -2092,14 +2094,23 @@
                     });
                 };
 
+                const syncPublicHeaderOffset = () => {
+                    const header = document.querySelector('.modern-nav-wrap');
+                    const globalRow = header?.querySelector('.global-nav-links');
+                    const secondaryRow = header?.querySelector('.public-secondary-nav');
+                    const root = document.documentElement;
+                    root.style.setProperty('--public-global-nav-height', `${globalRow?.getBoundingClientRect().height || 60}px`);
+                    root.style.setProperty('--public-secondary-nav-height', `${secondaryRow?.getBoundingClientRect().height || 0}px`);
+                };
+
                 const updateContextNav = () => {
-                    const headerOffset = (document.querySelector('.modern-nav-wrap')?.offsetHeight || 64) + 24;
+                    syncPublicHeaderOffset();
+                    const headerHeight = document.querySelector('.modern-nav-wrap')?.getBoundingClientRect().height || 64;
+                    const activationLine = headerHeight + Math.min(window.innerHeight * 0.3, 220);
                     let currentSection = contextSections[0];
 
                     contextSections.forEach((section) => {
-                        if (section.getBoundingClientRect().top <= headerOffset) {
-                            currentSection = section;
-                        }
+                        if (section.getBoundingClientRect().top <= activationLine) currentSection = section;
                     });
 
                     const atPageEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
@@ -2115,11 +2126,30 @@
                 }, { passive: true });
 
                 contextNavLinks.forEach((link) => {
-                    link.addEventListener('click', () => setContextNavActive(link.dataset.section));
+                    link.addEventListener('click', () => {
+                        setContextNavActive(link.dataset.section);
+                        link.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    });
                 });
 
                 updateContextNav();
+                window.addEventListener('resize', updateContextNav, { passive: true });
+                window.addEventListener('hashchange', updateContextNav);
+                const publicHeader = document.querySelector('.modern-nav-wrap');
+                if (publicHeader && 'ResizeObserver' in window) new ResizeObserver(updateContextNav).observe(publicHeader);
             }
+        })();
+    </script>
+    <script>
+        (() => {
+            const header = document.querySelector('.modern-nav-wrap:has(.global-nav-links)');
+            if (!header) return;
+            const syncPublicHeaderHeight = () => {
+                document.documentElement.style.setProperty('--public-header-height', `${header.getBoundingClientRect().height}px`);
+            };
+            syncPublicHeaderHeight();
+            if ('ResizeObserver' in window) new ResizeObserver(syncPublicHeaderHeight).observe(header);
+            else window.addEventListener('resize', syncPublicHeaderHeight, { passive: true });
         })();
     </script>
 </body>

@@ -12,8 +12,14 @@
     <header class="support-hero">
         <div class="support-hero__copy">
             <span class="support-kicker">PABASA Help Center</span>
-            <h1>Frequently asked questions</h1>
-            <p>Quick answers about accounts, reading activities, progress, and getting help with PABASA.</p>
+            <h1>Need help? Pip is here!</h1>
+            <p>Find answers about your account, reading assessments, learning activities, and using PABASA.</p>
+            <div class="faq-search">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <label class="visually-hidden" for="faqSearch">Search frequently asked questions</label>
+                <input id="faqSearch" type="search" placeholder="Search for answers..." autocomplete="off">
+                <p id="faqSearchStatus" role="status" aria-live="polite"></p>
+            </div>
         </div>
         <div class="support-hero__visual" aria-hidden="true">
             <span class="support-orbit support-orbit--one">A</span>
@@ -24,17 +30,19 @@
     </header>
 
     <nav class="support-jump-nav" aria-label="FAQ categories">
-        <a href="#faq-getting-started">Getting started</a>
-        <a href="#faq-reading">Reading activities</a>
-        <a href="#faq-accounts">Accounts and support</a>
+        <a href="#faq-getting-started" aria-current="true">
+            <span class="support-jump-nav__icon"><i class="bi bi-compass" aria-hidden="true"></i></span>
+            <span><b><small>01</small> Getting started</b><em>Learn what PABASA is and how to begin.</em></span>
+        </a>
+        <a href="#faq-reading">
+            <span class="support-jump-nav__icon support-jump-nav__icon--yellow"><i class="bi bi-book-half" aria-hidden="true"></i></span>
+            <span><b><small>02</small> Assessments &amp; activities</b><em>Understand reading checks and learning exercises.</em></span>
+        </a>
+        <a href="#faq-accounts">
+            <span class="support-jump-nav__icon support-jump-nav__icon--teal"><i class="bi bi-person-heart" aria-hidden="true"></i></span>
+            <span><b><small>03</small> Accounts &amp; support</b><em>Find help with access and common issues.</em></span>
+        </a>
     </nav>
-
-    <div class="faq-search">
-        <i class="bi bi-search" aria-hidden="true"></i>
-        <label class="visually-hidden" for="faqSearch">Search frequently asked questions</label>
-        <input id="faqSearch" type="search" placeholder="Search questions and answers" autocomplete="off">
-        <p id="faqSearchStatus" role="status" aria-live="polite"></p>
-    </div>
 
     <div class="faq-layout">
         <aside class="faq-intro">
@@ -131,12 +139,13 @@
     </div>
 
     <aside class="support-contact-card">
+        <div class="support-contact-card__pip" aria-hidden="true"><i class="bi bi-chat-heart-fill"></i></div>
         <div>
             <span>Still need help?</span>
-            <h2>Talk to the PABASA team.</h2>
-            <p>Tell us what happened and which device or browser you were using.</p>
+            <h2>Talk to your teacher or school coordinator.</h2>
+            <p>They can help with classroom access, reading activities, and the next step in your PABASA journey.</p>
         </div>
-        <a href="mailto:pabasa.tupc@gmail.com" class="support-contact-button">Email support <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+        <a href="mailto:pabasa.tupc@gmail.com" class="support-contact-button">Email the team <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
     </aside>
 </div>
 
@@ -145,8 +154,27 @@
         const searchInput = document.getElementById('faqSearch');
         const faqItems = Array.from(document.querySelectorAll('.faq-item'));
         const faqSections = Array.from(document.querySelectorAll('.faq-section'));
+        const categoryLinks = Array.from(document.querySelectorAll('.support-jump-nav a'));
         const status = document.getElementById('faqSearchStatus');
         if (!searchInput || !status) return;
+
+        const setActiveCategory = (id) => {
+            categoryLinks.forEach((link) => {
+                const active = link.getAttribute('href') === `#${id}`;
+                link.toggleAttribute('aria-current', active);
+                if (!active) link.removeAttribute('aria-current');
+            });
+        };
+
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries) => {
+                const visible = entries
+                    .filter((entry) => entry.isIntersecting)
+                    .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+                if (visible) setActiveCategory(visible.target.id);
+            }, { rootMargin: '-18% 0px -62% 0px', threshold: [0, 0.2, 0.5] });
+            faqSections.forEach((section) => observer.observe(section));
+        }
 
         const filterFaqs = () => {
             const query = searchInput.value.trim().toLocaleLowerCase();
@@ -162,7 +190,9 @@
                 section.hidden = !section.querySelector('.faq-item:not([hidden])');
             });
 
-            status.textContent = query ? `${matches} ${matches === 1 ? 'answer' : 'answers'} found.` : '';
+            status.textContent = query
+                ? (matches ? `${matches} ${matches === 1 ? 'answer' : 'answers'} found.` : 'No answers found. Try another phrase.')
+                : '';
         };
 
         searchInput.addEventListener('input', filterFaqs);

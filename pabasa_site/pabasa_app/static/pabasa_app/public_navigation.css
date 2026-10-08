@@ -1,0 +1,91 @@
+/* Shared public-site navigation and footer. Authenticated shells keep their
+   existing navigation because these selectors are scoped to public templates. */
+.public-site-footer { margin-top: 0; padding: 3.5rem 0 1.25rem; background: #10466e; color: #fff; }
+html:has(.global-nav-links), body:has(.global-nav-links) { overflow-x: hidden; }
+body:has(.global-nav-links) { --public-global-nav-height: 3.75rem; --public-secondary-nav-height: 2.5rem; }
+body:has(.global-nav-links) { padding-top: var(--public-header-height, 62px); }
+.modern-nav-wrap:has(.global-nav-links) { position: fixed !important; top: 0; left: 0; right: 0; z-index: 1050; }
+.public-site-footer a { color: rgba(255,255,255,.82); text-decoration: none; }
+.public-site-footer a:hover, .public-site-footer a:focus-visible { color: #ffd639; }
+.public-site-footer__brand { display: inline-flex; align-items: center; gap: .65rem; color: #fff !important; font: 800 1.45rem "Nunito", sans-serif; }
+.public-site-footer__brand img { width: 2.4rem; height: 2.4rem; object-fit: contain; }
+.public-site-footer__copy { max-width: 25rem; margin: 1rem 0 0; color: rgba(255,255,255,.72); line-height: 1.6; }
+.public-site-footer__title { margin-bottom: .85rem; color: #ffd639; font: 800 .8rem "Nunito", sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+.public-site-footer__links { display: grid; gap: .55rem; margin: 0; padding: 0; list-style: none; }
+.public-site-footer__project { margin: 0; color: rgba(255,255,255,.78); line-height: 1.6; }
+.public-site-footer__bottom { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,.18); color: rgba(255,255,255,.58); font-size: .8rem; }
+.modern-nav-wrap:not(.auth-nav-wrap) .modern-nav-shell { align-items: flex-start; min-height: 0; }
+.modern-nav-wrap:not(.auth-nav-wrap) .modern-brand-panel { height: var(--public-global-nav-height); min-height: var(--public-global-nav-height); box-sizing: border-box; padding-block: .2rem; }
+.modern-nav-wrap:not(.auth-nav-wrap) .modern-nav-area { align-self: stretch; padding-right: clamp(1rem, 2.2vw, 1.8rem); }
+.modern-nav-wrap:not(.auth-nav-wrap) .modern-nav-content { min-height: var(--public-global-nav-height); }
+.global-nav-links { display: flex; align-items: center; justify-content: flex-start; gap: clamp(.75rem, 1.8vw, 1.5rem); min-height: var(--public-global-nav-height); }
+.global-nav-links .nav-link-modern { padding-block: .35rem; }
+.legacy-page-links { display: none !important; }
+.global-nav-links .nav-link-modern.active { color: #ffd639 !important; background: transparent !important; border-radius: 0; }
+.global-nav-links .nav-link-modern.active::after, .global-nav-links .nav-link-modern:hover::after, .global-nav-links .nav-link-modern:focus-visible::after { content: ""; position: absolute; left: .2rem; right: .2rem; bottom: .05rem; height: 2px; border-radius: 2px; background: #ffd639; opacity: 1; transform: scaleX(1); }
+.contextual-nav-wrap .modern-nav-content { display: grid; grid-template-columns: minmax(0,1fr) auto; align-content: start; gap: 0 clamp(.75rem, 2vw, 1.5rem); }
+.contextual-nav-wrap .global-nav-links { grid-column: 1; grid-row: 1; min-height: var(--public-global-nav-height); justify-content: flex-start; }
+.contextual-nav-wrap .contextual-section-links { grid-column: 1 / -1; grid-row: 2; min-height: var(--public-secondary-nav-height); justify-content: center; align-items: center; gap: clamp(.65rem, 1.8vw, 1.5rem); border-top: 1px solid rgba(255,255,255,.16); }
+.contextual-nav-wrap .modern-nav-actions { grid-column: 2; grid-row: 1; }
+.contextual-section-links .nav-link-modern.is-section-active { color: #fff4b8 !important; background: transparent !important; border-radius: 0; }
+.contextual-section-links .nav-link-modern.is-section-active::after { background: #ffd639 !important; }
+.contextual-section-links .nav-link-modern:hover, .contextual-section-links .nav-link-modern:focus-visible { color: #ffd639 !important; background: transparent !important; box-shadow: none !important; transform: none !important; }
+.modern-nav-wrap:not(.contextual-nav-wrap) .modern-nav-content { gap: clamp(.75rem, 2vw, 1.5rem); }
+.modern-nav-wrap:not(.contextual-nav-wrap) .modern-nav-actions { align-items: center; }
+.modern-nav-wrap:not(.contextual-nav-wrap) .header-inline-link { min-height: 2.35rem; }
+body:has(.contextual-section-links) .info-hero[id], body:has(.contextual-section-links) .info-section[id], body:has(.contextual-section-links) .about-hero-section[id], body:has(.contextual-section-links) .about-articles-section[id], body:has(.contextual-section-links) .about-principles-section[id], body:has(.contextual-section-links) .about-journey-section[id], body:has(.contextual-section-links) .about-team-section[id] { scroll-margin-top: var(--public-header-height); }
+@media (max-width: 991.98px) {
+    .modern-nav-wrap:not(.auth-nav-wrap) .modern-brand-panel { height: 3.75rem; min-height: 3.75rem; }
+    .modern-nav-wrap:not(.auth-nav-wrap) .modern-nav-area { padding-right: .75rem; }
+    .modern-nav-wrap:not(.auth-nav-wrap) .modern-nav-content { min-height: 0; }
+    .global-nav-links { flex-direction: column; align-items: stretch; gap: 0; min-height: 0; }
+    .global-nav-links .nav-link-modern { min-height: 2.8rem; justify-content: flex-start; padding: .7rem 1rem; }
+    .contextual-nav-wrap .contextual-section-links { flex-direction: column; align-items: stretch; justify-content: flex-start; min-height: 0; gap: 0; border-top: 1px solid rgba(255,255,255,.14); }
+    .contextual-nav-wrap .contextual-section-links .nav-link-modern { min-height: 2.65rem; justify-content: flex-start; padding: .65rem 1rem; }
+    .contextual-nav-wrap .modern-nav-content { display: flex; flex-direction: column; align-items: stretch; }
+    .public-site-footer__bottom { flex-direction: column; }
+}
+@media (max-width: 575.98px) {
+    .public-site-footer { padding-top: 2.75rem; }
+}
+
+/* One shared secondary-row contract for About and What Is PABASA?. */
+.public-secondary-nav { box-sizing: border-box; }
+.public-secondary-nav .nav-link-modern,
+.public-secondary-nav .nav-link-modern:not(.active) {
+    min-height: var(--public-secondary-nav-height) !important;
+    padding: 0 .65rem !important;
+    color: rgba(255,255,255,.72) !important;
+    font-family: "Poppins", sans-serif !important;
+    font-size: .75rem !important;
+    font-weight: 700 !important;
+    letter-spacing: .05em !important;
+    line-height: 1.2 !important;
+    text-transform: uppercase !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+.public-secondary-nav .nav-link-modern::after {
+    left: .65rem !important;
+    right: .65rem !important;
+    bottom: .1rem !important;
+    width: auto !important;
+    height: 2px !important;
+    background: #ffd639 !important;
+    opacity: 0 !important;
+    transform: scaleX(0) !important;
+    transition: opacity .18s ease, transform .18s ease !important;
+}
+.public-secondary-nav .nav-link-modern.is-section-active { color: #fff4b8 !important; }
+.public-secondary-nav .nav-link-modern.is-section-active::after { opacity: 1 !important; transform: scaleX(1) !important; }
+.public-secondary-nav .nav-link-modern:hover, .public-secondary-nav .nav-link-modern:focus-visible { color: #ffd639 !important; }
+.public-secondary-nav .nav-link-modern:hover::after, .public-secondary-nav .nav-link-modern:focus-visible::after { opacity: .7 !important; transform: scaleX(1) !important; }
+@media (max-width: 991.98px) {
+    .public-secondary-nav { flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: .25rem !important; max-width: 100%; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; white-space: nowrap; }
+    .public-secondary-nav::-webkit-scrollbar { display: none; }
+    .public-secondary-nav .nav-item { flex: 0 0 auto; }
+    .public-secondary-nav .nav-link-modern { min-height: 2.7rem !important; padding-inline: .75rem !important; }
+    .public-secondary-nav .nav-link-modern::after { left: .8rem !important; right: .8rem !important; bottom: .25rem !important; }
+}
