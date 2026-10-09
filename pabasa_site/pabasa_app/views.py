@@ -30396,6 +30396,7 @@ def profile(request):
         'avatar_catalog': STUDENT_AVATAR_CATALOG,
         'animal_avatar': selected_avatar_slug,
         'selected_avatar': selected_avatar,
+        'sidebar_selected_avatar': selected_avatar if user.role == 'student' else None,
         'username': username,
         'full_name': full_name,
         'user_full_name': full_name,

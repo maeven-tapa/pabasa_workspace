@@ -60,10 +60,12 @@ function initProfilePage() {
         const previewBadge = document.getElementById("avatarPreviewBadge");
         const profileAvatarDisplay = document.getElementById("profileAvatarDisplay");
         const playerAvatarBadge = document.querySelector(".player-hero .student-avatar-badge");
+        const sidebarAvatarBadges = document.querySelectorAll(".sidebar-student-avatar, .sidebar-collapsed-profile");
 
-        [previewBadge, profileAvatarDisplay, playerAvatarBadge].forEach(function (badge) {
+        [previewBadge, profileAvatarDisplay, playerAvatarBadge, ...sidebarAvatarBadges].forEach(function (badge) {
             if (!badge) return;
-            badge.innerHTML = "<span>" + emoji + "</span>" + (badge === playerAvatarBadge ? "" : "<small>" + name + "</small>");
+            const compactAvatar = badge.classList.contains("sidebar-student-avatar") || badge.classList.contains("sidebar-collapsed-profile") || badge === playerAvatarBadge;
+            badge.innerHTML = "<span>" + emoji + "</span>" + (compactAvatar ? "" : "<small>" + name + "</small>");
             badge.setAttribute("aria-label", name + " avatar");
             badge.setAttribute("data-avatar-name", name);
             badge.setAttribute("data-avatar-emoji", emoji);
