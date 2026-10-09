@@ -7399,6 +7399,86 @@ class LiveAssessmentStartTests(TestCase):
                 expected_sizes,
             )
 
+    def test_student_active_invitation_disables_finished_live_students_before_end_session(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=[self.student.id], student_count=1, status='started',
+            start_at=timezone.now() - timedelta(seconds=20),
+        )
+        student_client = Client()
+        login = student_client.session
+        login.update({'user_id': self.student.id, 'user_role': 'student'})
+        login.save()
+
+        for state in (
+            {'status': 'completed', 'connection_status': 'connected'},
+            {'status': 'submitted', 'connection_status': 'disconnected'},
+            {'status': 'paused', 'recovery_state': {'temporary_completed': True, 'stage': 'completed'}},
+        ):
+            with self.subTest(state=state):
+                session.student_states = {str(self.student.id): state}
+                session.save(update_fields=['student_states'])
+                for _ in range(2):
+                    response = student_client.get(reverse('live_assessment_active_invitation'))
+                    self.assertEqual(response.status_code, 200)
+                    self.assertTrue(response.json()['success'])
+                    self.assertIsNone(response.json()['session'])
+                    self.assertTrue(response.json()['invitation_disabled'])
+                    self.assertEqual(response.json()['retry_after_seconds'], 30)
+
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'started')
+        self.assertFalse(Assessment.objects.filter(student=self.student, material=self.material).exists())
+
+    def test_student_active_invitation_does_not_treat_stage_progress_as_completion(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=[self.student.id], student_count=1, status='started',
+            student_states={str(self.student.id): {
+                'status': 'reading', 'progress': 1, 'connection_status': 'connected',
+                'recovery_state': {'stage': 'learner_experience'},
+            }},
+        )
+        student_client = Client()
+        login = student_client.session
+        login.update({'user_id': self.student.id, 'user_role': 'student'})
+        login.save()
+
+        response = student_client.get(reverse('live_assessment_active_invitation'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['session']['id'], session.id)
+        self.assertTrue(response.json()['session']['redirect_to_waiting_room'])
+
+    def test_student_active_invitation_respects_official_completion_and_later_material(self):
+        self.material.record_assessment_result(
+            self.student, status='completed', completed_at=timezone.now(), total_score=28,
+            crla_classification='Reading At Grade Level', classification='Reading At Grade Level',
+        )
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=[self.student.id], student_count=1, status='waiting',
+        )
+        student_client = Client()
+        login = student_client.session
+        login.update({'user_id': self.student.id, 'user_role': 'student'})
+        login.save()
+
+        response = student_client.get(reverse('live_assessment_active_invitation'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()['session'])
+        self.assertTrue(response.json()['invitation_disabled'])
+
+        later_material = Material.objects.create(
+            title='Later CRLA', code='MAT-LIVE-LATER', type='assessment', item_type='word',
+            teacher=self.teacher, is_active=True, is_official_reading=True, assessment_kind='crla',
+        )
+        session.material = later_material
+        session.save(update_fields=['material'])
+        response = student_client.get(reverse('live_assessment_active_invitation'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['session']['id'], session.id)
+        self.assertTrue(response.json()['session']['redirect_to_waiting_room'])
+
     def test_student_active_invitation_endpoint_only_returns_late_joiner_modal(self):
         session = LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex,

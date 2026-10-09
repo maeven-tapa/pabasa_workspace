@@ -4194,6 +4194,7 @@
         let liveAssessmentInviteWatchTimer = null;
         let liveAssessmentInviteBusy = false;
         let liveAssessmentInviteObservedNoSession = false;
+        let liveAssessmentInviteNextCheckAt = 0;
 
         function startActiveLiveAssessmentInviteWatch() {
             console.debug('LIVE_CRLA_INVITE_DEBUG startActiveLiveAssessmentInviteWatch', {
@@ -4261,7 +4262,6 @@
             if (existing) {
                 existing.dataset.sessionId = session.id;
                 existing.dataset.joinUrl = session.join_url || existing.dataset.joinUrl || '';
-                bindActiveLiveAssessmentModalHandlers(existing);
                 updateActiveLiveAssessmentRemainingTime(session);
                 return true;
             }
@@ -4308,6 +4308,7 @@
                 console.debug('LIVE_CRLA_INVITE_DEBUG early return: request_busy');
                 return false;
             }
+            if (Date.now() < liveAssessmentInviteNextCheckAt) return false;
             liveAssessmentInviteBusy = true;
             try {
                 const requestUrl = "{% url 'live_assessment_active_invitation' %}";
@@ -4319,6 +4320,9 @@
                     headers: { Accept: 'application/json' }
                 });
                 const data = await response.json();
+                if (data.success && data.invitation_disabled) {
+                    liveAssessmentInviteNextCheckAt = Date.now() + (Number(data.retry_after_seconds) || 30) * 1000;
+                }
                 console.warn('LIVE_CRLA_INVITE_DEBUG response_visible', { requestUrl, httpStatus: response.status, response: data });
                 const session = data?.session || null;
                 console.debug('LIVE_CRLA_INVITE_DEBUG response', {
@@ -4333,6 +4337,7 @@
                     redirectToWaitingRoom: session?.redirect_to_waiting_room ?? null,
                 });
                 if (!data.success || !data.session) {
+                    if (data.success) dismissActiveLiveAssessmentInvite();
                     liveAssessmentInviteObservedNoSession = true;
                     console.debug('LIVE_CRLA_INVITE_DEBUG early return: no_session', {
                         httpStatus: response.status,

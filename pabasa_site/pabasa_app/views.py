@@ -27736,21 +27736,34 @@ def live_assessment_active_invitation(request):
         student_connection_status,
         bool(student_state),
     )
-    # A temporary 100% live state is still recoverable until End Session
-    # creates the official result.
+    # Finishing Live CRLA disables invitations immediately, even though the
+    # teacher's End Session action has not created the official result yet.
+    # Progress alone is insufficient: an unfinished stage can also reach 100%.
+    recovery_state = student_state.get('recovery_state')
+    live_completed = student_status in {'completed', 'submitted'} or bool(
+        isinstance(recovery_state, dict) and recovery_state.get('temporary_completed')
+    )
     completion_check_started_at = time.perf_counter()
     logger.warning(
         'LIVE_CRLA_INVITE_SERVER_DEBUG official_completion_check_start session_id=%s',
         session.id,
     )
-    student_completed = bool(_official_crla_completed_result_for_material(student_user, session.material))
+    student_completed = live_completed or bool(_official_crla_completed_result_for_material(student_user, session.material))
     logger.warning(
         'LIVE_CRLA_INVITE_SERVER_DEBUG official_completion_check_end session_id=%s elapsed_ms=%s completed=%s',
         session.id,
         round((time.perf_counter() - completion_check_started_at) * 1000, 2),
         student_completed,
     )
-    student_has_participated = student_status in {'reading', 'started', 'paused', 'completed', 'submitted'} or student_connection_status in {'connected', 'disconnected'}
+    if student_completed:
+        return JsonResponse({
+            'success': True,
+            'session': None,
+            'invitation_disabled': True,
+            'retry_after_seconds': 30,
+        })
+
+    student_has_participated = student_status in {'reading', 'started', 'paused'} or student_connection_status in {'connected', 'disconnected'}
 
     login_at_raw = request.session.get('login_at') or request.session.get('created_at')
     login_at = _coerce_aware_datetime(login_at_raw)
