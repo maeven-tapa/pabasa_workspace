@@ -169,9 +169,6 @@ var getStudentClassData = window.getStudentClassData = function() {
 })();
 
 (function () {
-    const DASHBOARD_NAV_DELAY_MS = 500;
-    const DASHBOARD_PRELOAD_MIN_MS = 450;
-    const preloadStartedAt = Date.now();
     let navigationPending = false;
 
     function getLoader() {
@@ -272,7 +269,7 @@ var getStudentClassData = window.getStudentClassData = function() {
             loader.setAttribute("aria-hidden", "true");
             loader.setAttribute("inert", "");
             window.requestAnimationFrame(function () {
-                if (loader && loader.isConnected) {
+                if (loader && loader.isConnected && !loader.classList.contains("is-visible")) {
                     loader.remove();
                 }
             });
@@ -284,14 +281,7 @@ var getStudentClassData = window.getStudentClassData = function() {
     }
 
     function releaseDashboardPreload() {
-        if (window.PABASA_HOLD_DASHBOARD_LOADER && !window.PABASA_COURSE_UI_READY) {
-            return;
-        }
-        const elapsed = Date.now() - preloadStartedAt;
-        const remaining = Math.max(0, DASHBOARD_PRELOAD_MIN_MS - elapsed);
-        window.setTimeout(function () {
-            window.requestAnimationFrame(hideDashboardPageLoader);
-        }, remaining);
+        window.PabasaDashboardLoading.whenReady(hideDashboardPageLoader);
     }
 
     window.addEventListener("storage", function (event) {
@@ -378,16 +368,13 @@ var getStudentClassData = window.getStudentClassData = function() {
         hideActiveNavTooltips();
         showDashboardPageLoader({ branded: link.classList.contains("assessment-type-link") });
         window.requestAnimationFrame(function () {
-            window.setTimeout(function () {
-                window.location.href = targetUrl.href;
-            }, DASHBOARD_NAV_DELAY_MS);
+            window.location.href = targetUrl.href;
         });
     }, true);
 
     window.showDashboardPageLoader = showDashboardPageLoader;
     window.hideDashboardPageLoader = hideDashboardPageLoader;
     window.releaseDashboardPreload = function() {
-        window.PABASA_COURSE_UI_READY = true;
         releaseDashboardPreload();
     };
     if (document.readyState === "complete") {

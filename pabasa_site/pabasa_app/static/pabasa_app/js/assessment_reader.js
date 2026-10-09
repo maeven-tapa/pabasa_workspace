@@ -278,6 +278,9 @@
         let readAloudAudio = null;
         let readAloudAudioUrl = "";
         let isReadAloudLoading = false;
+        let readAloudController = null;
+        let readAloudButton = null;
+        let readAloudButtonHtml = "";
         let isTestingMic = false;
         let storyCallSpeakingTimer = null;
         let storyCallSpeakingFrame = 0;
@@ -1764,6 +1767,7 @@
         }
 
         function renderCRLAQuestion() {
+            stopReadAloud();
             const question = currentStoryQuestions[currentStoryQuestionIndex] || {};
             if (crlaQuestionTitle) crlaQuestionTitle.textContent = currentSelectedStory?.title || "Reading Comprehension";
             if (crlaQuestionText) crlaQuestionText.textContent = question.question || "No comprehension question is available for this story.";
@@ -1813,6 +1817,7 @@
         }
 
         async function finishCRLAComprehension() {
+            stopReadAloud();
             const correctAnswers = currentStoryResults.filter(Boolean).length;
             const persisted = readStudentEndState();
             const storyReadPercent = Number(persisted.story_read_percent ?? persisted.passage_accuracy_percent ?? 0);
@@ -1946,6 +1951,7 @@
 
         function startCRLASpokenAttempt() {
             if (crlaSpeechAttemptActive || !currentStoryQuestions.length) return;
+            stopReadAloud();
             const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!Recognition) {
                 if (crlaAnswerFeedback) { crlaAnswerFeedback.textContent = "Speech recognition is unavailable in this browser."; crlaAnswerFeedback.classList.remove("d-none"); }
@@ -7367,6 +7373,7 @@
             }
             if (resetPhraseListening()) return;
             if (isSpeechResponsePending()) return;
+            if (isCrla) stopReadAloud();
             if (mode === 'phrase') {
                 const selectedPhrase = window.__PABASA_SELECTED_READING_ITEM__ || window.__PABASA_SELECTED_PHRASE__ || null;
                 const synced = syncPhraseSelectionIntoReadingUI(selectedPhrase, { force: true });
@@ -7534,23 +7541,32 @@
         btnReadAloud?.addEventListener("click", readCurrentItemAloud);
 
         async function readCurrentItemAloud() {
-            if (!items[currentIndex] || isReadAloudLoading || isSpeechResponsePending()) return;
-            if (readAloudAudio && !readAloudAudio.paused) {
+            if (!items[currentIndex]) return;
+            await readAssessmentTextAloud(getCurrentDisplayText() || items[currentIndex], btnReadAloud);
+        }
+
+        async function readAssessmentTextAloud(text, button) {
+            if (!text || isSpeechResponsePending()) return;
+            if (readAloudButton === button && (isReadAloudLoading || (readAloudAudio && !readAloudAudio.paused))) {
                 stopReadAloud();
                 return;
             }
-
+            stopReadAloud();
+            if (isCrla) window.speechSynthesis?.cancel();
+            const controller = new AbortController();
+            readAloudController = controller;
+            readAloudButton = button;
+            readAloudButtonHtml = button?.innerHTML || "";
             isReadAloudLoading = true;
-            btnReadAloud?.setAttribute("disabled", "disabled");
-            btnReadAloud?.classList.add("is-playing");
-            const originalHtml = btnReadAloud?.innerHTML || "";
-            if (btnReadAloud) btnReadAloud.innerHTML = '<i class="bi bi-hourglass-split"></i> Loading';
+            button?.setAttribute("disabled", "disabled");
+            button?.classList.add("is-playing");
+            if (button) button.innerHTML = '<i class="bi bi-hourglass-split"></i> Loading';
 
             const formData = new FormData();
-            formData.append("target_text", getCurrentDisplayText() || items[currentIndex] || "");
+            formData.append("target_text", text);
             formData.append("mode", mode);
             formData.append("language", currentMaterialLanguage || "");
-            formData.append("tts_profile", "crla");
+            formData.append("tts_profile", isCrla ? "crla" : "assessment");
             if (isTemplateActivity) {
                 formData.append("material_id", String(materialId));
                 formData.append("profile", mode === "paragraph" ? "passage" : mode === "sentence" ? "sentence" : "word");
@@ -7562,8 +7578,10 @@
                     headers: { "X-CSRFToken": getCsrfToken() },
                     credentials: "same-origin",
                     body: formData,
+                    signal: controller.signal,
                 });
                 const data = await response.json();
+                if (controller.signal.aborted || readAloudController !== controller) return;
                 if (!response.ok || !data.success) {
                     throw new Error(data.error || "Read aloud failed.");
                 }
@@ -7573,30 +7591,34 @@
                 readAloudAudio = new Audio(readAloudAudioUrl);
                 readAloudAudio.onended = stopReadAloud;
                 readAloudAudio.onerror = stopReadAloud;
-                if (btnReadAloud) btnReadAloud.innerHTML = '<i class="bi bi-stop-fill"></i> Stop Audio';
-                btnReadAloud?.classList.add("is-playing");
-                btnReadAloud?.removeAttribute("disabled");
+                if (button) button.innerHTML = '<i class="bi bi-stop-fill"></i> Stop Audio';
+                button?.classList.add("is-playing");
+                button?.removeAttribute("disabled");
                 await readAloudAudio.play();
             } catch (error) {
+                if (controller.signal.aborted || readAloudController !== controller) return;
                 console.warn("PABASA: Read aloud failed", error);
                 setSpeechStatus("Read aloud had trouble.", error.message || "Please try again.");
-                if (btnReadAloud) btnReadAloud.innerHTML = originalHtml;
-                btnReadAloud?.classList.remove("is-playing");
-                btnReadAloud?.removeAttribute("disabled");
+                stopReadAloud();
             } finally {
-                isReadAloudLoading = false;
+                if (readAloudController === controller) isReadAloudLoading = false;
             }
         }
 
         function stopReadAloud() {
+            readAloudController?.abort();
+            readAloudController = null;
+            isReadAloudLoading = false;
             if (readAloudAudio) {
                 readAloudAudio.pause();
                 readAloudAudio.currentTime = 0;
             }
             revokeReadAloudUrl();
-            btnReadAloud?.classList.remove("is-playing");
-            btnReadAloud?.removeAttribute("disabled");
-            if (btnReadAloud) btnReadAloud.innerHTML = '<i class="bi bi-volume-up-fill"></i> Read Aloud';
+            readAloudButton?.classList.remove("is-playing");
+            readAloudButton?.removeAttribute("disabled");
+            if (readAloudButton) readAloudButton.innerHTML = readAloudButtonHtml;
+            readAloudButton = null;
+            readAloudButtonHtml = "";
         }
 
         function revokeReadAloudUrl() {
@@ -8000,11 +8022,7 @@
             await finishCRLAComprehension();
         });
         crlaQuestionReadAloudBtn?.addEventListener("click", () => {
-            if (!crlaQuestionText?.textContent || !window.speechSynthesis) return;
-            speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(crlaQuestionText.textContent);
-            utterance.lang = /filipino|fil\b/i.test(currentMaterialLanguage || "") ? "fil-PH" : "en-US";
-            speechSynthesis.speak(utterance);
+            readAssessmentTextAloud(crlaQuestionText?.textContent, crlaQuestionReadAloudBtn);
         });
         crlaQuestionFinishBtn?.addEventListener("click", () => goBackToAssessments());
 

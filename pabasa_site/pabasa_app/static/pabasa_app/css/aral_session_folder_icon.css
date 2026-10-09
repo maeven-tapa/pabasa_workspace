@@ -41,8 +41,10 @@
     height: 80px;
     max-width: 100%;
     object-fit: contain;
-    background: #fff;
-    border-radius: 3px;
+    background: transparent;
+    border-radius: 0;
+    /* Display the original logo without its white rectangle; no bitmap rewrite. */
+    mix-blend-mode: multiply;
     filter: none;
     opacity: 1;
 }
@@ -70,6 +72,25 @@
 #sessionGrid .aral-session-folder-icon img {
     width: 42px;
     height: 47px;
+}
+.aral-session-folder-icon.aral-session-folder-icon--compact {
+    width: 32px;
+    height: 28px;
+    padding: 0 4px 2px;
+    margin-right: 4px;
+}
+.aral-session-folder-icon--compact::before {
+    top: 0;
+    height: 10px;
+    border-radius: 3px 4px 0 0;
+}
+.aral-session-folder-icon--compact::after {
+    top: 5px;
+    border-radius: 2px 4px 4px 4px;
+}
+.aral-session-folder-icon.aral-session-folder-icon--compact img {
+    width: 18px;
+    height: 20px;
 }
 @media (max-width: 620px) {
     .aral-session-folder-icon {

@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'pabasa_app/css/aral_session_folder_icon.css' %}">
+<link rel="stylesheet" href="{% static 'pabasa_app/css/aral_session_folder_icon.css' %}?v=20261010-2">
 <style>.lesson7-progress{height:8px;margin:.25rem auto .8rem;border-radius:99px;background:#dcebea;overflow:hidden;width:88%}.lesson7-progress span{display:block;height:100%;background:#e6a33a}</style><script>document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){const g=document.getElementById('sessionGrid'),c=[...(g?.children||[])].find(x=>x.querySelector('.session-content h4')?.textContent.trim()==='Session 9'),p=JSON.parse(document.getElementById('aral-standalone-progress')?.textContent||'{}')['lesson-7-gawain-1']||{};if(!c)return;const n=Math.min(8,Number(p.completed_items)||0),done=Boolean(p.activity_completed)&&n===8;c.className='pabasa-session-card unlocked';c.innerHTML='<div class="session-visual"><span class="pabasa-session-badge">⭐</span><img src="{% static "pabasa_app/images/letrang_i/ilaw.png" %}" alt="Larawan ng ilaw"></div><div class="session-content"><h4>Lesson 7</h4><p>Gawain 1</p><div>Letrang Ii</div></div><div class="session-bottom"><div class="lesson7-progress"><span style="width:'+(n/8*100)+'%"></span></div><button type="button" '+(done?'disabled':'')+'>'+(done?'✓ NATAPOS NA':n?'IPAGPATULOY':'SIMULAN')+'</button></div>';if(!done)c.onclick=()=>location.href='{% url "lesson_7_gawain_1_page" %}'},500)});</script>
 <script>document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){const card=[...document.querySelectorAll('#sessionGrid > .pabasa-session-card')].find(card=>card.querySelector('.session-content h4')?.textContent.trim()==='Lesson 7'&&card.querySelector('.session-content p')?.textContent.trim()==='Gawain 1');if(card){card.dataset.prescribedActivity='lesson-7-gawain-1';card.dataset.sessionKey='session-3'}},700)});</script>
 <style>.lesson6-progress{height:8px;margin:.25rem auto .8rem;border-radius:99px;background:#dcebea;overflow:hidden;width:88%}.lesson6-progress span{display:block;height:100%;background:#e6a33a}</style>
@@ -2664,7 +2664,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="week-activities-modal session-folder-modal" hidden>
                 <div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="Session 1 activities">
                     <div class="week-activities-header">
-                        <span class="week-activities-title">📁 Session 1 <small>— 4 activities</small></span>
+                        <span class="week-activities-title">{% include "pabasa_app/includes/aral_session_folder_icon.html" with compact=True %} Session 1 <small>— 4 activities</small></span>
                         <button class="week-activities-close" type="button" aria-label="Close">×</button>
                     </div>
                     <div class="week-activities-list"><div class="assessment-week-cards"></div></div>
@@ -2699,7 +2699,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (session4Cards.length) {
             const session4Column = document.createElement('div');
             session4Column.className = 'assessment-week-column session-folder-column';
-            session4Column.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">{% include "pabasa_app/includes/aral_session_folder_icon.html" %}</span><span class="week-folder-name">Session 4</span><span class="week-activity-count">${session4Cards.length} activities</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="Session 4 activities"><div class="week-activities-header"><span class="week-activities-title">📁 Session 4 <small>— ${session4Cards.length} activities</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
+            session4Column.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">{% include "pabasa_app/includes/aral_session_folder_icon.html" %}</span><span class="week-folder-name">Session 4</span><span class="week-activity-count">${session4Cards.length} activities</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="Session 4 activities"><div class="week-activities-header"><span class="week-activities-title">{% include "pabasa_app/includes/aral_session_folder_icon.html" with compact=True %} Session 4 <small>— ${session4Cards.length} activities</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
             const session4Modal = session4Column.querySelector('.session-folder-modal');
             session4Modal.classList.add('aking-aralin-session-modal', 'session-4-activities-modal');
             session4Cards.forEach(card => session4Modal.querySelector('.assessment-week-cards').appendChild(card));
@@ -2724,7 +2724,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (session5Cards.length) {
             const session5Column = document.createElement('div');
             session5Column.className = 'assessment-week-column session-folder-column';
-            session5Column.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">{% include "pabasa_app/includes/aral_session_folder_icon.html" %}</span><span class="week-folder-name">Session 5</span><span class="week-activity-count">${session5Cards.length} ${session5Cards.length === 1 ? 'activity' : 'activities'}</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="Session 5 activities"><div class="week-activities-header"><span class="week-activities-title">📁 Session 5 <small>— ${session5Cards.length} ${session5Cards.length === 1 ? 'activity' : 'activities'}</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
+            session5Column.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">{% include "pabasa_app/includes/aral_session_folder_icon.html" %}</span><span class="week-folder-name">Session 5</span><span class="week-activity-count">${session5Cards.length} ${session5Cards.length === 1 ? 'activity' : 'activities'}</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="Session 5 activities"><div class="week-activities-header"><span class="week-activities-title">{% include "pabasa_app/includes/aral_session_folder_icon.html" with compact=True %} Session 5 <small>— ${session5Cards.length} ${session5Cards.length === 1 ? 'activity' : 'activities'}</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
             const session5Modal = session5Column.querySelector('.session-folder-modal');
             session5Modal.classList.add('aking-aralin-session-modal');
             session5Cards.forEach(card => session5Modal.querySelector('.assessment-week-cards').appendChild(card));
@@ -2752,7 +2752,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!/^Session\s+\d+$/.test(sessionName || '')) return;
             const sessionColumn = document.createElement('div');
             sessionColumn.className = 'assessment-week-column session-folder-column';
-            sessionColumn.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">{% include "pabasa_app/includes/aral_session_folder_icon.html" %}</span><span class="week-folder-name">${sessionName}</span><span class="week-activity-count">1 activity</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="${sessionName} activities"><div class="week-activities-header"><span class="week-activities-title">📁 ${sessionName} <small>— 1 activity</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
+            sessionColumn.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">{% include "pabasa_app/includes/aral_session_folder_icon.html" %}</span><span class="week-folder-name">${sessionName}</span><span class="week-activity-count">1 activity</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="${sessionName} activities"><div class="week-activities-header"><span class="week-activities-title">{% include "pabasa_app/includes/aral_session_folder_icon.html" with compact=True %} ${sessionName} <small>— 1 activity</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
             const sessionModal = sessionColumn.querySelector('.session-folder-modal');
             sessionModal.classList.add('aking-aralin-session-modal');
             sessionModal.querySelector('.assessment-week-cards').appendChild(activity);
@@ -2809,7 +2809,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!groupCards.length) return;
             const groupColumn = document.createElement('div');
             groupColumn.className = 'assessment-week-column session-folder-column';
-            groupColumn.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">{% include "pabasa_app/includes/aral_session_folder_icon.html" %}</span><span class="week-folder-name">${group.name}</span><span class="week-activity-count">${groupCards.length} activities</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="${group.name} activities"><div class="week-activities-header"><span class="week-activities-title">📁 ${group.name} <small>— ${groupCards.length} activities</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
+            groupColumn.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">{% include "pabasa_app/includes/aral_session_folder_icon.html" %}</span><span class="week-folder-name">${group.name}</span><span class="week-activity-count">${groupCards.length} activities</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="${group.name} activities"><div class="week-activities-header"><span class="week-activities-title">{% include "pabasa_app/includes/aral_session_folder_icon.html" with compact=True %} ${group.name} <small>— ${groupCards.length} activities</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
             const groupModal = groupColumn.querySelector('.session-folder-modal');
             groupModal.classList.add('aking-aralin-session-modal');
             groupModal.dataset.sessionKey = group.key;
@@ -2828,7 +2828,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const activityCount = lesson16Cards.length;
             const lesson16Column = document.createElement('div');
             lesson16Column.className = 'assessment-week-column session-folder-column';
-            lesson16Column.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">{% include "pabasa_app/includes/aral_session_folder_icon.html" %}</span><span class="week-folder-name">Session 6</span><span class="week-activity-count">${activityCount} activities</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="Session 6 activities"><div class="week-activities-header"><span class="week-activities-title">📁 Session 6 <small>— ${activityCount} activities</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
+            lesson16Column.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">{% include "pabasa_app/includes/aral_session_folder_icon.html" %}</span><span class="week-folder-name">Session 6</span><span class="week-activity-count">${activityCount} activities</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="Session 6 activities"><div class="week-activities-header"><span class="week-activities-title">{% include "pabasa_app/includes/aral_session_folder_icon.html" with compact=True %} Session 6 <small>— ${activityCount} activities</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
             const lesson16Modal = lesson16Column.querySelector('.session-folder-modal');
             lesson16Modal.classList.add('aking-aralin-session-modal');
             lesson16Cards.forEach(card => lesson16Modal.querySelector('.assessment-week-cards').appendChild(card));
@@ -2848,7 +2848,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const sessionName = `Session ${sessionNumber}`;
             const sessionColumn = document.createElement('div');
             sessionColumn.className = 'assessment-week-column session-folder-column';
-            sessionColumn.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">{% include "pabasa_app/includes/aral_session_folder_icon.html" %}</span><span class="week-folder-name">${sessionName}</span><span class="week-activity-count">${activityCount} ${activityCount === 1 ? 'activity' : 'activities'}</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="${sessionName} activities"><div class="week-activities-header"><span class="week-activities-title">📁 ${sessionName} <small>— ${activityCount} ${activityCount === 1 ? 'activity' : 'activities'}</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
+            sessionColumn.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">{% include "pabasa_app/includes/aral_session_folder_icon.html" %}</span><span class="week-folder-name">${sessionName}</span><span class="week-activity-count">${activityCount} ${activityCount === 1 ? 'activity' : 'activities'}</span></button><div class="week-activities-modal session-folder-modal" hidden><div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="${sessionName} activities"><div class="week-activities-header"><span class="week-activities-title">{% include "pabasa_app/includes/aral_session_folder_icon.html" with compact=True %} ${sessionName} <small>— ${activityCount} ${activityCount === 1 ? 'activity' : 'activities'}</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div></div>`;
             const sessionModal = sessionColumn.querySelector('.session-folder-modal');
             sessionModal.classList.add('aking-aralin-session-modal');
             sessionCards.forEach(card => sessionModal.querySelector('.assessment-week-cards').appendChild(card));
@@ -2896,58 +2896,64 @@ document.addEventListener('DOMContentLoaded', function () {
 /* Rebuild only the PDF-backed Sessions 8–11 after legacy cards finish their
    own setup.  Counts come from the same prescribed payload as the cards. */
 document.addEventListener('DOMContentLoaded', function () {
+    if (!document.getElementById('sessionGrid') || !document.getElementById('prescribed-activity-cards')) return;
+    const releaseSessions = window.PabasaDashboardLoading.hold('student-session-folders');
     setTimeout(function () {
-        const grid = document.getElementById('sessionGrid');
-        const source = document.getElementById('prescribed-activity-cards');
-        if (!grid || !source) return;
-        let activities;
-        try { activities = JSON.parse(source.textContent || '[]'); } catch (_) { return; }
-        const sessions = [8, 9, 10, 11];
-        const workbook = activities.filter(activity => sessions.includes(Number(activity.session_number)));
-        const bySession = new Map(sessions.map(session => [session, []]));
+        try {
+            const grid = document.getElementById('sessionGrid');
+            const source = document.getElementById('prescribed-activity-cards');
+            if (!grid || !source) return;
+            let activities;
+            try { activities = JSON.parse(source.textContent || '[]'); } catch (_) { return; }
+            const sessions = [8, 9, 10, 11];
+            const workbook = activities.filter(activity => sessions.includes(Number(activity.session_number)));
+            const bySession = new Map(sessions.map(session => [session, []]));
 
-        workbook.forEach(function (activity) {
-            const matchingCards = Array.from(document.querySelectorAll('#sessionGrid [data-prescribed-activity], .session-folder-modal [data-prescribed-activity]'))
-                .filter(node => node.dataset.prescribedActivity === String(activity.activity_key));
-            const card = matchingCards.shift();
-            matchingCards.forEach(node => node.remove());
-            if (!card) return;
-            card.dataset.sessionKey = `session-${activity.session_number}`;
-            const heading = card.querySelector('.session-content h4');
-            const label = card.querySelector('.session-content p');
-            if (heading) heading.textContent = activity.lesson_number ? `Lesson ${activity.lesson_number}` : `Session ${activity.session_number}`;
-            if (label) label.textContent = activity.lesson_number ? `Gawain ${activity.gawain_number}` : `Activity ${activity.gawain_number}`;
-            bySession.get(Number(activity.session_number)).push(card);
-        });
+            workbook.forEach(function (activity) {
+                const matchingCards = Array.from(document.querySelectorAll('#sessionGrid [data-prescribed-activity], .session-folder-modal [data-prescribed-activity]'))
+                    .filter(node => node.dataset.prescribedActivity === String(activity.activity_key));
+                const card = matchingCards.shift();
+                matchingCards.forEach(node => node.remove());
+                if (!card) return;
+                card.dataset.sessionKey = `session-${activity.session_number}`;
+                const heading = card.querySelector('.session-content h4');
+                const label = card.querySelector('.session-content p');
+                if (heading) heading.textContent = activity.lesson_number ? `Lesson ${activity.lesson_number}` : `Session ${activity.session_number}`;
+                if (label) label.textContent = activity.lesson_number ? `Gawain ${activity.gawain_number}` : `Activity ${activity.gawain_number}`;
+                bySession.get(Number(activity.session_number)).push(card);
+            });
 
-        sessions.forEach(function (session) {
-            const label = `Session ${session}`;
-            Array.from(grid.querySelectorAll('.session-folder-column')).filter(column => column.querySelector('.week-folder-name')?.textContent.trim() === label).forEach(column => column.remove());
-            Array.from(document.querySelectorAll('.session-folder-modal')).filter(modal => modal.querySelector('.week-activities-title')?.textContent.includes(label)).forEach(modal => modal.remove());
-            const cards = bySession.get(session);
-            if (!cards.length) return;
-            const count = cards.length;
-            const column = document.createElement('div');
-            column.className = 'assessment-week-column session-folder-column';
-            column.dataset.sessionKey = `session-${session}`;
-            column.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">{% include "pabasa_app/includes/aral_session_folder_icon.html" %}</span><span class="week-folder-name">${label}</span><span class="week-activity-count">${count} ${count === 1 ? 'activity' : 'activities'}</span></button>`;
-            const modal = document.createElement('div');
-            modal.className = 'week-activities-modal session-folder-modal aking-aralin-session-modal';
-            modal.hidden = true;
-            modal.dataset.sessionKey = `session-${session}`;
-            modal.innerHTML = `<div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="${label} activities"><div class="week-activities-header"><span class="week-activities-title">📁 ${label} <small>— ${count} ${count === 1 ? 'activity' : 'activities'}</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div>`;
-            cards.forEach(card => modal.querySelector('.assessment-week-cards').appendChild(card));
-            const close = () => { modal.hidden = true; document.body.style.overflow = ''; };
-            column.querySelector('.assessment-week-folder').addEventListener('click', () => { modal.hidden = false; document.body.style.overflow = 'hidden'; });
-            modal.querySelector('.week-activities-close').addEventListener('click', close);
-            modal.addEventListener('click', event => { if (event.target === modal) close(); });
-            grid.appendChild(column);
-            document.body.appendChild(modal);
-        });
-        Array.from(grid.querySelectorAll('.session-folder-column')).sort((left, right) => {
-            const number = node => Number(node.querySelector('.week-folder-name')?.textContent.match(/\d+/)?.[0] || Number.MAX_SAFE_INTEGER);
-            return number(left) - number(right);
-        }).forEach(column => grid.appendChild(column));
+            sessions.forEach(function (session) {
+                const label = `Session ${session}`;
+                Array.from(grid.querySelectorAll('.session-folder-column')).filter(column => column.querySelector('.week-folder-name')?.textContent.trim() === label).forEach(column => column.remove());
+                Array.from(document.querySelectorAll('.session-folder-modal')).filter(modal => modal.querySelector('.week-activities-title')?.textContent.includes(label)).forEach(modal => modal.remove());
+                const cards = bySession.get(session);
+                if (!cards.length) return;
+                const count = cards.length;
+                const column = document.createElement('div');
+                column.className = 'assessment-week-column session-folder-column';
+                column.dataset.sessionKey = `session-${session}`;
+                column.innerHTML = `<button class="assessment-week-folder" type="button"><span class="week-folder-icon" aria-hidden="true">{% include "pabasa_app/includes/aral_session_folder_icon.html" %}</span><span class="week-folder-name">${label}</span><span class="week-activity-count">${count} ${count === 1 ? 'activity' : 'activities'}</span></button>`;
+                const modal = document.createElement('div');
+                modal.className = 'week-activities-modal session-folder-modal aking-aralin-session-modal';
+                modal.hidden = true;
+                modal.dataset.sessionKey = `session-${session}`;
+                modal.innerHTML = `<div class="week-activities-dialog" role="dialog" aria-modal="true" aria-label="${label} activities"><div class="week-activities-header"><span class="week-activities-title">{% include "pabasa_app/includes/aral_session_folder_icon.html" with compact=True %} ${label} <small>— ${count} ${count === 1 ? 'activity' : 'activities'}</small></span><button class="week-activities-close" type="button" aria-label="Close">×</button></div><div class="week-activities-list"><div class="assessment-week-cards"></div></div></div>`;
+                cards.forEach(card => modal.querySelector('.assessment-week-cards').appendChild(card));
+                const close = () => { modal.hidden = true; document.body.style.overflow = ''; };
+                column.querySelector('.assessment-week-folder').addEventListener('click', () => { modal.hidden = false; document.body.style.overflow = 'hidden'; });
+                modal.querySelector('.week-activities-close').addEventListener('click', close);
+                modal.addEventListener('click', event => { if (event.target === modal) close(); });
+                grid.appendChild(column);
+                document.body.appendChild(modal);
+            });
+            Array.from(grid.querySelectorAll('.session-folder-column')).sort((left, right) => {
+                const number = node => Number(node.querySelector('.week-folder-name')?.textContent.match(/\d+/)?.[0] || Number.MAX_SAFE_INTEGER);
+                return number(left) - number(right);
+            }).forEach(column => grid.appendChild(column));
+        } finally {
+            releaseSessions();
+        }
     }, 2200);
 });
 </script>

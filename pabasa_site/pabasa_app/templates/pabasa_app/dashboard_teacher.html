@@ -2067,6 +2067,25 @@ window.addEventListener('pabasa:teacher-class-selected', () => {
 });
 
     let dashboardStudentResizeObserver = null;
+    let dashboardRosterRequest = null;
+    let dashboardRosterCache = null;
+
+    function fetchDashboardRoster(refresh = true) {
+        if (!refresh && dashboardRosterCache) return Promise.resolve(dashboardRosterCache);
+        if (!dashboardRosterRequest) {
+            dashboardRosterRequest = fetch(`/dashboard/teacher/students-api/?ts=${Date.now()}`, {
+                method: 'GET', credentials: 'same-origin', cache: 'no-store',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Cache-Control': 'no-cache, no-store, max-age=0', 'Pragma': 'no-cache' },
+            }).then(response => {
+                if (!response.ok) throw new Error('Unable to load the student roster.');
+                return response.json();
+            }).then(data => {
+                dashboardRosterCache = data;
+                return data;
+            }).finally(() => { dashboardRosterRequest = null; });
+        }
+        return dashboardRosterRequest;
+    }
 
     function getDashboardStudentPageSize(studentRow) {
         // On desktop the student row is the expandable middle grid track. On
@@ -2095,7 +2114,7 @@ window.addEventListener('pabasa:teacher-class-selected', () => {
     classCard.style.height = '';
 }
 
-async function loadPersistedStudents() {
+async function loadPersistedStudents({ refresh = true } = {}) {
     const studentRow = document.getElementById("dashboardStudentRow");
     if (!studentRow) return;
 
@@ -2107,35 +2126,23 @@ async function loadPersistedStudents() {
     // Use the server-backed authoritative student list for preview.
     let students = [];
     try {
-        const resp = await fetch(`/dashboard/teacher/students-api/?ts=${Date.now()}`, {
-            method: 'GET',
-            credentials: 'same-origin',
-            cache: 'no-store',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Cache-Control': 'no-cache, no-store, max-age=0',
-                'Pragma': 'no-cache'
-            }
-        });
-        if (resp && resp.ok) {
-            const data = await resp.json();
-            if (data && data.success && Array.isArray(data.students)) {
-                students = data.students.map(s => ({
-                    name: s.name || '',
-                    class: Array.isArray(s.classes) ? s.classes.join(', ') : (s.class || ''),
-                    classes: Array.isArray(s.classes) ? s.classes : (s.class ? [s.class] : []),
-                    section_ids: Array.isArray(s.section_ids) ? s.section_ids : [],
-                    level: s.reading_level || s.level || s.adapted_reading_level || '',
-                    aral_eligible: s.aral_eligible === true,
-                    aral_status: s.aral_status || '',
-                    aral_assessment_completed: s.aral_assessment_completed === true,
-                    wpm: s.wpm || '0',
-                    accuracy: s.accuracy || '0',
-                    has_completed_assessment: s.has_completed_assessment === true,
-                    email: s.email || ''
-                }));
-                console.log('Loading students for dashboard from server:', students);
-            }
+        const data = await fetchDashboardRoster(refresh);
+        if (data && data.success && Array.isArray(data.students)) {
+            students = data.students.map(s => ({
+                name: s.name || '',
+                class: Array.isArray(s.classes) ? s.classes.join(', ') : (s.class || ''),
+                classes: Array.isArray(s.classes) ? s.classes : (s.class ? [s.class] : []),
+                section_ids: Array.isArray(s.section_ids) ? s.section_ids : [],
+                level: s.reading_level || s.level || s.adapted_reading_level || '',
+                aral_eligible: s.aral_eligible === true,
+                aral_status: s.aral_status || '',
+                aral_assessment_completed: s.aral_assessment_completed === true,
+                wpm: s.wpm || '0',
+                accuracy: s.accuracy || '0',
+                has_completed_assessment: s.has_completed_assessment === true,
+                email: s.email || ''
+            }));
+            console.log('Loading students for dashboard from server:', students);
         }
     } catch (e) {
         console.warn('Failed to fetch dashboard students from server', e);
@@ -2244,7 +2251,7 @@ async function loadPersistedStudents() {
     renderStudentPage();
 
     if (!dashboardStudentResizeObserver) {
-        dashboardStudentResizeObserver = new ResizeObserver(() => loadPersistedStudents());
+        dashboardStudentResizeObserver = new ResizeObserver(() => loadPersistedStudents({ refresh: false }));
         dashboardStudentResizeObserver.observe(studentRow);
     }
 }
@@ -2253,36 +2260,24 @@ document.addEventListener("DOMContentLoaded", async function() {
     // Fetch authoritative student list from server and use it for dashboard statistics
     async function fetchAndUpdateStudents() {
         try {
-            const resp = await fetch(`/dashboard/teacher/students-api/?ts=${Date.now()}`, {
-                method: 'GET',
-                credentials: 'same-origin',
-                cache: 'no-store',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Cache-Control': 'no-cache, no-store, max-age=0',
-                    'Pragma': 'no-cache'
-                }
-            });
-            if (resp && resp.ok) {
-                const data = await resp.json();
-                if (data && data.success && Array.isArray(data.students)) {
-                    // Map the authoritative roster to the compact teacher overview.
-                    const mapped = data.students.map(s => ({
-                        name: s.name || '',
-                        class: Array.isArray(s.classes) ? s.classes.join(', ') : (s.class || ''),
-                        classes: Array.isArray(s.classes) ? s.classes : (s.class ? [s.class] : []),
-                        section_ids: Array.isArray(s.section_ids) ? s.section_ids : [],
-                        level: s.reading_level || s.level || s.adapted_reading_level || '',
-                        accuracy: s.accuracy || '0',
-                        wpm: s.wpm || '0',
-                        email: s.email || '',
-                        has_completed_assessment: s.has_completed_assessment === true,
-                        last_active_at: s.last_active_at || '',
-                        improvement_30d: s.improvement_30d
-                    }));
-                    renderTeacherAtGlance(mapped);
-                    return;
-                }
+            const data = await fetchDashboardRoster();
+            if (data && data.success && Array.isArray(data.students)) {
+                // Map the authoritative roster to the compact teacher overview.
+                const mapped = data.students.map(s => ({
+                    name: s.name || '',
+                    class: Array.isArray(s.classes) ? s.classes.join(', ') : (s.class || ''),
+                    classes: Array.isArray(s.classes) ? s.classes : (s.class ? [s.class] : []),
+                    section_ids: Array.isArray(s.section_ids) ? s.section_ids : [],
+                    level: s.reading_level || s.level || s.adapted_reading_level || '',
+                    accuracy: s.accuracy || '0',
+                    wpm: s.wpm || '0',
+                    email: s.email || '',
+                    has_completed_assessment: s.has_completed_assessment === true,
+                    last_active_at: s.last_active_at || '',
+                    improvement_30d: s.improvement_30d
+                }));
+                renderTeacherAtGlance(mapped);
+                return;
             }
         } catch (e) {
             console.warn('Failed to fetch teacher students for dashboard statistics', e);
@@ -2290,8 +2285,8 @@ document.addEventListener("DOMContentLoaded", async function() {
         renderTeacherAtGlance([]);
     }
 
-    await fetchAndUpdateStudents();
-    loadPersistedStudents();
+    await window.PabasaDashboardLoading.track(
+        Promise.all([fetchAndUpdateStudents(), loadPersistedStudents()]), 'teacher-roster');
     syncClassCardToRightColumn();
     window.addEventListener('resize', syncClassCardToRightColumn);
 
@@ -2322,5 +2317,5 @@ document.addEventListener("DOMContentLoaded", async function() {
     window.PABASA_USER_EMAIL = teacherDashboardConfig ? teacherDashboardConfig.dataset.userEmail : '';
 </script>
 
-<script src="{% static 'pabasa_app/js/dashboard_teacher.js' %}?v=20260828-layout-1"></script>
+<script src="{% static 'pabasa_app/js/dashboard_teacher.js' %}?v=20261010-ready-1"></script>
 {% endblock %}

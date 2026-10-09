@@ -4146,3 +4146,91 @@ section.pb-md-5 h2::after {
     .practice-sneak-peek::before { animation: none; }
     .practice-sneak-peek__frame::before { animation: none; }
 }
+
+/* Keep the homepage links centered between equal outer columns. */
+@media (min-width: 992px) {
+    .homepage-nav-wrap .modern-nav-shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        align-items: center;
+    }
+
+    .homepage-nav-wrap .modern-brand-panel { justify-self: start; }
+    .homepage-nav-wrap .modern-nav-area,
+    .homepage-nav-wrap #mainNavbar,
+    .homepage-nav-wrap .modern-nav-content { display: contents !important; }
+    .homepage-nav-wrap .global-nav-links { grid-column: 2; justify-content: center; }
+    .homepage-nav-wrap .modern-nav-actions {
+        grid-column: 3;
+        justify-self: end;
+        margin-right: clamp(1rem, 2.2vw, 1.8rem);
+    }
+}
+
+.homepage-nav-wrap .modern-nav-content .global-nav-links .nav-link-modern {
+    padding-inline: 0.8rem !important;
+    border-radius: 0.5rem !important;
+}
+
+.homepage-nav-wrap .modern-nav-content :is(.global-nav-links .nav-link-modern, .modern-nav-actions .header-inline-link):is(:hover, :focus-visible) {
+    background: #fff !important;
+    color: #10466e !important;
+    transform: none !important;
+    animation: homeNavBlueTwinkle 2.4s ease-in-out infinite;
+}
+
+.homepage-nav-wrap .modern-nav-content :is(.global-nav-links .nav-link-modern, .modern-nav-actions .header-inline-link):focus-visible {
+    outline: 2px solid #ffd639;
+    outline-offset: 3px;
+}
+
+.homepage-nav-wrap .modern-nav-content :is(.global-nav-links .nav-link-modern, .modern-nav-actions .header-inline-link):is(:hover, :focus-visible)::before,
+.homepage-nav-wrap .modern-nav-content :is(.global-nav-links .nav-link-modern, .modern-nav-actions .header-inline-link):is(:hover, :focus-visible)::after {
+    content: "✦" !important;
+    display: block !important;
+    position: absolute;
+    top: 0.12rem;
+    right: 0.12rem;
+    bottom: auto;
+    left: auto;
+    width: auto;
+    height: auto;
+    background: transparent;
+    color: #f5b800;
+    font-size: 0.65rem;
+    line-height: 1;
+    pointer-events: none;
+    transform-origin: center;
+    animation: homeNavYellowTwinkle 2.4s ease-in-out infinite;
+}
+
+.homepage-nav-wrap .modern-nav-content :is(.global-nav-links .nav-link-modern, .modern-nav-actions .header-inline-link):is(:hover, :focus-visible)::before {
+    top: auto;
+    bottom: 0.12rem;
+    left: 0.12rem;
+    right: auto;
+    animation-delay: -1.2s;
+}
+
+@keyframes homeNavBlueTwinkle {
+    0%, 100% { text-shadow: none; box-shadow: 0 3px 0 rgba(16, 70, 110, 0.24), 0 0 5px rgba(255, 214, 57, 0.25); }
+    50% { text-shadow: 0 0 5px rgba(84, 194, 240, 0.65); box-shadow: 0 3px 0 rgba(16, 70, 110, 0.24), 0 0 14px rgba(255, 214, 57, 0.65); }
+}
+
+@keyframes homeNavYellowTwinkle {
+    0%, 100% { opacity: 0.35; transform: scale(0.65) rotate(0deg); }
+    50% { opacity: 1; transform: scale(1.15) rotate(90deg); }
+}
+
+@media (max-width: 991.98px) {
+    .homepage-nav-wrap .global-nav-links { padding-inline: 0.75rem; }
+    .homepage-nav-wrap .global-nav-links .nav-link-modern { justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .homepage-nav-wrap .modern-nav-content :is(.global-nav-links .nav-link-modern, .modern-nav-actions .header-inline-link):is(:hover, :focus-visible),
+    .homepage-nav-wrap .modern-nav-content :is(.global-nav-links .nav-link-modern, .modern-nav-actions .header-inline-link):is(:hover, :focus-visible)::before,
+    .homepage-nav-wrap .modern-nav-content :is(.global-nav-links .nav-link-modern, .modern-nav-actions .header-inline-link):is(:hover, :focus-visible)::after {
+        animation: none;
+    }
+}

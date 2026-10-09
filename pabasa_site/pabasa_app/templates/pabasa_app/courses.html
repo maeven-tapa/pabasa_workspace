@@ -2,8 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'pabasa_app/css/aral_session_folder_icon.css' %}">
-{% if teacher_courses|length == 1 and nav_role == 'teacher' %}<script>window.PABASA_HOLD_DASHBOARD_LOADER = true;</script>{% endif %}
+<link rel="stylesheet" href="{% static 'pabasa_app/css/aral_session_folder_icon.css' %}?v=20261010-2">
 <script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[data-prescribed-activity="lesson-7-gawain-1"]').forEach(x=>x.dataset.prescribedActivity='lesson-7-gawain-1')});</script>
 <script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[data-prescribed-activity="letrang-msa"]').forEach(x=>x.dataset.prescribedActivity='lesson-6-gawain-1');document.querySelectorAll('[data-prescribed-preview="letrang-msa"]').forEach(x=>x.dataset.prescribedPreview='lesson-6-gawain-1')});</script>
 <link rel="stylesheet" href="{% static 'pabasa_app/sound_detective.css' %}?v=20260831-7">
@@ -7362,11 +7361,10 @@ document.addEventListener('DOMContentLoaded',()=>{
                     const courseId = Array.isArray(courses) && courses.length === 1 ? courses[0].id : null;
                     if (courseId && typeof openCourseDetail === 'function') {
                         window.showDashboardPageLoader?.();
-                        openCourseDetail(courseId).catch(error => {
+                        const initialCourse = openCourseDetail(courseId).catch(error => {
                             console.error('Unable to open assigned course', error);
-                        }).finally(() => {
-                            window.releaseDashboardPreload?.();
                         });
+                        window.PabasaDashboardLoading.track(initialCourse, 'teacher-assigned-course');
                     }
                 });
             </script>
@@ -24586,7 +24584,7 @@ if (key.startsWith('lesson-7-') || ['lesson7-gawain2c', 'lesson7-gawain4', 'less
         const modal = document.createElement('div');
         modal.className = 'prescribed-session-modal';
         modal.hidden = true;
-        modal.innerHTML = `<div class="prescribed-session-modal__dialog" role="dialog" aria-modal="true" aria-label="Session ${number} activities"><div class="prescribed-session-modal__header"><strong><i class="bi bi-folder-fill" aria-hidden="true"></i> Session ${number} <small>&mdash; ${members.length} activities</small></strong><button type="button" class="prescribed-session-modal__close" aria-label="Close">&times;</button></div><div class="prescribed-session-modal__list"></div></div>`;
+        modal.innerHTML = `<div class="prescribed-session-modal__dialog" role="dialog" aria-modal="true" aria-label="Session ${number} activities"><div class="prescribed-session-modal__header"><strong>{% include "pabasa_app/includes/aral_session_folder_icon.html" with compact=True %} Session ${number} <small>&mdash; ${members.length} activities</small></strong><button type="button" class="prescribed-session-modal__close" aria-label="Close">&times;</button></div><div class="prescribed-session-modal__list"></div></div>`;
         const list = modal.querySelector('.prescribed-session-modal__list');
         members.forEach(member => list.append(member));
         button.addEventListener('click', () => { modal.hidden = false; document.body.style.overflow = 'hidden'; });

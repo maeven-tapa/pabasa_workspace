@@ -4044,7 +4044,7 @@ class ReadingMatcherTests(TestCase):
         self.assertEqual(result["miscues"], 1)
 
     def test_crla_word_aliases_count_as_correct_and_advance(self):
-        for target, spoken in (("agiw", "agyo"), ("kuneho", "conejo")):
+        for target, spoken in (("agiw", "agyo"), ("kuneho", "conejo"), ("aling", "aleng")):
             with self.subTest(target=target, spoken=spoken):
                 result = analyze_reading(target, 0, spoken, "fil-PH", crla_reading=True)
                 self.assertTrue(result["complete"])
@@ -4062,7 +4062,7 @@ class ReadingMatcherTests(TestCase):
                                                "fil-PH", crla_story_reading=True)["complete"])
 
     def test_crla_word_aliases_are_directional_and_opt_in(self):
-        for target, spoken in (("agiw", "agyo"), ("kuneho", "conejo")):
+        for target, spoken in (("agiw", "agyo"), ("kuneho", "conejo"), ("aling", "aleng")):
             with self.subTest(target=target, spoken=spoken):
                 self.assertFalse(analyze_reading(target, 0, spoken, "fil-PH")["complete"])
                 self.assertFalse(analyze_reading(spoken, 0, target, "fil-PH", crla_reading=True)["complete"])
@@ -4072,7 +4072,7 @@ class ReadingMatcherTests(TestCase):
                 self.assertEqual(reversed_alias["correct_words"], 0)
 
     def test_crla_word_aliases_do_not_accept_other_spellings(self):
-        for target, spoken in (("agiw", "agya"), ("kuneho", "conejos"), ("kuneho", "pagong")):
+        for target, spoken in (("agiw", "agya"), ("kuneho", "conejos"), ("kuneho", "pagong"), ("aling", "alang")):
             with self.subTest(target=target, spoken=spoken):
                 self.assertFalse(analyze_reading(target, 0, spoken, "fil-PH", crla_reading=True)["complete"])
                 story = align_story_transcript(target, spoken, language_code="fil-PH", crla_story_reading=True)

@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PABASA Dashboard</title>
+    <script src="{% static 'pabasa_app/js/dashboard_loading.js' %}?v=20261010-1"></script>
     <link rel="icon" type="image/png" href="{% static 'pabasa_app/images/pabasalogo.png' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3893,7 +3894,7 @@
         window.PABASA_USER_ROLE = "{{ nav_role }}";
         window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
     </script>
-    <script src="{% static 'pabasa_app/js/base_dashboard.js' %}?v=20260905-server-clock-1"></script>
+    <script src="{% static 'pabasa_app/js/base_dashboard.js' %}?v=20261010-content-ready-1"></script>
     <script src="{% static 'pabasa_app/js/notifications_shared.js' %}"></script>
     <script>
         (() => {

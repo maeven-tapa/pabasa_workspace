@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page_title }} | PABASA Admin</title>
+    <script src="{% static 'pabasa_app/js/dashboard_loading.js' %}?v=20261010-1"></script>
     <link rel="icon" type="image/png" href="{% static 'pabasa_app/images/pabasalogo.png' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3714,9 +3715,9 @@
                 loader.setAttribute('aria-hidden', 'false');
             };
 
-            window.addEventListener('pageshow', hideLoader);
-            document.addEventListener('DOMContentLoaded', () => {
-                window.requestAnimationFrame(hideLoader);
+            window.PabasaDashboardLoading.whenReady(hideLoader);
+            window.addEventListener('pageshow', event => {
+                if (event.persisted) hideLoader();
             });
 
             document.addEventListener('click', (event) => {

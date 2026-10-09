@@ -1,7 +1,7 @@
 {% extends "pabasa_app/admin_base.html" %}
 {% load static %}
 {% block content %}
-<link rel="stylesheet" href="{% static 'pabasa_app/css/aral_session_folder_icon.css' %}">
+<link rel="stylesheet" href="{% static 'pabasa_app/css/aral_session_folder_icon.css' %}?v=20261010-2">
 <style>
   .prescribed-session-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1rem}
   .prescribed-session-folder{background:linear-gradient(145deg,#fffaf0,#f2fbf5);border:1px solid rgba(31,111,139,.16);border-radius:24px;box-shadow:0 8px 20px rgba(31,111,139,.10);color:#16465d;cursor:pointer;display:grid;gap:.55rem;min-height:160px;padding:1rem;text-align:center;width:100%}
@@ -23,7 +23,7 @@
     <span class="folder-icon" aria-hidden="true">{% include "pabasa_app/includes/aral_session_folder_icon.html" %}</span><strong>Session {{ session.number }}</strong><small>{{ session.activities|length }} activities</small>
   </button>
   <dialog class="prescribed-session-dialog" id="prescribedSession{{ session.number }}" aria-labelledby="sessionTitle{{ session.number }}">
-    <div class="d-flex justify-content-between align-items-center gap-3"><h2 class="h5 fw-bold mb-0" id="sessionTitle{{ session.number }}">📁 Session {{ session.number }}</h2><button class="btn btn-outline-secondary btn-sm" type="button" data-close-session aria-label="Close session">✕</button></div>
+    <div class="d-flex justify-content-between align-items-center gap-3"><h2 class="h5 fw-bold mb-0" id="sessionTitle{{ session.number }}">{% include "pabasa_app/includes/aral_session_folder_icon.html" with compact=True %} Session {{ session.number }}</h2><button class="btn btn-outline-secondary btn-sm" type="button" data-close-session aria-label="Close session">✕</button></div>
     <div class="prescribed-gawain-grid">
       {% for activity in session.activities %}
       <a class="prescribed-gawain" href="{{ activity.launch_url }}" data-activity-key="{{ activity.activity_key }}"><strong>{{ activity.label }}</strong><span>{{ activity.title }}</span></a>

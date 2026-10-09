@@ -86,7 +86,7 @@
                 }
             });
 
-            fetch('/dashboard/teacher/classes/', {
+            return fetch('/dashboard/teacher/classes/', {
                 method: 'GET',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             })
@@ -163,7 +163,7 @@
 
                 const firstCard = classList.querySelector('.class-card');
                 if (firstCard && activeClassName) {
-                    selectClass(firstCard);
+                    return selectClass(firstCard, { refresh: false });
                 } else if (data.classes.length > 0) {
                     updateBannerCountsFromClassData(data.classes[0]);
                 }
@@ -173,7 +173,7 @@
             });
         }
 
-        function selectClass(card) {
+        function selectClass(card, { refresh = true } = {}) {
             if (!card) return;
             
             // Defensive check for pages that list classes but don't have an "Active Class" detail area
@@ -222,7 +222,7 @@
             // Refresh student directory to show students for the selected class (if present)
             try {
                 if (typeof loadPersistedStudents === 'function') {
-                    loadPersistedStudents();
+                    return loadPersistedStudents({ refresh });
                 } else if (window.refreshStudentDirectory) {
                     window.refreshStudentDirectory();
                 }
@@ -516,7 +516,7 @@
             });
         }
 
-        loadSavedClasses();
+        window.PabasaDashboardLoading.track(loadSavedClasses(), 'teacher-classes');
 
         // Polling: refresh overview stats every 15s to keep counts fresh
         (function startOverviewPolling() {
@@ -545,7 +545,7 @@
                 }
             }
             // initial call and interval
-            poll();
+            window.PabasaDashboardLoading.track(poll(), 'teacher-overview');
             setInterval(poll, INTERVAL_MS);
         })();
 

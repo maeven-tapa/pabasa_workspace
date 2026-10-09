@@ -77,6 +77,7 @@ from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingInte
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
 from .knowlez_stt import KnowlezSpeechError, transcribe_knowlez_audio, uses_knowlez_stt
 from .reading_stt import (
+    CRLA_TTS_VOICES,
     stt_word_metadata,
     ReadingMatcher,
     align_story_transcript,
@@ -25430,7 +25431,8 @@ def reading_read_aloud_api(request):
                        }
                        else {'voice_gender': 'MALE'} if tts_profile == 'correspondence'
                        else {'speaking_rate': 0.80, 'prosody_rate': '82%'} if tts_profile == 'hunt'
-                       else {'speaking_rate': 1.0, 'prosody_rate': '100%'} if tts_profile == 'crla'
+                       else {'tts_profile': 'crla', 'voice_gender': 'FEMALE'} if tts_profile == 'crla'
+                       else {'speaking_rate': 1.0, 'prosody_rate': '100%'} if tts_profile == 'assessment'
                        else {})
         audio_content = synthesize_read_aloud_audio(
             target_text,
@@ -25439,13 +25441,16 @@ def reading_read_aloud_api(request):
             credentials_file=credentials_file,
             **tts_options,
         )
+        uses_crla_voice = tts_options.get('tts_profile') == 'crla'
+        tts_language = ('fil-PH' if language_code == 'fil-PH' else 'en-US') if uses_crla_voice else language_code
+        voice_name = CRLA_TTS_VOICES[tts_language] if uses_crla_voice else ('fil-PH-Wavenet-A' if language_code == 'fil-PH' else '')
         return JsonResponse({
             'success': True,
             'audio_content': audio_content,
             'mime_type': 'audio/mpeg',
             'language_code': language_code,
-            'tts_language': language_code,
-            'voice_name': 'fil-PH-Wavenet-A' if language_code == 'fil-PH' else '',
+            'tts_language': tts_language,
+            'voice_name': voice_name,
         })
     except Exception as exc:
         logger.exception('Read aloud synthesis failed')

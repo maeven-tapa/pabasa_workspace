@@ -104,6 +104,9 @@ class CrlaStreamingTests(SimpleTestCase):
             ('paragraph', "May iba't-ibang tao.", 'May ibat-ibang tao.', {'crla_story_reading': '1'}),
             ('paragraph', "May iba't-ibang tao.", 'May ibat ibang tao.', {'crla_story_reading': '1'}),
             ('word', 'agiw', 'agyo', {}),
+            ('word', 'aling', 'aleng', {}),
+            ('sentence', 'May Aling Ana dito.', 'May Aleng Ana dito.', {'crla_sentence_word_scoring': '1'}),
+            ('paragraph', 'May Aling Ana dito.', 'May Aleng Ana dito.', {'crla_story_reading': '1'}),
             ('word', 'kuneho', 'conejo', {}),
             ('sentence', 'May agiw at kuneho.', 'May agyo at conejo.', {'crla_sentence_word_scoring': '1'}),
             ('paragraph', 'May agiw at kuneho.', 'May agyo at conejo.', {'crla_story_reading': '1'}),
@@ -132,7 +135,7 @@ class CrlaStreamingTests(SimpleTestCase):
                     self.assertTrue(result['complete'])
                     self.assertEqual(result['current_word_index'], 3)
                     self.assertEqual(result['raw_transcript'], transcript)
-                if 'agyo' in transcript or 'conejo' in transcript:
+                if 'agyo' in transcript or 'conejo' in transcript or 'Aleng' in transcript or 'aleng' in transcript:
                     self.assertTrue(result['complete'])
                     self.assertEqual(result['correct_word_count'], 1 if mode == 'word' else 4)
                     self.assertEqual(result['raw_transcript'], transcript)

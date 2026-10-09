@@ -3767,7 +3767,13 @@
         };
 
         // Fetch class details from database API instead of localStorage
+        let initialStudentClasses = null;
         const fetchClassDetailsFromDatabase = async (codes) => {
+            if (initialStudentClasses) {
+                const classes = initialStudentClasses;
+                initialStudentClasses = null;
+                return Object.fromEntries(classes.map(cls => [String(cls.section_id || cls.id), cls]));
+            }
             try {
                 const fetchStartedAt = performance.now();
                 const response = await fetch('/dashboard/student/classes/', {
@@ -4061,6 +4067,7 @@
                 });
                 if (data.success && Array.isArray(data.classes)) {
                     // Keep the relational Section ID as the only technical identity.
+                    initialStudentClasses = data.classes;
                     return data.classes
                         .map(cls => cls.section_id || cls.id)
                         .filter(Boolean)
@@ -4086,12 +4093,15 @@
         };
 
         // Initialize with database classes
-        fetchStudentClassesFromDatabase().then(initialSectionIds => {
+        const initialDashboardContent = fetchStudentClassesFromDatabase().then(initialSectionIds => {
             return setJoinedState(initialSectionIds);
         }).catch(error => {
             console.error('Failed to initialize student classes:', error);
             return setJoinedState([]);
+        }).finally(() => {
+            initialStudentClasses = null;
         });
+        window.PabasaDashboardLoading.track(initialDashboardContent, 'student-classes');
 
         {% comment %}Legacy class-code submission removed.
         // Remove redundant input event listeners for auto-dashing, as base_dashboard.js will handle it.

@@ -693,7 +693,13 @@ def transcribe_audio_bytes_v1(
     )
 
 
-def synthesize_read_aloud_audio(text, api_key="", language_code="en-US", speaking_rate=0.95, prosody_rate="92%", credentials_file=None, voice_gender="FEMALE"):
+CRLA_TTS_VOICES = {
+    "fil-PH": "fil-ph-Neural2-A",
+    "en-US": "en-US-Neural2-F",
+}
+
+
+def synthesize_read_aloud_audio(text, api_key="", language_code="en-US", speaking_rate=0.95, prosody_rate="92%", credentials_file=None, voice_gender="FEMALE", tts_profile=""):
     clean_text = " ".join(str(text or "").split())
     if not clean_text:
         raise RuntimeError("Text is required for read aloud.")
@@ -702,13 +708,16 @@ def synthesize_read_aloud_audio(text, api_key="", language_code="en-US", speakin
     # APIs pass Tagalog and Filipino materials in with this language code, so
     # preserve it instead of always using the English assessment voice.
     is_filipino = str(language_code or "").lower() in {"fil", "fil-ph", "tl", "tl-ph"}
-    is_male = str(voice_gender or "").upper() == "MALE"
+    is_crla = str(tts_profile or "").lower() == "crla"
+    is_male = not is_crla and str(voice_gender or "").upper() == "MALE"
     if is_filipino:
         tts_language = "fil-PH"
         voice_name = "fil-PH-Wavenet-D" if is_male else "fil-PH-Wavenet-A"
     else:
         tts_language = "en-US"
         voice_name = "en-US-Chirp3-HD-Charon" if is_male else "en-US-Chirp3-HD-Vindemiatrix"
+    if is_crla:
+        voice_name = CRLA_TTS_VOICES[tts_language]
     teaching_ssml = (
         '<speak>'
         f'<prosody rate="{prosody_rate}" pitch="+0st" volume="medium">'
@@ -723,7 +732,9 @@ def synthesize_read_aloud_audio(text, api_key="", language_code="en-US", speakin
         # WaveNet Filipino supports SSML.  Applying the same sentence-level
         # pacing as English avoids the unnaturally fast, high-pitched delivery
         # previously forced on every Filipino template narration.
-        "input": {"text": clean_text} if uses_chirp3_male else {"ssml": teaching_ssml},
+        # CRLA keeps the voice's natural sentence phrasing and pitch. Apply a
+        # single, modest slowdown, rather than stacking SSML and audio rates.
+        "input": {"text": clean_text} if is_crla or uses_chirp3_male else {"ssml": teaching_ssml},
         "voice": {
             "languageCode": tts_language,
             "name": voice_name,
@@ -733,7 +744,7 @@ def synthesize_read_aloud_audio(text, api_key="", language_code="en-US", speakin
     }
     if not uses_chirp3_male:
         payload["audioConfig"].update({
-            "speakingRate": speaking_rate,
+            "speakingRate": 0.92 if is_crla else speaking_rate,
             "pitch": 0,
             "volumeGainDb": 0,
         })
@@ -892,6 +903,7 @@ def _story_words_are_equivalent(expected_word, recognized_word):
 
 
 CRLA_WORD_ALIASES = {
+    "aling": frozenset({"aleng"}),
     "agiw": frozenset({"agyo"}),
     "kuneho": frozenset({"conejo"}),
 }
