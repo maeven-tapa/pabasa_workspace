@@ -17,6 +17,7 @@
 <script>document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){const cards=[...document.querySelectorAll('#sessionGrid .pabasa-session-card')],card=cards.find(c=>c.textContent.includes('Letrang Mm at Ss')),footer=card?.querySelector('.session-bottom');if(!footer)return;const d=JSON.parse(document.getElementById('aral-standalone-progress')?.textContent||'{}')['session-2-lesson-4-gawain-2']||{},t=Number(d.total_items)||6,n=Math.min(t,Number(d.completed_items||d.current_index)||0),done=Boolean(d.activity_completed)&&n>=t;footer.innerHTML='<div class="lesson4-gawain2-progress"><span style="width:'+(n/t*100)+'%"></span></div><button type="button" '+(done?'disabled':'')+'>'+(done?'✓ NATAPOS NA':(n?'IPAGPATULOY':'SIMULAN'))+'</button>';if(!done)card.onclick=function(){location.href='{% url "prescribed_activity_page" activity_key="session-2-lesson-4-gawain-2" %}'}},1000)});</script>
 <script>document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){const c=document.querySelector('#sessionGrid .pabasa-session-card:nth-child(6)'),b=c&&c.querySelector('.session-bottom');if(!b)return;const d=JSON.parse(document.getElementById('aral-standalone-progress')?.textContent||'{}')['session-2-lesson-4-gawain-2']||{},t=Number(d.total_items)||6,n=Math.min(t,Number(d.completed_items||d.current_index)||0),done=Boolean(d.activity_completed)&&n>=t;b.innerHTML='<div class="lesson4-gawain2-progress"><span style="width:'+(n/t*100)+'%"></span></div><button type="button" '+(done?'disabled':'')+'>'+(done?'✓ NATAPOS NA':(n?'IPAGPATULOY':'SIMULAN'))+'</button>';if(!done)c.onclick=function(){location.href='{% url "prescribed_activity_page" activity_key="session-2-lesson-4-gawain-2" %}'}},500)});</script>
 <style>
+    .week-activities-modal.aking-aralin-session-modal { --activity-card-height: 130px; --activity-title-size: 14px; --activity-badge-size: 10px; --activity-description-size: 12px; }
     /* Ensure main content area handles sidebar transition correctly on mobile */
     @media (max-width: 991.98px) {
         .dashboard-main {
@@ -477,17 +478,18 @@
     .assessment-week-folder .week-activity-count { color: var(--dash-muted); font-size: .82rem; font-weight: 800; margin-top: .25rem; }
     .week-activities-modal { align-items: center; background: rgba(27,26,23,.48); box-sizing: border-box; display: flex; height: 100vh; inset: 0; justify-content: center; overflow-y: auto; padding: 1rem; position: fixed; width: 100vw; z-index: 9999; }
     .week-activities-modal[hidden] { display: none; }
-    .week-activities-dialog { background: #fffdf7; border-radius: 26px; box-shadow: 0 24px 60px rgba(27,26,23,.24); contain: layout paint; display: flex; flex: 0 0 auto; flex-direction: column; height: min(500px, calc(100dvh - 2rem)); margin: 0 auto; max-height: calc(100dvh - 2rem); width: min(620px, calc(100vw - 2rem)); }
+    .week-activities-dialog { background: #fffdf7; border-radius: 26px; box-shadow: 0 24px 60px rgba(27,26,23,.24); contain: layout paint; display: flex; flex: 0 1 auto; flex-direction: column; height: auto; margin: 0 auto; max-height: min(80dvh, 440px); overflow: hidden; width: min(620px, calc(100vw - 2rem)); }
     .week-activities-header { align-items: center; border-bottom: 1px solid rgba(27,26,23,.1); display: flex; justify-content: space-between; padding: 1rem 1.25rem; }
     .week-activities-title { color: var(--dash-primary); font-family: "Nunito", sans-serif; font-size: 1.25rem; font-weight: 900; }
     .week-activities-close { align-items: center; background: #fff1c7; border: 2px solid rgba(31,111,139,.18); border-radius: 14px; color: var(--dash-primary); cursor: pointer; display: inline-flex; font-size: 2rem; font-weight: 900; height: 52px; justify-content: center; line-height: 1; min-width: 52px; padding: 0; }
-    .week-activities-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 1rem; }
+    .week-activities-list { flex: 1 1 auto; min-height: 0; max-height: none; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; padding: .75rem 1rem 1rem; scrollbar-gutter: stable; }
     @media (max-width: 767.98px) { .week-activities-modal { inset: 0; } }
 
     .assessment-week-cards {
         display: grid;
         gap: 0.35rem;
-        grid-auto-rows: auto;
+        grid-auto-rows: var(--activity-card-height, 130px);
+        align-content: start;
         min-width: 0;
     }
 
@@ -1859,7 +1861,61 @@ document.addEventListener('DOMContentLoaded',function(){
   routes['lesson7-gawain4b']="{% url 'prescribed_activity_page' activity_key='lesson7-gawain4b' %}";
   const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   activities.forEach(activity=>{if(String(activity.session_key||'')==='session-3'){activity.title=String(activity.title||'').replace(/^\s*gawain\s+[A-Z0-9-]+\s*:\s*/i,'').trim();}});
-  activities.forEach(activity=>{const key=String(activity.activity_key||''),sessionKey=String(activity.session_key||''),route=activity.route_url||routes[key],progress=saved[key]||{},total=Number(progress.total_items)||Number(activity.total_items)||5,completed=Math.max(0,Math.min(total,Number(progress.completed_items)||0)),state=progress.state&&typeof progress.state==='object'?progress.state:{},arrangingLesson31=key==='lesson-31-gawain-3'&&['arranging','reading_sentence'].includes(String(state.phase||'')),displayedProgress=arrangingLesson31?Math.max(completed,Math.min(total,(Number(state.current_item)||0)+1)):completed,done=Boolean(progress.activity_completed)&&completed>=total,locked=Boolean(activity.is_locked);const reopenable=key==='lesson-13-gawain-4'||key==='lesson-27-gawain-1'||key==='lesson-29-gawain-1'||key==='lesson-29-gawain-2'||key==='lesson-29-gawain-3',isLesson2021=key==='session-7-lesson-20-21-gawain-1',isLesson2021Gawain4=key==='session-7-lesson-20-21-gawain-4',isSession4=sessionKey==='session-4'&&String(activity.lesson_number||'')==='10, 11, at 12';if(!route||grid.querySelector(`[data-prescribed-activity="${key}"]`))return;const card=document.createElement('article');card.className='pabasa-session-card '+(locked?'locked':'unlocked')+' lesson16-session-card'+(done?' completed':'');card.dataset.prescribedActivity=key;card.dataset.sessionKey=sessionKey;const image=activity.image_url?`<img class="lesson16-card-image" src="${escape(activity.image_url)}" alt="Larawan ng ${escape(activity.title)}"><span class="lesson16-card-placeholder">Larawan<br>Idagdag</span>`:'';const badge=key==='session-2-lesson-4-gawain-2'?'<span class="pabasa-session-badge">⭐</span>':'';const session4Descriptions={1:'Tunog ng mga letra',2:'Pagsamahin ang mga tunog',3:'Basahin ang salita',4:'Basahin ang pangungusap',5:'Pagsusulat ng letrang Bb at Uu'};const label=isSession4?`Lesson ${escape(activity.lesson_number)}: Gawain ${escape(activity.gawain_number)}`:(isLesson2021Gawain4?escape(activity.card_label):(isLesson2021?'Lesson '+escape(activity.lesson_number):(activity.card_label?escape(activity.card_label):'Lesson '+escape(activity.lesson_number))));const subLabel=isLesson2021Gawain4?'':(isLesson2021?'Gawain '+escape(activity.gawain_number):(activity.card_label?'':'Gawain '+escape(activity.gawain_number)));const title=isSession4?escape(session4Descriptions[Number(activity.gawain_number)]||activity.description||activity.instruction||''):(isLesson2021?escape(activity.activity_title||activity.title):escape(activity.title));card.innerHTML=`<div class="session-visual">${badge}<div class="lesson16-card-visual">${image}</div></div><div class="session-content"><h4>${label}</h4>${isSession4?'':`<p>${subLabel}</p>`}<div>${title}</div></div><div class="session-bottom"><div class="lesson16-progress"><i style="--lesson16-complete:${done?100:(displayedProgress/total)*100}%"></i></div><button type="button" ${locked?'disabled':''}>${locked?'NAKAKANDADO':(done?'✓ NATAPOS NA':(displayedProgress?'IPAGPATULOY':'SIMULAN'))}</button></div>`;const imageElement=card.querySelector('.lesson16-card-image');if(imageElement)imageElement.addEventListener('error',event=>event.currentTarget.parentElement.classList.add('is-placeholder'),{once:true});if(!locked&&(!done||reopenable))card.onclick=()=>{location.href=route};else card.querySelector('button').disabled=true;grid.appendChild(card)});
+  activities.forEach(activity=>{const key=String(activity.activity_key||''),sessionKey=String(activity.session_key||''),route=activity.route_url||routes[key],progress=saved[key]||{},total=Number(progress.total_items)||Number(activity.total_items)||5,completed=Math.max(0,Math.min(total,Number(progress.completed_items)||0)),state=progress.state&&typeof progress.state==='object'?progress.state:{},arrangingLesson31=key==='lesson-31-gawain-3'&&['arranging','reading_sentence'].includes(String(state.phase||'')),displayedProgress=arrangingLesson31?Math.max(completed,Math.min(total,(Number(state.current_item)||0)+1)):completed,done=Boolean(progress.activity_completed)&&completed>=total,locked=Boolean(activity.is_locked);const reopenable=key==='lesson-13-gawain-4'||key==='lesson-27-gawain-1'||key==='lesson-29-gawain-1'||key==='lesson-29-gawain-2'||key==='lesson-29-gawain-3',isLesson2021=key==='session-7-lesson-20-21-gawain-1',isLesson2021Gawain4=key==='session-7-lesson-20-21-gawain-4',isSession4=sessionKey==='session-4'&&String(activity.lesson_number||'')==='10, 11, at 12';if(!route||grid.querySelector(`[data-prescribed-activity="${key}"]`))return;const card=document.createElement('article');card.className='pabasa-session-card '+(locked?'locked':'unlocked')+' lesson16-session-card'+(done?' completed':'');card.dataset.prescribedActivity=key;card.dataset.sessionKey=sessionKey;card.dataset.gawain=String(activity.gawain_number||'');const image=activity.image_url?`<img class="lesson16-card-image" src="${escape(activity.image_url)}" alt="Larawan ng ${escape(activity.title)}"><span class="lesson16-card-placeholder">Larawan<br>Idagdag</span>`:'';const badge=key==='session-2-lesson-4-gawain-2'?'<span class="pabasa-session-badge">⭐</span>':'';const session4Descriptions={1:'Tunog ng mga letra',2:'Pagsamahin ang mga tunog',3:'Basahin ang salita',4:'Basahin ang pangungusap',5:'Pagsusulat ng letrang Bb at Uu'};const label=isSession4?`Lesson ${escape(activity.lesson_number)}`:(isLesson2021Gawain4?escape(activity.card_label):(isLesson2021?'Lesson '+escape(activity.lesson_number):(activity.card_label?escape(activity.card_label):'Lesson '+escape(activity.lesson_number))));const subLabel=isLesson2021Gawain4?'':(isLesson2021?'Gawain '+escape(activity.gawain_number):(activity.card_label?'':'Gawain '+escape(activity.gawain_number)));const title=isSession4?escape(session4Descriptions[Number(activity.gawain_number)]||activity.description||activity.instruction||''):(isLesson2021?escape(activity.activity_title||activity.title):escape(activity.title));card.innerHTML=`<div class="session-visual">${badge}<div class="lesson16-card-visual">${image}</div></div><div class="session-content"><h4>${label}</h4><p>${subLabel||('Gawain '+escape(activity.gawain_number))}</p><div>${title}</div></div><div class="session-bottom"><div class="lesson16-progress"><i style="--lesson16-complete:${done?100:(displayedProgress/total)*100}%"></i></div><button type="button" ${locked?'disabled':''}>${locked?'NAKAKANDADO':(done?'✓ NATAPOS NA':(displayedProgress?'IPAGPATULOY':'SIMULAN'))}</button></div>`;const imageElement=card.querySelector('.lesson16-card-image');if(imageElement)imageElement.addEventListener('error',event=>event.currentTarget.parentElement.classList.add('is-placeholder'),{once:true});if(!locked&&(!done||reopenable))card.onclick=()=>{location.href=route};else card.querySelector('button').disabled=true;grid.appendChild(card)});
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+ const semantic={
+  sound:{icon:'bi-volume-up',color:'sound'},
+  matching:{icon:'bi-puzzle',color:'matching'},
+  word:{icon:'bi-book',color:'word'},
+  sentence:{icon:'bi-journal-text',color:'sentence'},
+  writing:{icon:'bi-pencil',color:'writing'},
+  identify:{icon:'bi-image',color:'identify'},
+  search:{icon:'bi-search',color:'search'}
+ };
+ const accents=['sun','orange','sky','aqua','pink','lavender','mint','coral'];
+ const classify=text=>{
+  const value=String(text||'').toLowerCase();
+  if(/pagsulat|pagsusulat|isulat|sulat|tracing|handwriting|letra.*(bb|uu|aa|ii|mm|ss)/i.test(value))return 'writing';
+  if(/itugma|tugma|pagsamahin|hanay|match|combine|connect|pares|magkatugma/i.test(value))return 'matching';
+  if(/pangungusap|talata|paragraph|comprehension|unawa|kuwento|story|response/i.test(value))return 'sentence';
+  if(/basahin ang salita|pagbasa ng salita|salita|word|bokabularyo|vocabulary/i.test(value))return 'word';
+  if(/hanapin|hanap|tukuyin|piliin|identify|search|find|correct word|tamang salita/i.test(value))return 'search';
+  if(/larawan|picture|imahe|object|bagay|hugis|shapes|kilalanin/i.test(value))return 'identify';
+  if(/tunog|pakinggan|pantig|oral|bigkas|sound|listen|basa/i.test(value))return 'sound';
+  return 'identify';
+ };
+ const clean=v=>String(v||'').replace(/[<&>"']/g,'');
+ const normalize=(card,index)=>{
+  if(card.dataset.activityType&&card.querySelector('.activity-icon')&&!card.querySelector('.session-visual img'))return;
+  const old=card.querySelector('.session-content'); if(!old)return;
+  const h=old.querySelector('h4')?.textContent.trim()||'Activity', parts=[...old.children].map(el=>({el,text:el.textContent.trim()})), badge=parts.find(x=>/^gawain\s+/i.test(x.text)), desc=parts.find(x=>x.el.tagName!=='H4'&&x!==badge&&x.text);
+  const badgeText=badge?.text||'Gawain 1', description=desc?.text||'', n=card.dataset.gawain||badgeText.match(/(\d+)/)?.[1]||'1', type=classify(h+' '+badgeText+' '+description), activityKey=card.dataset.prescribedActivity||card.dataset.sessionKey+'|'+h+'|'+badgeText+'|'+description, hash=Array.from(activityKey).reduce((sum,ch)=>((sum*31)+ch.charCodeAt(0))>>>0,0), siblings=[...(card.closest('.assessment-week-cards')?.querySelectorAll('.pabasa-session-card')||[])], position=siblings.indexOf(card), used=siblings.slice(Math.max(0,position-2),position).map(item=>item.dataset.accent), accentIndex=hash%accents.length; while(used.includes(accents[accentIndex]))accentIndex=(accentIndex+1)%accents.length; const accent=accents[accentIndex], visual=document.createElement('div'), icon=document.createElement('span'), content=document.createElement('div');
+  visual.className='session-visual'; icon.className='activity-icon'; icon.innerHTML='<i class="bi '+semantic[type].icon+'" aria-hidden="true"></i>'; visual.appendChild(icon); content.className='session-content'; content.innerHTML='<h4>'+clean(h)+'</h4><p>'+clean(badgeText)+'</p><div>'+clean(description)+'</div>';
+  const bottom=card.querySelector('.session-bottom'); card.replaceChildren(visual,content); if(bottom)card.appendChild(bottom); card.dataset.gawain=n; card.dataset.activityType=type; card.dataset.accent=accent;
+ };
+ const apply=()=>document.querySelectorAll('.pabasa-session-card').forEach((card,index)=>normalize(card,index)); apply(); new MutationObserver(apply).observe(document.body,{childList:true,subtree:true}); [100,500,1000,2000,4000].forEach(delay=>setTimeout(apply,delay));
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  const icons={1:'bi-volume-up',2:'bi-dice-5',3:'bi-book',4:'bi-journal-text',5:'bi-pencil'};
+  document.querySelectorAll('.pabasa-session-card').forEach(card=>{
+    const visual=card.querySelector('.session-visual');
+    const gawainText=card.querySelector('.session-content p')?.textContent||'';
+    const inferredGawain=(gawainText.match(/(\d+)/)||[])[1]||'';
+    const gawain=card.dataset.gawain||inferredGawain;
+    if(gawain)card.dataset.gawain=gawain;
+    if(!visual||visual.querySelector('.activity-icon'))return;
+    const icon=document.createElement('span');
+    icon.className='activity-icon';
+    const glyph=document.createElement('i');
+    glyph.className='bi '+(icons[gawain]||'bi-stars');
+    glyph.setAttribute('aria-hidden','true');
+    icon.appendChild(glyph); visual.prepend(icon);
+  });
 });
 </script>
 <script>
@@ -1907,26 +1963,59 @@ document.addEventListener('DOMContentLoaded',function(){
     #sessionGrid > .pabasa-session-card { visibility: hidden; }
     .session-folder-column .assessment-week-folder { min-height: 150px; }
     .week-activities-modal.aking-aralin-session-modal .assessment-week-cards {
+        display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: .65rem;
+        gap: .7rem;
+        min-width: 0;
     }
     .week-activities-modal.aking-aralin-session-modal .pabasa-session-card {
         box-sizing: border-box;
-        height: 128px;
-        min-height: 128px;
+        height: var(--activity-card-height, 130px);
+        min-height: var(--activity-card-height, 130px);
+        max-height: var(--activity-card-height, 130px);
         overflow: hidden;
-        padding: .55rem .65rem;
+        padding: .5rem .6rem;
+        border-radius: 16px;
+        position: relative;
+        box-shadow: 0 2px 4px rgba(31,111,139,.12);
+        transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
     }
-    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .session-visual { min-height: 24px; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .session-visual { min-height: 36px; display:flex; align-items:flex-start; }
     .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .session-content { min-height: 0; }
-    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card h4 { font-size: 1rem; margin: .15rem 0; }
-    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card p,
-    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .session-content > div { font-size: .75rem; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card h4 { color:#17485d; font-size:var(--activity-title-size); font-weight:800; line-height:1.15; margin:.08rem 0; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card p { font-size:var(--activity-badge-size); line-height:1.15; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .session-content > div { font-size:var(--activity-description-size); font-weight:500; line-height:1.2; }
     .week-activities-modal.aking-aralin-session-modal .pabasa-session-card button { min-height: 32px; font-size: .78rem; padding: .4rem .6rem; }
-    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .session-visual img { display: none; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card { background:#f4fbf6; border-color:#b9ded8; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .lesson16-card-image { display:none; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card img { display:none; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .lesson16-card-visual { display:none; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .session-visual::before { content:'•'; display:grid; place-items:center; width:24px; height:24px; border:1px solid #f0a13a; border-radius:7px; color:#f0a13a; font-size:.9rem; font-weight:900; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .session-visual:has(.activity-icon)::before { display:none; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .activity-icon { display:grid; place-items:center; width:34px; height:34px; border:2px solid #f0a13a; border-radius:10px; color:#f0a13a; font-size:1rem; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-gawain="2"] .activity-icon { border-color:#55b9c5; color:#55b9c5; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-gawain="3"] .activity-icon { border-color:#e68bb4; color:#e68bb4; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-gawain="4"] .activity-icon { border-color:#9f82cf; color:#9f82cf; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-gawain="5"] .activity-icon { border-color:#72b786; color:#72b786; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-gawain="1"] { border-color:#f0a13a; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-gawain="2"] { border-color:#8ed7d8; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-gawain="3"] { border-color:#e8a4c4; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-gawain="4"] { border-color:#b9a4df; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-gawain="5"] { border-color:#9bcda6; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-gawain="2"] .session-visual::before { content:'▦'; border-color:#55b9c5; color:#55b9c5; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-gawain="3"] .session-visual::before { content:'▱'; border-color:#e68bb4; color:#e68bb4; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-gawain="4"] .session-visual::before { content:'▤'; border-color:#9f82cf; color:#9f82cf; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-gawain="5"] .session-visual::before { content:'✎'; border-color:#72b786; color:#72b786; }
     .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .session-visual { background-image: none !important; }
-    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card img { visibility: hidden; }
-    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card { position: relative; cursor: pointer; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card { cursor: pointer; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card.locked { filter: saturate(.45); cursor: not-allowed; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card.unlocked { transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card.unlocked:hover,
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card.unlocked:focus-within { border-width: 2px; box-shadow: 0 6px 12px rgba(31,111,139,.18); transform: translateY(-3px); }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card.unlocked:active { transform: translateY(0); }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card.unlocked:hover .activity-icon,
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card.unlocked:focus-within .activity-icon { transform: scale(1.08); }
+    .week-activities-modal.aking-aralin-session-modal .activity-icon { transition: transform 200ms ease; }
     .week-activities-modal.aking-aralin-session-modal .pabasa-session-card::after {
         position: absolute;
         top: .45rem;
@@ -1943,11 +2032,11 @@ document.addEventListener('DOMContentLoaded',function(){
         transition: opacity .15s ease, transform .15s ease;
     }
     .week-activities-modal.aking-aralin-session-modal .pabasa-session-card.unlocked::after {
-        content: 'OPEN';
+        content: 'OPEN ↗';
         background: #1f6f8b;
     }
     .week-activities-modal.aking-aralin-session-modal .pabasa-session-card.locked::after {
-        content: 'LOCKED';
+        content: '🔒 LOCKED';
         background: #8b5252;
     }
     .week-activities-modal.aking-aralin-session-modal .pabasa-session-card.completed {
@@ -1961,6 +2050,78 @@ document.addEventListener('DOMContentLoaded',function(){
     .week-activities-modal.aking-aralin-session-modal .pabasa-session-card:focus-within::after {
         opacity: 1;
         transform: translateY(0);
+    }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card.completed::after { content: '✓ COMPLETED'; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .session-bottom { display:none; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .session-content p {
+        display:inline-block;
+        margin:.1rem 0;
+        padding:.12rem .35rem;
+        border-radius:999px;
+        background:#e8f4df;
+        color:#6fa56b;
+        font-size:.62rem;
+        font-weight:900;
+        letter-spacing:.03em;
+        text-transform:uppercase;
+    }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-gawain="2"] .session-content p { background:#e3f5f5; color:#55aab6; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-gawain="3"] .session-content p { background:#fde8f0; color:#d779a3; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-gawain="4"] .session-content p { background:#eee8fa; color:#8869bc; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-gawain="5"] .session-content p { background:#e6f4e5; color:#639d6e; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="sound"] { border-color:#f0a13a; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="matching"] { border-color:#8ed7d8; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="word"] { border-color:#e8a4c4; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="sentence"] { border-color:#b9a4df; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="writing"] { border-color:#9bcda6; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="identify"] { border-color:#f2c37b; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="search"] { border-color:#a9c6e8; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="sound"] .activity-icon { border-color:#f0a13a; color:#f0a13a; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="matching"] .activity-icon { border-color:#55b9c5; color:#55b9c5; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="word"] .activity-icon { border-color:#e68bb4; color:#e68bb4; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="sentence"] .activity-icon { border-color:#9f82cf; color:#9f82cf; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="writing"] .activity-icon { border-color:#72b786; color:#72b786; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="identify"] .activity-icon { border-color:#e2a64a; color:#e2a64a; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="search"] .activity-icon { border-color:#6c9ed1; color:#6c9ed1; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="sound"] .session-content p { background:#fff0d2; color:#c77d16; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="matching"] .session-content p { background:#e3f5f5; color:#459eaa; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="word"] .session-content p { background:#fde8f0; color:#d779a3; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="sentence"] .session-content p { background:#eee8fa; color:#8869bc; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="writing"] .session-content p { background:#e6f4e5; color:#639d6e; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="identify"] .session-content p { background:#fff1dc; color:#b77721; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-activity-type="search"] .session-content p { background:#e8f0fb; color:#527da9; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="sun"] { border-color:#e8bb5b; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="orange"] { border-color:#f0a13a; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="sky"] { border-color:#8ebee8; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="aqua"] { border-color:#72c9c9; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="pink"] { border-color:#e8a4c4; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="lavender"] { border-color:#b9a4df; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="mint"] { border-color:#9bcda6; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="coral"] { border-color:#efa58f; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="sun"] .activity-icon { border-color:#d39d27; color:#d39d27; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="orange"] .activity-icon { border-color:#e38a1d; color:#e38a1d; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="sky"] .activity-icon { border-color:#5d99d0; color:#5d99d0; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="aqua"] .activity-icon { border-color:#43aeb0; color:#43aeb0; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="pink"] .activity-icon { border-color:#d779a3; color:#d779a3; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="lavender"] .activity-icon { border-color:#8869bc; color:#8869bc; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="mint"] .activity-icon { border-color:#639d6e; color:#639d6e; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="coral"] .activity-icon { border-color:#d87960; color:#d87960; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="sun"] .session-content p { background:#fff4c9; color:#b88416; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="orange"] .session-content p { background:#fff0d2; color:#c77d16; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="sky"] .session-content p { background:#e8f2fc; color:#527da9; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="aqua"] .session-content p { background:#e3f5f5; color:#459eaa; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="pink"] .session-content p { background:#fde8f0; color:#d779a3; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="lavender"] .session-content p { background:#eee8fa; color:#8869bc; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="mint"] .session-content p { background:#e6f4e5; color:#639d6e; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card[data-accent="coral"] .session-content p { background:#fff0ec; color:#c66e56; }
+    .week-activities-modal.aking-aralin-session-modal .pabasa-session-card .session-content > div { color:#607982; }
+    @media (prefers-reduced-motion: reduce) {
+        .week-activities-modal.aking-aralin-session-modal .pabasa-session-card,
+        .week-activities-modal.aking-aralin-session-modal .activity-icon { transition: none; }
+    }
+    @media (max-width: 700px) {
+        .week-activities-modal.aking-aralin-session-modal .assessment-week-cards { grid-template-columns: 1fr; }
+        .week-activities-modal.aking-aralin-session-modal .pabasa-session-card { height:var(--activity-card-height, 130px); min-height:var(--activity-card-height, 130px); max-height:var(--activity-card-height, 130px); }
     }
 
     /* Friendly Grade 2 polish for the Aking Aralin session folders. */
@@ -2799,13 +2960,15 @@ document.addEventListener('DOMContentLoaded', function () {
         gap: .45rem;
     }
     .week-activities-modal.session-4-activities-modal .pabasa-session-card {
-        height: 112px;
-        min-height: 112px;
-        padding: .4rem .6rem;
+        height: var(--activity-card-height, 130px);
+        min-height: var(--activity-card-height, 130px);
+        max-height: var(--activity-card-height, 130px);
+        padding: .5rem .6rem;
     }
     .week-activities-modal.session-4-activities-modal .pabasa-session-card .session-content > div {
         color: #435f69;
-        font-size: 16px;
+        font-size: var(--activity-description-size, 12px);
+        font-weight: 500;
         line-height: 1.2;
     }
 </style>
@@ -2818,6 +2981,43 @@ document.addEventListener('DOMContentLoaded', () => {
  const apply=()=>document.querySelectorAll('.pabasa-session-card').forEach(card=>{const activity=key(card);if(!activity)return;const button=card.querySelector('button');const completed=card.classList.contains('completed')||Boolean(button?.disabled&&/NATAPOS NA/.test(button.textContent||''));if(completed){card.classList.add('completed');card.dataset.activityCompleted='true';return;}delete card.dataset.activityCompleted;if(unlocked.has(activity)){card.classList.remove('locked');card.classList.add('unlocked');delete card.dataset.activityLocked;return;}card.classList.remove('unlocked');card.classList.add('locked');card.dataset.activityLocked='true';if(button){button.disabled=true;button.textContent='NAKAKANDADO';}});
  new MutationObserver(apply).observe(document.body,{childList:true,subtree:true});[0,500,1500,3000,5000].forEach(delay=>setTimeout(apply,delay));
  document.addEventListener('click',event=>{if(event.target.closest('.pabasa-session-card[data-activity-locked="true"],.pabasa-session-card[data-activity-completed="true"]')){event.preventDefault();event.stopImmediatePropagation();}},true);
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const icons = ['bi-volume-up', 'bi-dice-5', 'bi-book', 'bi-journal-text', 'bi-pencil'];
+    const clean = value => String(value || '').replace(/[<&>"']/g, '');
+    const normalize = (card, index) => {
+        if (!card.closest('.aking-aralin-session-modal')) return;
+        const content = card.querySelector('.session-content');
+        if (!content) return;
+        const heading = content.querySelector('h4')?.textContent.trim() || 'Activity';
+        const parts = Array.from(content.children).map(el => ({el, text: el.textContent.trim()}));
+        const badgePart = parts.find(item => /^gawain\s+/i.test(item.text));
+        const descriptionPart = parts.find(item => item.el.tagName !== 'H4' && item !== badgePart && item.text && !item.el.classList.contains('lesson2-progress-label') && !item.el.classList.contains('lesson3-progress-label') && !item.el.classList.contains('lesson4-progress-label'));
+        const badgeText = badgePart?.text || `Gawain ${((index % 5) + 1)}`;
+        const description = descriptionPart?.text || '';
+        const gawain = card.dataset.gawain || badgeText.match(/(\d+)/)?.[1] || String((index % 5) + 1);
+        const visual = document.createElement('div');
+        visual.className = 'session-visual';
+        const icon = document.createElement('span');
+        icon.className = 'activity-icon';
+        icon.innerHTML = `<i class="bi ${icons[(Number(gawain) - 1) % icons.length] || 'bi-stars'}" aria-hidden="true"></i>`;
+        visual.appendChild(icon);
+        const rebuilt = document.createElement('div');
+        rebuilt.className = 'session-content';
+        rebuilt.innerHTML = `<h4>${clean(heading)}</h4><p>${clean(badgeText)}</p><div>${clean(description)}</div>`;
+        const oldBottom = card.querySelector('.session-bottom');
+        card.replaceChildren(visual, rebuilt);
+        if (oldBottom) card.appendChild(oldBottom);
+        card.dataset.gawain = gawain;
+        card.dataset.presentationNormalized = 'true';
+    };
+    const normalizeAll = () => document.querySelectorAll('.aking-aralin-session-modal .pabasa-session-card').forEach((card, index) => {
+        if (!card.dataset.presentationNormalized || !card.querySelector('.activity-icon')) normalize(card, index);
+    });
+    normalizeAll();
+    new MutationObserver(() => requestAnimationFrame(normalizeAll)).observe(document.body, {childList: true, subtree: true});
 });
 </script>
 {% endblock %}
@@ -2843,3 +3043,39 @@ document.addEventListener('DOMContentLoaded',function(){
 <script>document.addEventListener('DOMContentLoaded',function(){const p=JSON.parse(document.getElementById('aral-standalone-progress')?.textContent||'{}')['lesson-1-gawain-1']||{},c=document.querySelector('#sessionGrid .pabasa-session-card:first-child');if(p.activity_completed&&c){const b=c.querySelector('button');if(b){b.disabled=true;b.textContent='✓ NATAPOS NA';}c.classList.add('unlocked');c.onclick=null;const bar=c.querySelector('.lesson1-progress span');if(bar)bar.style.width='100%';}});</script>
 <style>.pabasa-session-card button:disabled,.pabasa-session-card button.activity-completed{background:#6da77a!important;color:#fff!important;cursor:default!important;box-shadow:none!important;opacity:1!important}.pabasa-session-card button:disabled:hover,.pabasa-session-card button:disabled:active{transform:none!important}</style>
 <script>document.addEventListener('DOMContentLoaded',function(){const g=document.getElementById('sessionGrid');if(!g)return;function apply(){const c=g.querySelector('.pabasa-session-card:nth-child(7)'),s=JSON.parse(document.getElementById('aral-standalone-progress')?.textContent||'{}')['lesson-5-gawain-1']||{};if(!c)return;const n=Math.max(0,Math.min(9,Number(s.completed_items)||0)),d=Boolean(s.activity_completed)&&n>=9;c.className='pabasa-session-card unlocked';c.innerHTML='<div class="session-visual"><span class="pabasa-session-badge">⭐</span></div><div class="session-content"><h4>Lesson 5</h4><p>Gawain 1</p><div>Letrang Aa</div></div><div class="session-bottom"><div class="lesson5-progress"><span style="width:'+(d?100:n/9*100)+'%"></span></div><button type="button" '+(d?'disabled':'')+'>'+(d?'✓ NATAPOS NA':(n?'IPAGPATULOY':'SIMULAN'))+'</button></div>';if(!d)c.onclick=function(){location.href='{% url "lesson_5_gawain_1_page" %}'}}apply();new MutationObserver(apply).observe(g,{childList:true,subtree:true})});</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const icons = ['bi-volume-up', 'bi-dice-5', 'bi-book', 'bi-journal-text', 'bi-pencil'];
+    const normalize = (card, index) => {
+        if (!card.closest('.aking-aralin-session-modal')) return;
+        const content = card.querySelector('.session-content');
+        if (!content) return;
+        const heading = content.querySelector('h4')?.textContent.trim() || 'Activity';
+        const parts = Array.from(content.children).map(el => ({el, text: el.textContent.trim()}));
+        const badgePart = parts.find(item => /^gawain\s+/i.test(item.text));
+        const descriptionPart = parts.find(item => item.el.tagName !== 'H4' && item !== badgePart && item.text && !item.el.classList.contains('lesson2-progress-label') && !item.el.classList.contains('lesson3-progress-label') && !item.el.classList.contains('lesson4-progress-label'));
+        const badgeText = badgePart?.text || `Gawain ${((index % 5) + 1)}`;
+        const description = descriptionPart?.text || '';
+        const gawain = (card.dataset.gawain || badgeText.match(/(\d+)/)?.[1] || String((index % 5) + 1));
+        card.dataset.gawain = gawain;
+        const visual = document.createElement('div');
+        visual.className = 'session-visual';
+        const icon = document.createElement('span');
+        icon.className = 'activity-icon';
+        icon.innerHTML = `<i class="bi ${icons[(Number(gawain) - 1) % icons.length] || 'bi-stars'}" aria-hidden="true"></i>`;
+        visual.appendChild(icon);
+        const rebuilt = document.createElement('div');
+        rebuilt.className = 'session-content';
+        rebuilt.innerHTML = `<h4>${heading.replace(/[<&>"']/g, '')}</h4><p>${badgeText.replace(/[<&>"']/g, '')}</p><div>${description.replace(/[<&>"']/g, '')}</div>`;
+        const oldBottom = card.querySelector('.session-bottom');
+        card.replaceChildren(visual, rebuilt);
+        if (oldBottom) card.appendChild(oldBottom);
+        card.dataset.presentationNormalized = 'true';
+    };
+    const normalizeAll = () => document.querySelectorAll('.aking-aralin-session-modal .pabasa-session-card').forEach((card, index) => {
+        if (!card.dataset.presentationNormalized || !card.querySelector('.activity-icon')) normalize(card, index);
+    });
+    normalizeAll();
+    new MutationObserver(() => requestAnimationFrame(normalizeAll)).observe(document.body, {childList: true, subtree: true});
+});
+</script>
