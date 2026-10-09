@@ -37,6 +37,8 @@ import re
 from pathlib import Path
 from html import escape
 import random
+import secrets
+import hashlib
 import traceback
 import ssl
 import subprocess
@@ -30176,7 +30178,7 @@ def profile(request):
                 last_name = request.POST.get('last_name', '').strip()
                 middle_initial = request.POST.get('middle_initial', '').strip()
                 suffix = request.POST.get('suffix', '').strip()
-                email = request.POST.get('email', '').strip()
+                email = request.POST.get('email', '').strip().lower()
                 bio = request.POST.get('bio', '').strip()
                 animal_avatar = request.POST.get('animal_avatar', '').strip()
                 
@@ -30188,15 +30190,46 @@ def profile(request):
                     return JsonResponse({'success': False, 'error': 'Email is required'})
                 
                 # Check if email is already used by another user
-                if email != user.email and User.objects.filter(email=email).exists():
+                if email != (user.email or '').strip().lower() and User.objects.filter(email__iexact=email).exclude(pk=user.pk).exists():
                     return JsonResponse({'success': False, 'error': 'This email is already in use'})
+
+                email_changed = user.role == 'teacher' and email != (user.email or '').strip().lower()
+                if email_changed:
+                    try:
+                        validate_email(email)
+                    except ValidationError:
+                        return JsonResponse({'success': False, 'error': 'Enter a valid email address'})
+
+                    code = f'{secrets.randbelow(1000000):06d}'
+                    profile_info = _get_profile_dict(user, 'profile_info')
+                    if not isinstance(profile_info, dict):
+                        profile_info = {}
+                    profile_info['pending_email_verification'] = {
+                        'email': email,
+                        'code_hash': hashlib.sha256(f'{settings.SECRET_KEY}:{email}:{code}'.encode()).hexdigest(),
+                        'expires_at': time.time() + 600,
+                        'resend_available_at': time.time() + 60,
+                    }
+                    try:
+                        send_mail(
+                            'Verify your new Pabasa email address',
+                            f'Your Pabasa email verification code is {code}. It expires in 10 minutes.',
+                            settings.DEFAULT_FROM_EMAIL,
+                            [email],
+                            fail_silently=False,
+                        )
+                    except Exception:
+                        logger.exception('Could not send teacher email verification code for %s', user.custom_id)
+                        return JsonResponse({'success': False, 'error': 'Could not send the verification code. Please try again.'})
+                    _set_profile_dict(user, 'profile_info', profile_info)
                 
                 # Update user fields
                 user.first_name = first_name
                 user.last_name = last_name
                 user.middle_initial = middle_initial if middle_initial else ''
                 user.suffix = suffix if suffix else ''
-                user.email = email
+                if not email_changed:
+                    user.email = email
                 if animal_avatar and animal_avatar in STUDENT_AVATAR_BY_SLUG:
                     user.animal_avatar = animal_avatar
                 request.session['first_name'] = user.first_name
@@ -30204,8 +30237,12 @@ def profile(request):
                 request.session['email'] = user.email
                 
                 # Store bio in tags for profile information
+                profile_info = _get_profile_dict(user, 'profile_info')
+                if not isinstance(profile_info, dict):
+                    profile_info = {}
                 if bio:
-                    _set_profile_dict(user, 'profile_info', {'bio': bio})
+                    profile_info['bio'] = bio
+                _set_profile_dict(user, 'profile_info', profile_info)
                 
                 user.save()
                 request.session.modified = True
@@ -30214,7 +30251,9 @@ def profile(request):
                 
                 return JsonResponse({
                     'success': True,
-                    'message': 'Profile updated successfully',
+                    'message': 'Profile updated. Check your new email for the verification code.' if email_changed else 'Profile updated successfully',
+                    'requires_email_verification': email_changed,
+                    'pending_email': email if email_changed else '',
                     'full_name': f"{first_name} {middle_initial} {last_name} {suffix}".replace('  ', ' ').strip()
                 })
             except IntegrityError as e:
@@ -30223,6 +30262,54 @@ def profile(request):
             except Exception as e:
                 logger.error(f"Error saving profile for {user.custom_id}: {str(e)}")
                 return JsonResponse({'success': False, 'error': str(e)})
+
+        elif request.POST.get('verify_teacher_email') == 'true':
+            if user.role != 'teacher':
+                return JsonResponse({'success': False, 'error': 'Email verification is only available for teachers.'})
+            code = request.POST.get('code', '').strip()
+            profile_info = _get_profile_dict(user, 'profile_info')
+            pending = profile_info.get('pending_email_verification') if isinstance(profile_info, dict) else None
+            if not isinstance(pending, dict) or not pending.get('email'):
+                return JsonResponse({'success': False, 'error': 'No pending email change was found.'})
+            if time.time() > float(pending.get('expires_at') or 0):
+                profile_info.pop('pending_email_verification', None)
+                _set_profile_dict(user, 'profile_info', profile_info)
+                return JsonResponse({'success': False, 'error': 'That verification code has expired. Please request a new one.'})
+            expected_hash = hashlib.sha256(f"{settings.SECRET_KEY}:{pending['email']}:{code}".encode()).hexdigest()
+            if len(code) != 6 or not secrets.compare_digest(expected_hash, pending.get('code_hash', '')):
+                return JsonResponse({'success': False, 'error': 'The verification code is incorrect.'})
+            if User.objects.filter(email__iexact=pending['email']).exclude(pk=user.pk).exists():
+                return JsonResponse({'success': False, 'error': 'This email is already in use.'})
+            user.email = pending['email']
+            profile_info.pop('pending_email_verification', None)
+            user.save(update_fields=['email', 'updated_at'])
+            _set_profile_dict(user, 'profile_info', profile_info)
+            request.session['email'] = user.email
+            request.session.modified = True
+            return JsonResponse({'success': True, 'message': 'Email address verified and updated.', 'email': user.email})
+
+        elif request.POST.get('resend_teacher_email_verification') == 'true':
+            if user.role != 'teacher':
+                return JsonResponse({'success': False, 'error': 'Email verification is only available for teachers.'})
+            profile_info = _get_profile_dict(user, 'profile_info')
+            pending = profile_info.get('pending_email_verification') if isinstance(profile_info, dict) else None
+            if not isinstance(pending, dict) or not pending.get('email'):
+                return JsonResponse({'success': False, 'error': 'No pending email change was found.'})
+            remaining = max(0, int(float(pending.get('resend_available_at') or 0) - time.time()))
+            if remaining:
+                return JsonResponse({'success': False, 'error': f'Please wait {remaining} seconds before requesting another code.'})
+            code = f'{secrets.randbelow(1000000):06d}'
+            pending.update({
+                'code_hash': hashlib.sha256(f"{settings.SECRET_KEY}:{pending['email']}:{code}".encode()).hexdigest(),
+                'expires_at': time.time() + 600,
+                'resend_available_at': time.time() + 60,
+            })
+            try:
+                send_mail('Verify your new Pabasa email address', f'Your Pabasa email verification code is {code}. It expires in 10 minutes.', settings.DEFAULT_FROM_EMAIL, [pending['email']], fail_silently=False)
+            except Exception:
+                return JsonResponse({'success': False, 'error': 'Could not resend the verification code. Please try again.'})
+            _set_profile_dict(user, 'profile_info', profile_info)
+            return JsonResponse({'success': True, 'message': 'A new verification code was sent.'})
         
         # Handle password change
         elif request.POST.get('change_password') == 'true':

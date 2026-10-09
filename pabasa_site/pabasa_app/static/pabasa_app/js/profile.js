@@ -28,6 +28,13 @@ function initProfilePage() {
     const actions = document.getElementById("accountDetailsActions");
     const profileSummaryCard = document.querySelector(".profile-summary");
     const teacherEditModal = document.getElementById("teacherEditModal");
+    const teacherEmailVerificationModal = document.getElementById("teacherEmailVerificationModal");
+    const teacherEmailVerificationCode = document.getElementById("teacherEmailVerificationCode");
+    const teacherEmailVerifyButton = document.getElementById("teacherEmailVerifyButton");
+    const teacherEmailResendButton = document.getElementById("teacherEmailResendButton");
+    const teacherPendingEmail = document.getElementById("teacherPendingEmail");
+    const teacherEmailVerificationError = document.getElementById("teacherEmailVerificationError");
+    const teacherEmailVerificationStatus = document.getElementById("teacherEmailVerificationStatus");
     if (teacherEditModal && teacherEditModal.parentElement !== document.body) {
         document.body.appendChild(teacherEditModal);
     }
@@ -164,6 +171,20 @@ function initProfilePage() {
                     return;
                 }
 
+                if (data.requires_email_verification) {
+                    if (teacherPendingEmail) teacherPendingEmail.textContent = data.pending_email || fields.email;
+                    if (teacherEmailVerificationError) teacherEmailVerificationError.hidden = true;
+                    if (teacherEmailVerificationCode) teacherEmailVerificationCode.value = "";
+                    if (teacherEditModal && window.bootstrap?.Modal) {
+                        window.bootstrap.Modal.getInstance(teacherEditModal)?.hide();
+                    }
+                    form.reset();
+                    if (teacherEmailVerificationModal && window.bootstrap?.Modal) {
+                        window.bootstrap.Modal.getOrCreateInstance(teacherEmailVerificationModal).show();
+                    }
+                    return;
+                }
+
                 showToast(data.message || "Profile updated successfully", "success");
                 setEditMode(false);
                 const studentEditModal = document.getElementById("studentEditModal");
@@ -196,6 +217,41 @@ function initProfilePage() {
     });
     teacherEditModal?.addEventListener("hidden.bs.modal", function () {
         setEditMode(false);
+    });
+
+    teacherEmailVerifyButton?.addEventListener("click", function () {
+        const code = teacherEmailVerificationCode?.value.trim() || "";
+        if (!/^\d{6}$/.test(code)) {
+            if (teacherEmailVerificationError) { teacherEmailVerificationError.textContent = "Enter the 6-digit verification code."; teacherEmailVerificationError.hidden = false; }
+            return;
+        }
+        teacherEmailVerifyButton.disabled = true;
+        postProfileAction("verify_teacher_email", { code: code }).then(function (data) {
+            if (!data.success) {
+                if (teacherEmailVerificationError) { teacherEmailVerificationError.textContent = data.error || "Could not verify the email."; teacherEmailVerificationError.hidden = false; }
+                return;
+            }
+            window.bootstrap?.Modal.getInstance(teacherEmailVerificationModal)?.hide();
+            showToast(data.message || "Email address verified and updated", "success");
+            const emailDisplay = document.querySelector('.profile-detail-text .value');
+            if (emailDisplay && data.email) emailDisplay.textContent = data.email;
+        }).catch(function () {
+            if (teacherEmailVerificationError) { teacherEmailVerificationError.textContent = "Could not verify the email. Please try again."; teacherEmailVerificationError.hidden = false; }
+        }).finally(function () { teacherEmailVerifyButton.disabled = false; });
+    });
+
+    teacherEmailResendButton?.addEventListener("click", function () {
+        teacherEmailResendButton.disabled = true;
+        postProfileAction("resend_teacher_email_verification").then(function (data) {
+            if (teacherEmailVerificationStatus) teacherEmailVerificationStatus.textContent = data.message || data.error || "";
+            if (!data.success) return;
+            let remaining = 60;
+            const timer = window.setInterval(function () {
+                remaining -= 1;
+                if (teacherEmailVerificationStatus) teacherEmailVerificationStatus.textContent = `A new code was sent. Resend available in ${remaining}s.`;
+                if (remaining <= 0) { window.clearInterval(timer); teacherEmailResendButton.disabled = false; if (teacherEmailVerificationStatus) teacherEmailVerificationStatus.textContent = "You can request another code."; }
+            }, 1000);
+        }).catch(function () { teacherEmailResendButton.disabled = false; if (teacherEmailVerificationStatus) teacherEmailVerificationStatus.textContent = "Could not resend the code."; });
     });
 
     function showToast(message, type = "success") {
