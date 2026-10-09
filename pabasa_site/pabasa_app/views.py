@@ -22061,7 +22061,10 @@ def lesson_3_gawain_1_page(request):
     progress = StudentActivityProgress.objects.filter(student_id=request.session.get('user_id'), activity_key='lesson-3-gawain-1').first()
     context['lesson_3_progress'] = json.dumps({'current_index': progress.current_index, 'completed_items': progress.completed_items, 'correct_items': progress.correct_items, 'total_items': progress.total_items, 'activity_completed': progress.activity_completed} if progress else None)
     context['lesson_3_progress_url'] = reverse('lesson_3_activity_progress')
-    return render(request, 'pabasa_app/lesson_3_gawain_1_page.html', context)
+    response = render(request, 'pabasa_app/lesson_3_gawain_1_page.html', context)
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response['Pragma'] = 'no-cache'
+    return response
 
 
 @login_required(role='student')
