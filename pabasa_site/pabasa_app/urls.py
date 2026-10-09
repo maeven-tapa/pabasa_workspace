@@ -67,6 +67,7 @@ urlpatterns = [
     path('dashboard/admin/official-reading-assessments/', views.admin_official_reading_assessments, name='admin_official_reading_assessments'),
     path('dashboard/admin/official-reading-assessments/add/', views.admin_official_reading_assessment_add, name='admin_official_reading_assessment_add'),
     path('dashboard/admin/official-reading-assessments/<int:material_id>/', views.admin_official_reading_assessment_detail, name='admin_official_reading_assessment_detail'),
+    path('dashboard/admin/official-reading-assessments/<int:material_id>/test/', views.admin_official_reading_assessment_test, name='admin_official_reading_assessment_test'),
     path('dashboard/admin/official-reading-assessments/<int:material_id>/archive/', views.admin_official_reading_assessment_archive, name='admin_official_reading_assessment_archive'),
     path('dashboard/admin/official-reading-assessments/<int:material_id>/unarchive/', views.admin_official_reading_assessment_unarchive, name='admin_official_reading_assessment_unarchive'),
     path('dashboard/admin/official-reading-assessments/<int:material_id>/delete/', views.admin_official_reading_assessment_delete, name='admin_official_reading_assessment_delete'),

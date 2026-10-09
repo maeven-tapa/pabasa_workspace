@@ -1,0 +1,82 @@
+{% extends "pabasa_app/admin_base.html" %}
+{% block content %}
+<style>
+  .crla-test-shell{display:grid;gap:1rem}
+  .crla-test-card{background:#fff;border:1px solid rgba(16,70,110,.09);border-radius:24px;box-shadow:0 16px 38px rgba(16,70,110,.08);padding:1.2rem}
+  .crla-test-kicker{font-size:.76rem;font-weight:900;letter-spacing:.11em;text-transform:uppercase;color:#6b7f94}
+  .crla-test-meta{font-size:.88rem;color:#64748b}
+  .crla-test-value{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.9rem;overflow-wrap:anywhere}
+</style>
+
+<div class="crla-test-shell">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div>
+      <a class="btn btn-sm btn-outline-secondary mb-3" href="{% url 'admin_official_reading_assessments' %}"><i class="bi bi-arrow-left me-1"></i>Back</a>
+      <div class="crla-test-kicker mb-1">Read-only student launch test</div>
+      <h1 class="h4 fw-bold mb-1">{{ material.title }}</h1>
+      <p class="text-secondary mb-0">This checks the exact official CRLA record the student assessment hub selects.</p>
+    </div>
+    <a class="btn btn-outline-primary fw-bold" href="{% url 'admin_official_reading_assessment_detail' material.id %}">View assessment details</a>
+  </div>
+
+  <section class="crla-test-card">
+    <div class="d-flex flex-wrap justify-content-between gap-3 align-items-start">
+      <div>
+        <div class="crla-test-kicker mb-1">Material under test</div>
+        <h2 class="h5 fw-bold mb-2">{{ material.title }}</h2>
+        <div class="crla-test-meta">ID <span class="crla-test-value">{{ material.id }}</span> · Phase <span class="crla-test-value">{{ test_phase|default:'unknown' }}</span> · System key <span class="crla-test-value">{{ material.system_assessment_key|default:'(none)' }}</span></div>
+      </div>
+      <div class="text-end">
+        <span class="badge rounded-pill {% if material.is_active and material.status == 'published' %}text-bg-success{% else %}text-bg-warning{% endif %}">{% if material.is_active and material.status == 'published' %}Published and active{% else %}Not currently published/active{% endif %}</span>
+      </div>
+    </div>
+    <div class="row g-3 mt-2">
+      <div class="col-6 col-lg-3"><div class="border rounded-3 p-3"><div class="small text-secondary">Words</div><strong>{{ test_material_launch_data.words|length }}</strong></div></div>
+      <div class="col-6 col-lg-3"><div class="border rounded-3 p-3"><div class="small text-secondary">Sentences</div><strong>{{ test_material_launch_data.sentences|length }}</strong></div></div>
+      <div class="col-6 col-lg-3"><div class="border rounded-3 p-3"><div class="small text-secondary">Stories</div><strong>{{ test_material_launch_data.stories|length }}</strong></div></div>
+      <div class="col-6 col-lg-3"><div class="border rounded-3 p-3"><div class="small text-secondary">Launch ID</div><strong class="crla-test-value">{{ test_material_launch_data.id }}</strong></div></div>
+    </div>
+  </section>
+
+  <section class="crla-test-card">
+    <div class="crla-test-kicker mb-1">Choose student</div>
+    <p class="text-secondary">Enter a PABASA ID such as <span class="crla-test-value">G2-0005</span>. The test uses the same student subject, active enrollment, phase, and official-material selection path as the student assessment page.</p>
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-12 col-md-6 col-lg-4">
+        <label class="form-label fw-bold" for="studentIdInput">Student PABASA ID</label>
+        <input class="form-control" id="studentIdInput" name="student_id" value="{{ student_id_query|default:'' }}" list="studentIdOptions" placeholder="G2-0005" required>
+        <datalist id="studentIdOptions">
+          {% for option in student_options %}<option value="{{ option.custom_id }}">{{ option.first_name }} {{ option.last_name }}</option>{% endfor %}
+        </datalist>
+      </div>
+      <div class="col-auto"><button class="btn btn-primary fw-bold" type="submit"><i class="bi bi-shield-check me-1"></i>Verify student launch</button></div>
+    </form>
+  </section>
+
+  {% if student_id_query and not selected_student %}
+  <div class="alert alert-danger rounded-4">No active student account matched <span class="crla-test-value">{{ student_id_query }}</span>.</div>
+  {% endif %}
+
+  {% if student_launch_verification %}
+  <section class="crla-test-card">
+    {% if student_launch_verification.passed %}
+    <div class="alert alert-success rounded-4 mb-3"><strong>Exact match.</strong> This student will receive this same official CRLA material.</div>
+    {% else %}
+    <div class="alert alert-danger rounded-4 mb-3"><strong>Selection mismatch.</strong> The student path did not select this exact material. Review the selected records below before opening the assessment window.</div>
+    {% endif %}
+    <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
+      <div><div class="crla-test-kicker">Student</div><strong>{{ selected_student.custom_id }} · {{ selected_student.first_name }} {{ selected_student.last_name }}</strong></div>
+      <div><div class="crla-test-kicker">Student phase tested</div><strong>{{ student_launch_verification.phase|default:'Unavailable' }}</strong></div>
+    </div>
+    <h2 class="h6 fw-bold">Materials selected by the student path</h2>
+    {% if student_launch_verification.selected_materials %}
+    <div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>ID</th><th>Title</th><th>Subject</th><th>System key</th></tr></thead><tbody>
+      {% for selected in student_launch_verification.selected_materials %}<tr class="{% if selected.id == material.id %}table-success{% endif %}"><td class="crla-test-value">{{ selected.id }}</td><td>{{ selected.title }}</td><td>{{ selected.subject }}</td><td class="crla-test-value">{{ selected.system_assessment_key|default:'(none)' }}</td></tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}
+    <p class="text-secondary mb-0">The student path returned no official CRLA material for this phase.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

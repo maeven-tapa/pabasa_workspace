@@ -63,6 +63,7 @@
           </div>
           <div class="ora-actions">
             <a class="btn btn-outline-primary btn-sm fw-bold" href="{% url 'admin_official_reading_assessment_detail' group.active_material.id %}">View</a>
+            <a class="btn btn-primary btn-sm fw-bold" href="{% url 'admin_official_reading_assessment_test' group.active_material.id %}"><i class="bi bi-shield-check me-1"></i>Test student launch</a>
             <form method="post" action="{% url 'admin_official_reading_assessment_archive' group.active_material.id %}">
               {% csrf_token %}
               <button class="btn btn-outline-secondary btn-sm fw-bold" type="submit">Archive</button>
@@ -92,6 +93,7 @@
           </div>
           <div class="ora-actions">
             <a class="btn btn-outline-primary btn-sm fw-bold" href="{% url 'admin_official_reading_assessment_detail' material.id %}">View</a>
+            <a class="btn btn-outline-primary btn-sm fw-bold" href="{% url 'admin_official_reading_assessment_test' material.id %}"><i class="bi bi-shield-check me-1"></i>Test student launch</a>
             <form method="post" action="{% url 'admin_official_reading_assessment_unarchive' material.id %}">
               {% csrf_token %}
               <button class="btn btn-outline-success btn-sm fw-bold" type="submit">Unarchive</button>

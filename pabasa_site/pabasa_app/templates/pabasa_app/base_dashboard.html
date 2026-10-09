@@ -3885,6 +3885,14 @@
         // Material availability is based on this server-rendered timestamp, not the device clock.
         window.PABASA_SERVER_TIME = '{% now "c" %}';
     </script>
+    <script>
+        // Make the server-authoritative identity available before shared dashboard
+        // code initializes. This prevents stale localStorage roles from selecting
+        // teacher-only requests during the first page load.
+        window.PABASA_USER_NAME = "{{ user_full_name|escapejs }}";
+        window.PABASA_USER_ROLE = "{{ nav_role }}";
+        window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
+    </script>
     <script src="{% static 'pabasa_app/js/base_dashboard.js' %}?v=20260905-server-clock-1"></script>
     <script src="{% static 'pabasa_app/js/notifications_shared.js' %}"></script>
     <script>
@@ -4137,12 +4145,6 @@
         })();
     </script>
     {% block extra_scripts %}{% endblock %}
-    <script>
-        // Global user context for notifications
-        window.PABASA_USER_NAME = "{{ user_full_name|escapejs }}";
-        window.PABASA_USER_ROLE = "{{ nav_role }}";
-        window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
-    </script>
     <script>
         function getNotificationCsrfToken() {
             const cookieToken = document.cookie.split('; ')
