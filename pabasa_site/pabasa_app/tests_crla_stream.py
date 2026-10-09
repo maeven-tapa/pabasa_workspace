@@ -101,6 +101,8 @@ class CrlaStreamingTests(SimpleTestCase):
             ('word', 'tatay', 'ta tay', {'crla_rhymes': '1'}),
             ('sentence', 'Si Bibo ay bata.', 'Si Bibo', {'crla_sentence_word_scoring': '1'}),
             ('paragraph', 'Si Bibo ay bata.', 'Si Bibo ay bata.', {'crla_story_reading': '1'}),
+            ('paragraph', "May iba't-ibang tao.", 'May ibat-ibang tao.', {'crla_story_reading': '1'}),
+            ('paragraph', "May iba't-ibang tao.", 'May ibat ibang tao.', {'crla_story_reading': '1'}),
         ]
         for mode, target, transcript, flags in cases:
             fields = {**self.fields, 'mode': mode, 'target_text': target, **flags}
@@ -120,6 +122,12 @@ class CrlaStreamingTests(SimpleTestCase):
                 })).content)
                 provider.assert_not_called()
                 self.assertEqual(result, expected)
+                if "iba't-ibang" in target:
+                    self.assertEqual(result['word_alignment']['correct_words'], 3)
+                    self.assertEqual(result['word_alignment']['miscues'], 0)
+                    self.assertTrue(result['complete'])
+                    self.assertEqual(result['current_word_index'], 3)
+                    self.assertEqual(result['raw_transcript'], transcript)
 
     def test_sentence_self_correction_uses_prior_shared_results(self):
         fields = {**self.fields, 'mode': 'sentence', 'target_text': 'Si Bibo ay bata.', 'crla_sentence_word_scoring': '1'}

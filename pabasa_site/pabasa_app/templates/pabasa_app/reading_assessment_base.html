@@ -629,6 +629,18 @@
             transform: translateY(-1px);
         }
 
+        .reading-word .is-next-word,
+        .reading-title .is-next-word {
+            background: #ddebff;
+            color: #0f172a;
+            border-radius: 0.3em;
+            outline: 2px solid #2563eb;
+            outline-offset: 1px;
+            text-decoration: underline;
+            text-decoration-color: #2563eb;
+            text-underline-offset: 0.16em;
+        }
+
         .reading-word .syllable.is-wrong {
             background: #ffebee;
             color: #c41c3b;
@@ -3110,6 +3122,13 @@
         body.dark-theme .reading-word .syllable.is-current {
             background: rgba(56, 189, 248, 0.22) !important;
             color: #f8fafc !important;
+        }
+        body.dark-theme .reading-word .is-next-word,
+        body.dark-theme .reading-title .is-next-word {
+            background: rgba(56, 189, 248, 0.22) !important;
+            color: #f8fafc !important;
+            outline-color: #7dd3fc;
+            text-decoration-color: #7dd3fc;
         }
         body.dark-theme .reading-word .syllable.is-wrong {
             background: rgba(196, 28, 59, 0.24) !important;

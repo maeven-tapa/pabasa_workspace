@@ -25028,6 +25028,7 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
                 language_code,
                 strict_rhyme=request.POST.get('crla_rhymes') == '1',
                 pronunciation_aliases=pronunciation_aliases,
+                crla_story_reading=mode == 'paragraph' and request.POST.get('crla_story_reading') == '1',
             )
         if l22_c_pronunciation:
             l22_match = l22_c_pronunciation_match(

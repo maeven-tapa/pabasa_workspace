@@ -1665,6 +1665,7 @@
                 readingTitle.hidden = false;
                 readingTitle.textContent = story.title || "";
             }
+            if (isCrla) renderCrlaStoryStartHint();
             if (storyReadingProgress) {
                 storyReadingProgress.textContent = `${currentPageIndex + 1} / ${getCurrentPageCount()}`;
                 storyReadingProgress.classList.remove("d-none");
@@ -5331,6 +5332,7 @@
                         }
                     } else if (range[0] <= currentSyllableIndex && currentSyllableIndex < range[1]) {
                         span.classList.add("is-current");
+                        markCrlaNextWord(span);
                     }
                     span.textContent = part;
                     storyDebug({
@@ -5358,6 +5360,40 @@
             }
         }
 
+        function markCrlaNextWord(word) {
+            if (!isCrla) return;
+            word.classList.add("is-next-word");
+            word.setAttribute("aria-current", "true");
+        }
+
+        function renderCrlaStoryStartHint() {
+            if (!readingWord || !isCrla) return;
+            const displayText = String(getCurrentDisplayText() || items[currentIndex] || "");
+            const { titleText, bodyText } = splitDisplayTextByTitle(displayText, getCurrentItemTitle());
+            let wordIndex = 0;
+            const renderParts = (text, container) => {
+                container.replaceChildren();
+                String(text || "").split(/(\s+)/).forEach(part => {
+                    if (!part) return;
+                    if (/^\s+$/.test(part) || isDisplayListMarker(part) || !normalizeDisplayWord(part)) {
+                        container.appendChild(document.createTextNode(part));
+                        return;
+                    }
+                    const word = document.createElement("span");
+                    word.className = "syllable";
+                    if (wordIndex === 0) {
+                        word.classList.add("is-current");
+                        markCrlaNextWord(word);
+                    }
+                    word.textContent = part;
+                    container.appendChild(word);
+                    wordIndex += 1;
+                });
+            };
+            if (titleText && readingTitle) renderParts(titleText, readingTitle);
+            renderParts(bodyText || displayText, readingWord);
+        }
+
         function renderPhraseWordGuide(displayText, activeWordIndex = 0) {
             if (!readingWord) return;
             const parts = String(displayText || "").split(/(\s+)/);
@@ -5367,13 +5403,16 @@
             readingWord.replaceChildren();
             parts.forEach((part) => {
                 if (!part) return;
-                if (/^\s+$/.test(part)) {
+                if (/^\s+$/.test(part) || isDisplayListMarker(part) || !normalizeDisplayWord(part)) {
                     readingWord.appendChild(document.createTextNode(part));
                     return;
                 }
                 const word = document.createElement("span");
                 word.className = "phrase-reading-word";
-                if (wordIndex === targetIndex) word.classList.add("is-current");
+                if (wordIndex === targetIndex) {
+                    word.classList.add("is-current");
+                    markCrlaNextWord(word);
+                }
                 word.textContent = part;
                 readingWord.appendChild(word);
                 wordIndex += 1;
@@ -5419,6 +5458,7 @@
                     .map((result) => [Number(result?.expected_index), result])
             );
             const displayText = String(getCurrentDisplayText() || items[currentIndex] || "");
+            let nextWordMarked = Boolean(data?.complete);
             let readableWordIndex = 0;
             readingWord.replaceChildren();
             displayText.split(/(\s+)/).forEach((part) => {
@@ -5435,6 +5475,10 @@
                     word.classList.add("is-wrong");
                 } else if (String(result?.result || "").toLowerCase() === "correct") {
                     word.classList.add("is-read");
+                } else if (isCrla && !nextWordMarked) {
+                    word.classList.add("is-current");
+                    markCrlaNextWord(word);
+                    nextWordMarked = true;
                 }
                 word.textContent = part;
                 word.dataset.sentenceTargetIndex = String(readableWordIndex);
@@ -5528,6 +5572,7 @@
                         }
                     } else if (range[0] <= currentSyllableIndex && currentSyllableIndex < range[1]) {
                         span.classList.add("is-current");
+                        markCrlaNextWord(span);
                     }
                     span.textContent = part;
                     storyDebug({
@@ -5638,6 +5683,10 @@
                     renderRhymesWordGuide(safeText, 0);
                 } else if (shell.classList.contains('reader-phrase')) {
                     renderPhraseWordGuide(safeText, 0);
+                } else if (isCrla && mode === "sentence") {
+                    renderSentenceWordResults({ word_results: sentenceWordResults[currentIndex] || [] });
+                } else if (isCrla && mode === "paragraph") {
+                    renderCrlaStoryStartHint();
                 } else {
                     readingWord.textContent = bodyText || displayText;
                 }

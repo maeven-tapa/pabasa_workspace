@@ -4043,6 +4043,50 @@ class ReadingMatcherTests(TestCase):
         result = align_story_transcript("Kapana-panabik", "Kapanapanabik", language_code="fil-PH")
         self.assertEqual(result["miscues"], 1)
 
+    def test_crla_story_accepts_apostrophe_and_hyphen_variants_as_one_word(self):
+        for target in ("iba't-ibang", "iba’t-ibang"):
+            for spoken in ("iba't-ibang", "ibat-ibang", "ibat ibang", "ibatibang", "iba't ibang", "iba t ibang"):
+                for cursor in (None, 1):
+                    with self.subTest(target=target, spoken=spoken, cursor=cursor):
+                        result = align_story_transcript(
+                            f"May {target} tao.", f"{spoken} tao" if cursor else f"May {spoken} tao",
+                            language_code="fil-PH", start_word_index=cursor, crla_story_reading=True,
+                        )
+                        self.assertEqual(result["total_words"], 3)
+                        self.assertEqual(result["correct_words"], 2 if cursor else 3)
+                        self.assertEqual(result["miscues"], 0)
+                        self.assertEqual([word["expected_index"] for word in result["word_results"]],
+                                         [1, 2] if cursor else [0, 1, 2])
+
+    def test_crla_story_apostrophe_variants_preserve_separate_target_words(self):
+        result = align_story_transcript("Iba't ibang tao", "ibat ibang tao", language_code="fil-PH", crla_story_reading=True)
+        self.assertEqual(result["correct_words"], 3)
+        self.assertEqual(result["miscues"], 0)
+
+    def test_crla_story_punctuation_variants_advance_the_reading_cursor(self):
+        target = "May iba't-ibang tao."
+        initial = analyze_reading(target, 0, "May", "fil-PH", crla_story_reading=True)
+        for spoken in ("ibat-ibang", "ibat ibang", "iba't ibang", "iba t ibang"):
+            with self.subTest(spoken=spoken):
+                result = analyze_reading(target, initial["current_syllable_index"], spoken,
+                                         "fil-PH", crla_story_reading=True)
+                self.assertEqual(result["current_word_index"], 2)
+                self.assertEqual(result["next_word"], "tao.")
+                self.assertFalse(result["complete"])
+                self.assertGreater(result["matched"], 0)
+
+    def test_story_apostrophe_tolerance_is_opt_in(self):
+        result = align_story_transcript("iba't-ibang", "ibat ibang", language_code="fil-PH")
+        self.assertEqual(result["correct_words"], 0)
+
+    def test_crla_story_punctuation_variants_do_not_accept_different_letters(self):
+        for spoken in ("iba-ibang", "ibat-ibeng", "ibat ibangx", "ibat maling tao"):
+            with self.subTest(spoken=spoken):
+                result = align_story_transcript("iba't-ibang tao", spoken, language_code="fil-PH", crla_story_reading=True)
+                self.assertGreater(result["miscues"], 0)
+                self.assertFalse(any(word["expected_index"] == 0 and word["result"] == "correct"
+                                     for word in result["word_results"]))
+
     def test_story_alignment_groups_two_token_tatay_miscue_without_resolving_may(self):
         target = "Iba't ibang tao ang sumasakay sa jeepney ni Tatay. May mga estudyante."
         result = align_story_transcript(

@@ -892,17 +892,10 @@ def _story_words_are_equivalent(expected_word, recognized_word):
 
 
 def _crla_story_words_are_equivalent(expected_word, recognized_word):
-    """Match only an official CRLA Story word with its spoken hyphen omitted."""
-    if _story_words_are_equivalent(expected_word, recognized_word):
-        return True
-    expected = _normalize_story_word_text(expected_word)
-    recognized = _normalize_story_word_text(recognized_word)
-    return bool(
-        expected
-        and recognized
-        and expected.count("-") == 1
-        and recognized == expected.replace("-", "")
-    )
+    """Ignore spoken apostrophe/hyphen formatting, while requiring exact letters."""
+    expected = _normalize_story_word_text(expected_word).replace("'", "").replace("-", "")
+    recognized = _normalize_story_word_text(recognized_word).replace("'", "").replace("-", "")
+    return bool(expected and recognized and expected == recognized)
 
 
 def _story_two_token_candidate(expected_word, first_token, second_token):
@@ -932,7 +925,13 @@ def _story_two_token_candidate(expected_word, first_token, second_token):
     }
 
 
-def _story_fragment_candidate(expected_word, tokens, language_code):
+def _story_fragment_candidate(expected_word, tokens, language_code, crla_story_reading=False):
+    # A printed contraction/compound remains one scored word even when STT
+    # emits its parts with spaces ("iba't-ibang" -> "ibat ibang"). Only exact
+    # reconstructed letters qualify; unrelated split words stay miscues.
+    if (crla_story_reading and any(mark in expected_word for mark in ("'", "-"))
+            and _crla_story_words_are_equivalent(expected_word, "".join(tokens))):
+        return {"combined": "".join(tokens), "correct": True, "cost": 0}
     if len(tokens) == 2:
         return _story_two_token_candidate(expected_word, *tokens)
     # Filipino STT can split the final consonant cluster off a syllable:
@@ -1044,7 +1043,7 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
             for width in (2, 3):
                 if j < width:
                     continue
-                multi_token = _story_fragment_candidate(expected_word, recognized_words[j - width:j], language_code)
+                multi_token = _story_fragment_candidate(expected_word, recognized_words[j - width:j], language_code, crla_story_reading)
                 if multi_token:
                     candidates.append(dp[i - 1][j - width] + multi_token["cost"])
             dp[i][j] = min(candidates)
@@ -1064,7 +1063,7 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
             if i <= 0 or j < width:
                 continue
             expected_word = expected_words[i - 1]
-            multi_token = _story_fragment_candidate(expected_word, recognized_words[j - width:j], language_code)
+            multi_token = _story_fragment_candidate(expected_word, recognized_words[j - width:j], language_code, crla_story_reading)
             if multi_token and dp[i][j] == dp[i - 1][j - width] + multi_token["cost"]:
                 word_results.append({
                     "expected": expected_word,
@@ -1174,8 +1173,8 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
     }
 
 
-def analyze_reading(target_text, current_syllable_index=0, transcript="", language_code="en-US", strict_rhyme=False, pronunciation_aliases=None):
-    matcher = ReadingMatcher(target_text, current_syllable_index, language_code, strict_rhyme=strict_rhyme, pronunciation_aliases=pronunciation_aliases)
+def analyze_reading(target_text, current_syllable_index=0, transcript="", language_code="en-US", strict_rhyme=False, pronunciation_aliases=None, crla_story_reading=False):
+    matcher = ReadingMatcher(target_text, current_syllable_index, language_code, strict_rhyme=strict_rhyme, pronunciation_aliases=pronunciation_aliases, crla_story_reading=crla_story_reading)
     matched = matcher.advance_for_spoken_text(transcript)
     return matcher.payload(matched, transcript)
 
@@ -1422,10 +1421,11 @@ def analyze_sentence_reading(target_text, transcript="", prior_results=None, lan
 
 
 class ReadingMatcher:
-    def __init__(self, target_text, current_syllable_index=0, language_code="en-US", strict_rhyme=False, pronunciation_aliases=None):
+    def __init__(self, target_text, current_syllable_index=0, language_code="en-US", strict_rhyme=False, pronunciation_aliases=None, crla_story_reading=False):
         self.target_text = target_text or ""
         self.language_code = language_code or "en-US"
         self.strict_rhyme = bool(strict_rhyme)
+        self.crla_story_reading = bool(crla_story_reading)
         self.pronunciation_aliases = pronunciation_aliases or {}
         self.words = self.readable_words(self.target_text)
         self.current_syllable_index = max(0, int(current_syllable_index or 0))
@@ -1468,6 +1468,16 @@ class ReadingMatcher:
             target_word = self.normalize_word(self.words[target_index])
             matched_span = None
             for candidate_index in range(spoken_index, len(spoken_words)):
+                if self.crla_story_reading:
+                    source_word = _normalize_story_word_text(self.words[target_index])
+                    if any(mark in source_word for mark in ("'", "-")):
+                        for width in (2, 3):
+                            fragment = spoken_words[candidate_index:candidate_index + width]
+                            if len(fragment) == width and _crla_story_words_are_equivalent(source_word, "".join(fragment)):
+                                matched_span = (candidate_index, candidate_index + width)
+                                break
+                    if matched_span is not None:
+                        break
                 if self.words_match(spoken_words[candidate_index], target_word):
                     matched_span = (candidate_index, candidate_index + 1)
                     break
@@ -1519,6 +1529,8 @@ class ReadingMatcher:
         return best_index
 
     def words_match(self, spoken_word, target_word):
+        if self.crla_story_reading and _crla_story_words_are_equivalent(target_word, spoken_word):
+            return True
         if spoken_word == target_word:
             return True
         if target_word in self.pronunciation_aliases and spoken_word in self.pronunciation_aliases[target_word]:
