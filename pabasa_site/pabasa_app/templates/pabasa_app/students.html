@@ -976,7 +976,7 @@
     .crla-finalize-tooltip:hover::after, .crla-finalize-tooltip:focus-within::after { opacity:1; transform:translate(-50%, 0); }
     .crla-export-tooltip { display:inline-flex; position:relative; }
     .crla-export-tooltip::after { background:#172033; border-radius:8px; bottom:calc(100% + 9px); color:#fff; content:attr(data-tooltip); font-size:.78rem; font-weight:600; left:50%; line-height:1.35; opacity:0; padding:.55rem .7rem; pointer-events:none; position:absolute; transform:translate(-50%, 4px); transition:opacity .15s ease, transform .15s ease; white-space:normal; width:270px; z-index:20; }
-    .crla-export-tooltip:hover::after, .crla-export-tooltip:focus-within::after { opacity:1; transform:translate(-50%, 0); }
+    .crla-export-tooltip.is-disabled:hover::after, .crla-export-tooltip.is-disabled:focus-within::after { opacity:1; transform:translate(-50%, 0); }
     .crla-finalization-actions .student-export-btn { background:rgba(239,248,252,.95); border:1px solid rgba(22,95,143,.24); border-radius:12px; box-shadow:0 8px 18px rgba(15,23,42,.05); color:var(--dash-primary-deep); margin-left:0; padding:.5rem 1rem; }
     .crla-finalization-actions .student-export-btn:hover:not([aria-disabled="true"]) { background:rgba(226,242,248,.98); border-color:rgba(22,95,143,.38); color:var(--dash-primary-deep); transform:translateY(-1px); }
     .crla-finalization-actions .student-export-btn[aria-disabled="true"] { background:#e5e7eb; border-color:#cbd5e1; box-shadow:none; color:#7b8794; cursor:not-allowed; opacity:.82; pointer-events:none; }
@@ -2345,8 +2345,16 @@ function setStudentExportState(students) {
         exportBtn.tabIndex = canExport ? 0 : -1;
         exportBtn.setAttribute('aria-label', `Export CRLA Result. ${exportNotice}`);
         if (exportTooltip) {
-            exportTooltip.dataset.tooltip = exportNotice;
-            exportTooltip.setAttribute('aria-label', exportNotice);
+            exportTooltip.classList.toggle('is-disabled', !canExport);
+            if (canExport) {
+                delete exportTooltip.dataset.tooltip;
+                exportTooltip.removeAttribute('aria-label');
+                exportTooltip.removeAttribute('tabindex');
+            } else {
+                exportTooltip.dataset.tooltip = exportNotice;
+                exportTooltip.setAttribute('aria-label', exportNotice);
+                exportTooltip.setAttribute('tabindex', '0');
+            }
         }
     }
 }
