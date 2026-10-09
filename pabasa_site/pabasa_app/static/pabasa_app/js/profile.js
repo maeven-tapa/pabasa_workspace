@@ -38,6 +38,9 @@ function initProfilePage() {
     if (teacherEditModal && teacherEditModal.parentElement !== document.body) {
         document.body.appendChild(teacherEditModal);
     }
+    if (teacherEmailVerificationModal && teacherEmailVerificationModal.parentElement !== document.body) {
+        document.body.appendChild(teacherEmailVerificationModal);
+    }
     const profileUsername = JSON.parse(document.getElementById("profileUsername")?.textContent || "\"user\"");
     const profileFullName = JSON.parse(document.getElementById("profileFullName")?.textContent || '""');
     const profileEmail = JSON.parse(document.getElementById("profileEmail")?.textContent || "\"\"");
