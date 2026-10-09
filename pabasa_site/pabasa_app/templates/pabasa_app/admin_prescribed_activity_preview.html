@@ -1,0 +1,9 @@
+{% extends "pabasa_app/admin_base.html" %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+  <div><h1 class="h5 fw-bold mb-1">Session {{ preview_activity.session_number }} · {{ preview_activity.label }}</h1><p class="text-secondary small mb-0">{{ preview_activity.title }} · Admin preview</p></div>
+  <a class="btn btn-outline-primary" href="{% url 'admin_prescribed_materials' %}"><i class="bi bi-arrow-left me-1"></i>Back to sessions</a>
+</div>
+<p class="small text-secondary">This is the existing student activity. Previewing it does not save student work or create a material copy.</p>
+<iframe title="{{ preview_activity.label }} student screen" src="{{ preview_screen_url }}" allow="microphone; autoplay" style="background:#fff;border:1px solid #dcebea;border-radius:18px;height:calc(100dvh - 235px);min-height:540px;width:100%;"></iframe>
+{% endblock %}

@@ -163,7 +163,7 @@
             ""
         );
         const viewMode = urlParams.get("viewMode");
-        const adminPreviewReturnUrl = window.__PABASA_ADMIN_PREVIEW_RETURN__ || urlParams.get("admin_return") || "";
+        const adminPreviewReturnUrl = window.__PABASA_ADMIN_PREVIEW_RETURN__ || "";
         const isAssistMode = urlParams.get("assist") === "1";
         const assistToken = urlParams.get("assist_token") || "";
         const sentenceDebugStorageKey = "pabasaCrlaSentenceDebug";
@@ -223,7 +223,7 @@
             if (isAdminPreview && testMeta) {
                 const previewBadge = document.createElement("span");
                 previewBadge.style.cssText = "background:rgba(31,111,139,.12);color:var(--accent-deep);padding:2px 8px;border-radius:6px;font-size:.7em;vertical-align:middle;margin-left:8px;";
-                previewBadge.textContent = `Admin preview · ${window.__PABASA_PREVIEW_STUDENT_NAME__ || "selected student"}`;
+                previewBadge.textContent = "Admin CRLA preview";
                 testMeta.append(previewBadge);
             }
         };
@@ -696,7 +696,7 @@
                 if (!["completed", "early_completed_words", "learner_experience"].includes(savedState.stage)) {
                     return Promise.resolve({ success: true, preview_only: true, student_end_assessment_state: savedState });
                 }
-                return fetch(`/api/admin/crla-preview/score/?admin_student_id=${encodeURIComponent(urlParams.get("admin_student_id") || "")}`, {
+                return fetch("/api/admin/crla-preview/score/", {
                     method: "POST", credentials: "same-origin",
                     headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
                     body: JSON.stringify(savedState),
@@ -2167,7 +2167,7 @@
                     : [];
             const normalizedItems = originalItems.map(normalizeDisplayItem).map(item => String(item || '').trim()).filter(Boolean);
             if (material.content_json && material.content_json.randomize_order && normalizedItems.length > 0) {
-                const seedSource = `${String(material.raw_id || material.id || '')}|${String(window.__PABASA_PREVIEW_STUDENT_NAME__ || window.PABASA_USER_NAME || window.localStorage.getItem('pabasaUserName') || window.PABASA_USER_EMAIL || '').toLowerCase().trim()}`;
+                const seedSource = `${String(material.raw_id || material.id || '')}|${String(window.PABASA_USER_NAME || window.localStorage.getItem('pabasaUserName') || window.PABASA_USER_EMAIL || '').toLowerCase().trim()}`;
                 const seed = hashString(seedSource);
                 return stableShuffle(normalizedItems, seed);
             }
@@ -7659,7 +7659,7 @@
             clearStoryReadingTimer();
             if (isAdminPreview) {
                 sessionStorage.removeItem(adminPreviewStateKey);
-                window.location.assign(adminPreviewReturnUrl || "/dashboard/admin/courses/prescribed/");
+                window.location.assign(adminPreviewReturnUrl || "/dashboard/admin/official-reading-assessments/");
                 return;
             }
             if (isAssistMode && window.parent && window.parent !== window) {

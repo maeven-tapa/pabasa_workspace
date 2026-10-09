@@ -13,7 +13,7 @@
       <p class="text-secondary mb-0">{{ assessment_type_label }} · {{ system_status_label }} · {{ material_status_label }}</p>
     </div>
     <div class="d-flex flex-wrap gap-2">
-      <a class="btn btn-primary fw-bold" href="{% url 'admin_official_reading_assessment_test' material.id %}"><i class="bi bi-shield-check me-1"></i>Test student launch</a>
+      <a class="btn btn-primary fw-bold" href="{% url 'admin_official_reading_assessment_test' material.id %}"><i class="bi bi-shield-check me-1"></i>Test CRLA</a>
       {% if not material.is_active %}
       <form method="post" action="{% url 'admin_official_reading_assessment_unarchive' material.id %}">
         {% csrf_token %}

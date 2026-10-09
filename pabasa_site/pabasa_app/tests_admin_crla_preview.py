@@ -15,7 +15,6 @@ class AdminCrlaPreviewTests(SimpleTestCase):
 
     def setUp(self):
         self.factory = RequestFactory()
-        self.student = SimpleNamespace(id=48, custom_id='G2-0005')
         self.material = SimpleNamespace(id=12, is_active=True, status='published')
 
     def admin_request(self, request):
@@ -23,38 +22,45 @@ class AdminCrlaPreviewTests(SimpleTestCase):
         request._dont_enforce_csrf_checks = True
         return request
 
-    def test_resolver_returns_the_original_selected_record(self):
-        with patch.object(views, '_get_official_reading_material', return_value=self.material), \
-                patch.object(views, '_official_material_phase', return_value='pretest'), \
-                patch.object(views, '_official_reading_assessments_for_student', return_value=[{'id': 12}]) as selector:
-            self.assertIs(views._admin_crla_material_for_student(self.student, 12), self.material)
-            selector.assert_called_once_with(self.student, {'available': True, 'assessment_type': 'pretest'})
+    def test_resolver_returns_original_published_record(self):
+        with patch.object(views, '_get_official_reading_material', return_value=self.material) as resolver:
+            self.assertIs(views._admin_published_crla(12), self.material)
+        resolver.assert_called_once_with(12)
 
-    def test_resolver_rejects_another_version(self):
-        with patch.object(views, '_get_official_reading_material', return_value=self.material), \
-                patch.object(views, '_official_material_phase', return_value='pretest'), \
-                patch.object(views, '_official_reading_assessments_for_student', return_value=[{'id': 99}]):
-            self.assertIsNone(views._admin_crla_material_for_student(self.student, 12))
+    def test_resolver_rejects_missing_inactive_or_unpublished_records(self):
+        for material in (None, SimpleNamespace(is_active=False, status='published'),
+                         SimpleNamespace(is_active=True, status='draft')):
+            with self.subTest(material=material), patch.object(views, '_get_official_reading_material', return_value=material):
+                self.assertIsNone(views._admin_published_crla(12))
 
-    def test_launch_uses_original_id_and_shared_student_reader(self):
-        request = self.admin_request(self.factory.get('/test/launch/', {'student_id': 'G2-0005'}))
-        with patch.object(views, '_admin_selected_student', return_value=self.student), \
-                patch.object(views, '_admin_crla_material_for_student', return_value=self.material):
-            response = views.admin_official_reading_assessment_test_launch(request, 12)
+    def test_test_button_uses_original_record_without_student_selection(self):
+        request = self.admin_request(self.factory.get('/test/'))
+        with patch.object(views, '_admin_published_crla', return_value=self.material) as resolver:
+            response = views.admin_official_reading_assessment_test(request, 12)
+        resolver.assert_called_once_with(12)
         url = urlsplit(response.url)
         self.assertEqual(url.path, '/dashboard/assessment/reading_ui/word/')
         query = parse_qs(url.query)
         self.assertEqual(query['official_assessment_id'], ['12'])
-        self.assertEqual(query['admin_student_id'], ['48'])
         self.assertEqual(query['admin_preview'], ['1'])
         self.assertTrue(query['admin_preview_token'][0])
+        self.assertNotIn('admin_student_id', query)
 
-    def test_launch_rejects_a_selection_mismatch(self):
-        request = self.admin_request(self.factory.get('/test/launch/'))
-        with patch.object(views, '_admin_selected_student', return_value=self.student), \
-                patch.object(views, '_admin_crla_material_for_student', return_value=None):
+    def test_launch_rejects_unavailable_record(self):
+        request = self.admin_request(self.factory.get('/test/'))
+        with patch.object(views, '_admin_published_crla', return_value=None):
             with self.assertRaises(PermissionDenied):
-                views.admin_official_reading_assessment_test_launch(request, 12)
+                views.admin_official_reading_assessment_test(request, 12)
+
+    def test_score_without_student_uses_existing_published_record(self):
+        request = self.admin_request(self.factory.post(
+            '/api/admin/crla-preview/score/',
+            json.dumps({'material_id': 12, 'stage': 'completed', 'part1_total_score': 6}),
+            content_type='application/json',
+        ))
+        with patch.object(views, '_admin_published_crla', return_value=self.material):
+            response = views.admin_crla_preview_score(request)
+        self.assertEqual(json.loads(response.content)['reader_classification'], 'Low Emerging Reader')
 
     def test_score_uses_student_rules_without_persisting(self):
         payload = {
@@ -64,11 +70,10 @@ class AdminCrlaPreviewTests(SimpleTestCase):
             'classification': 'Forged browser label', 'story_read_percent': 100,
         }
         request = self.admin_request(self.factory.post(
-            '/api/admin/crla-preview/score/?admin_student_id=48',
+            '/api/admin/crla-preview/score/',
             json.dumps(payload), content_type='application/json',
         ))
-        with patch.object(views, '_admin_selected_student', return_value=self.student), \
-                patch.object(views, '_admin_crla_material_for_student', return_value=self.material):
+        with patch.object(views, '_admin_published_crla', return_value=self.material):
             response = views.admin_crla_preview_score(request)
         result = json.loads(response.content)
         profile = crla_part2_profile(100, 70, 30, 60, 4)
@@ -89,4 +94,27 @@ class AdminCrlaPreviewTests(SimpleTestCase):
         request.session = {'user_id': 48, 'user_role': 'student'}
         with patch.object(views, '_current_user', return_value=SimpleNamespace(role='student', is_archived=False)):
             with self.assertRaises(PermissionDenied):
-                views._admin_material_preview_context(request)
+                views._admin_crla_preview_context(request)
+
+    def test_preview_context_uses_same_official_record_on_all_reader_surfaces(self):
+        for surface in ('word', 'sentence', 'para'):
+            request = self.factory.get(f'/reader/{surface}/', {'admin_preview': '1', 'official_assessment_id': '12'})
+            with self.subTest(surface=surface), \
+                    patch.object(views, '_current_user', return_value=SimpleNamespace(role='admin', is_archived=False)), \
+                    patch.object(views, '_admin_published_crla', return_value=self.material) as resolver:
+                context = views._admin_crla_preview_context(request)
+            resolver.assert_called_once_with(12)
+            self.assertTrue(context['is_admin_preview'])
+            self.assertEqual(context['admin_preview_return_url'], '/dashboard/admin/official-reading-assessments/')
+
+    def test_preview_context_rejects_regular_material_reader(self):
+        request = self.factory.get('/reader/', {'admin_preview': '1', 'id': '12'})
+        with patch.object(views, '_current_user', return_value=SimpleNamespace(role='admin', is_archived=False)):
+            with self.assertRaises(PermissionDenied):
+                views._admin_crla_preview_context(request)
+
+    def test_score_rejects_unavailable_record(self):
+        request = self.admin_request(self.factory.post('/api/admin/crla-preview/score/',
+            json.dumps({'material_id': 12}), content_type='application/json'))
+        with patch.object(views, '_admin_published_crla', return_value=None):
+            self.assertEqual(views.admin_crla_preview_score(request).status_code, 403)

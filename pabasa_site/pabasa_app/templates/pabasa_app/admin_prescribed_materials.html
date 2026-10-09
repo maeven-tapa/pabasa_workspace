@@ -1,69 +1,37 @@
 {% extends "pabasa_app/admin_base.html" %}
 {% block content %}
 <style>
-  .admin-prescribed-shell{display:grid;gap:1rem}
-  .admin-prescribed-card{background:#fff;border:1px solid rgba(16,70,110,.1);border-radius:22px;box-shadow:0 14px 32px rgba(16,70,110,.07);padding:1.1rem 1.2rem}
-  .admin-prescribed-intro{background:linear-gradient(135deg,#eef8ff,#f7fbff);border-color:rgba(31,111,139,.16)}
-  .admin-prescribed-material{align-items:center;display:flex;gap:1rem;justify-content:space-between}
-  .admin-prescribed-material + .admin-prescribed-material{border-top:1px solid #e8eef4;margin-top:1rem;padding-top:1rem}
-  .admin-prescribed-meta{color:#64748b;font-size:.86rem}
-  .admin-prescribed-code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.84rem}
-  @media (max-width:700px){.admin-prescribed-material{align-items:flex-start;flex-direction:column}.admin-prescribed-material .btn{width:100%}}
+  .prescribed-session-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1rem}
+  .prescribed-session-folder{background:linear-gradient(145deg,#fffaf0,#f2fbf5);border:1px solid rgba(31,111,139,.16);border-radius:24px;box-shadow:0 8px 20px rgba(31,111,139,.10);color:#16465d;cursor:pointer;display:grid;gap:.55rem;min-height:160px;padding:1rem;text-align:center;width:100%}
+  .prescribed-session-folder:hover,.prescribed-session-folder:focus-visible{border-color:#1f6f8b;box-shadow:0 13px 26px rgba(31,111,139,.16)}
+  .prescribed-session-folder .folder-icon{font-size:2.8rem}.prescribed-session-folder strong{font-size:1.1rem}.prescribed-session-folder small{background:#edf5ee;border-radius:99px;padding:.3rem .6rem}
+  .prescribed-session-dialog{border:0;border-radius:24px;box-shadow:0 24px 70px rgba(16,70,110,.25);max-height:85vh;padding:1.2rem;width:min(760px,92vw)}
+  .prescribed-session-dialog::backdrop{background:rgba(15,40,55,.5)}
+  .prescribed-gawain-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem;margin-top:1rem}
+  .prescribed-gawain{background:#f7fbf7;border:1px solid #dcebea;border-radius:16px;color:#16465d;display:grid;gap:.4rem;padding:1rem;text-decoration:none}
+  .prescribed-gawain:hover{background:#eaf5ef;border-color:#1f6f8b}.prescribed-gawain span{color:#53707b;font-size:.88rem}
+  @media(max-width:1000px){.prescribed-session-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:600px){.prescribed-session-grid,.prescribed-gawain-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.prescribed-session-folder{min-height:135px}}
 </style>
-
-<div class="admin-prescribed-shell">
-  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
-    <div>
-      <a class="btn btn-sm btn-outline-secondary mb-3" href="{% url 'admin_courses' %}"><i class="bi bi-arrow-left me-1"></i>Back to Courses &amp; Materials</a>
-      <h1 class="h4 fw-bold mb-1">View prescribed materials</h1>
-      <p class="text-secondary mb-0">Open the same material record and reading surface that a selected student receives.</p>
+<a class="btn btn-sm btn-outline-secondary mb-3" href="{% url 'admin_courses' %}"><i class="bi bi-arrow-left me-1"></i>Back to Courses &amp; Materials</a>
+<h1 class="h4 fw-bold">Prescribed Materials</h1>
+<p class="text-secondary">Choose a session, then a Gawain to view the same activity students use. No student ID is needed.</p>
+<div class="prescribed-session-grid" id="adminPrescribedSessions">
+  {% for session in prescribed_sessions %}
+  <button class="prescribed-session-folder" type="button" data-session-dialog="prescribedSession{{ session.number }}">
+    <span class="folder-icon" aria-hidden="true">📁</span><strong>Session {{ session.number }}</strong><small>{{ session.activities|length }} activities</small>
+  </button>
+  <dialog class="prescribed-session-dialog" id="prescribedSession{{ session.number }}" aria-labelledby="sessionTitle{{ session.number }}">
+    <div class="d-flex justify-content-between align-items-center gap-3"><h2 class="h5 fw-bold mb-0" id="sessionTitle{{ session.number }}">📁 Session {{ session.number }}</h2><button class="btn btn-outline-secondary btn-sm" type="button" data-close-session aria-label="Close session">✕</button></div>
+    <div class="prescribed-gawain-grid">
+      {% for activity in session.activities %}
+      <a class="prescribed-gawain" href="{{ activity.launch_url }}" data-activity-key="{{ activity.activity_key }}"><strong>{{ activity.label }}</strong><span>{{ activity.title }}</span></a>
+      {% empty %}<p class="text-secondary">No prescribed activities are available in this session.</p>{% endfor %}
     </div>
-  </div>
-
-  <section class="admin-prescribed-card admin-prescribed-intro">
-    <div class="d-flex gap-3 align-items-start">
-      <div class="text-primary fs-3" aria-hidden="true"><i class="bi bi-shield-check"></i></div>
-      <div><strong>Read-only admin preview</strong><p class="mb-0 text-secondary small">Completion results are shown for checking the activity. The preview does not save student progress, create an assessment result, send notifications, or change the selected student.</p></div>
-    </div>
-  </section>
-
-  <section class="admin-prescribed-card">
-    <div class="small text-uppercase fw-bold text-secondary mb-2">Choose student</div>
-    <form method="get" class="row g-2 align-items-end">
-      <div class="col-12 col-md-6 col-lg-4">
-        <label class="form-label fw-bold" for="prescribedStudentId">Student PABASA ID</label>
-        <input class="form-control" id="prescribedStudentId" name="student_id" value="{{ student_id_query|default:'' }}" list="prescribedStudentOptions" placeholder="G2-0005" required>
-        <datalist id="prescribedStudentOptions">
-          {% for option in student_options %}<option value="{{ option.custom_id }}">{{ option.first_name }} {{ option.last_name }}</option>{% endfor %}
-        </datalist>
-      </div>
-      <div class="col-auto"><button class="btn btn-primary fw-bold" type="submit"><i class="bi bi-search me-1"></i>Show materials</button></div>
-    </form>
-  </section>
-
-  {% if student_id_query and not selected_student %}
-  <div class="alert alert-danger rounded-4">No active student account matched <span class="admin-prescribed-code">{{ student_id_query }}</span>.</div>
-  {% endif %}
-
-  {% if selected_student %}
-  <section class="admin-prescribed-card">
-    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
-      <div><div class="small text-uppercase fw-bold text-secondary">Selected student</div><h2 class="h5 fw-bold mb-0">{{ selected_student.custom_id }} · {{ selected_student.first_name }} {{ selected_student.last_name }}</h2></div>
-      <span class="badge rounded-pill text-bg-success">Using the student's assigned records</span>
-    </div>
-    {% for material in prescribed_materials %}
-    <article class="admin-prescribed-material">
-      <div>
-        <h3 class="h6 fw-bold mb-1">{{ material.title|default:'Untitled material' }}</h3>
-        <div class="admin-prescribed-meta">{{ material.get_item_type_display }} · {{ material.language|default:'Language not set' }} · Material <span class="admin-prescribed-code">{{ material.id }}</span></div>
-        {% if material.section %}<div class="admin-prescribed-meta">Section: {{ material.section.class_name }}</div>{% endif %}
-      </div>
-      <a class="btn btn-primary fw-bold flex-shrink-0" href="{% url 'admin_prescribed_material_launch' material.id %}?student_id={{ selected_student.custom_id|urlencode }}"><i class="bi bi-play-circle me-1"></i>Open student view</a>
-    </article>
-    {% empty %}
-    <div class="text-secondary py-3">This student has no active prescribed reading materials available right now.</div>
-    {% endfor %}
-  </section>
-  {% endif %}
+  </dialog>
+  {% endfor %}
 </div>
+<script>
+  document.querySelectorAll('[data-session-dialog]').forEach(button=>button.addEventListener('click',()=>document.getElementById(button.dataset.sessionDialog).showModal()));
+  document.querySelectorAll('.prescribed-session-dialog').forEach(dialog=>{dialog.querySelector('[data-close-session]').addEventListener('click',()=>dialog.close());dialog.addEventListener('click',event=>{if(event.target===dialog){const bounds=dialog.getBoundingClientRect();if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)dialog.close();}});});
+</script>
 {% endblock %}

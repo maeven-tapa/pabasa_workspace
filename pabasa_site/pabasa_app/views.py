@@ -1796,7 +1796,12 @@ def login_required(role=None):
                 if is_ajax:
                     return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
                 return redirect('auth')
-            if role and request.session.get('user_role') != role:
+            admin_activity_preview = (
+                request.method == 'GET' and role == 'student'
+                and getattr(request, '_admin_prescribed_preview', False)
+                and request.session.get('user_role') == 'admin'
+            )
+            if role and request.session.get('user_role') != role and not admin_activity_preview:
                 if is_ajax:
                     return JsonResponse({'success': False, 'error': 'Forbidden: insufficient role'}, status=403)
                 return redirect('auth')
@@ -8063,110 +8068,120 @@ def admin_courses(request):
     return render(request, 'pabasa_app/admin_courses.html', _admin_materials_context(request, 'Courses'))
 
 
-def _admin_selected_student(request, parameter='student_id'):
-    """Resolve the active student selected by an admin preview request."""
-    requested_student = str(request.GET.get(parameter) or '').strip()
-    if not requested_student:
-        return None
-    students = User.objects.filter(role='student', is_archived=False)
-    selected_student = None
-    if requested_student.isdigit():
-        selected_student = students.filter(pk=int(requested_student)).first()
-    if selected_student is None:
-        selected_student = students.filter(custom_id__iexact=requested_student).first()
-    return selected_student
-
-
-def _admin_prescribed_material_queryset(student):
-    """Return the exact regular materials available to a selected student."""
-    if not student:
-        return Material.objects.none()
-    return _assessment_materials_for_student(student).filter(
-        assessment_kind='regular',
-    ).select_related('section').distinct()
-
-
-def _admin_crla_material_for_student(student, material_id):
-    """Resolve an existing official record through the student's selection path."""
+def _admin_published_crla(material_id):
+    """Open the existing published CRLA selected in the admin list."""
     material = _get_official_reading_material(material_id)
-    if not student or not material or not material.is_active or material.status != 'published':
-        return None
-    phase = _official_material_phase(material)
-    payloads = _official_reading_assessments_for_student(
-        student, {'available': True, 'assessment_type': phase},
-    )
-    return material if any(payload.get('id') == material.id for payload in payloads) else None
+    return material if material and material.is_active and material.status == 'published' else None
 
 
-def _admin_material_preview_context(request):
-    """Authorize a preview without impersonating or modifying the learner."""
+def _admin_crla_preview_context(request):
+    """Authorize the shared CRLA reader without modifying student work."""
     if request.GET.get('admin_preview') != '1':
         return {}
     admin = _current_user(request)
     if not admin or admin.role != 'admin' or admin.is_archived:
         raise PermissionDenied('Admin preview access is required.')
-    student = _admin_selected_student(request, 'admin_student_id')
     _, official_id = _parse_prefixed_id(request.GET.get('official_assessment_id'))
-    if official_id:
-        material = _admin_crla_material_for_student(student, official_id)
-        return_route = reverse('admin_official_reading_assessment_test', args=[official_id])
-    else:
-        _, material_id = _parse_prefixed_id(request.GET.get('id'))
-        material = _admin_prescribed_material_queryset(student).filter(pk=material_id).first()
-        return_route = reverse('admin_prescribed_materials')
-    if not student or not material:
-        raise PermissionDenied('This material is not selected by the student assessment path.')
+    if not official_id or not _admin_published_crla(official_id):
+        raise PermissionDenied('This official CRLA is not available for preview.')
     return {
         'is_admin_preview': True,
-        'admin_preview_student_name': _display_user_name(student),
-        'admin_preview_student_id': student.id,
-        'admin_preview_return_url': f"{return_route}?{urlencode({'student_id': student.custom_id or student.id})}",
+        'admin_preview_return_url': reverse('admin_official_reading_assessments'),
     }
 
 
 @admin_required
 def admin_prescribed_materials(request):
-    """Let an admin open a student's real prescribed materials read-only."""
-    selected_student = _admin_selected_student(request)
-    materials = _admin_prescribed_material_queryset(selected_student).order_by('-created_at', 'title')
+    """Show the same prescribed catalog and session grouping as the student."""
     context = _admin_context(request, 'Prescribed Materials', [])
-    context.update({
-        'selected_student': selected_student,
-        'student_id_query': str(request.GET.get('student_id') or '').strip(),
-        'student_options': User.objects.filter(
-            role='student', is_archived=False,
-        ).only('id', 'custom_id', 'first_name', 'last_name').order_by('custom_id')[:500],
-        'prescribed_materials': materials,
-    })
+    context['prescribed_sessions'] = _admin_prescribed_sessions()
     return render(request, 'pabasa_app/admin_prescribed_materials.html', context)
 
 
-@admin_required
-def admin_prescribed_material_launch(request, material_id):
-    """Launch the selected student's exact material in the shared student reader."""
-    student = _admin_selected_student(request)
-    material = _admin_prescribed_material_queryset(student).filter(pk=material_id).first()
-    if not student or not material:
-        return redirect('admin_prescribed_materials')
+def _admin_prescribed_sessions():
+    # Only navigation metadata belongs here. Activity content remains in the
+    # original student views and immutable prescribed catalog.
+    legacy_routes = {
+        'lesson-1-gawain-1': ('lesson_1_gawain_1_page', 'Alpabetong Pilipino'),
+        'lesson-2-gawain-1': ('salitang_magkatugma_page', 'Salitang Magkatugma'),
+        'lesson-3-gawain-1': ('lesson_3_gawain_1_page', 'Salitang Magkatugma'),
+        'lesson-3-gawain-2': ('lesson_3_gawain_2_page', 'Pagtutugma ng mga Salita'),
+        'lesson-4-gawain-1': ('lesson_4_gawain_1_page', 'Letrang Mm at Ss'),
+        'lesson-5-gawain-1': ('lesson_5_gawain_1_page', 'Letrang Aa'),
+        'lesson-6-gawain-1': ('lesson_6_gawain_1_page', 'Pagbuo ng mga Salita'),
+        'lesson-7-gawain-1': ('lesson_7_gawain_1_page', 'Letrang Ii'),
+    }
+    catalog = {item['activity_key']: item for item in active_prescribed_activities()}
+    for item in LEGACY_SESSION_PROGRESS_ACTIVITIES:
+        route, title = legacy_routes[item['activity_key']]
+        numbers = re.findall(r'\d+', item['activity_key'])
+        catalog[item['activity_key']] = dict(item, route_name=route, title=title,
+                                            lesson_number=int(numbers[0]), gawain_number=int(numbers[1]))
+    sessions = [{'number': number, 'activities': []} for number in range(1, 16)]
+    for key in _prescribed_activity_order():
+        activity = catalog.get(key)
+        if not activity or not 1 <= int(activity.get('session_number') or 0) <= 15:
+            continue
+        sessions[int(activity['session_number']) - 1]['activities'].append({
+            **activity,
+            'label': activity.get('section_display_label') or (
+                f"Lesson {activity['lesson_number']} · Gawain {activity.get('display_gawain_number', activity['gawain_number'])}"
+                if activity.get('lesson_number') else f"Activity {activity['gawain_number']}"
+            ),
+            'launch_url': reverse('admin_prescribed_activity_preview', args=[key]),
+        })
+    return sessions
 
-    enrollment = Enrollment.objects.filter(
-        student=student, is_active=True,
-    ).select_related('section').order_by('-joined_at', '-id').first()
-    content_json = material.content_json if isinstance(material.content_json, dict) else {}
-    content_text = material.content_text or material.prompt_text or ''
-    return_url = f"{reverse('admin_prescribed_materials')}?{urlencode({'student_id': student.custom_id or student.id})}"
-    reader_query = urlencode({
-        'id': material.id,
-        'test': material.title or 'Reading Material',
-        'section_id': getattr(enrollment, 'section_id', '') or '',
-        'content': content_text,
-        'item_type': material.item_type or 'word',
-        'language': material.language or content_json.get('language') or '',
-        'admin_preview': '1',
-        'admin_student_id': student.id,
-        'admin_return': return_url,
-    })
-    return redirect(f"{reverse('reading_word_page')}?{reader_query}")
+
+def _admin_prescribed_activity(activity_key):
+    return next((activity for session in _admin_prescribed_sessions()
+                 for activity in session['activities'] if activity['activity_key'] == activity_key), None)
+
+
+@admin_required
+def admin_prescribed_activity_preview(request, activity_key):
+    activity = _admin_prescribed_activity(activity_key)
+    if not activity:
+        raise PermissionDenied('This prescribed activity is unavailable.')
+    context = _admin_context(request, activity['label'], [])
+    context.update({'preview_activity': activity,
+                    'preview_screen_url': reverse('admin_prescribed_activity_screen', args=[activity_key])})
+    return render(request, 'pabasa_app/admin_prescribed_activity_preview.html', context)
+
+
+@admin_required
+@require_http_methods(['GET'])
+def admin_prescribed_activity_screen(request, activity_key):
+    """Render the actual student page, without selecting or modifying a student."""
+    activity = _admin_prescribed_activity(activity_key)
+    if not activity:
+        raise PermissionDenied('This prescribed activity is unavailable.')
+    request._admin_prescribed_preview = True
+    # Workbook preview is already supported by the shared student renderer.
+    request.GET = request.GET.copy()
+    request.GET['preview'] = '1'
+    if activity.get('route_name'):
+        response = globals()[activity['route_name']](request)
+    else:
+        response = prescribed_activity_page(request, activity_key)
+    if response.status_code == 200:
+        script = (f'<script>window.__PABASA_ADMIN_PRESCRIBED_KEY__={json.dumps(activity_key)};</script>'
+                  f'<script src="{static("pabasa_app/js/admin_prescribed_preview.js")}"></script>')
+        response.content = response.content.decode(response.charset).replace('<head>', '<head>' + script, 1)
+        response['Cache-Control'] = 'no-store'
+    return response
+
+
+@admin_required
+@csrf_protect
+@require_http_methods(['POST'])
+def admin_prescribed_workbook_event(request, activity_key):
+    """Evaluate the shared workbook interaction using browser-only preview state."""
+    activity = prescribed_activity(activity_key)
+    if not activity or activity.get('interaction') != 'prescribed_workbook':
+        return JsonResponse({'success': False, 'error': 'Workbook activity not found.'}, status=404)
+    request._admin_prescribed_preview = True
+    return _prescribed_workbook_activity_progress(request, activity_key, activity, None)
 
 
 def _admin_course_queryset():
@@ -11064,81 +11079,13 @@ def admin_official_reading_assessment_detail(request, material_id):
 
 @admin_required
 def admin_official_reading_assessment_test(request, material_id):
-    """Verify that a student would receive this exact official CRLA material.
-
-    This is deliberately read-only. It reuses the same material-selection helper
-    used by the student assessment hub instead of building a second preview path.
-    """
-    material = _get_official_reading_material(material_id)
+    """Open the existing published CRLA directly in the shared student reader."""
+    material = _admin_published_crla(material_id)
     if not material:
-        return redirect('admin_official_reading_assessments')
-
-    requested_student = str(request.GET.get('student_id') or '').strip()
-    selected_student = None
-    if requested_student:
-        student_query = User.objects.filter(role='student', is_archived=False)
-        if requested_student.isdigit():
-            selected_student = student_query.filter(pk=int(requested_student)).first()
-        if selected_student is None:
-            selected_student = student_query.filter(custom_id__iexact=requested_student).first()
-
-    phase = _official_material_phase(material)
-    verification = None
-    if selected_student:
-        selected_payloads = _official_reading_assessments_for_student(
-            selected_student,
-            {'available': True, 'assessment_type': phase},
-        ) if phase in {'pretest', 'midtest', 'posttest'} else []
-        selected_materials = [
-            {
-                'id': payload.get('id'),
-                'title': payload.get('title') or payload.get('official_title') or '',
-                'subject': payload.get('subject') or '',
-                'system_assessment_key': getattr(
-                    Material.objects.filter(pk=payload.get('id')).first(),
-                    'system_assessment_key',
-                    '',
-                ) if payload.get('id') else '',
-            }
-            for payload in selected_payloads
-        ]
-        exact_match = next((item for item in selected_materials if item['id'] == material.id), None)
-        verification = {
-            'passed': bool(
-                material.is_active
-                and str(material.status or '').strip().lower() == 'published'
-                and exact_match
-            ),
-            'phase': phase,
-            'exact_match': exact_match,
-            'selected_materials': selected_materials,
-        }
-
-    context = _official_assessment_detail_context(request, material)
-    context.update({
-        'selected_student': selected_student,
-        'student_id_query': requested_student,
-        'student_options': User.objects.filter(
-            role='student', is_archived=False,
-        ).only('id', 'custom_id', 'first_name', 'last_name').order_by('custom_id')[:500],
-        'test_phase': phase,
-        'test_material_launch_data': _official_reading_launch_data(material),
-        'student_launch_verification': verification,
-    })
-    return render(request, 'pabasa_app/admin_official_reading_assessment_test.html', context)
-
-
-@admin_required
-def admin_official_reading_assessment_test_launch(request, material_id):
-    """Open the real student CRLA record; never create a preview Material."""
-    student = _admin_selected_student(request)
-    material = _admin_crla_material_for_student(student, material_id)
-    if not material:
-        raise PermissionDenied('This official CRLA is not selected for the student.')
+        raise PermissionDenied('This official CRLA is not available for preview.')
     query = urlencode({
         'official_assessment_id': material.id,
         'admin_preview': '1',
-        'admin_student_id': student.id,
         'admin_preview_token': uuid.uuid4().hex,
         'crla_fresh': '1',
     })
@@ -11156,9 +11103,9 @@ def admin_crla_preview_score(request):
         return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
     if not isinstance(payload, dict):
         return JsonResponse({'success': False, 'error': 'Invalid preview state'}, status=400)
-    student = _admin_selected_student(request, 'admin_student_id')
     _, material_id = _parse_prefixed_id(payload.get('material_id'))
-    if not _admin_crla_material_for_student(student, material_id):
+    material = _admin_published_crla(material_id)
+    if not material:
         return JsonResponse({'success': False, 'error': 'CRLA selection mismatch'}, status=403)
     profile = crla_part2_profile(
         payload.get('story_total_words') or payload.get('total_story_words'),
@@ -13561,7 +13508,7 @@ def reading_word_page(request):
             getattr(canonical_response, 'url', None),
         )
         return canonical_response
-    preview_context = _admin_material_preview_context(request)
+    preview_context = _admin_crla_preview_context(request)
     context = _dashboard_context(request)
     context.update(_custom_material_reading_context(request))
     context.update(preview_context)
@@ -14782,9 +14729,10 @@ def prescribed_activity_page(request, activity_key):
                                           initial_s9_a2_state, normalize_s9_a2_state)
         from .prescribed_workbook import initial_l23_g3_state, normalize_l23_g3_state, initial_l23_g4_state, normalize_l23_g4_state, normalize_l23_g5_state, initial_l23_g7_state, normalize_l23_g7_state
 
-        preview = request.GET.get('preview') == '1'
+        admin_preview = getattr(request, '_admin_prescribed_preview', False)
+        preview = request.GET.get('preview') == '1' and not admin_preview
         role = request.session.get('user_role')
-        if preview:
+        if preview or admin_preview:
             if role not in {'teacher', 'admin'}:
                 return HttpResponseForbidden()
             student = None
@@ -15790,11 +15738,12 @@ def prescribed_activity_page(request, activity_key):
                 'local_audio': local_audio,
             },
         })
+    admin_preview = getattr(request, '_admin_prescribed_preview', False)
     student = _active_prescribed_student(request)
-    if not student:
+    if not student and not admin_preview:
         return redirect('assessment')
-    lifecycle = _current_learning_context(student)
-    progress = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
+    lifecycle = _current_learning_context(student) if student else None
+    progress = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first() if student else None
     raw_state = progress.state if progress and isinstance(progress.state, dict) else {}
     if activity_key == 'session-2-lesson-4-gawain-2':
         context = _dashboard_context(request)
@@ -16015,7 +15964,7 @@ def prescribed_activity_page(request, activity_key):
                 current_index=0, completed_items=0, correct_items=0,
                 total_items=len(activity['items']), activity_completed=False,
                 state=raw_state,
-            )
+            ) if not admin_preview else None
         elif not progress.activity_completed and 'started_at' not in raw_state:
             raw_state = {**raw_state, 'started_at': timezone.now().isoformat(), 'elapsed_seconds': 0}
             progress.state = raw_state
@@ -20220,7 +20169,18 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
         event = json.loads(request.body or '{}') if request.content_type == 'application/json' else request.POST.dict()
         if not isinstance(event, dict):
             raise ValueError('Invalid event.')
-        row = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
+        admin_preview = getattr(request, '_admin_prescribed_preview', False)
+        row = None if admin_preview else _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
+        if admin_preview:
+            preview_state = event.pop('_preview_state', {})
+            if isinstance(preview_state, str):
+                preview_state = json.loads(preview_state)
+            if not isinstance(preview_state, dict):
+                raise ValueError('Invalid preview state.')
+            if preview_state:
+                from types import SimpleNamespace
+                row = SimpleNamespace(state=preview_state)
+
         state = deepcopy(row.state if row and isinstance(row.state, dict) else (
             initial_l22_g2_state() if activity_key == 'aral-l22-g2-c-word-reading' else
             initial_l24_g2_state() if activity_key == 'aral-l24-g2-v-word-reading' else
@@ -20569,6 +20529,10 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             correct = len(updated.get('completed_words') or [])
         elif activity_key == 'aral-l23-g4-j-syllabication':
             correct = len(updated.get('answers') or {})
+        if admin_preview:
+            return JsonResponse({'success': True, 'preview_only': True, **speech_details,
+                'state': updated, 'progress': {'current_index': index, 'completed_items': index,
+                'correct_items': correct, 'total_items': total, 'activity_completed': bool(updated.get('completed'))}})
         progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': correct,
                       'total_items': total, 'activity_completed': bool(updated.get('completed')), 'state': updated},
         )
@@ -21871,7 +21835,7 @@ def lesson_1_gawain_1_page(request):
         return redirect('assessment')
     submission = StudentActivityRecordingSubmission.objects.filter(
         student_id=request.session.get('user_id'), activity_key='lesson-1-gawain-1'
-    ).first()
+    ).first() if not getattr(request, '_admin_prescribed_preview', False) else None
     context = _dashboard_context(request)
     context['lesson_1_data'] = {
         'progress_url': reverse('lesson_3_activity_progress'),
@@ -23668,7 +23632,7 @@ def reading_sentence_page(request):
     canonical_response = _canonicalize_custom_material_reading_url(request)
     if canonical_response:
         return canonical_response
-    preview_context = _admin_material_preview_context(request)
+    preview_context = _admin_crla_preview_context(request)
     context = _dashboard_context(request)
     context.update(_custom_material_reading_context(request))
     context.update(preview_context)
@@ -23859,7 +23823,7 @@ def reading_para_page(request):
     canonical_response = _canonicalize_custom_material_reading_url(request)
     if canonical_response:
         return canonical_response
-    preview_context = _admin_material_preview_context(request)
+    preview_context = _admin_crla_preview_context(request)
     context = _dashboard_context(request)
     context.update(_custom_material_reading_context(request))
     context.update(preview_context)

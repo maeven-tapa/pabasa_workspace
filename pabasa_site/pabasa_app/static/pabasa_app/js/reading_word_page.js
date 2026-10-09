@@ -91,7 +91,7 @@
                 : [];
         const normalizedItems = originalItems.map(normalizeDisplayItem).filter(Boolean);
         if (material.content_json && material.content_json.randomize_order && normalizedItems.length > 0) {
-            const seedSource = `${String(material.raw_id || material.id || '')}|${String(window.__PABASA_PREVIEW_STUDENT_NAME__ || window.PABASA_USER_NAME || window.localStorage.getItem('pabasaUserName') || window.PABASA_USER_EMAIL || '').toLowerCase().trim()}`;
+            const seedSource = `${String(material.raw_id || material.id || '')}|${String(window.PABASA_USER_NAME || window.localStorage.getItem('pabasaUserName') || window.PABASA_USER_EMAIL || '').toLowerCase().trim()}`;
             const seed = hashString(seedSource);
             return stableShuffle(normalizedItems, seed);
         }

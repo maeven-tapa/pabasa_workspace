@@ -19,7 +19,7 @@ const noop = () => {};
 const context = vm.createContext({
     isAdminPreview: true, adminPreviewStateKey: 'test-tab', adminPreviewEndState: {},
     materialId: '1', officialAssessmentId: '1', studentEndStateVersion: 'crla_grade2_v1',
-    urlParams: new URLSearchParams('admin_student_id=48'),
+    urlParams: new URLSearchParams(),
     sessionStorage: { getItem: k => storage.get(k) || null, setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k) },
     localStorage: {
         getItem: () => { throw Error('Student storage read'); },
@@ -30,7 +30,7 @@ const context = vm.createContext({
     storyReadingTimerRecoveryState: () => ({}), getCsrfToken: () => '',
     fetch: async (url, options) => {
         requests.push(url);
-        assert.ok(url.startsWith('/api/admin/crla-preview/score/'));
+        assert.equal(url, '/api/admin/crla-preview/score/');
         const state = JSON.parse(options.body);
         return { ok: true, json: async () => ({
             success: true, preview_only: true,
@@ -38,7 +38,7 @@ const context = vm.createContext({
         }) };
     },
     window: { location: {
-        href: 'https://test/dashboard/assessment/reading_ui/word/?official_assessment_id=1&admin_preview=1&admin_student_id=48&admin_preview_token=test-tab',
+        href: 'https://test/dashboard/assessment/reading_ui/word/?official_assessment_id=1&admin_preview=1&admin_preview_token=test-tab',
         assign: url => destinations.push(url),
     } },
     traceOfficialCrlaCompletion: noop, traceEndSession: noop, traceLiveCrlaState: noop,
@@ -75,7 +75,7 @@ vm.runInContext(chunks.join('\n') + '\nlet studentEndStateWriteQueue = Promise.r
         const url = new URL(vm.runInContext(`buildCrlaStageUrl("${stage}")`, context));
         assert.equal(url.searchParams.get('official_assessment_id'), '1');
         assert.equal(url.searchParams.get('admin_preview'), '1');
-        assert.equal(url.searchParams.get('admin_student_id'), '48');
+        assert.equal(url.searchParams.has('admin_student_id'), false);
         assert.equal(url.searchParams.get('admin_preview_token'), 'test-tab');
         assert.ok(url.pathname.endsWith(`/${surface}/`));
     }
