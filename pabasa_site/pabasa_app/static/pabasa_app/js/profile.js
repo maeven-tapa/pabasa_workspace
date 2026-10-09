@@ -205,7 +205,6 @@ function initProfilePage() {
                 }
                 showToast(data.message || "Profile updated successfully", "success");
                 setEditMode(false);
-                const studentEditModal = document.getElementById("studentEditModal");
                 if (studentEditModal && window.bootstrap?.Modal) {
                     window.bootstrap.Modal.getInstance(studentEditModal)?.hide();
                 }
