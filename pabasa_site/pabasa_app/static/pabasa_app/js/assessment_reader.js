@@ -281,6 +281,11 @@
         let mediaStream = null;
         let mediaRecorder = null;
         let speechChunkTimer = null;
+        let crlaLiveSpeech = null;
+        let crlaLiveContext = null;
+        let crlaStreamStarting = false;
+        let crlaStreamingUnavailable = false;
+        let crlaSpeechFailure = false;
         let speechAudioChunks = [];
         let stoppingSpeechRecognition = false;
         let isFinalizingReading = false;
@@ -1547,7 +1552,7 @@
 
         function syncStoryReadingTimerProcessing() {
             if (storyReadingTimerStartedAt === null) return;
-            const shouldPause = Boolean(isSendingChunk || pendingAudioChunk || liveSessionPaused
+            const shouldPause = Boolean((!crlaLiveSpeech && isSendingChunk) || pendingAudioChunk || liveSessionPaused
                 || liveSessionEnded || liveSessionEndRedirecting || isFinalizingReading);
             if (shouldPause && storyReadingTimerPausedAt === null) {
                 storyReadingTimerPausedAt = Date.now();
@@ -2395,6 +2400,15 @@
                 : currentIndex >= items.length - 1 && currentPageIndex >= getCurrentPageCount() - 1;
             if (!isCrla || (!isStoryReading && !isStandardReading)) return false;
             if (isAdvancingItem) return true;
+            if (crlaLiveSpeech) {
+                const context = currentSpeechContext();
+                try { await flushCurrentSpeechChunk(); }
+                catch (error) {
+                    setSpeechStatus("Speech result is still unresolved.", error.message);
+                    return true;
+                } finally { stoppingSpeechRecognition = false; }
+                if (!sameCrlaStreamItem(context) || itemLocked[currentIndex]) return true;
+            }
 
             // Skip is navigation. Preserve captured results and never invent
             // a locked, zero-score answer for an item the learner did not read.
@@ -3722,6 +3736,101 @@
             return { audio };
         }
 
+        function canStreamCrla() {
+            return isOfficialAssessmentLaunch && isCrla && !crlaStreamingUnavailable
+                && ["word", "sentence", "paragraph"].includes(mode)
+                && window.CrlaSpeechStream && window.AudioWorkletNode && window.WebSocket;
+        }
+
+        function sameCrlaStreamItem(context) {
+            return context && context.index === currentIndex && context.version === itemResultVersion
+                && context.itemText === (getCurrentDisplayText() || items[currentIndex])
+                && !liveSessionEnded && !liveSessionEndRedirecting && !isAdvancingItem;
+        }
+
+        async function startCrlaLiveSpeech() {
+            if (crlaStreamStarting || stoppingSpeechRecognition || !isRecording || isMuted) return;
+            if (crlaLiveSpeech?.active && sameCrlaStreamItem(crlaLiveContext)) return;
+            crlaLiveSpeech?.stop();
+            crlaStreamStarting = true;
+            const itemContext = currentSpeechContext();
+            crlaLiveContext = itemContext;
+            const stream = new window.CrlaSpeechStream({
+                csrf: getCsrfToken,
+                fields: {material_id: officialAssessmentId, target_text: itemContext.itemText,
+                    mode, language: currentMaterialLanguage || "", rhymes: currentAssessmentBranch === "rhymes"},
+                onInterim: transcript => {
+                    if (crlaLiveSpeech !== stream || !sameCrlaStreamItem(itemContext)) return;
+                    const preview = document.getElementById("crlaLiveTranscript");
+                    if (preview) { preview.hidden = false; preview.textContent = `Hearing: ${transcript}`; }
+                },
+                onFinal: async message => {
+                    if (crlaLiveSpeech !== stream || !sameCrlaStreamItem(itemContext)) return;
+                    const context = currentSpeechContext();
+                    isSendingChunk = true;
+                    if (currentStoryState === "story_reading") storyReadingHasAttempted = true;
+                    updateAssessmentNavigationButtons();
+                    updateSpeechProcessingControls();
+                    const controller = new AbortController();
+                    const timeout = setTimeout(() => controller.abort(), 15000);
+                    try {
+                        const response = await fetch("/api/reading/crla-stream/evaluate/", {
+                            method: "POST", credentials: "same-origin", signal: controller.signal,
+                            headers: {"Content-Type": "application/json", "X-CSRFToken": getCsrfToken()},
+                            body: JSON.stringify({final_token: message.final_token,
+                                current_syllable_index: context.syllableIndex,
+                                sentence_word_results: mode === "sentence" ? sentenceWordResults[currentIndex] || [] : [],
+                                syllable_context: Date.now() - syllableStitchingContextAt <= syllableStitchingWindowMs
+                                    ? syllableStitchingContext || "" : ""}),
+                        });
+                        const data = await response.json();
+                        if (!response.ok || !data.success) throw new Error(data.error || "Speech evaluation failed.");
+                        if (crlaLiveSpeech !== stream || !isCurrentSpeechContext(context)) return;
+                        const preview = document.getElementById("crlaLiveTranscript");
+                        if (preview) { preview.hidden = true; preview.textContent = ""; }
+                        currentSttLanguageCode = String(data.language_code || currentSttLanguageCode || "");
+                        if (String(data.language_code || "").toLowerCase() === "fil-ph" && data.syllable_context) {
+                            syllableStitchingContext = String(data.syllable_context);
+                            syllableStitchingContextAt = Date.now();
+                        } else resetSyllableStitching();
+                        if (data.transcript) appendRawMicInput(window.SpeechDebug.format(data));
+                        handleSpeechResult(data, context);
+                    } finally {
+                        clearTimeout(timeout);
+                        isSendingChunk = false;
+                        updateAssessmentNavigationButtons();
+                        updateSpeechProcessingControls();
+                    }
+                },
+                onError: error => {
+                    if (crlaLiveSpeech !== stream || !sameCrlaStreamItem(itemContext)) return;
+                    crlaSpeechFailure = true;
+                    stopSpeechRecognition();
+                    setSpeechStatus("Live speech interrupted.", error.message + " Toggle the microphone off and on to resume.");
+                },
+            });
+            crlaLiveSpeech = stream;
+            try {
+                await stream.start(mediaStream);
+                if (crlaLiveSpeech === stream && stream.active) {
+                    crlaSpeechFailure = false;
+                    setSpeechStatus("Listening live with Google Speech…", "Words appear as you speak. Reading is checked when each phrase is confirmed.", true);
+                }
+            } catch (error) {
+                stream.stop();
+                if (crlaLiveSpeech !== stream || stoppingSpeechRecognition || !isRecording) return;
+                // Check buffered startup audio using the original clip path
+                // before resuming fallback capture; never discard the first word.
+                crlaLiveSpeech = null;
+                crlaStreamingUnavailable = true;
+                setSpeechStatus("Listening with recorded speech…", "Live connection unavailable; your recording will still be checked.", true);
+                if (stream.fallbackAudio && isCurrentSpeechContext(itemContext)) {
+                    await sendAudioChunk(stream.fallbackAudio, itemContext);
+                }
+                startSpeechChunkRecorder();
+            } finally { crlaStreamStarting = false; }
+        }
+
         async function startSpeechRecognition() {
             if (isReviewMode || isMuted || recognitionActive) return;
             if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
@@ -3732,11 +3841,13 @@
                 mediaStream = await navigator.mediaDevices.getUserMedia(microphoneConstraints());
                 startAudioMeter(mediaStream);
                 stoppingSpeechRecognition = false;
-                startSpeechChunkRecorder();
+                crlaSpeechFailure = false;
+                if (canStreamCrla()) await startCrlaLiveSpeech();
+                else startSpeechChunkRecorder();
                 speechChunkTimer = window.setInterval(finishCurrentAudioChunk, 250);
-                recognitionActive = true;
+                recognitionActive = Boolean(mediaStream);
                 resetRawMicInput("Waiting for speech...");
-                setSpeechStatus("Listening with Google Speech...", "Read the text on screen. Correct syllables will highlight as they are confirmed.", true);
+                if (!crlaLiveSpeech) setSpeechStatus("Listening with Google Speech...", "Read the text on screen. Correct syllables will highlight as they are confirmed.", true);
             } catch (error) {
                 console.warn("PABASA: Microphone unavailable", error);
                 setSpeechStatus("Microphone access was not allowed.", "Please allow microphone access and try again.");
@@ -3745,6 +3856,7 @@
 
         function startSpeechChunkRecorder() {
             if (!mediaStream || stoppingSpeechRecognition || isMuted || !isRecording || isAdvancingItem) return;
+            if (canStreamCrla()) { startCrlaLiveSpeech(); return; }
             const recorderContext = currentSpeechContext();
             const mimeType = pickAudioMimeType();
             speechAudioChunks = [];
@@ -3791,6 +3903,11 @@
         }
 
         function finishCurrentAudioChunk(force = false) {
+            if (canStreamCrla()) {
+                if (!force && !stoppingSpeechRecognition && !crlaStreamStarting && !crlaSpeechFailure
+                    && (!crlaLiveSpeech?.active || !sameCrlaStreamItem(crlaLiveContext))) startCrlaLiveSpeech();
+                return;
+            }
             if (!mediaRecorder || mediaRecorder.state !== "recording") return;
             const now = Date.now();
             const chunkAge = now - speechChunkStartedAt;
@@ -3808,6 +3925,14 @@
         }
 
         async function flushCurrentSpeechChunk(maxMs = 1200) {
+            if (crlaLiveSpeech) {
+                stoppingSpeechRecognition = true;
+                const stream = crlaLiveSpeech;
+                try { await stream.finish(); }
+                catch (error) { crlaSpeechFailure = true; throw error; }
+                finally { if (crlaLiveSpeech === stream) crlaLiveSpeech = null; }
+                return;
+            }
             if (!mediaRecorder || mediaRecorder.state !== "recording") return;
             stoppingSpeechRecognition = true;
             finishCurrentAudioChunk(true);
@@ -3819,6 +3944,11 @@
 
         function stopSpeechRecognition() {
             stoppingSpeechRecognition = true;
+            crlaLiveSpeech?.stop();
+            crlaLiveSpeech = null;
+            crlaLiveContext = null;
+            const preview = document.getElementById("crlaLiveTranscript");
+            if (preview) { preview.hidden = true; preview.textContent = ""; }
             if (speechChunkTimer) {
                 window.clearInterval(speechChunkTimer);
                 speechChunkTimer = null;
@@ -3950,7 +4080,7 @@
             return Boolean(
                 !isReviewMode
                 && isRecording
-                && (hasHeardSinceLastChunk || isSendingChunk || pendingAudioChunk)
+                && (isSendingChunk || pendingAudioChunk || (crlaLiveSpeech ? crlaLiveSpeech.pending : hasHeardSinceLastChunk))
             );
         }
 
@@ -5480,10 +5610,10 @@
             // if present, one queued final chunk. Never finalize after the old
             // 3.5-second wait while spoken evidence is still being checked.
             const started = Date.now();
-            while ((isSendingChunk || pendingAudioChunk) && !liveSessionEnded && !liveSessionEndRedirecting && Date.now() - started < maxMs) {
+            while ((isSendingChunk || pendingAudioChunk || crlaLiveSpeech?.pending) && !liveSessionEnded && !liveSessionEndRedirecting && Date.now() - started < maxMs) {
                 await new Promise(resolve => window.setTimeout(resolve, 100));
             }
-            return !isSendingChunk && !pendingAudioChunk;
+            return !isSendingChunk && !pendingAudioChunk && !crlaLiveSpeech?.pending && !crlaSpeechFailure;
         }
 
         function updateUI() {
@@ -5688,8 +5818,17 @@
             // before it finish scoring rather than treating provider latency
             // as words the student did not read.
             stoppingSpeechRecognition = true;
-            await flushCurrentSpeechChunk();
-            await waitForPendingSpeech();
+            try { await flushCurrentSpeechChunk(); }
+            catch (error) {
+                stoppingSpeechRecognition = false;
+                setSpeechStatus("Speech result is still unresolved.", error.message);
+                return;
+            }
+            if (!await waitForPendingSpeech()) {
+                stoppingSpeechRecognition = false;
+                setSpeechStatus("Speech result is still unresolved.", "Resume the microphone to finish checking this sentence.");
+                return;
+            }
             if (liveSessionEnded || liveSessionEndRedirecting || !isRecording) return;
             stoppingSpeechRecognition = false;
             // The response may advance the syllable cursor within this same
@@ -7227,14 +7366,18 @@
                     autoAdvanceTimer = null;
                 }
                 stoppingSpeechRecognition = true;
-                if (mediaRecorder && mediaRecorder.state === "recording") {
+                if (crlaLiveSpeech || (mediaRecorder && mediaRecorder.state === "recording")) {
                     try {
                         await flushCurrentSpeechChunk();
                     } catch (error) {
                         console.warn("PABASA: Final audio request failed", error);
                     }
                 }
-                await waitForPendingSpeech();
+                if (!await waitForPendingSpeech()) {
+                    stoppingSpeechRecognition = false;
+                    setSpeechStatus("Speech result is still unresolved.", "Resume the microphone before finishing this reading.");
+                    return;
+                }
                 if (liveSessionEnded || liveSessionEndRedirecting) return;
                 isRecording = false;
                 stopSpeechRecognition();
@@ -7372,13 +7515,17 @@
             return new Blob([bytes], { type: mimeType });
         }
         
-        btnToggleMic?.addEventListener("click", () => {
+        btnToggleMic?.addEventListener("click", async () => {
             isMuted = !isMuted;
             const icon = btnToggleMic.querySelector("i");
             if (icon) icon.className = isMuted ? "bi bi-mic-mute-fill" : "bi bi-mic-fill";
             btnToggleMic.classList.toggle("btn-outline-danger", isMuted);
             btnToggleMic.classList.toggle("btn-outline-dark", !isMuted);
-            if (isMuted) stopSpeechRecognition();
+            if (isMuted) {
+                try { if (crlaLiveSpeech) await flushCurrentSpeechChunk(); }
+                catch (error) { setSpeechStatus("Live speech interrupted.", error.message); }
+                stopSpeechRecognition();
+            }
             else if (isRecording) startSpeechRecognition();
         });
 
@@ -7807,6 +7954,15 @@
             if (currentStoryState === "story_reading" && currentSelectedStory) {
                 if (currentPageIndex < getCurrentPageCount() - 1) {
                     if (isAdvancingItem) return;
+                    if (crlaLiveSpeech) {
+                        const context = currentSpeechContext();
+                        try { await flushCurrentSpeechChunk(); }
+                        catch (error) {
+                            setSpeechStatus("Speech result is still unresolved.", error.message);
+                            return;
+                        } finally { stoppingSpeechRecognition = false; }
+                        if (!sameCrlaStreamItem(context)) return;
+                    }
                     isAdvancingItem = true;
                     if (nextBtn) nextBtn.disabled = true;
                     itemResultVersion += 1;

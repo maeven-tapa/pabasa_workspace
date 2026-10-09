@@ -10,6 +10,8 @@ cookiecutter==2.7.1
 Django==6.0.3
 django-tailwind==4.4.2
 gunicorn==25.3.0
+uvicorn==0.54.0
+websockets==17.2
 google-cloud-speech==2.34.0
 av==19.0.1
 idna==3.11

@@ -33,4 +33,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 
 # Apply migrations once in a Cloud Run Job before directing traffic here.
 # Instance startup only checks readiness; autoscaling never changes the schema.
-CMD ["sh", "-c", "python pabasa_site/manage.py check_migration_readiness --require-recorded && python pabasa_site/manage.py migrate --check && exec gunicorn pabasa_site.wsgi:application --chdir pabasa_site --worker-class gthread --threads 16 --timeout 120 --worker-tmp-dir /dev/shm --bind 0.0.0.0:${PORT:-8080}"]
+CMD ["sh", "-c", "python pabasa_site/manage.py check_migration_readiness --require-recorded && python pabasa_site/manage.py migrate --check && exec uvicorn pabasa_site.asgi:application --app-dir pabasa_site --host 0.0.0.0 --port ${PORT:-8080} --lifespan off --ws websockets-sansio --ws-max-size 65536"]

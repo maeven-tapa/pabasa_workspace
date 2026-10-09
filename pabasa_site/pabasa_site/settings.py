@@ -178,6 +178,7 @@ GOOGLE_STT_LOCATION = 'us'
 GOOGLE_STT_CHIRP2_LOCATION = os.environ.get('GOOGLE_STT_CHIRP2_LOCATION', 'us-central1')
 # Chirp 3 is used through Speech-to-Text V2 Recognize for short reading clips.
 GOOGLE_STT_MODEL = 'chirp_3'
+CRLA_STREAMING_ENABLED = os.environ.get('CRLA_STREAMING_ENABLED', 'true').lower() == 'true'
 GOOGLE_STT_CREDENTIALS_FILE = BASE_DIR / 'google-stt-service-account.json'
 # Knowlez STT key, injected by Cloud Run. Keep the existing secret name.
 AZURE_SPEECH_KEY = os.environ.get('AZURE_SPEECH_KEY', '').strip()

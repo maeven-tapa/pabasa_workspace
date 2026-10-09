@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import crla_stream
 
 urlpatterns = [
     path('', views.home, name='home'),
@@ -200,6 +201,8 @@ urlpatterns = [
     path('dashboard/assessment/reading_ui/vowel/', views.reading_vowel_page, name='reading_vowel_page'),
     path('api/dashboard/assessment/activity/word-decoding/transcribe/', views.word_decoding_transcribe_api, name='word_decoding_transcribe_api'),
     path('api/reading/transcribe/', views.reading_transcribe_api, name='reading_transcribe_api'),
+    path('api/reading/crla-stream/start/', crla_stream.crla_stream_ticket, name='crla_stream_ticket'),
+    path('api/reading/crla-stream/evaluate/', crla_stream.crla_stream_evaluate, name='crla_stream_evaluate'),
     path('api/dashboard/assessment/activity/prescribed/session-5-lesson-14-gawain-4/recording/', views.session_5_lesson_14_gawain_4_recording, name='session_5_lesson_14_gawain_4_recording'),
     path('api/teacher/session-5-lesson-14-gawain-4/recordings/', views.teacher_session_5_lesson_14_gawain_4_recordings, name='teacher_session_5_lesson_14_gawain_4_recordings'),
     path('api/teacher/session-5-lesson-14-gawain-4/classify/', views.teacher_session_5_lesson_14_gawain_4_classify, name='teacher_session_5_lesson_14_gawain_4_classify'),

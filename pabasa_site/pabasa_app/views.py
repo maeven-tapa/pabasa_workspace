@@ -24738,6 +24738,11 @@ def _local_api_key_stt_fallback(request, api_key, credentials_file, selected_mod
 @csrf_protect
 @require_http_methods(["POST"])
 def reading_transcribe_api(request):
+    return _reading_transcribe_response(request)
+
+
+def _reading_transcribe_response(request, *, stream_transcript=None):
+    """Shared evaluation for uploaded clips and authenticated Google stream finals."""
     if not _check_auth(request):
         return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
 
@@ -24747,7 +24752,7 @@ def reading_transcribe_api(request):
 
     audio = request.FILES.get('audio')
     target_text = (request.POST.get('target_text') or '').strip()
-    if not audio:
+    if not audio and stream_transcript is None:
         return JsonResponse({'success': False, 'error': 'Audio is required.'}, status=400)
     if not target_text:
         return JsonResponse({'success': False, 'error': 'Reading text is required.'}, status=400)
@@ -24809,7 +24814,9 @@ def reading_transcribe_api(request):
         location = _chirp_location(stt_model)
     words = []
     try:
-        if knowlez_selected:
+        if stream_transcript is not None:
+            transcript, model_used, fallback_reason = stream_transcript, 'chirp_3', ''
+        elif knowlez_selected:
             transcript, model_used, fallback_reason = transcribe_knowlez_audio(audio, language_code)
         else:
             transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
