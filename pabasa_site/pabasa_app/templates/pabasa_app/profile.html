@@ -1428,11 +1428,23 @@
     }
 
     .teacher-hero-meta .profile-status-badge {
-        margin-top: 0;
+        align-items: center;
+        display: inline-flex;
+        line-height: 1.2;
+        margin: 0;
+        min-height: 32px;
+        box-sizing: border-box;
     }
 
     .teacher-hero-meta .teacher-hero-pill {
-        margin-top: 0;
+        line-height: 1.2;
+        margin: 0;
+        min-height: 32px;
+        box-sizing: border-box;
+    }
+
+    .teacher-hero-meta > span[aria-hidden="true"] {
+        line-height: 1;
     }
 
     .teacher-hero-pill {
@@ -1545,6 +1557,11 @@
         font-size: .82rem;
         margin-top: .85rem;
         padding: .38rem .78rem;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .teacher-hero-meta .profile-status-badge {
+        margin-top: 0;
+        padding: .35rem .7rem;
     }
 
     body.dashboard-body:not(:has(.player-profile)) #editAccountDetailsBtn {
