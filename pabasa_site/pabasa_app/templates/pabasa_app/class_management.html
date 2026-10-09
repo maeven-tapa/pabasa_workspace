@@ -335,12 +335,9 @@
     }
 
     .section-information-students {
-        margin-top: 0.65rem;
-        padding: 0.9rem 1rem 1rem;
-        border: 1px solid rgba(100, 116, 139, 0.16);
-        border-radius: 16px;
-        background: rgba(248, 250, 252, 0.72);
-        box-shadow: inset 0 1px rgba(255, 255, 255, 0.9);
+        margin-top: 0.85rem;
+        padding: 0.9rem 0 0;
+        border-top: 1px solid rgba(100, 116, 139, 0.18);
     }
 
     .section-information-card > .section-information-divider {
@@ -615,7 +612,15 @@
     }
 
     .section-information-students .table-frame {
-        min-height: 34rem;
+        min-height: 0;
+        border: 0;
+        border-top: 1px solid rgba(100, 116, 139, 0.16);
+        border-bottom: 1px solid rgba(100, 116, 139, 0.16);
+        border-radius: 0;
+        background: transparent;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        box-shadow: none;
     }
 
     .student-table {
@@ -1281,7 +1286,7 @@
 
             <hr class="section-information-divider">
 
-        <section class="card section-information-students">
+        <section class="section-information-students">
             <div class="card-header">
                 <div class="section-title-group">
                     <div class="section-heading">
