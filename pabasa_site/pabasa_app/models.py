@@ -1419,6 +1419,8 @@ class Material(models.Model):
 
     class Meta:
         db_table = "materials"
+        # Ordering by the nullable section relation adds an outer join. Any
+        # PostgreSQL row lock on Material must use select_for_update(of=("self",)).
         ordering = ["section", "created_at"]
         constraints = [
             models.UniqueConstraint(

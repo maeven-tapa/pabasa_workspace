@@ -10862,7 +10862,7 @@ def _toggle_official_material_state(material, activate):
     if not material or not material.is_official_reading:
         return False
     with transaction.atomic():
-        material = Material.objects.select_for_update().get(pk=material.pk)
+        material = Material.objects.select_for_update(of=("self",)).get(pk=material.pk)
         if activate:
             material.is_active = True
         else:
@@ -21025,7 +21025,7 @@ def aral_template_activity_complete(request, activity_slug):
         }
 
     with transaction.atomic():
-        locked_material = Material.objects.select_for_update().get(pk=material.pk)
+        locked_material = Material.objects.select_for_update(of=("self",)).get(pk=material.pk)
         existing = (
             _fluency_reading_completed_result(locked_material, student)
             if activity_slug == 'fluency-reading'
@@ -22573,7 +22573,7 @@ def sound_detective_progress(request):
     if activity_completed:
         if student_user:
             with transaction.atomic():
-                material = Material.objects.select_for_update().get(pk=material.pk)
+                material = Material.objects.select_for_update(of=("self",)).get(pk=material.pk)
                 if not material.has_student_completed(student_user):
                     material.record_assessment_result(
                         student_user,
@@ -23200,7 +23200,7 @@ def sentence_bot_complete(request):
     if not material_id or not student_user:
         return JsonResponse({'success': False, 'error': 'A valid student and material are required.'}, status=400)
     with transaction.atomic():
-        material = Material.objects.select_for_update().filter(pk=material_id).first()
+        material = Material.objects.select_for_update(of=("self",)).filter(pk=material_id).first()
         if not _is_sentence_reading_template_material(material):
             return JsonResponse({'success': False, 'error': 'Invalid Sentence Bot material.'}, status=400)
         access_response = _enforce_student_access_for_request(request, material=material, json_response=True)
@@ -23827,7 +23827,7 @@ def persist_student_end_assessment_state(request):
             # Make the just-derived end state visible to the synchronizer in
             # this transaction; it needs the Part 1 evidence for early exits.
             _set_user_state(student, state)
-            locked_material = Material.objects.select_for_update().get(pk=material.pk)
+            locked_material = Material.objects.select_for_update(of=("self",)).get(pk=material.pk)
             result_row = locked_material.assessment_results.filter(
                 student=student, attempt_status='completed',
             ).order_by('-completed_at', '-created_at', '-id').first()
@@ -25118,7 +25118,7 @@ def award_hunt_mode_stars(request):
 
         with transaction.atomic():
             student = User.objects.select_for_update().get(pk=session_student_id, role='student')
-            material = Material.objects.select_for_update().get(pk=material_id, type='practice')
+            material = Material.objects.select_for_update(of=("self",)).get(pk=material_id, type='practice')
             content_json = dict(material.content_json or {})
             if str(content_json.get('mode') or '').lower() != 'hunt':
                 return JsonResponse({'success': False, 'error': 'The selected level is not Hunt Mode.'}, status=400)
@@ -26488,7 +26488,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 # Lock this material row while checking/creating so concurrent final submits
                 # and CRLA class finalization cannot cross a result submission.
                 with transaction.atomic():
-                    locked_material = Material.objects.select_for_update().get(pk=material.pk)
+                    locked_material = Material.objects.select_for_update(of=("self",)).get(pk=material.pk)
                     workflow_state = _get_user_state(student_user)
                     persisted_transition = workflow_state.get('student_end_assessment_state')
                     persisted_transition = persisted_transition if isinstance(persisted_transition, dict) else {}
@@ -31709,7 +31709,7 @@ def finalize_class_crla_assessment(request):
         # submit that acquired it first is retained; one after finalization is
         # rejected by the same authoritative state below.
         with transaction.atomic():
-            material = Material.objects.select_for_update().filter(pk=material_id, is_active=True).first()
+            material = Material.objects.select_for_update(of=("self",)).filter(pk=material_id, is_active=True).first()
             section = Section.objects.select_for_update().filter(
                 pk=section_id, teacher=teacher, is_active=True,
             ).first()
@@ -31773,7 +31773,7 @@ def export_crla_assessment(request, assessment_id):
     ).first()
     if not finalization:
         with transaction.atomic():
-            material = Material.objects.select_for_update().filter(pk=material_id, is_active=True).first()
+            material = Material.objects.select_for_update(of=("self",)).filter(pk=material_id, is_active=True).first()
             section = Section.objects.select_for_update().filter(pk=section_id, is_active=True).first()
             if not material or not _is_official_crla_material(material) or material.assessment_id != root_assessment.id:
                 return HttpResponseForbidden('CRLA results can be exported only for an active official CRLA assessment.')
