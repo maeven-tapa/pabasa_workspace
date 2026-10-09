@@ -12040,18 +12040,23 @@ def teacher_session_5_lesson_14_gawain_4_recordings(request):
     progress_state = progress.state if progress and isinstance(progress.state, dict) else {}
     progress_classes = progress_state.get('fluency_classifications') if isinstance(progress_state.get('fluency_classifications'), dict) else {}
     progress_sources = progress_state.get('classification_sources') if isinstance(progress_state.get('classification_sources'), dict) else {}
+    progress_transcripts = progress_state.get('transcripts') if isinstance(progress_state.get('transcripts'), dict) else {}
+    progress_matches = progress_state.get('reading_matches') if isinstance(progress_state.get('reading_matches'), dict) else {}
+    started = bool(progress or rows)
+    activity_status = 'Completed' if progress and progress.activity_completed else ('In Progress' if started else 'Not Started')
     return JsonResponse({'success': True, 'items': [{
         'item_index': index, 'expected_text': item.get('text', ''),
         'submission_id': (row.id if (row := rows.get(index)) else None),
-        'transcript': row.recognized_transcript if row else '',
-        'stt_match': row.stt_match if row else None,
-        'classification': row.fluency_classification if row else progress_classes.get(str(index), ''),
+        'transcript': row.recognized_transcript if row else progress_transcripts.get(str(index), ''),
+        'stt_match': row.stt_match if row else progress_matches.get(str(index)),
+        'classification': row.fluency_classification if row else ('RED' if progress_sources.get(str(index)) == 'skipped' else progress_classes.get(str(index), '')),
         'classification_source': row.classification_source if row else progress_sources.get(str(index), ''),
         'review_status': row.review_status if row else ('skipped' if progress_sources.get(str(index)) == 'skipped' else 'missing'),
+        'classification_auto': bool((row and row.classification_source == 'skipped') or progress_sources.get(str(index)) == 'skipped'),
         'recording_url': reverse('teacher_session_5_lesson_14_gawain_4_audio', args=[row.id]) if row and row.audio_file else None,
         'duration_seconds': row.duration_seconds if row else None,
         'reviewed_at': row.checked_at.isoformat() if row and row.checked_at else None,
-    } for index, item in enumerate(activity.get('items') or [])]})
+    } for index, item in enumerate(activity.get('items') or [])], 'activity_status': activity_status})
 
 
 @login_required(role='teacher')
@@ -17887,7 +17892,21 @@ def prescribed_activity_progress(request, activity_key):
                 with transaction.atomic():
                     progress = query.select_for_update().first()
                     if not progress:
-                        return JsonResponse({'success': False, 'error': 'Progress not found.'}, status=409)
+                        initial_state = {
+                            'part': 1, 'current_index': 0, 'completed_reading_items': [],
+                            'reading_attempts': {}, 'transcripts': {}, 'reading_matches': {},
+                            'statuses': {}, 'fluency_classifications': {},
+                            'classification_sources': {}, 'state_version': 1,
+                        }
+                        progress, _ = _current_progress_update_or_create(
+                            student, lifecycle, activity_key,
+                            defaults={
+                                'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+                                'total_items': len(activity['items']), 'activity_completed': False,
+                                'state': initial_state,
+                            },
+                        )
+                        progress = query.select_for_update().get(pk=progress.pk)
                     old = progress.state if isinstance(progress.state, dict) else {}
                     current = int(old.get('current_index', progress.current_index) or 0)
                     version = int(old.get('state_version', 0) or 0)
@@ -24650,6 +24669,16 @@ def reading_transcribe_api(request):
             activity_syllables = []
         is_clap_phase2 = request.POST.get('phase2_strict') == '1'
         matching_transcript = transcript
+        # Session 5 Lesson 14 Gawain 4 accepts Google's Ana/Anna variant only
+        # for the displayed phrase "salamin ni Ana". Keep the raw transcript.
+        if (
+            request.POST.get('prescribed_activity_key') == 'session-5-lesson-14-gawain-4'
+            and language_code.lower() == 'fil-ph'
+            and mode in {'reading', 'word'}
+            and ReadingMatcher.normalize_spoken_words(target_text) == ['salamin', 'ni', 'ana']
+            and ReadingMatcher.normalize_spoken_words(transcript) == ['salamin', 'ni', 'anna']
+        ):
+            matching_transcript = target_text
         # Chirp 3 can omit the doubled consonant in ``mangga``. Preserve the
         # raw provider transcript while canonicalizing this known variant only
         # for the prescribed activities that use ``mangga`` as the target.
