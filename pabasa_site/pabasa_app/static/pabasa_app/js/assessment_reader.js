@@ -431,6 +431,7 @@
         let hasHeardSinceLastChunk = false;
         let ambientNoiseFloor = 0;
         let speechFrameCount = 0;
+        let speechChunkStartedAt = 0;
         // Multisyllable words need the same uninterrupted capture window as
         // longer reading modes. A short fixed chunk can stop after the first
         // syllable, and capture is paused while that chunk is sent to STT.
@@ -3680,7 +3681,7 @@
                 startAudioMeter(mediaStream);
                 stoppingSpeechRecognition = false;
                 startSpeechChunkRecorder();
-                speechChunkTimer = window.setInterval(finishCurrentAudioChunk, speechChunkMs);
+                speechChunkTimer = window.setInterval(finishCurrentAudioChunk, 250);
                 recognitionActive = true;
                 resetRawMicInput("Waiting for speech...");
                 setSpeechStatus("Listening with Google Speech...", "Read the text on screen. Correct syllables will highlight as they are confirmed.", true);
@@ -3734,10 +3735,18 @@
                 }
             };
             mediaRecorder.start();
+            speechChunkStartedAt = Date.now();
         }
 
-        function finishCurrentAudioChunk() {
+        function finishCurrentAudioChunk(force = false) {
             if (!mediaRecorder || mediaRecorder.state !== "recording") return;
+            const now = Date.now();
+            const chunkAge = now - speechChunkStartedAt;
+            const quietAfterWord = mode === "word"
+                && hasHeardSinceLastChunk
+                && lastHeardAt > 0
+                && now - lastHeardAt >= 1200;
+            if (!force && chunkAge < speechChunkMs && !quietAfterWord) return;
             try {
                 mediaRecorder.requestData();
                 mediaRecorder.stop();
@@ -3749,7 +3758,7 @@
         async function flushCurrentSpeechChunk(maxMs = 1200) {
             if (!mediaRecorder || mediaRecorder.state !== "recording") return;
             stoppingSpeechRecognition = true;
-            finishCurrentAudioChunk();
+            finishCurrentAudioChunk(true);
             const started = Date.now();
             while (mediaRecorder && Date.now() - started < maxMs) {
                 await new Promise(resolve => window.setTimeout(resolve, 50));
