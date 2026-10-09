@@ -7,7 +7,7 @@ from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.cache import never_cache
 from django.core.cache import cache
 from django.core.paginator import Paginator
-from django.core.exceptions import DisallowedHost, ValidationError
+from django.core.exceptions import DisallowedHost, PermissionDenied, ValidationError
 from django.core.validators import validate_email
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth.password_validation import validate_password
@@ -8062,6 +8062,113 @@ def _admin_deactivate_section(request, section_id):
 def admin_courses(request):
     return render(request, 'pabasa_app/admin_courses.html', _admin_materials_context(request, 'Courses'))
 
+
+def _admin_selected_student(request, parameter='student_id'):
+    """Resolve the active student selected by an admin preview request."""
+    requested_student = str(request.GET.get(parameter) or '').strip()
+    if not requested_student:
+        return None
+    students = User.objects.filter(role='student', is_archived=False)
+    selected_student = None
+    if requested_student.isdigit():
+        selected_student = students.filter(pk=int(requested_student)).first()
+    if selected_student is None:
+        selected_student = students.filter(custom_id__iexact=requested_student).first()
+    return selected_student
+
+
+def _admin_prescribed_material_queryset(student):
+    """Return the exact regular materials available to a selected student."""
+    if not student:
+        return Material.objects.none()
+    return _assessment_materials_for_student(student).filter(
+        assessment_kind='regular',
+    ).select_related('section').distinct()
+
+
+def _admin_crla_material_for_student(student, material_id):
+    """Resolve an existing official record through the student's selection path."""
+    material = _get_official_reading_material(material_id)
+    if not student or not material or not material.is_active or material.status != 'published':
+        return None
+    phase = _official_material_phase(material)
+    payloads = _official_reading_assessments_for_student(
+        student, {'available': True, 'assessment_type': phase},
+    )
+    return material if any(payload.get('id') == material.id for payload in payloads) else None
+
+
+def _admin_material_preview_context(request):
+    """Authorize a preview without impersonating or modifying the learner."""
+    if request.GET.get('admin_preview') != '1':
+        return {}
+    admin = _current_user(request)
+    if not admin or admin.role != 'admin' or admin.is_archived:
+        raise PermissionDenied('Admin preview access is required.')
+    student = _admin_selected_student(request, 'admin_student_id')
+    _, official_id = _parse_prefixed_id(request.GET.get('official_assessment_id'))
+    if official_id:
+        material = _admin_crla_material_for_student(student, official_id)
+        return_route = reverse('admin_official_reading_assessment_test', args=[official_id])
+    else:
+        _, material_id = _parse_prefixed_id(request.GET.get('id'))
+        material = _admin_prescribed_material_queryset(student).filter(pk=material_id).first()
+        return_route = reverse('admin_prescribed_materials')
+    if not student or not material:
+        raise PermissionDenied('This material is not selected by the student assessment path.')
+    return {
+        'is_admin_preview': True,
+        'admin_preview_student_name': _display_user_name(student),
+        'admin_preview_student_id': student.id,
+        'admin_preview_return_url': f"{return_route}?{urlencode({'student_id': student.custom_id or student.id})}",
+    }
+
+
+@admin_required
+def admin_prescribed_materials(request):
+    """Let an admin open a student's real prescribed materials read-only."""
+    selected_student = _admin_selected_student(request)
+    materials = _admin_prescribed_material_queryset(selected_student).order_by('-created_at', 'title')
+    context = _admin_context(request, 'Prescribed Materials', [])
+    context.update({
+        'selected_student': selected_student,
+        'student_id_query': str(request.GET.get('student_id') or '').strip(),
+        'student_options': User.objects.filter(
+            role='student', is_archived=False,
+        ).only('id', 'custom_id', 'first_name', 'last_name').order_by('custom_id')[:500],
+        'prescribed_materials': materials,
+    })
+    return render(request, 'pabasa_app/admin_prescribed_materials.html', context)
+
+
+@admin_required
+def admin_prescribed_material_launch(request, material_id):
+    """Launch the selected student's exact material in the shared student reader."""
+    student = _admin_selected_student(request)
+    material = _admin_prescribed_material_queryset(student).filter(pk=material_id).first()
+    if not student or not material:
+        return redirect('admin_prescribed_materials')
+
+    enrollment = Enrollment.objects.filter(
+        student=student, is_active=True,
+    ).select_related('section').order_by('-joined_at', '-id').first()
+    content_json = material.content_json if isinstance(material.content_json, dict) else {}
+    content_text = material.content_text or material.prompt_text or ''
+    return_url = f"{reverse('admin_prescribed_materials')}?{urlencode({'student_id': student.custom_id or student.id})}"
+    reader_query = urlencode({
+        'id': material.id,
+        'test': material.title or 'Reading Material',
+        'section_id': getattr(enrollment, 'section_id', '') or '',
+        'content': content_text,
+        'item_type': material.item_type or 'word',
+        'language': material.language or content_json.get('language') or '',
+        'admin_preview': '1',
+        'admin_student_id': student.id,
+        'admin_return': return_url,
+    })
+    return redirect(f"{reverse('reading_word_page')}?{reader_query}")
+
+
 def _admin_course_queryset():
     return Material.objects.select_related(
         'section',
@@ -11021,6 +11128,58 @@ def admin_official_reading_assessment_test(request, material_id):
     return render(request, 'pabasa_app/admin_official_reading_assessment_test.html', context)
 
 
+@admin_required
+def admin_official_reading_assessment_test_launch(request, material_id):
+    """Open the real student CRLA record; never create a preview Material."""
+    student = _admin_selected_student(request)
+    material = _admin_crla_material_for_student(student, material_id)
+    if not material:
+        raise PermissionDenied('This official CRLA is not selected for the student.')
+    query = urlencode({
+        'official_assessment_id': material.id,
+        'admin_preview': '1',
+        'admin_student_id': student.id,
+        'admin_preview_token': uuid.uuid4().hex,
+        'crla_fresh': '1',
+    })
+    return redirect(f"{reverse('reading_word_page')}?{query}")
+
+
+@admin_required
+@csrf_protect
+@require_http_methods(['POST'])
+def admin_crla_preview_score(request):
+    """Use the student's canonical scoring functions without persisting a result."""
+    try:
+        payload = json.loads(request.body or '{}')
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+    if not isinstance(payload, dict):
+        return JsonResponse({'success': False, 'error': 'Invalid preview state'}, status=400)
+    student = _admin_selected_student(request, 'admin_student_id')
+    _, material_id = _parse_prefixed_id(payload.get('material_id'))
+    if not _admin_crla_material_for_student(student, material_id):
+        return JsonResponse({'success': False, 'error': 'CRLA selection mismatch'}, status=403)
+    profile = crla_part2_profile(
+        payload.get('story_total_words') or payload.get('total_story_words'),
+        payload.get('words_read') if payload.get('words_read') is not None else payload.get('total_words_read'),
+        payload.get('miscues'), payload.get('duration_seconds'),
+        payload.get('correct_answers') if payload.get('correct_answers') is not None else payload.get('comprehension_correct'),
+    )
+    classification = crla_reading_profile(
+        payload.get('part1_total_score'), payload.get('story_number'),
+        profile.get('passage_accuracy_percent'),
+        payload.get('correct_answers') if payload.get('correct_answers') is not None else payload.get('comprehension_correct'),
+    )
+    preview_state = dict(payload, classification=classification, crla_classification=classification)
+    preview_state['passage_accuracy_percent'] = profile.get('passage_accuracy_percent')
+    return JsonResponse({
+        'success': True, 'preview_only': True,
+        'student_end_assessment_state': preview_state,
+        'reader_classification': classification, 'next_url': None,
+    })
+
+
 def _official_assessment_detail_context(request, material):
     selected_calendar, calendars, active_calendar = _selected_school_calendar(request)
     content_json = getattr(material, 'content_json', None) or {}
@@ -13402,8 +13561,10 @@ def reading_word_page(request):
             getattr(canonical_response, 'url', None),
         )
         return canonical_response
+    preview_context = _admin_material_preview_context(request)
     context = _dashboard_context(request)
     context.update(_custom_material_reading_context(request))
+    context.update(preview_context)
     live_recovery_state = (
         student_state.get('recovery_state', {})
         if live_session_id and request.GET.get('live_recovery') == '1' and isinstance(student_state, dict)
@@ -23507,8 +23668,10 @@ def reading_sentence_page(request):
     canonical_response = _canonicalize_custom_material_reading_url(request)
     if canonical_response:
         return canonical_response
+    preview_context = _admin_material_preview_context(request)
     context = _dashboard_context(request)
     context.update(_custom_material_reading_context(request))
+    context.update(preview_context)
     context['student_end_assessment_state_json'] = json.dumps(
         (_canonical_live_recovery_state(live_student_state.get('recovery_state')) if request.GET.get('live_recovery') == '1' and live_student_state else _get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
         default=str, separators=(',', ':'),
@@ -23696,8 +23859,10 @@ def reading_para_page(request):
     canonical_response = _canonicalize_custom_material_reading_url(request)
     if canonical_response:
         return canonical_response
+    preview_context = _admin_material_preview_context(request)
     context = _dashboard_context(request)
     context.update(_custom_material_reading_context(request))
+    context.update(preview_context)
     custom_material = context.get('custom_material_launch_data') or {}
     content_json = custom_material.get('content_json') if isinstance(custom_material, dict) else {}
     if isinstance(content_json, dict) and content_json.get('activity_type') == 'retell_story':

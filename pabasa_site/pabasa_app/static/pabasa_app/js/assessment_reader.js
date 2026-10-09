@@ -130,6 +130,7 @@
             });
         }
         const isMyMaterials = window.__PABASA_MY_MATERIALS__ === true;
+        const isAdminPreview = window.__PABASA_ADMIN_PREVIEW__ === true;
         const officialAssessmentId = urlParams.get("official_assessment_id") || "";
         const customMaterialData = window.__PABASA_CUSTOM_MATERIAL__ || null;
         const isTemplateActivity = customMaterialData?.content_json?.template_source === "template"
@@ -162,6 +163,7 @@
             ""
         );
         const viewMode = urlParams.get("viewMode");
+        const adminPreviewReturnUrl = window.__PABASA_ADMIN_PREVIEW_RETURN__ || urlParams.get("admin_return") || "";
         const isAssistMode = urlParams.get("assist") === "1";
         const assistToken = urlParams.get("assist_token") || "";
         const sentenceDebugStorageKey = "pabasaCrlaSentenceDebug";
@@ -218,6 +220,12 @@
         const updateAssessmentLanguageLabel = (language) => {
             const displayLanguage = /filipino|fil\b/i.test(String(language || "")) ? "Filipino" : "English";
             if (testMeta) testMeta.textContent = `${testTitle} - ${testCode} · Language: ${displayLanguage}`;
+            if (isAdminPreview && testMeta) {
+                const previewBadge = document.createElement("span");
+                previewBadge.style.cssText = "background:rgba(31,111,139,.12);color:var(--accent-deep);padding:2px 8px;border-radius:6px;font-size:.7em;vertical-align:middle;margin-left:8px;";
+                previewBadge.textContent = `Admin preview · ${window.__PABASA_PREVIEW_STUDENT_NAME__ || "selected student"}`;
+                testMeta.append(previewBadge);
+            }
         };
         updateAssessmentLanguageLabel((officialAssessmentData && officialAssessmentData.language) || liveLanguage);
 
@@ -591,6 +599,10 @@
         const studentEndStateVersion = "crla_grade2_v1";
         const studentEndStateResetKey = "pabasa_student_end_assessment_state_reset";
         const officialCrlaItemResultsStorageKey = "crla_item_results";
+        // Preview state lives only in this tab and survives CRLA section changes.
+        // It never shares the student's progress or item-lock storage.
+        const adminPreviewStateKey = `pabasa_admin_crla_preview:${urlParams.get("admin_preview_token") || "preview"}`;
+        let adminPreviewEndState = {};
 
         function getStoredData(key, fallback = []) {
             try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); } catch (e) { return fallback; }
@@ -610,6 +622,7 @@
         }
 
         function clearOfficialCrlaItemResults() {
+            if (isAdminPreview) return;
             try {
                 const savedResults = JSON.parse(localStorage.getItem(officialCrlaItemResultsStorageKey) || '{}');
                 const keyPrefix = `${getStudentEndStateKey()}:`;
@@ -625,6 +638,10 @@
         let liveStudentEndState = null;
 
         function readStudentEndState() {
+            if (isAdminPreview) {
+                try { return JSON.parse(sessionStorage.getItem(adminPreviewStateKey) || "{}"); }
+                catch (error) { return adminPreviewEndState; }
+            }
             try {
                 if (isCurrentLiveAssessment() && liveStudentEndState !== null) return liveStudentEndState;
                 const liveRecovery = window.__PABASA_STUDENT_END_STATE__ || {};
@@ -673,6 +690,24 @@
                 material_id: String(officialAssessmentId || materialId || "").trim(),
                 updated_at: new Date().toISOString(),
             };
+            if (isAdminPreview) {
+                adminPreviewEndState = savedState;
+                sessionStorage.setItem(adminPreviewStateKey, JSON.stringify(savedState));
+                if (!["completed", "early_completed_words", "learner_experience"].includes(savedState.stage)) {
+                    return Promise.resolve({ success: true, preview_only: true, student_end_assessment_state: savedState });
+                }
+                return fetch(`/api/admin/crla-preview/score/?admin_student_id=${encodeURIComponent(urlParams.get("admin_student_id") || "")}`, {
+                    method: "POST", credentials: "same-origin",
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrfToken() },
+                    body: JSON.stringify(savedState),
+                }).then(async response => {
+                    const result = await response.json();
+                    if (!response.ok || !result.success) return null;
+                    adminPreviewEndState = result.student_end_assessment_state;
+                    sessionStorage.setItem(adminPreviewStateKey, JSON.stringify(adminPreviewEndState));
+                    return result;
+                }).catch(() => null);
+            }
             if (!deferLocalStorage) {
                 try {
                     localStorage.setItem(getStudentEndStateKey(), JSON.stringify(savedState));
@@ -751,6 +786,15 @@
                 ...current,
                 ...(patch || {}),
             };
+            if (isAdminPreview) {
+                adminPreviewEndState = nextState;
+                sessionStorage.setItem(adminPreviewStateKey, JSON.stringify(nextState));
+                const previewOperation = studentEndStateWriteQueue.then(() => writeStudentEndState({
+                    ...readStudentEndState(), ...(patch || {}),
+                }, options));
+                studentEndStateWriteQueue = previewOperation.catch(() => null);
+                return previewOperation;
+            }
             if (nextState.stage && options.optimisticLocalStorage !== false) {
                 // A reconnect snapshot seeds this reader once. Subsequent
                 // branches must read the scores accumulated in this tab.
@@ -776,6 +820,7 @@
 
         // CRLA Official Assessment: Persist item score immediately when locked
         function persistLockedItemResult(itemIndex, nextActiveItemIndex = null) {
+            if (isAdminPreview) return;
             if (!isOfficialAssessmentLaunch || !itemLocked[itemIndex]) return;
             const itemScore = itemScores[itemIndex];
             if (!itemScore) return;
@@ -805,6 +850,7 @@
         }
 
         function restoreOfficialCrlaItemResults() {
+            if (isAdminPreview) return;
             if (!isOfficialAssessmentLaunch || !isCrla) return;
             try {
                 const savedResults = JSON.parse(localStorage.getItem(officialCrlaItemResultsStorageKey) || '{}');
@@ -854,6 +900,11 @@
         }
 
         function clearStudentEndState() {
+            if (isAdminPreview) {
+                adminPreviewEndState = {};
+                sessionStorage.removeItem(adminPreviewStateKey);
+                return;
+            }
             liveStudentEndState = isCurrentLiveAssessment() ? {} : null;
             window.__PABASA_STUDENT_END_STATE__ = {};
             try {
@@ -1248,6 +1299,7 @@
         }
 
         async function submitStoryResponse() {
+            if (isAdminPreview) return null;
             if (!storyAnswerChunks.length || !materialId) return null;
             const formData = new FormData();
             const blob = new Blob(storyAnswerChunks, { type: storyAnswerChunks[0].type || "audio/webm" });
@@ -2115,7 +2167,7 @@
                     : [];
             const normalizedItems = originalItems.map(normalizeDisplayItem).map(item => String(item || '').trim()).filter(Boolean);
             if (material.content_json && material.content_json.randomize_order && normalizedItems.length > 0) {
-                const seedSource = `${String(material.raw_id || material.id || '')}|${String(window.PABASA_USER_NAME || window.localStorage.getItem('pabasaUserName') || window.PABASA_USER_EMAIL || '').toLowerCase().trim()}`;
+                const seedSource = `${String(material.raw_id || material.id || '')}|${String(window.__PABASA_PREVIEW_STUDENT_NAME__ || window.PABASA_USER_NAME || window.localStorage.getItem('pabasaUserName') || window.PABASA_USER_EMAIL || '').toLowerCase().trim()}`;
                 const seed = hashString(seedSource);
                 return stableShuffle(normalizedItems, seed);
             }
@@ -2509,7 +2561,7 @@
             }
             if (isFinalCompletion) {
                 if (completionClassificationValue) completionClassificationValue.textContent = classificationText;
-                finishBtn?.remove();
+                if (!isAdminPreview) finishBtn?.remove();
             } else {
                 // A section transition is not a result screen. Remove the
                 // classification panel entirely instead of leaving an empty
@@ -2524,7 +2576,7 @@
                 finishBtn.dataset.transitionUrl = transition
                     ? buildCrlaStageUrl(transition.nextStage, endState)
                     : "";
-                finishBtn.textContent = transition?.cta || "Back to Assessment";
+                finishBtn.textContent = transition?.cta || (isAdminPreview ? "Back to CRLA selection" : "Back to Assessment");
             }
             reviewBtn?.classList.toggle("d-none", !["early_completed_words", "completed"].includes(stage));
             setCompletionLoadingState(false);
@@ -5979,6 +6031,14 @@
                 renderPersistedEndState(renderedEndState);
                 renderLiveCompletionWaitingState(branchState.stage);
             }
+            if (isAdminPreview) {
+                // Show the same local completion/result card as the student,
+                // then stop before any student progress, notifications, or
+                // assessment-result request is sent.
+                completionSubmitted = !["transition_to_rhymes", "transition_to_sentence", "transition_to_story"].includes(branchState.stage);
+                setCompletionActionButtonsProcessing(false);
+                return;
+            }
             if (!isMyMaterials && (branchState.stage === "transition_to_rhymes" || branchState.stage === "transition_to_sentence" || branchState.stage === "transition_to_story")) {
                 traceEndSession('showCompletion.awaitContinue', { nextStageUrl, next_stage: branchState.next_stage });
                 return;
@@ -7597,6 +7657,11 @@
 
         function goBackToAssessments() {
             clearStoryReadingTimer();
+            if (isAdminPreview) {
+                sessionStorage.removeItem(adminPreviewStateKey);
+                window.location.assign(adminPreviewReturnUrl || "/dashboard/admin/courses/prescribed/");
+                return;
+            }
             if (isAssistMode && window.parent && window.parent !== window) {
                 window.parent.postMessage({
                     type: "pabasa-assist-returning",

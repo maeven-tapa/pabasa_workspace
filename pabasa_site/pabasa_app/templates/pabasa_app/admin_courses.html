@@ -13,6 +13,10 @@
 
     .admin-courses-panel > form { flex:0 0 auto; }
     .admin-courses-panel > .table-responsive thead th { position:sticky; top:0; z-index:1; }
+    .admin-prescribed-card { align-items:center; background:linear-gradient(135deg,#eef8ff,#f7fbff); border:1px solid rgba(31,111,139,.16); border-radius:20px; box-shadow:0 12px 28px rgba(16,70,110,.08); display:flex; gap:1rem; padding:1rem 1.1rem; }
+    .admin-prescribed-card-icon { align-items:center; background:#1f6f8b; border-radius:16px; color:#fff; display:grid; flex:0 0 48px; font-size:1.35rem; height:48px; justify-content:center; }
+    .admin-prescribed-card-copy { flex:1 1 auto; min-width:0; }
+    @media (max-width: 700px) { .admin-prescribed-card { align-items:flex-start; flex-wrap:wrap; } .admin-prescribed-card > a { margin-left:64px; } }
     .admin-courses-panel > .table-responsive th:nth-child(1) { min-width:20%; }
     .admin-courses-panel > .table-responsive th:nth-child(2) { min-width:17%; }
     .admin-courses-panel > .table-responsive th:nth-child(3),
@@ -50,6 +54,16 @@
     }
 </style>
 <div class="admin-panel admin-courses-panel">
+    <section class="admin-prescribed-card mb-3" aria-labelledby="adminPrescribedMaterialsHeading">
+        <div class="admin-prescribed-card-icon" aria-hidden="true"><i class="bi bi-person-workspace"></i></div>
+        <div class="admin-prescribed-card-copy">
+            <span class="small text-uppercase fw-bold text-primary">Student material test</span>
+            <h2 class="h5 fw-bold mb-1" id="adminPrescribedMaterialsHeading">View prescribed materials as a student</h2>
+            <p class="text-secondary mb-0">Choose a student to open the exact material currently prescribed to that student. The preview uses the existing material record and never creates progress or a result.</p>
+        </div>
+        <a class="btn btn-primary fw-bold flex-shrink-0" href="{% url 'admin_prescribed_materials' %}"><i class="bi bi-eye me-1"></i>View prescribed materials</a>
+    </section>
+
     <form class="row g-2 align-items-end mb-3" method="get" data-admin-auto-filter>
         <div class="col-12 col-lg-6">
             <label class="form-label small fw-bold text-secondary" for="materialSearch">Search materials</label>

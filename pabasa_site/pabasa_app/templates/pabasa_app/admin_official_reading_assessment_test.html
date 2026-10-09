@@ -61,6 +61,8 @@
   <section class="crla-test-card">
     {% if student_launch_verification.passed %}
     <div class="alert alert-success rounded-4 mb-3"><strong>Exact match.</strong> This student will receive this same official CRLA material.</div>
+    <a class="btn btn-primary fw-bold mb-3" href="{% url 'admin_official_reading_assessment_test_launch' material.id %}?student_id={{ selected_student.id }}"><i class="bi bi-play-circle me-1"></i>Test CRLA in student view</a>
+    <p class="text-secondary small">Uses this existing assessment without creating a copy. You can complete the student flow and view the result, then return here. Student progress, results, and notifications are not saved.</p>
     {% else %}
     <div class="alert alert-danger rounded-4 mb-3"><strong>Selection mismatch.</strong> The student path did not select this exact material. Review the selected records below before opening the assessment window.</div>
     {% endif %}
