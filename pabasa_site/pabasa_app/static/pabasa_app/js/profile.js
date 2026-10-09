@@ -179,12 +179,23 @@ function initProfilePage() {
                         window.bootstrap.Modal.getInstance(teacherEditModal)?.hide();
                     }
                     form.reset();
-                    if (teacherEmailVerificationModal && window.bootstrap?.Modal) {
+                if (teacherEmailVerificationModal && window.bootstrap?.Modal) {
                         window.bootstrap.Modal.getOrCreateInstance(teacherEmailVerificationModal).show();
                     }
                     return;
                 }
 
+                const savedAvatar = fields.animal_avatar;
+                const savedAvatarInput = savedAvatar
+                    ? form.querySelector(`[data-avatar-choice][value="${CSS.escape(savedAvatar)}"]`)
+                    : null;
+                if (savedAvatarInput) {
+                    avatarChoices.forEach(function (input) {
+                        input.defaultChecked = input === savedAvatarInput;
+                    });
+                    savedAvatarInput.checked = true;
+                    updateAvatarPreview(savedAvatarInput);
+                }
                 showToast(data.message || "Profile updated successfully", "success");
                 setEditMode(false);
                 const studentEditModal = document.getElementById("studentEditModal");
@@ -195,6 +206,7 @@ function initProfilePage() {
                     window.bootstrap.Modal.getInstance(teacherEditModal)?.hide();
                 }
                 form.reset();
+                if (savedAvatarInput) updateAvatarPreview(form.querySelector("[data-avatar-choice]:checked"));
                 
                 // Update the display with new values
                 const fullNameDisplay = document.querySelector(".teacher-hero-name") || document.querySelector(".profile-main-content h2");
