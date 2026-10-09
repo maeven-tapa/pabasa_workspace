@@ -53,7 +53,7 @@ PRESCRIBED_ACTIVITIES = {
         'items': [
             {'id': 'dagat', 'word': 'dagat', 'choices': ['ba', 'da', 'pa'], 'answer': 'da', 'alt_text': 'Larawan ng dagat na may araw at alon', 'image_path': 'pabasa_app/images/session_7_lesson_19/dagat.svg'},
             {'id': 'hito', 'word': 'hito', 'choices': ['hi', 'gi', 'to'], 'answer': 'hi', 'alt_text': 'Larawan ng hito', 'image_path': 'pabasa_app/images/session_7_lesson_19/hito.png'},
-            {'id': 'labi', 'word': 'labi', 'choices': ['la', 'di', 'bi'], 'answer': 'la', 'alt_text': 'Larawan ng labi', 'image_path': 'pabasa_app/images/session_7_lesson_19/labi.svg'},
+            {'id': 'dila', 'word': 'dila', 'choices': ['la', 'di', 'bi'], 'answer': 'di', 'alt_text': 'Larawan ng dila', 'image_path': 'pabasa_app/images/picture_word/custom/Tongue-Dila.png'},
             {'id': 'hikaw', 'word': 'hikaw', 'choices': ['ki', 'he', 'hi'], 'answer': 'hi', 'alt_text': 'Larawan ng pares ng hikaw', 'image_path': 'pabasa_app/images/session_7_lesson_19/hikaw.png'},
             {'id': 'daga', 'word': 'daga', 'choices': ['ma', 'da', 'na'], 'answer': 'da', 'alt_text': 'Larawan ng daga', 'image_path': 'pabasa_app/images/picture_word/custom/Mouse-Daga.png'},
         ],
