@@ -24479,6 +24479,10 @@ def reading_transcribe_api(request):
                 pronunciation_aliases = {'lili': {'lili', 'lily'}, 'lily': {'lili', 'lily'}}
             elif request.POST.get('prescribed_activity_key') == 'lesson-14-gawain-3' and target_text.strip().lower() == 'elisi' and language_code.lower() == 'fil-ph':
                 pronunciation_aliases = {'elisi': {'elisi', 'ilisi', 'lc', 'lcc'}}
+            elif (request.POST.get('prescribed_activity_key') == 'lesson-27-gawain-1'
+                  and language_code.lower().startswith('en') and mode == 'sentence'):
+                # Accept the known STT substitution within Lesson 27 verses.
+                pronunciation_aliases = {'loved': {'love'}}
             analysis = analyze_reading(
                 target_text,
                 current_syllable_index,

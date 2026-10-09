@@ -113,9 +113,13 @@
     card.setAttribute('role', 'dialog');
     card.setAttribute('aria-modal', 'true');
     card.innerHTML = '<h1>Activity complete! 🎉</h1><p>Great job! You have completed the activity.</p><div class="pabasa-completion-actions"></div>';
-    back.classList.add('pabasa-completion-button');
-    back.replaceChildren(document.createTextNode('BACK TO MY LESSONS'));
-    card.querySelector('.pabasa-completion-actions').append(back);
+    // Keep the activity's leave-confirmation listeners on its original link.
+    // A completed activity can return to lessons without another confirmation.
+    const completionBack = document.createElement('a');
+    completionBack.className = 'pabasa-completion-button';
+    completionBack.href = back.href;
+    completionBack.textContent = 'BACK TO MY LESSONS';
+    card.querySelector('.pabasa-completion-actions').append(completionBack);
     target.replaceChildren(card);
     target.classList.add('pabasa-completion-root');
     document.body.append(target);

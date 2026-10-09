@@ -181,7 +181,7 @@
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { busy = false; return; }
     button.textContent = 'Listening…';
     try {
-      const result = await window.Basahin.read({target_text:target, language:'English', mode:'sentence'}, {button:button, url:data.transcribe_url}); if (attempt !== generation || isPaused) return;
+      const result = await window.Basahin.read({target_text:target, language:'English', mode:'sentence', prescribed_activity_key:'lesson-27-gawain-1'}, {button:button, url:data.transcribe_url}); if (attempt !== generation || isPaused) return;
       const heardText = result.raw_transcript || result.transcript;
       const spoken = normalize(heardText);
       const correct = result.complete === true;
