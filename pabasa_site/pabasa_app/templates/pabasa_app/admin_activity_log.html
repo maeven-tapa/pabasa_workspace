@@ -17,13 +17,23 @@
     .activity-log-filter .custom-device-trigger,
     .activity-log-filter .custom-device-option { white-space:nowrap; }
     .activity-log-card { background:#fff; border:1px solid #e1e8f0; border-radius:18px; box-shadow:0 8px 24px rgba(24,49,83,.06); overflow:hidden; }
+    .activity-log-table-scroll { flex:1 1 auto; min-height:0; overflow-y:auto; }
     .activity-log-table { margin:0; min-width:650px; }
-    .activity-log-table th { background:#f6f9fc; border-bottom:1px solid #e1e8f0; color:#536a84; font-size:.74rem; letter-spacing:.05em; padding:1rem; text-transform:uppercase; }
+    .activity-log-table th { background:#f6f9fc; border-bottom:1px solid #e1e8f0; color:#536a84; font-size:.74rem; letter-spacing:.05em; padding:1rem; position:sticky; text-transform:uppercase; top:0; z-index:1; }
     .activity-log-table td { border-color:#edf1f5; color:#29425f; padding:1rem; vertical-align:top; }
     .activity-log-title { color:#183153; font-weight:750; }
     .activity-log-message { color:#65768c; display:block; font-size:.9rem; margin-top:.2rem; }
     .activity-log-time { color:#52677f; font-size:.86rem; white-space:nowrap; }
     .activity-log-empty { color:#697d93; padding:3.5rem 1rem !important; text-align:center; }
+    @media (min-width: 992px) {
+        html:has(.activity-log-header),
+        body:has(.activity-log-header) { height:100%; min-height:0; overflow:hidden; }
+        body:has(.activity-log-header) .admin-app-shell { height:100dvh; min-height:0; overflow:hidden; }
+        .admin-main:has(.activity-log-header) { display:flex; flex:1 1 auto; flex-direction:column; height:100%; min-height:0; overflow:hidden; }
+        .admin-main:has(.activity-log-header) > .admin-content { display:flex; flex:1 1 0; flex-direction:column; height:0; min-height:0; overflow:hidden; }
+        .admin-main:has(.activity-log-header) .activity-log-header { flex:0 0 auto; }
+        .admin-main:has(.activity-log-header) .activity-log-card { display:flex; flex:1 1 0; flex-direction:column; height:0; min-height:0; }
+    }
     @media (max-width: 767px) { .activity-log-header { align-items:stretch; flex-direction:column; } .activity-log-controls { align-items:stretch; } .activity-log-filter .form-select, .activity-log-filter .custom-device-dropdown, .activity-log-filter .custom-device-trigger, .activity-log-filter .custom-device-menu { flex-basis:200px; min-width:200px; width:200px; } .activity-log-server-time { white-space:normal; } }
     @media (max-width: 991.98px) { .admin-content:has(.activity-log-header) { padding-top: 1rem; } }
 </style>
@@ -52,7 +62,7 @@
 </section>
 
 <section class="activity-log-card" aria-label="Recorded system activity">
-    <div class="table-responsive">
+    <div class="table-responsive activity-log-table-scroll">
         <table class="table activity-log-table">
             <thead>
                 <tr>

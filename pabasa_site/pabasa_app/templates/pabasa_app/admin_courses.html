@@ -2,13 +2,45 @@
 
 {% block content %}
 <style>
-    .admin-courses-panel .admin-filter-clear-btn {
-        min-height: 44px;
-    }
-
     .admin-courses-panel > .table-responsive {
         border-radius: 12px;
         overflow: auto;
+    }
+
+    .admin-courses-panel,
+    .admin-courses-panel > form,
+    .admin-courses-panel > .table-responsive { min-width:0; width:100%; }
+
+    .admin-courses-panel > form { flex:0 0 auto; }
+    .admin-courses-panel > .table-responsive thead th { position:sticky; top:0; z-index:1; }
+    .admin-courses-panel > .table-responsive th:nth-child(1) { min-width:20%; }
+    .admin-courses-panel > .table-responsive th:nth-child(2) { min-width:17%; }
+    .admin-courses-panel > .table-responsive th:nth-child(3),
+    .admin-courses-panel > .table-responsive th:nth-child(4) { white-space:nowrap; }
+    .admin-courses-panel > .table-responsive td:nth-child(3),
+    .admin-courses-panel > .table-responsive td:nth-child(4) { white-space:nowrap; }
+
+    .admin-course-details-modal .modal-dialog { max-width:52rem; }
+    .admin-course-details-modal .modal-content { border:0; border-radius:.85rem; box-shadow:0 1rem 3rem rgba(16,70,110,.2); max-height:88dvh; }
+    .admin-course-details-modal .modal-header { background:#fff; border-bottom:1px solid #e8eef4; padding:.9rem 1.1rem .8rem; }
+    .admin-course-details-modal .modal-title { color:#183153; font-size:1.15rem; }
+    .admin-course-details-modal .modal-header .btn-close { padding:.4rem; }
+    .admin-course-details-modal .modal-body { overflow-y:auto; padding:1rem 1.1rem; }
+    .admin-course-details-modal .details-grid { border-bottom:1px solid #e8eef4; margin-bottom:1rem; padding-bottom:.9rem; row-gap:.65rem; }
+    .admin-course-details-modal .detail-label { color:#748398; display:block; font-size:.7rem; font-weight:800; letter-spacing:.04em; margin-bottom:.15rem; text-transform:uppercase; }
+    .admin-course-details-modal .material-content-block { background:#fff; border:0; border-radius:0; padding:0; }
+    .admin-course-details-modal .material-content-block dd { color:#29425f; line-height:1.55; margin-bottom:.8rem; white-space:pre-wrap; }
+    .admin-course-details-modal .material-content-block dl + dl { border-top:1px solid #e8eef4; padding-top:.8rem; }
+    .admin-course-details-modal .modal-footer { border-top:1px solid #e8eef4; padding:.7rem 1.1rem; }
+
+    @media (min-width: 992px) {
+        html:has(.admin-courses-panel),
+        body:has(.admin-courses-panel) { height:100%; min-height:0; overflow:hidden; }
+        body:has(.admin-courses-panel) .admin-app-shell { height:100dvh; min-height:0; overflow:hidden; }
+        .admin-main:has(.admin-courses-panel) { display:flex; flex:1 1 auto; flex-direction:column; height:100%; min-height:0; overflow:hidden; }
+        .admin-main:has(.admin-courses-panel) > .admin-content { display:flex; flex:1 1 0; flex-direction:column; height:0; min-height:0; max-width:none; overflow:hidden; width:100%; }
+        .admin-main:has(.admin-courses-panel) .admin-courses-panel { display:flex; flex:1 1 0; flex-direction:column; height:0; min-height:0; overflow:hidden; width:100%; }
+        .admin-courses-panel > .table-responsive { flex:1 1 0; min-height:0; overflow:auto; }
     }
 
     @media (max-width: 991.98px) {
@@ -19,7 +51,7 @@
 </style>
 <div class="admin-panel admin-courses-panel">
     <form class="row g-2 align-items-end mb-3" method="get" data-admin-auto-filter>
-        <div class="col-12 col-lg-4">
+        <div class="col-12 col-lg-6">
             <label class="form-label small fw-bold text-secondary" for="materialSearch">Search materials</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -41,11 +73,6 @@
                 <option value="{{ value }}" {% if type_filter == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
-        </div>
-        <div class="col-12 col-lg-2 d-flex gap-2 align-items-end">
-            <a class="btn btn-outline-secondary admin-filter-clear-btn flex-fill" href="{% url 'admin_courses' %}" aria-label="Clear filters">
-                <i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span>
-            </a>
         </div>
     </form>
 
@@ -89,9 +116,9 @@
                     </td>
                     <td>
                         <div class="admin-table-actions">
-                            <a class="btn btn-sm admin-action-btn admin-action-view" href="{% url 'admin_course_detail' material.id %}">
-                                <i class="bi bi-eye"></i><span>View</span>
-                            </a>
+                                <button class="btn btn-sm admin-action-btn admin-action-view" type="button" data-bs-toggle="modal" data-bs-target="#adminCourseDetailsModal{{ material.id }}">
+                                    <i class="bi bi-eye"></i><span>View</span>
+                                </button>
                             <form method="post" action="{% url 'admin_course_archive' material.id %}">
                                 {% csrf_token %}
                                 {% if material.is_active %}
@@ -120,4 +147,29 @@
         </table>
     </div>
 </div>
+{% for material in materials %}
+<div class="modal fade admin-course-details-modal" id="adminCourseDetailsModal{{ material.id }}" tabindex="-1" aria-labelledby="adminCourseDetailsModalLabel{{ material.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title h5 fw-bold mb-1" id="adminCourseDetailsModalLabel{{ material.id }}">{{ material.title|default:"Untitled material" }}</h2>
+                    <div class="d-flex flex-wrap gap-2"><span class="badge rounded-pill text-bg-light border">{{ material.get_item_type_display }}</span>{% if material.get_saved_language %}<span class="badge rounded-pill text-bg-light border">{{ material.get_saved_language }}</span>{% endif %}{% if material.is_active %}<span class="badge rounded-pill text-bg-success">{{ material.get_status_display }}</span>{% else %}<span class="badge rounded-pill text-bg-secondary">Archived</span>{% endif %}</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row details-grid small mb-3">
+                    {% if material.section %}<div class="col-12 col-md-6"><span class="detail-label">Section / Class</span><strong>{{ material.section.class_name }}</strong></div>{% endif %}
+                    {% if material.section and material.section.teacher %}<div class="col-12 col-md-6"><span class="detail-label">Created By</span><strong>{{ material.section.teacher.first_name }} {{ material.section.teacher.last_name }}</strong></div>{% elif material.assessment and material.assessment.teacher %}<div class="col-12 col-md-6"><span class="detail-label">Created By</span><strong>{{ material.assessment.teacher.first_name }} {{ material.assessment.teacher.last_name }}</strong></div>{% endif %}
+                    <div class="col-12 col-md-6"><span class="detail-label">Created At</span><strong>{{ material.created_at|date:"M d, Y g:i A" }}</strong></div>
+                    <div class="col-12 col-md-6"><span class="detail-label">Last Updated</span><strong>{{ material.updated_at|date:"M d, Y g:i A" }}</strong></div>
+                </div>
+                <div class="material-content-block mb-3"><h3 class="h6 fw-bold mb-2">Material Content</h3>{% if material.prompt_text %}<dl class="mb-2"><dt class="text-secondary">Prompt</dt><dd>{{ material.prompt_text|linebreaksbr }}</dd></dl>{% endif %}{% if material.content_text %}<dl class="mb-0"><dt class="text-secondary">Content</dt><dd class="mb-0">{{ material.content_text|linebreaksbr }}</dd></dl>{% endif %}</div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button><form method="post" action="{% url 'admin_course_archive' material.id %}">{% csrf_token %}{% if material.is_active %}<input type="hidden" name="action" value="archive"><button class="btn btn-outline-danger" type="submit"><i class="bi bi-archive me-1"></i>Archive</button>{% else %}<input type="hidden" name="action" value="restore"><button class="btn btn-outline-success" type="submit"><i class="bi bi-arrow-counterclockwise me-1"></i>Restore</button>{% endif %}</form></div>
+        </div>
+    </div>
+</div>
+{% endfor %}
 {% endblock %}
