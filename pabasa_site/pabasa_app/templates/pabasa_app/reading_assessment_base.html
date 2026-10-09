@@ -122,6 +122,22 @@
             flex: 0 0 auto;
         }
 
+        .level-mark.level-mark-deped {
+            width: 96px;
+            height: 56px;
+            padding: 6px;
+            border: 1px solid #d5e2f0;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(0, 59, 116, 0.1);
+        }
+        .level-mark-deped img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
         .eyebrow {
             color: var(--accent-deep);
             font-family: "Nunito", "Segoe UI", sans-serif;
@@ -627,6 +643,12 @@
             background: #ddebff;
             color: #0f172a;
             transform: translateY(-1px);
+        }
+
+        .reading-word .is-unread-word,
+        .reading-title .is-unread-word {
+            background: rgba(37, 99, 235, 0.08);
+            border-radius: 0.3em;
         }
 
         .reading-word .is-next-word,
@@ -2212,6 +2234,39 @@
             background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,0.94));
         }
 
+        #storySelectionPanel .story-choice-banner-illustrated {
+            min-height: 0;
+            aspect-ratio: 2 / 1;
+            overflow: hidden;
+            background: #e9f2fb;
+        }
+        #storySelectionPanel .story-choice-illustration {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            animation: crlaStoryBannerDrift 10s ease-in-out infinite alternate;
+        }
+        #storySelectionPanel .story-choice-card:nth-child(even) .story-choice-illustration {
+            animation-duration: 12s;
+            animation-delay: -4s;
+        }
+        #storySelectionPanel .story-choice-banner-illustrated::after {
+            height: 20px;
+            pointer-events: none;
+        }
+        @keyframes crlaStoryBannerDrift {
+            from { transform: scale(1.01) translateX(-0.25%); }
+            to { transform: scale(1.045) translateX(0.25%); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #storySelectionPanel .story-choice-illustration {
+                animation: none;
+                transform: none;
+            }
+        }
+
         #storySelectionPanel .story-choice-badges {
             display: flex;
             flex-wrap: wrap;
@@ -3123,6 +3178,10 @@
             background: rgba(56, 189, 248, 0.22) !important;
             color: #f8fafc !important;
         }
+        body.dark-theme .reading-word .is-unread-word,
+        body.dark-theme .reading-title .is-unread-word {
+            background: rgba(56, 189, 248, 0.08) !important;
+        }
         body.dark-theme .reading-word .is-next-word,
         body.dark-theme .reading-title .is-next-word {
             background: rgba(56, 189, 248, 0.22) !important;
@@ -3629,6 +3688,67 @@
 <link rel="stylesheet" href="{% static 'pabasa_app/library-theme.css' %}?v=storybook-library-1">
 <link rel="stylesheet" href="{% static 'pabasa_app/zoo-theme.css' %}?v=storybook-zoo-1">
 <link rel="stylesheet" href="{% static 'pabasa_app/ocean-theme.css' %}?v=storybook-ocean-1">
+<style>
+    body.is-crla-reader[data-student-theme] {
+        background:
+            radial-gradient(ellipse at 0% 0%, rgba(0, 71, 171, .2), transparent 55%),
+            radial-gradient(ellipse at 100% 12%, rgba(198, 40, 40, .14), transparent 50%),
+            #f8fbff !important;
+    }
+    body.dark-theme.is-crla-reader[data-student-theme] {
+        background:
+            radial-gradient(ellipse at 0% 0%, rgba(0, 91, 187, .32), transparent 55%),
+            radial-gradient(ellipse at 100% 12%, rgba(198, 40, 40, .2), transparent 50%),
+            #102344 !important;
+    }
+    body.is-crla-reader[data-student-theme]::before {
+        background-image:
+            linear-gradient(rgba(0, 71, 171, .04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 71, 171, .04) 1px, transparent 1px);
+    }
+    body.is-crla-reader :is(.forest-world, .treasure-world, .space-world, .library-world, .zoo-world, .ocean-world) {
+        display: none !important;
+    }
+    .sentence-countdown-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 21000;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: rgba(219, 234, 254, .8);
+        backdrop-filter: blur(4px);
+        pointer-events: auto;
+    }
+    .sentence-countdown-card {
+        min-width: min(14rem, 100%);
+        padding: 2rem 2.5rem;
+        border: 1px solid #c4d8f2;
+        border-top: 4px solid #c62828;
+        border-radius: 18px;
+        background: #fff;
+        box-shadow: 0 18px 45px rgba(0, 59, 116, .16);
+        color: #003b74;
+        color-scheme: light;
+        text-align: center;
+    }
+    .sentence-countdown-label {
+        margin-bottom: .25rem;
+        color: #46617e;
+        font-size: .72rem;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+    #sentenceItemCountdownNumber {
+        display: block;
+        color: #003b74;
+        font-size: 3.5rem;
+        line-height: 1;
+        font-weight: 900;
+    }
+</style>
 </head>
 <body data-student-theme="{{ student_theme_slug|default:'sky' }}">
     <script>
@@ -3855,10 +3975,10 @@
             </div>
         </div>
 
-        <div id="sentenceItemCountdown" aria-hidden="true" style="display:none;position:fixed;inset:0;z-index:21000;align-items:center;justify-content:center;background:rgba(2,6,23,.62);pointer-events:auto;">
-            <div style="min-width:14rem;padding:2rem 2.5rem;border:1px solid rgba(110,168,255,.3);border-radius:18px;background:rgba(16,39,70,.96);box-shadow:0 18px 45px rgba(2,10,24,.3);color:#fff;text-align:center;">
-                <div style="margin-bottom:.25rem;color:#bfd0e7;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">Get ready</div>
-                <strong id="sentenceItemCountdownNumber" style="display:block;color:#8fc5ff;font-size:3.5rem;line-height:1;font-weight:900;">3</strong>
+        <div id="sentenceItemCountdown" class="sentence-countdown-overlay" aria-hidden="true">
+            <div class="sentence-countdown-card">
+                <div class="sentence-countdown-label">Get ready</div>
+                <strong id="sentenceItemCountdownNumber">3</strong>
             </div>
         </div>
 

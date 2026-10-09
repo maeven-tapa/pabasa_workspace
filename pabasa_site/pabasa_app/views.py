@@ -25010,6 +25010,7 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
             sentence_debug = request.POST.get('sentence_debug') == '1'
             analysis = analyze_sentence_reading(
                 target_text, analysis_transcript, sentence_word_results, language_code, debug=sentence_debug,
+                crla_reading=official_crla_assessment,
             )
         else:
             pronunciation_aliases = None
@@ -25029,6 +25030,7 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
                 strict_rhyme=request.POST.get('crla_rhymes') == '1',
                 pronunciation_aliases=pronunciation_aliases,
                 crla_story_reading=mode == 'paragraph' and request.POST.get('crla_story_reading') == '1',
+                crla_reading=official_crla_assessment,
             )
         if l22_c_pronunciation:
             l22_match = l22_c_pronunciation_match(

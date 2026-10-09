@@ -103,6 +103,10 @@ class CrlaStreamingTests(SimpleTestCase):
             ('paragraph', 'Si Bibo ay bata.', 'Si Bibo ay bata.', {'crla_story_reading': '1'}),
             ('paragraph', "May iba't-ibang tao.", 'May ibat-ibang tao.', {'crla_story_reading': '1'}),
             ('paragraph', "May iba't-ibang tao.", 'May ibat ibang tao.', {'crla_story_reading': '1'}),
+            ('word', 'agiw', 'agyo', {}),
+            ('word', 'kuneho', 'conejo', {}),
+            ('sentence', 'May agiw at kuneho.', 'May agyo at conejo.', {'crla_sentence_word_scoring': '1'}),
+            ('paragraph', 'May agiw at kuneho.', 'May agyo at conejo.', {'crla_story_reading': '1'}),
         ]
         for mode, target, transcript, flags in cases:
             fields = {**self.fields, 'mode': mode, 'target_text': target, **flags}
@@ -128,6 +132,15 @@ class CrlaStreamingTests(SimpleTestCase):
                     self.assertTrue(result['complete'])
                     self.assertEqual(result['current_word_index'], 3)
                     self.assertEqual(result['raw_transcript'], transcript)
+                if 'agyo' in transcript or 'conejo' in transcript:
+                    self.assertTrue(result['complete'])
+                    self.assertEqual(result['correct_word_count'], 1 if mode == 'word' else 4)
+                    self.assertEqual(result['raw_transcript'], transcript)
+                    if mode == 'paragraph':
+                        self.assertEqual(result['word_alignment']['miscues'], 0)
+                        self.assertEqual(result['word_alignment']['correct_words'], 4)
+                    elif mode == 'sentence':
+                        self.assertEqual(result['miscues'], 0)
 
     def test_sentence_self_correction_uses_prior_shared_results(self):
         fields = {**self.fields, 'mode': 'sentence', 'target_text': 'Si Bibo ay bata.', 'crla_sentence_word_scoring': '1'}

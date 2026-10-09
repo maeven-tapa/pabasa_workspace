@@ -891,11 +891,25 @@ def _story_words_are_equivalent(expected_word, recognized_word):
     return expected == recognized
 
 
+CRLA_WORD_ALIASES = {
+    "agiw": frozenset({"agyo"}),
+    "kuneho": frozenset({"conejo"}),
+}
+
+
+def _crla_word_alias_matches(expected_word, recognized_word):
+    expected = _normalize_story_word_text(expected_word)
+    recognized = _normalize_story_word_text(recognized_word)
+    return recognized in CRLA_WORD_ALIASES.get(expected, ())
+
+
 def _crla_story_words_are_equivalent(expected_word, recognized_word):
-    """Ignore spoken apostrophe/hyphen formatting, while requiring exact letters."""
+    """Ignore spoken punctuation and accept only the explicit CRLA word aliases."""
     expected = _normalize_story_word_text(expected_word).replace("'", "").replace("-", "")
     recognized = _normalize_story_word_text(recognized_word).replace("'", "").replace("-", "")
-    return bool(expected and recognized and expected == recognized)
+    return bool(expected and recognized and (
+        expected == recognized or _crla_word_alias_matches(expected, recognized)
+    ))
 
 
 def _story_two_token_candidate(expected_word, first_token, second_token):
@@ -1173,15 +1187,15 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
     }
 
 
-def analyze_reading(target_text, current_syllable_index=0, transcript="", language_code="en-US", strict_rhyme=False, pronunciation_aliases=None, crla_story_reading=False):
-    matcher = ReadingMatcher(target_text, current_syllable_index, language_code, strict_rhyme=strict_rhyme, pronunciation_aliases=pronunciation_aliases, crla_story_reading=crla_story_reading)
+def analyze_reading(target_text, current_syllable_index=0, transcript="", language_code="en-US", strict_rhyme=False, pronunciation_aliases=None, crla_story_reading=False, crla_reading=False):
+    matcher = ReadingMatcher(target_text, current_syllable_index, language_code, strict_rhyme=strict_rhyme, pronunciation_aliases=pronunciation_aliases, crla_story_reading=crla_story_reading, crla_reading=crla_reading)
     matched = matcher.advance_for_spoken_text(transcript)
     return matcher.payload(matched, transcript)
 
 
-def analyze_sentence_reading(target_text, transcript="", prior_results=None, language_code="en-US", debug=False):
+def analyze_sentence_reading(target_text, transcript="", prior_results=None, language_code="en-US", debug=False, crla_reading=False):
     """Resolve a sentence sequentially while allowing an immediate self-correction."""
-    matcher = ReadingMatcher(target_text, 0, language_code)
+    matcher = ReadingMatcher(target_text, 0, language_code, crla_reading=crla_reading)
     spoken_words = matcher.normalize_spoken_words(transcript)
     debug_trace = []
     if debug:
@@ -1421,11 +1435,12 @@ def analyze_sentence_reading(target_text, transcript="", prior_results=None, lan
 
 
 class ReadingMatcher:
-    def __init__(self, target_text, current_syllable_index=0, language_code="en-US", strict_rhyme=False, pronunciation_aliases=None, crla_story_reading=False):
+    def __init__(self, target_text, current_syllable_index=0, language_code="en-US", strict_rhyme=False, pronunciation_aliases=None, crla_story_reading=False, crla_reading=False):
         self.target_text = target_text or ""
         self.language_code = language_code or "en-US"
         self.strict_rhyme = bool(strict_rhyme)
         self.crla_story_reading = bool(crla_story_reading)
+        self.crla_reading = bool(crla_reading or crla_story_reading)
         self.pronunciation_aliases = pronunciation_aliases or {}
         self.words = self.readable_words(self.target_text)
         self.current_syllable_index = max(0, int(current_syllable_index or 0))
@@ -1529,6 +1544,8 @@ class ReadingMatcher:
         return best_index
 
     def words_match(self, spoken_word, target_word):
+        if self.crla_reading and _crla_word_alias_matches(target_word, spoken_word):
+            return True
         if self.crla_story_reading and _crla_story_words_are_equivalent(target_word, spoken_word):
             return True
         if spoken_word == target_word:

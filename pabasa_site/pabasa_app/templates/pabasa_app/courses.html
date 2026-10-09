@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="{% static 'pabasa_app/css/aral_session_folder_icon.css' %}">
 {% if teacher_courses|length == 1 and nav_role == 'teacher' %}<script>window.PABASA_HOLD_DASHBOARD_LOADER = true;</script>{% endif %}
 <script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[data-prescribed-activity="lesson-7-gawain-1"]').forEach(x=>x.dataset.prescribedActivity='lesson-7-gawain-1')});</script>
 <script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[data-prescribed-activity="letrang-msa"]').forEach(x=>x.dataset.prescribedActivity='lesson-6-gawain-1');document.querySelectorAll('[data-prescribed-preview="letrang-msa"]').forEach(x=>x.dataset.prescribedPreview='lesson-6-gawain-1')});</script>
@@ -24581,7 +24582,7 @@ if (key.startsWith('lesson-7-') || ['lesson7-gawain2c', 'lesson7-gawain4', 'less
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'prescribed-session-folder__button';
-        button.innerHTML = `<span class="prescribed-session-folder__icon" aria-hidden="true"><i class="bi bi-folder-fill"></i></span><span><strong>Session ${number}</strong><small>${members.length} ${members.length === 1 ? 'activity' : 'activities'}</small></span>`;
+        button.innerHTML = `<span class="prescribed-session-folder__icon" aria-hidden="true">{% include "pabasa_app/includes/aral_session_folder_icon.html" %}</span><span><strong>Session ${number}</strong><small>${members.length} ${members.length === 1 ? 'activity' : 'activities'}</small></span>`;
         const modal = document.createElement('div');
         modal.className = 'prescribed-session-modal';
         modal.hidden = true;

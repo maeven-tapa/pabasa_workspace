@@ -1,0 +1,88 @@
+/* The supplied ARAL logo stays intact; the folder is drawn around it. */
+.aral-session-folder-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: flex-end;
+    justify-content: center;
+    isolation: isolate;
+    width: 104px;
+    height: 104px;
+    padding: 0 12px 7px;
+    box-sizing: border-box;
+    vertical-align: middle;
+    flex: 0 0 auto;
+}
+.aral-session-folder-icon::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: 4px;
+    left: 0;
+    width: 47%;
+    height: 24px;
+    border: 1px solid #d79e25;
+    border-radius: 9px 12px 0 0;
+    background: #edb942;
+    box-sizing: border-box;
+}
+.aral-session-folder-icon::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 16px 0 0;
+    border: 1px solid #d79e25;
+    border-radius: 5px 10px 10px 10px;
+    background: linear-gradient(145deg, #ffdf7d, #f4c956);
+    box-shadow: 0 3px 5px rgba(66, 48, 9, .12);
+}
+.aral-session-folder-icon img {
+    display: block;
+    width: 72px;
+    height: 80px;
+    max-width: 100%;
+    object-fit: contain;
+    background: #fff;
+    border-radius: 3px;
+    filter: none;
+    opacity: 1;
+}
+.prescribed-session-folder__icon:has(.aral-session-folder-icon) {
+    line-height: 1;
+    font-size: 0;
+}
+#sessionGrid.session-folder-mode .week-folder-icon:has(.aral-session-folder-icon) {
+    font-size: 0;
+    margin-bottom: 4px;
+}
+/* Student folders also appear in compact, fixed-height dashboard rows. */
+#sessionGrid .aral-session-folder-icon {
+    width: 76px;
+    height: 64px;
+    padding: 0 9px 4px;
+}
+#sessionGrid .aral-session-folder-icon::before {
+    top: 0;
+    height: 20px;
+}
+#sessionGrid .aral-session-folder-icon::after {
+    top: 12px;
+}
+#sessionGrid .aral-session-folder-icon img {
+    width: 42px;
+    height: 47px;
+}
+@media (max-width: 620px) {
+    .aral-session-folder-icon {
+        width: 88px;
+        height: 88px;
+        padding: 0 10px 6px;
+    }
+    .aral-session-folder-icon img {
+        width: 59px;
+        height: 66px;
+    }
+    .prescribed-session-folder__button:has(.aral-session-folder-icon) {
+        flex-direction: column;
+        text-align: center;
+    }
+}

@@ -149,6 +149,19 @@
             }
         }
         const isCrla = officialAssessmentData?.assessment_kind === "crla";
+        document.body.classList.toggle("is-crla-reader", isCrla);
+        if (isCrla) {
+            const levelMark = shell.querySelector(".level-mark");
+            if (levelMark) {
+                const logo = document.createElement("img");
+                logo.src = "/static/pabasa_app/images/deped-logo-philippines-v1.png";
+                logo.alt = "Department of Education";
+                logo.width = 2000;
+                logo.height = 1020;
+                levelMark.classList.add("level-mark-deped");
+                levelMark.replaceChildren(logo);
+            }
+        }
         const isFreshOfficialCrlaLaunch = isOfficialAssessmentLaunch
             && isCrla
             && urlParams.get("crla_fresh") === "1";
@@ -219,12 +232,15 @@
         const isPractice = false;
         const updateAssessmentLanguageLabel = (language) => {
             const displayLanguage = /filipino|fil\b/i.test(String(language || "")) ? "Filipino" : "English";
-            if (testMeta) testMeta.textContent = `${testTitle} - ${testCode} · Language: ${displayLanguage}`;
+            if (testMeta) testMeta.textContent = isCrla
+                ? String(testTitle).replace(/\s+(?:Pre|Mid|Post)[ -]?Test\b.*$/i, "").trim()
+                : `${testTitle} - ${testCode} · Language: ${displayLanguage}`;
             if (isAdminPreview && testMeta) {
-                const previewBadge = document.createElement("span");
-                previewBadge.style.cssText = "background:rgba(31,111,139,.12);color:var(--accent-deep);padding:2px 8px;border-radius:6px;font-size:.7em;vertical-align:middle;margin-left:8px;";
+                const previewBadge = document.getElementById("crlaAdminPreviewBadge") || document.createElement("span");
+                previewBadge.id = "crlaAdminPreviewBadge";
+                previewBadge.style.cssText = "display:inline-block;background:rgba(31,111,139,.12);color:var(--accent-deep);padding:2px 8px;border-radius:6px;font-size:.7em;vertical-align:middle;margin-top:4px;";
                 previewBadge.textContent = "Admin CRLA preview";
-                testMeta.append(previewBadge);
+                testMeta.insertAdjacentElement("afterend", previewBadge);
             }
         };
         updateAssessmentLanguageLabel((officialAssessmentData && officialAssessmentData.language) || liveLanguage);
@@ -981,10 +997,16 @@
         function getStoryCardMeta(story) {
             const title = String(story?.title || "").trim().toLowerCase();
             if (title.includes("kakaibang") || title.includes("jeepney")) {
-                return { category: "Everyday", duration: "4 min read", level: "Level 1", thumbnail: "reading9.jpg" };
+                const illustrated = isCrla && title === "isang kakaibang araw";
+                return { category: "Everyday", duration: "4 min read", level: "Level 1",
+                    thumbnail: illustrated ? "crla_story_banners/isang-kakaibang-araw-v1.png" : "reading9.jpg",
+                    illustrated, description: "A cheerful clown juggling five balls inside a jeepney while passengers clap." };
             }
             if (title.includes("pagong") || title.includes("kuneho")) {
-                return { category: "Fable", duration: "3 min read", level: "Level 1", thumbnail: "reading8.jpg" };
+                const illustrated = isCrla && title === "ang pagong at ang kuneho";
+                return { category: "Fable", duration: "3 min read", level: "Level 1",
+                    thumbnail: illustrated ? "crla_story_banners/ang-pagong-at-ang-kuneho-v1.png" : "reading8.jpg",
+                    illustrated, description: "A tortoise and a rabbit preparing for a race while forest animals watch." };
             }
             return { category: "Adventure", duration: "3 min read", level: "Level 1", thumbnail: "reading7.jpg" };
         }
@@ -2022,7 +2044,18 @@
 
                 const banner = document.createElement("div");
                 banner.className = "story-choice-banner";
-                banner.style.backgroundImage = `linear-gradient(135deg, rgba(31,111,139,0.22), rgba(122,139,95,0.18)), url('${imageUrl}')`;
+                if (meta.illustrated) {
+                    banner.classList.add("story-choice-banner-illustrated");
+                    const illustration = document.createElement("img");
+                    illustration.className = "story-choice-illustration";
+                    illustration.src = imageUrl;
+                    illustration.alt = meta.description;
+                    illustration.loading = "lazy";
+                    illustration.decoding = "async";
+                    banner.appendChild(illustration);
+                } else {
+                    banner.style.backgroundImage = `linear-gradient(135deg, rgba(31,111,139,0.22), rgba(122,139,95,0.18)), url('${imageUrl}')`;
+                }
 
                 const badgeRow = document.createElement("div");
                 badgeRow.className = "story-choice-badges";
@@ -3650,7 +3683,8 @@
             if (!helper || !isOfficialAssessmentLaunch || !isCrla) return;
             const text = document.getElementById("readingHelperText");
             const dots = helper.querySelector(".helper-dot");
-            const processing = Boolean(isSendingChunk || pendingAudioChunk);
+            const processing = Boolean(isSendingChunk || pendingAudioChunk || crlaLiveSpeech?.pending
+                || (crlaLiveSpeech?.active && hasHeardSinceLastChunk));
             const activelyListening = Boolean(
                 isRecording && !isMuted && recognitionActive
                 && (shell?.classList.contains("is-hearing") || hasHeardSinceLastChunk || speechFrameCount > 0)
@@ -3660,7 +3694,7 @@
             const retry = wrong && !processing && !itemLocked[currentIndex];
             let status = "Read the Word";
             let animated = false;
-            if (processing) { status = "Listening..."; animated = true; }
+            if (processing) { status = "Processing..."; animated = true; }
             else if (activelyListening) { status = "Listening..."; animated = true; }
             else if (correct) status = "Great Job!";
             else if (retry) status = "Try to read again";
@@ -3769,6 +3803,8 @@
                     if (crlaLiveSpeech !== stream || !sameCrlaStreamItem(itemContext)) return;
                     const context = currentSpeechContext();
                     isSendingChunk = true;
+                    hasHeardSinceLastChunk = false;
+                    setSpeechStatus("Processing...", "Checking your reading. Please wait.");
                     if (currentStoryState === "story_reading") storyReadingHasAttempted = true;
                     updateAssessmentNavigationButtons();
                     updateSpeechProcessingControls();
@@ -4125,6 +4161,7 @@
         }
 
         function updateSpeechProcessingControls() {
+            renderOfficialCrlaStatus();
             const speechResponsePending = isSpeechResponsePending();
             [btnStartReading, btnStopReading, btnReadAloud].forEach((button) => {
                 if (!button) return;
@@ -4590,6 +4627,7 @@
                 return;
             }
             isSendingChunk = true;
+            if (isCrla) setSpeechStatus("Processing...", "Transcribing your speech and checking your reading. Please wait.");
             syncStoryReadingTimerProcessing();
             if (currentStoryState === "story_reading") storyReadingHasAttempted = true;
             updateAssessmentNavigationButtons();
@@ -5321,7 +5359,9 @@
                     const range = data.word_syllable_ranges[readableWordIndex] || [0, 0];
                     const span = document.createElement("span");
                     span.className = "syllable";
-                    if (paragraphWordResults[readableWordIndex] === "miscue") {
+                    if (isCrla && range[1] > currentSyllableIndex) {
+                        markCrlaUnreadWord(span, range[0] <= currentSyllableIndex);
+                    } else if (paragraphWordResults[readableWordIndex] === "miscue") {
                         span.classList.add("is-wrong");
                     } else if (range[1] <= currentSyllableIndex) {
                         span.classList.add("is-read");
@@ -5366,6 +5406,15 @@
             word.setAttribute("aria-current", "true");
         }
 
+        function markCrlaUnreadWord(word, isNext = false) {
+            if (!isCrla) return;
+            word.classList.add("is-unread-word");
+            if (isNext) {
+                word.classList.add("is-current");
+                markCrlaNextWord(word);
+            }
+        }
+
         function renderCrlaStoryStartHint() {
             if (!readingWord || !isCrla) return;
             const displayText = String(getCurrentDisplayText() || items[currentIndex] || "");
@@ -5381,10 +5430,7 @@
                     }
                     const word = document.createElement("span");
                     word.className = "syllable";
-                    if (wordIndex === 0) {
-                        word.classList.add("is-current");
-                        markCrlaNextWord(word);
-                    }
+                    markCrlaUnreadWord(word, wordIndex === 0);
                     word.textContent = part;
                     container.appendChild(word);
                     wordIndex += 1;
@@ -5409,7 +5455,9 @@
                 }
                 const word = document.createElement("span");
                 word.className = "phrase-reading-word";
-                if (wordIndex === targetIndex) {
+                if (isCrla && wordIndex >= targetIndex) {
+                    markCrlaUnreadWord(word, wordIndex === targetIndex);
+                } else if (wordIndex === targetIndex) {
                     word.classList.add("is-current");
                     markCrlaNextWord(word);
                 }
@@ -5475,9 +5523,8 @@
                     word.classList.add("is-wrong");
                 } else if (String(result?.result || "").toLowerCase() === "correct") {
                     word.classList.add("is-read");
-                } else if (isCrla && !nextWordMarked) {
-                    word.classList.add("is-current");
-                    markCrlaNextWord(word);
+                } else if (isCrla && !data?.complete) {
+                    markCrlaUnreadWord(word, !nextWordMarked);
                     nextWordMarked = true;
                 }
                 word.textContent = part;
@@ -5561,7 +5608,12 @@
                     span.className = "syllable";
                     
                     // Highlight the specific word index as wrong if it matches
-                    if (readableWordIndex === activeWordIndex || paragraphWordResults[readableWordIndex] === "miscue") {
+                    // The cursor is authoritative for unread words. A chunk can
+                    // report a future miscue before sequential advancement has
+                    // reached it; that red state must not hide the reading hint.
+                    if (isCrla && range[1] > currentSyllableIndex) {
+                        markCrlaUnreadWord(span, range[0] <= currentSyllableIndex);
+                    } else if (readableWordIndex === activeWordIndex || paragraphWordResults[readableWordIndex] === "miscue") {
                         span.classList.add("is-wrong");
                     } else if (range[1] <= currentSyllableIndex) {
                         span.classList.add("is-read");
