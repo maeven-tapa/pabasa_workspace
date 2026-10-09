@@ -47,6 +47,7 @@
     window.Basahin.bindActivity(document.getElementById('read'), () => record(item));
     document.getElementById('listen')?.addEventListener('click', () => playAudio(item.word).catch(error => render(error.message,'bad')));
     document.getElementById('check')?.addEventListener('click', () => submitLetter(item));
+    document.getElementById('letter')?.addEventListener('input', event => { event.target.value = event.target.value.toUpperCase(); });
     document.getElementById('letter')?.addEventListener('keydown', event => { if (event.key === 'Enter') submitLetter(item); });
     document.getElementById('letter')?.focus();
   }

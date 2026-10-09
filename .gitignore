@@ -33,6 +33,8 @@ dist/
 .eggs/
 
 # Test and coverage
+# Local audit environments, test databases, and performance measurement outputs
+/tmp/
 .pytest_cache/
 .coverage
 .coverage.*

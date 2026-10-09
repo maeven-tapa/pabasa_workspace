@@ -10955,6 +10955,72 @@ def admin_official_reading_assessment_detail(request, material_id):
     return render(request, 'pabasa_app/admin_official_reading_assessment_detail.html', _official_assessment_detail_context(request, material))
 
 
+@admin_required
+def admin_official_reading_assessment_test(request, material_id):
+    """Verify that a student would receive this exact official CRLA material.
+
+    This is deliberately read-only. It reuses the same material-selection helper
+    used by the student assessment hub instead of building a second preview path.
+    """
+    material = _get_official_reading_material(material_id)
+    if not material:
+        return redirect('admin_official_reading_assessments')
+
+    requested_student = str(request.GET.get('student_id') or '').strip()
+    selected_student = None
+    if requested_student:
+        student_query = User.objects.filter(role='student', is_archived=False)
+        if requested_student.isdigit():
+            selected_student = student_query.filter(pk=int(requested_student)).first()
+        if selected_student is None:
+            selected_student = student_query.filter(custom_id__iexact=requested_student).first()
+
+    phase = _official_material_phase(material)
+    verification = None
+    if selected_student:
+        selected_payloads = _official_reading_assessments_for_student(
+            selected_student,
+            {'available': True, 'assessment_type': phase},
+        ) if phase in {'pretest', 'midtest', 'posttest'} else []
+        selected_materials = [
+            {
+                'id': payload.get('id'),
+                'title': payload.get('title') or payload.get('official_title') or '',
+                'subject': payload.get('subject') or '',
+                'system_assessment_key': getattr(
+                    Material.objects.filter(pk=payload.get('id')).first(),
+                    'system_assessment_key',
+                    '',
+                ) if payload.get('id') else '',
+            }
+            for payload in selected_payloads
+        ]
+        exact_match = next((item for item in selected_materials if item['id'] == material.id), None)
+        verification = {
+            'passed': bool(
+                material.is_active
+                and str(material.status or '').strip().lower() == 'published'
+                and exact_match
+            ),
+            'phase': phase,
+            'exact_match': exact_match,
+            'selected_materials': selected_materials,
+        }
+
+    context = _official_assessment_detail_context(request, material)
+    context.update({
+        'selected_student': selected_student,
+        'student_id_query': requested_student,
+        'student_options': User.objects.filter(
+            role='student', is_archived=False,
+        ).only('id', 'custom_id', 'first_name', 'last_name').order_by('custom_id')[:500],
+        'test_phase': phase,
+        'test_material_launch_data': _official_reading_launch_data(material),
+        'student_launch_verification': verification,
+    })
+    return render(request, 'pabasa_app/admin_official_reading_assessment_test.html', context)
+
+
 def _official_assessment_detail_context(request, material):
     selected_calendar, calendars, active_calendar = _selected_school_calendar(request)
     content_json = getattr(material, 'content_json', None) or {}
@@ -19049,6 +19115,8 @@ def prescribed_activity_progress(request, activity_key):
                 if phase != 'answering':
                     raise ValueError('Read the completed sentence before moving on.')
                 accepted = _prescribed_spoken_word_matches(target, heard_words)
+                if activity_key == 'lesson-29-gawain-1':
+                    accepted = accepted and len(heard_words) == 1
                 if accepted:
                     attempts = 0
                     hint_length = 0
@@ -25102,6 +25170,7 @@ _LOCAL_PRESCRIBED_AUDIO_ALIASES = {
     ('lesson-29-gawain-3', 'aah'): 'A.mp3',
     ('lesson-30-gawain-1', 'greatjobyoucompletedtheactivity'):
         'Great job! You completed Match It..mp3',
+    ('lesson-30-gawain-1', 'pat'): 'Path.mp3',
     ('lesson-30-gawain-2', 'greatjobyoureadthewholestory'):
         'Great job! You completed Story Time..mp3',
     ('lesson-31-gawain-1', 'circletherightwordreadallthreechoicesaloudoneatatimethenlookatthepictureandcirclethecorrectword'):

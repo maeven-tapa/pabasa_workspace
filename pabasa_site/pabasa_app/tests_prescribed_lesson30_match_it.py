@@ -1,3 +1,4 @@
+import base64
 import json
 import uuid
 from pathlib import Path
@@ -147,6 +148,18 @@ class PrescribedLesson30MatchItTests(TestCase):
         )
         self.assertIsNotNone(audio_file)
         self.assertEqual(audio_file.name, 'Great job! You completed Match It..mp3')
+
+    def test_pat_listen_returns_the_existing_path_audio_file(self):
+        audio_file = _local_prescribed_audio_file(self.activity_key, 'pat')
+        self.assertIsNotNone(audio_file)
+        self.assertEqual(audio_file.name, 'Path.mp3')
+        response = self.client.post(reverse('reading_read_aloud_api'), {
+            'target_text': 'pat', 'language': 'English', 'lesson_tts_key': self.activity_key,
+        })
+        self.assertEqual(response.status_code, 200)
+        result = response.json()
+        self.assertTrue(result['success'])
+        self.assertEqual(base64.b64decode(result['audio_content']), audio_file.read_bytes())
 
     def test_second_wrong_picture_uses_the_next_word_audio(self):
         script = Path(
