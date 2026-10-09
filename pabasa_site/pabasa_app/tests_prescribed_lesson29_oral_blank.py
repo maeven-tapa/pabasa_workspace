@@ -1,13 +1,15 @@
 import json
 import uuid
+from unittest.mock import patch
 
-from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
 from .models import School, Section, StudentActivityProgress, User
 from .prescribed_activity_catalog import prescribed_activity
-from .views import _local_prescribed_audio_file
+from .views import _local_prescribed_audio_file, reading_transcribe_api
 
 
 class PrescribedLesson29OralBlankTests(TestCase):
@@ -103,6 +105,41 @@ class PrescribedLesson29OralBlankTests(TestCase):
         progress.refresh_from_db()
         self.assertEqual(progress.state['phase'], 'sentence_reading')
 
+    def test_word_phase_rejects_complete_sentences_for_every_item(self):
+        for index, item in enumerate(prescribed_activity('lesson-29-gawain-1')['items']):
+            with self.subTest(item=index):
+                StudentActivityProgress.objects.filter(student=self.student).delete()
+                StudentActivityProgress.objects.create(
+                    student=self.student, activity_key='lesson-29-gawain-1',
+                    current_index=index, completed_items=index, correct_items=index, total_items=5,
+                    state={'current_item': index, 'completed_items': index, 'phase': 'answering'},
+                )
+                sentence = f"{item['before']}{item['answer']}{item['after']}"
+                response = self.post_action(action='answer', item_index=index, heard=sentence)
+                self.assertEqual(response.status_code, 200)
+                result = response.json()
+                self.assertFalse(result['accepted'])
+                self.assertEqual(result['progress']['state']['phase'], 'answering')
+                self.assertEqual(result['progress']['completed_items'], index)
+                word_response = self.post_action(action='answer', item_index=index, heard=item['answer'])
+                self.assertTrue(word_response.json()['accepted'])
+                self.assertEqual(word_response.json()['progress']['state']['phase'], 'sentence_reading')
+
+    def test_word_phase_rejects_extra_words_and_repeated_answers(self):
+        for heard in ('the list', 'list please', 'list list', 'Matt is on the list', 'last'):
+            with self.subTest(heard=heard):
+                result = self.post_action(action='answer', item_index=0, heard=heard).json()
+                self.assertFalse(result['accepted'])
+                self.assertEqual(result['progress']['state']['phase'], 'answering')
+
+    def test_word_phase_accepts_case_spacing_and_punctuation(self):
+        for heard in ('list', 'LIST!', '  List?  '):
+            with self.subTest(heard=heard):
+                self.post_action(reset=True)
+                result = self.post_action(action='answer', item_index=0, heard=heard).json()
+                self.assertTrue(result['accepted'])
+                self.assertEqual(result['progress']['state']['phase'], 'sentence_reading')
+
     def test_completion_feedback_uses_the_existing_local_audio_file(self):
         audio_file = _local_prescribed_audio_file(
             'lesson-29-gawain-1', 'Great job! You completed all the sentences.',
@@ -138,3 +175,24 @@ class PrescribedLesson29OralBlankTests(TestCase):
         completion = self.client.post(self.complete_url, data='{}', content_type='application/json')
         self.assertEqual(completion.status_code, 200)
         self.assertEqual(completion.json()['result']['items_completed'], 5)
+
+
+@override_settings(GOOGLE_STT_API_KEY='', GOOGLE_CLOUD_PROJECT_ID='test-project')
+class Lesson29WordCaptureTranscriptTests(SimpleTestCase):
+    def test_word_capture_keeps_the_full_provider_transcript_for_activity_validation(self):
+        for heard in ('list', 'Matt is on the list.', 'the list', 'meal'):
+            with self.subTest(heard=heard), \
+                 patch('pabasa_app.views._check_auth', return_value=True), \
+                 patch('pabasa_app.views._enforce_student_access_for_request', return_value=None), \
+                 patch('pabasa_app.views.transcribe_audio_bytes_with_model', return_value=(heard, 'chirp_3', '')):
+                request = RequestFactory().post('/api/reading/transcribe/', {
+                    'audio': SimpleUploadedFile('word.webm', b'audio', content_type='audio/webm'),
+                    'target_text': 'mill' if heard == 'meal' else 'list',
+                    'language': 'English', 'mode': 'word',
+                }, HTTP_X_PABASA_STT_MODEL='chirp_3', HTTP_X_PABASA_STT_PROVIDER='google')
+                request._dont_enforce_csrf_checks = True
+                response = reading_transcribe_api(request)
+                self.assertEqual(response.status_code, 200, response.content)
+                result = json.loads(response.content)
+                self.assertEqual(result['raw_transcript'], heard)
+                self.assertEqual(result['transcript'], heard)

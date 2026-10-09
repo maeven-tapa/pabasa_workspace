@@ -19030,6 +19030,8 @@ def prescribed_activity_progress(request, activity_key):
                 if phase != 'answering':
                     raise ValueError('Read the completed sentence before moving on.')
                 accepted = _prescribed_spoken_word_matches(target, heard_words)
+                if activity_key == 'lesson-29-gawain-1':
+                    accepted = accepted and len(heard_words) == 1
                 if accepted:
                     attempts = 0
                     hint_length = 0
@@ -25073,6 +25075,7 @@ _LOCAL_PRESCRIBED_AUDIO_ALIASES = {
     ('lesson-29-gawain-3', 'aah'): 'A.mp3',
     ('lesson-30-gawain-1', 'greatjobyoucompletedtheactivity'):
         'Great job! You completed Match It..mp3',
+    ('lesson-30-gawain-1', 'pat'): 'Path.mp3',
     ('lesson-30-gawain-2', 'greatjobyoureadthewholestory'):
         'Great job! You completed Story Time..mp3',
     ('lesson-31-gawain-1', 'circletherightwordreadallthreechoicesaloudoneatatimethenlookatthepictureandcirclethecorrectword'):

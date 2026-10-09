@@ -21,6 +21,9 @@
   // Speech services commonly treat names as proper nouns.  "Matt" and "mat"
   // have the same pronunciation, so use the ordinary word for recognition only.
   const sentenceRecognitionText = item => sentenceText(item).replace(/\bMatt\b/g, 'Mat');
+  // Correct the name only in sentences that contain Matt; retain raw speech for debug.
+  const sentenceTranscript = (item, transcript) => /\bMatt\b/.test(sentenceText(item))
+    ? transcript.replace(/\b(?:matt|mat|math|mad)\b/gi, 'Matt') : transcript;
 
   function hydrate() {
     state.current_item = Number(state.current_item || 0);
@@ -100,18 +103,20 @@
     }
     const item = data.items[state.current_item];
     const readingSentence = state.phase === 'sentence_reading';
-    const target = readingSentence ? sentenceRecognitionText(item) : data.recognition_hints;
+    const target = readingSentence ? sentenceRecognitionText(item) : item.answer;
     const action = readingSentence ? 'sentence_reading' : 'answer';
     const attemptGeneration = generation;
     busy = true; speechAttemptActive = true; setButtonState('recording');
     emitDebug({status:'Listening', expected:readingSentence ? target : item.answer, mic:'Active · Unmuted', recorder:'Recording', vad:'waiting', error:'—', raw:'Listening for speech...'});
     try {
-      const result = await window.Basahin.read({target_text:target, language:'English', mode:readingSentence ? 'sentence' : 'reading'}, {button:document.getElementById('read'), url:data.transcribe_url, continuous:false});
+      // Word mode preserves extra spoken words so phase 1 can reject whole sentences.
+      const result = await window.Basahin.read({target_text:target, language:'English', mode:readingSentence ? 'sentence' : 'word'}, {button:document.getElementById('read'), url:data.transcribe_url, continuous:false});
       if (attemptGeneration !== generation || paused) return;
-      const heard = String(result.raw_transcript || result.transcript || '');
+      const rawHeard = String(result.raw_transcript || result.transcript || '');
+      const heard = readingSentence ? sentenceTranscript(item, rawHeard) : rawHeard;
       const saved = await post(data.progress_url, {action, item_index:state.current_item, heard});
       const correct = Boolean(saved.accepted);
-      emitDebug({status:'Ready', transcript:heard || 'No transcript yet.', normalized:normalizeTranscript(heard) || '—', result:correct ? 'Correct' : 'Try again', mic:'Inactive · Unmuted', recorder:'inactive', vad:'waiting', error:'—', raw:`Transcript: ${heard || 'No transcript yet.'} · Result: ${correct ? 'Correct' : 'Try again'}`});
+      emitDebug({status:'Ready', transcript:heard || 'No transcript yet.', normalized:normalizeTranscript(heard) || '—', result:correct ? 'Correct' : 'Try again', mic:'Inactive · Unmuted', recorder:'inactive', vad:'waiting', error:'—', raw:`Transcript: ${rawHeard || 'No transcript yet.'} · Result: ${correct ? 'Correct' : 'Try again'}`});
       const feedback = state.phase === 'complete' ? COMPLETION_FEEDBACK : (correct ? (action === 'answer' ? WORD_CORRECT_FEEDBACK : SENTENCE_CORRECT_FEEDBACK) : RETRY_FEEDBACK);
       busy = false;
       render(correct ? (action === 'answer' ? 'Correct! Now read the whole sentence.' : 'Correct!') : `I heard “${heard}”. Try again.`, correct ? 'good' : 'bad');
