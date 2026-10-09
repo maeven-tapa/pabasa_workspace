@@ -28,6 +28,7 @@ function initProfilePage() {
     const actions = document.getElementById("accountDetailsActions");
     const profileSummaryCard = document.querySelector(".profile-summary");
     const teacherEditModal = document.getElementById("teacherEditModal");
+    const studentEditModal = document.getElementById("studentEditModal");
     const teacherEmailVerificationModal = document.getElementById("teacherEmailVerificationModal");
     const teacherEmailVerificationCode = document.getElementById("teacherEmailVerificationCode");
     const teacherEmailVerifyButton = document.getElementById("teacherEmailVerifyButton");
@@ -180,6 +181,9 @@ function initProfilePage() {
                     if (teacherEmailVerificationCode) teacherEmailVerificationCode.value = "";
                     if (teacherEditModal && window.bootstrap?.Modal) {
                         window.bootstrap.Modal.getInstance(teacherEditModal)?.hide();
+                    }
+                    if (studentEditModal && window.bootstrap?.Modal) {
+                        window.bootstrap.Modal.getInstance(studentEditModal)?.hide();
                     }
                     form.reset();
                 if (teacherEmailVerificationModal && window.bootstrap?.Modal) {

@@ -864,6 +864,19 @@ def _set_profile_dict(user, key, profile_dict):
         user.save()
 
 
+def _email_verification_message(code):
+    return (
+        'Hello!\n\n'
+        'We received a request to update the email address associated with your PABASA account.\n\n'
+        'To verify your new email address, please enter the verification code below:\n\n'
+        f'{code}\n\n'
+        'This code will expire in 10 minutes.\n\n'
+        'If you did not request this change, you can safely ignore this email. '
+        'Your current email address will remain unchanged.\n\n'
+        'Thank you,\nThe PABASA Team'
+    )
+
+
 def _get_user_state(user):
     if not user:
         return {}
@@ -30193,7 +30206,7 @@ def profile(request):
                 if email != (user.email or '').strip().lower() and User.objects.filter(email__iexact=email).exclude(pk=user.pk).exists():
                     return JsonResponse({'success': False, 'error': 'This email is already in use'})
 
-                email_changed = user.role == 'teacher' and email != (user.email or '').strip().lower()
+                email_changed = user.role in {'teacher', 'student'} and email != (user.email or '').strip().lower()
                 if email_changed:
                     try:
                         validate_email(email)
@@ -30212,8 +30225,8 @@ def profile(request):
                     }
                     try:
                         send_mail(
-                            'Verify your new Pabasa email address',
-                            f'Your Pabasa email verification code is {code}. It expires in 10 minutes.',
+                            'PABASA | Verify Your New Email Address',
+                            _email_verification_message(code),
                             settings.DEFAULT_FROM_EMAIL,
                             [email],
                             fail_silently=False,
@@ -30264,8 +30277,8 @@ def profile(request):
                 return JsonResponse({'success': False, 'error': str(e)})
 
         elif request.POST.get('verify_teacher_email') == 'true':
-            if user.role != 'teacher':
-                return JsonResponse({'success': False, 'error': 'Email verification is only available for teachers.'})
+            if user.role not in {'teacher', 'student'}:
+                return JsonResponse({'success': False, 'error': 'Email verification is not available for this account.'})
             code = request.POST.get('code', '').strip()
             profile_info = _get_profile_dict(user, 'profile_info')
             pending = profile_info.get('pending_email_verification') if isinstance(profile_info, dict) else None
@@ -30289,8 +30302,8 @@ def profile(request):
             return JsonResponse({'success': True, 'message': 'Email address verified and updated.', 'email': user.email})
 
         elif request.POST.get('resend_teacher_email_verification') == 'true':
-            if user.role != 'teacher':
-                return JsonResponse({'success': False, 'error': 'Email verification is only available for teachers.'})
+            if user.role not in {'teacher', 'student'}:
+                return JsonResponse({'success': False, 'error': 'Email verification is not available for this account.'})
             profile_info = _get_profile_dict(user, 'profile_info')
             pending = profile_info.get('pending_email_verification') if isinstance(profile_info, dict) else None
             if not isinstance(pending, dict) or not pending.get('email'):
@@ -30305,7 +30318,7 @@ def profile(request):
                 'resend_available_at': time.time() + 60,
             })
             try:
-                send_mail('Verify your new Pabasa email address', f'Your Pabasa email verification code is {code}. It expires in 10 minutes.', settings.DEFAULT_FROM_EMAIL, [pending['email']], fail_silently=False)
+                send_mail('PABASA | Verify Your New Email Address', _email_verification_message(code), settings.DEFAULT_FROM_EMAIL, [pending['email']], fail_silently=False)
             except Exception:
                 return JsonResponse({'success': False, 'error': 'Could not resend the verification code. Please try again.'})
             _set_profile_dict(user, 'profile_info', profile_info)
