@@ -8062,6 +8062,75 @@ def _admin_deactivate_section(request, section_id):
 def admin_courses(request):
     return render(request, 'pabasa_app/admin_courses.html', _admin_materials_context(request, 'Courses'))
 
+
+def _admin_selected_student(request, parameter='student_id'):
+    """Resolve the active student selected by an admin preview request."""
+    requested_student = str(request.GET.get(parameter) or '').strip()
+    if not requested_student:
+        return None
+    students = User.objects.filter(role='student', is_archived=False)
+    selected_student = None
+    if requested_student.isdigit():
+        selected_student = students.filter(pk=int(requested_student)).first()
+    if selected_student is None:
+        selected_student = students.filter(custom_id__iexact=requested_student).first()
+    return selected_student
+
+
+def _admin_prescribed_material_queryset(student):
+    """Return the exact regular materials available to a selected student."""
+    if not student:
+        return Material.objects.none()
+    return _assessment_materials_for_student(student).filter(
+        assessment_kind='regular',
+    ).select_related('section').distinct()
+
+
+@admin_required
+def admin_prescribed_materials(request):
+    """Let an admin open a student's real prescribed materials read-only."""
+    selected_student = _admin_selected_student(request)
+    materials = _admin_prescribed_material_queryset(selected_student).order_by('-created_at', 'title')
+    context = _admin_context(request, 'Prescribed Materials', [])
+    context.update({
+        'selected_student': selected_student,
+        'student_id_query': str(request.GET.get('student_id') or '').strip(),
+        'student_options': User.objects.filter(
+            role='student', is_archived=False,
+        ).only('id', 'custom_id', 'first_name', 'last_name').order_by('custom_id')[:500],
+        'prescribed_materials': materials,
+    })
+    return render(request, 'pabasa_app/admin_prescribed_materials.html', context)
+
+
+@admin_required
+def admin_prescribed_material_launch(request, material_id):
+    """Launch the selected student's exact material in the shared student reader."""
+    student = _admin_selected_student(request)
+    material = _admin_prescribed_material_queryset(student).filter(pk=material_id).first()
+    if not student or not material:
+        return redirect('admin_prescribed_materials')
+
+    enrollment = Enrollment.objects.filter(
+        student=student, is_active=True,
+    ).select_related('section').order_by('-joined_at', '-id').first()
+    content_json = material.content_json if isinstance(material.content_json, dict) else {}
+    content_text = material.content_text or material.prompt_text or ''
+    return_url = f"{reverse('admin_prescribed_materials')}?{urlencode({'student_id': student.custom_id or student.id})}"
+    reader_query = urlencode({
+        'id': material.id,
+        'test': material.title or 'Reading Material',
+        'section_id': getattr(enrollment, 'section_id', '') or '',
+        'content': content_text,
+        'item_type': material.item_type or 'word',
+        'language': material.language or content_json.get('language') or '',
+        'admin_preview': '1',
+        'admin_student_id': student.id,
+        'admin_return': return_url,
+    })
+    return redirect(f"{reverse('reading_word_page')}?{reader_query}")
+
+
 def _admin_course_queryset():
     return Material.objects.select_related(
         'section',
@@ -13402,8 +13471,29 @@ def reading_word_page(request):
             getattr(canonical_response, 'url', None),
         )
         return canonical_response
+    admin_preview_student = None
+    if request.GET.get('admin_preview') == '1':
+        if request.session.get('user_role') != 'admin':
+            return HttpResponseForbidden('Admin preview access is required.')
+        admin_preview_student = _admin_selected_student(request, 'admin_student_id')
+        _, preview_material_id = _parse_prefixed_id(request.GET.get('id'))
+        preview_material = _admin_prescribed_material_queryset(admin_preview_student).filter(
+            pk=preview_material_id,
+        ).first()
+        if not admin_preview_student or not preview_material:
+            return HttpResponseForbidden('This material is not currently prescribed to the selected student.')
     context = _dashboard_context(request)
     context.update(_custom_material_reading_context(request))
+    if admin_preview_student:
+        context.update({
+            'is_admin_preview': True,
+            'admin_preview_student_name': _display_user_name(admin_preview_student),
+            'admin_preview_student_id': admin_preview_student.id,
+            'admin_preview_return_url': (
+                f"{reverse('admin_prescribed_materials')}?"
+                f"{urlencode({'student_id': admin_preview_student.custom_id or admin_preview_student.id})}"
+            ),
+        })
     live_recovery_state = (
         student_state.get('recovery_state', {})
         if live_session_id and request.GET.get('live_recovery') == '1' and isinstance(student_state, dict)

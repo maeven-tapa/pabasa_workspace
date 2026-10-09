@@ -1,0 +1,69 @@
+{% extends "pabasa_app/admin_base.html" %}
+{% block content %}
+<style>
+  .admin-prescribed-shell{display:grid;gap:1rem}
+  .admin-prescribed-card{background:#fff;border:1px solid rgba(16,70,110,.1);border-radius:22px;box-shadow:0 14px 32px rgba(16,70,110,.07);padding:1.1rem 1.2rem}
+  .admin-prescribed-intro{background:linear-gradient(135deg,#eef8ff,#f7fbff);border-color:rgba(31,111,139,.16)}
+  .admin-prescribed-material{align-items:center;display:flex;gap:1rem;justify-content:space-between}
+  .admin-prescribed-material + .admin-prescribed-material{border-top:1px solid #e8eef4;margin-top:1rem;padding-top:1rem}
+  .admin-prescribed-meta{color:#64748b;font-size:.86rem}
+  .admin-prescribed-code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.84rem}
+  @media (max-width:700px){.admin-prescribed-material{align-items:flex-start;flex-direction:column}.admin-prescribed-material .btn{width:100%}}
+</style>
+
+<div class="admin-prescribed-shell">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div>
+      <a class="btn btn-sm btn-outline-secondary mb-3" href="{% url 'admin_courses' %}"><i class="bi bi-arrow-left me-1"></i>Back to Courses &amp; Materials</a>
+      <h1 class="h4 fw-bold mb-1">View prescribed materials</h1>
+      <p class="text-secondary mb-0">Open the same material record and reading surface that a selected student receives.</p>
+    </div>
+  </div>
+
+  <section class="admin-prescribed-card admin-prescribed-intro">
+    <div class="d-flex gap-3 align-items-start">
+      <div class="text-primary fs-3" aria-hidden="true"><i class="bi bi-shield-check"></i></div>
+      <div><strong>Read-only admin preview</strong><p class="mb-0 text-secondary small">Completion results are shown for checking the activity. The preview does not save student progress, create an assessment result, send notifications, or change the selected student.</p></div>
+    </div>
+  </section>
+
+  <section class="admin-prescribed-card">
+    <div class="small text-uppercase fw-bold text-secondary mb-2">Choose student</div>
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-12 col-md-6 col-lg-4">
+        <label class="form-label fw-bold" for="prescribedStudentId">Student PABASA ID</label>
+        <input class="form-control" id="prescribedStudentId" name="student_id" value="{{ student_id_query|default:'' }}" list="prescribedStudentOptions" placeholder="G2-0005" required>
+        <datalist id="prescribedStudentOptions">
+          {% for option in student_options %}<option value="{{ option.custom_id }}">{{ option.first_name }} {{ option.last_name }}</option>{% endfor %}
+        </datalist>
+      </div>
+      <div class="col-auto"><button class="btn btn-primary fw-bold" type="submit"><i class="bi bi-search me-1"></i>Show materials</button></div>
+    </form>
+  </section>
+
+  {% if student_id_query and not selected_student %}
+  <div class="alert alert-danger rounded-4">No active student account matched <span class="admin-prescribed-code">{{ student_id_query }}</span>.</div>
+  {% endif %}
+
+  {% if selected_student %}
+  <section class="admin-prescribed-card">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+      <div><div class="small text-uppercase fw-bold text-secondary">Selected student</div><h2 class="h5 fw-bold mb-0">{{ selected_student.custom_id }} · {{ selected_student.first_name }} {{ selected_student.last_name }}</h2></div>
+      <span class="badge rounded-pill text-bg-success">Using the student's assigned records</span>
+    </div>
+    {% for material in prescribed_materials %}
+    <article class="admin-prescribed-material">
+      <div>
+        <h3 class="h6 fw-bold mb-1">{{ material.title|default:'Untitled material' }}</h3>
+        <div class="admin-prescribed-meta">{{ material.get_item_type_display }} · {{ material.language|default:'Language not set' }} · Material <span class="admin-prescribed-code">{{ material.id }}</span></div>
+        {% if material.section %}<div class="admin-prescribed-meta">Section: {{ material.section.class_name }}</div>{% endif %}
+      </div>
+      <a class="btn btn-primary fw-bold flex-shrink-0" href="{% url 'admin_prescribed_material_launch' material.id %}?student_id={{ selected_student.custom_id|urlencode }}"><i class="bi bi-play-circle me-1"></i>Open student view</a>
+    </article>
+    {% empty %}
+    <div class="text-secondary py-3">This student has no active prescribed reading materials available right now.</div>
+    {% endfor %}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

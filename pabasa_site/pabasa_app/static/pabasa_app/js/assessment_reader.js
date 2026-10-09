@@ -130,6 +130,7 @@
             });
         }
         const isMyMaterials = window.__PABASA_MY_MATERIALS__ === true;
+        const isAdminPreview = window.__PABASA_ADMIN_PREVIEW__ === true;
         const officialAssessmentId = urlParams.get("official_assessment_id") || "";
         const customMaterialData = window.__PABASA_CUSTOM_MATERIAL__ || null;
         const isTemplateActivity = customMaterialData?.content_json?.template_source === "template"
@@ -162,6 +163,7 @@
             ""
         );
         const viewMode = urlParams.get("viewMode");
+        const adminPreviewReturnUrl = window.__PABASA_ADMIN_PREVIEW_RETURN__ || urlParams.get("admin_return") || "";
         const isAssistMode = urlParams.get("assist") === "1";
         const assistToken = urlParams.get("assist_token") || "";
         const sentenceDebugStorageKey = "pabasaCrlaSentenceDebug";
@@ -220,6 +222,9 @@
             if (testMeta) testMeta.textContent = `${testTitle} - ${testCode} · Language: ${displayLanguage}`;
         };
         updateAssessmentLanguageLabel((officialAssessmentData && officialAssessmentData.language) || liveLanguage);
+        if (isAdminPreview && testMeta) {
+            testMeta.innerHTML += ` <span style="background:rgba(31,111,139,.12);color:var(--accent-deep);padding:2px 8px;border-radius:6px;font-size:.7em;vertical-align:middle;margin-left:8px;">Admin preview · ${String(window.__PABASA_PREVIEW_STUDENT_NAME__ || "selected student").replace(/[<>&\"']/g, "")}</span>`;
+        }
 
         function isCurrentLiveAssessment() {
             if (isReviewMode || isRetakeMode) return false;
@@ -2115,7 +2120,7 @@
                     : [];
             const normalizedItems = originalItems.map(normalizeDisplayItem).map(item => String(item || '').trim()).filter(Boolean);
             if (material.content_json && material.content_json.randomize_order && normalizedItems.length > 0) {
-                const seedSource = `${String(material.raw_id || material.id || '')}|${String(window.PABASA_USER_NAME || window.localStorage.getItem('pabasaUserName') || window.PABASA_USER_EMAIL || '').toLowerCase().trim()}`;
+                const seedSource = `${String(material.raw_id || material.id || '')}|${String(window.__PABASA_PREVIEW_STUDENT_NAME__ || window.PABASA_USER_NAME || window.localStorage.getItem('pabasaUserName') || window.PABASA_USER_EMAIL || '').toLowerCase().trim()}`;
                 const seed = hashString(seedSource);
                 return stableShuffle(normalizedItems, seed);
             }
@@ -5979,6 +5984,14 @@
                 renderPersistedEndState(renderedEndState);
                 renderLiveCompletionWaitingState(branchState.stage);
             }
+            if (isAdminPreview) {
+                // Show the same local completion/result card as the student,
+                // then stop before any student progress, notifications, or
+                // assessment-result request is sent.
+                completionSubmitted = true;
+                setCompletionActionButtonsProcessing(false);
+                return;
+            }
             if (!isMyMaterials && (branchState.stage === "transition_to_rhymes" || branchState.stage === "transition_to_sentence" || branchState.stage === "transition_to_story")) {
                 traceEndSession('showCompletion.awaitContinue', { nextStageUrl, next_stage: branchState.next_stage });
                 return;
@@ -7597,6 +7610,10 @@
 
         function goBackToAssessments() {
             clearStoryReadingTimer();
+            if (isAdminPreview) {
+                window.location.assign(adminPreviewReturnUrl || "/dashboard/admin/courses/prescribed/");
+                return;
+            }
             if (isAssistMode && window.parent && window.parent !== window) {
                 window.parent.postMessage({
                     type: "pabasa-assist-returning",
@@ -7851,6 +7868,10 @@
             window.location.assign(restartUrl.toString());
         });
         finishBtn?.addEventListener("click", async () => {
+            if (isAdminPreview) {
+                window.location.assign(adminPreviewReturnUrl || "/dashboard/admin/courses/prescribed/");
+                return;
+            }
             const transitionUrl = finishBtn.dataset.transitionUrl || "";
             if (transitionUrl) {
                 finishBtn.disabled = true;
