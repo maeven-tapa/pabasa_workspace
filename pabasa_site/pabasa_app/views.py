@@ -30780,14 +30780,6 @@ def class_management_view(request):
 
     roster_students, _, _ = _teacher_student_roster_payload(teacher_user, section=section)
     students_table = []
-    live_crla_material = None
-    live_crla_student_ids = [student.get('id') for student in roster_students if student.get('id')]
-    first_student = User.objects.filter(id__in=live_crla_student_ids, role='student', is_archived=False).first()
-    if first_student:
-        live_availability = _official_assessment_availability_for_student(first_student, request)
-        live_crla_material = _official_crla_material_for_student(
-            first_student, live_availability.get('assessment_type')
-        ) if live_availability.get('available') else None
     finalization_open = _teacher_year_end_finalization_open(section)
     section_enrollments = {e.student_id: e for e in _current_section_enrollments(
         section, statuses=('active', 'completed')
@@ -30825,8 +30817,6 @@ def class_management_view(request):
         'assessment_week_toggle_available': _section_assessment_week_status(section) == 'during',
         'sections': all_sections,
         'available_students': available_students,
-        'live_crla_material': live_crla_material,
-        'live_crla_student_ids': live_crla_student_ids,
         'students_table': students_table,
         'page_title': f"Manage {section.class_name}"
         ,'finalization_open': finalization_open,

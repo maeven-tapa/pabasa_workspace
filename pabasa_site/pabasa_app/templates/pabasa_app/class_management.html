@@ -1381,36 +1381,60 @@
     </main>
 </div>
 
-<!-- Drop Student Confirmation Modal (action intentionally not implemented yet) -->
+<style>
+    #dropStudentModal .modal-dialog,
+    #dropStudentSuccessModal .modal-dialog { max-width: 420px; margin-inline: auto; }
+    #dropStudentModal .modal-dialog,
+    #dropStudentSuccessModal .modal-dialog { max-width: 30rem; }
+    #dropStudentModal .modal-content,
+    #dropStudentSuccessModal .modal-content,
+    #dropStudentLoadingModal .modal-content { border: 1px solid #cbd8e2; border-radius: 22px; box-shadow: 0 24px 70px rgba(15, 45, 69, .2); overflow: hidden; }
+#dropStudentModal .modal-header { align-items: center; justify-content: space-between; position: relative; padding: 1rem 1.2rem .85rem; border-bottom: 0; }
+#dropStudentSuccessModal .modal-header { align-items: center; position: relative; padding: 1rem 1.2rem .85rem; border-bottom: 1px solid rgba(15, 23, 42, .08); }
+    #dropStudentModal .modal-title,
+    #dropStudentSuccessModal .modal-title { color: var(--primary); font-size: 1.1rem; }
+    #dropStudentModal .drop-student-heading { display: flex; align-items: center; gap: .65rem; }
+    #dropStudentModal .drop-student-heading .drop-student-icon { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 10px; background: #fff1e8; color: #c45a2e; font-size: 1rem; }
+    #dropStudentModal .btn-close,
+    #dropStudentSuccessModal .btn-close { margin: 0; padding: .55rem; border-radius: 8px; }
+    #dropStudentModal .modal-body,
+    #dropStudentSuccessModal .modal-body { padding: .8rem 1.2rem .2rem; text-align: center; }
+    #dropStudentModal .modal-body p:first-child,
+    #dropStudentSuccessModal .modal-body p:first-child { margin: 0; color: #102746; font-size: 1.28rem; font-weight: 800; line-height: 1.25; }
+    #dropStudentModal .modal-body p:first-child strong { color: #2f5f83; }
+    #dropStudentModal .modal-body p:last-child { margin: .45rem 0 0; color: #704126; font-size: .84rem; line-height: 1.4; }
+    #dropStudentSuccessModal .modal-body p:first-child { font-size: 1.1rem; }
+    #dropStudentModal .modal-footer,
+    #dropStudentSuccessModal .modal-footer { justify-content: center; gap: .65rem; padding: .85rem 1.2rem 1.1rem; border: 0; }
+    #dropStudentModal .modal-footer .btn,
+    #dropStudentSuccessModal .modal-footer .btn { min-width: 6.5rem; border-radius: 10px; font-weight: 700; }
+    #dropStudentModal .modal-footer .btn-secondary { border: 1px solid #b9c8d4; color: #304a63; background: #fff; }
+    #dropStudentModal .modal-footer .btn-danger { border: 0; background: #c45a2e; }
+    #dropStudentModal .modal-content { background: #fff; }
+</style>
+
+<!-- Drop Student Confirmation Modal -->
 <div class="modal fade" id="dropStudentModal" tabindex="-1" aria-labelledby="dropStudentModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title fw-bold" id="dropStudentModalTitle">Drop Student</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="drop-student-heading"><span class="drop-student-icon" aria-hidden="true"><i class="bi bi-exclamation-triangle-fill"></i></span><h5 class="modal-title fw-bold mb-0" id="dropStudentModalTitle">Drop Student</h5></div>
             </div>
             <div class="modal-body">
-                <p class="mb-2">Are you sure you want to drop “<strong id="dropStudentName"></strong>”?</p>
+                <p class="mb-2">Are you sure you want to drop <strong id="dropStudentName"></strong> from this section?</p>
                 <p class="mb-0 text-muted">This change cannot be undone.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="continueDropStudentButton">Continue</button>
+                <button type="button" class="btn btn-danger" id="continueDropStudentButton">Drop Student</button>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="dropStudentLoadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content"><div class="modal-body text-center py-4">
-        <div class="spinner-border text-primary mb-3" role="status" aria-label="Dropping student"></div>
-        <p class="mb-0">Dropping student…</p>
-    </div></div></div>
-</div>
-
 <div class="modal fade" id="dropStudentSuccessModal" tabindex="-1" aria-labelledby="dropStudentSuccessTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-        <div class="modal-header"><h5 class="modal-title fw-bold" id="dropStudentSuccessTitle">Student Dropped</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <div class="modal-header"><h5 class="modal-title fw-bold" id="dropStudentSuccessTitle">Student Dropped</h5></div>
         <div class="modal-body"><p class="mb-0" id="dropStudentSuccessMessage"></p></div>
         <div class="modal-footer"><button type="button" class="btn btn-primary" id="dropStudentSuccessOk">OK</button></div>
     </div></div>
@@ -1514,7 +1538,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const dropStudentModal = document.getElementById('dropStudentModal');
     const dropStudentName = document.getElementById('dropStudentName');
     const continueButton = document.getElementById('continueDropStudentButton');
-    const loadingModal = document.getElementById('dropStudentLoadingModal');
     const successModal = document.getElementById('dropStudentSuccessModal');
     const successMessage = document.getElementById('dropStudentSuccessMessage');
     const successOk = document.getElementById('dropStudentSuccessOk');
@@ -1528,7 +1551,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const finalizeSuccessMessage = document.getElementById('finalizeOutcomeSuccessMessage');
     let pendingTrigger = null;
     let pendingName = '';
-    let loadingInstance = null;
     let successInstance = null;
     let pendingFinalizeForm = null;
     let finalizeInstance = null;
@@ -1554,8 +1576,6 @@ document.addEventListener('DOMContentLoaded', function () {
         continueButton.disabled = true;
         const modalInstance = bootstrap.Modal.getInstance(dropStudentModal);
         await hideModalAndWait(modalInstance, dropStudentModal);
-        loadingInstance = bootstrap.Modal.getOrCreateInstance(loadingModal);
-        loadingInstance.show();
         try {
             const response = await fetch('{% url "teacher_drop_student" %}', {
                 method: 'POST', credentials: 'same-origin',
@@ -1564,25 +1584,27 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             const result = await response.json();
             if (!response.ok || !result.success) throw new Error(result.error || 'Unable to drop the student.');
-            await hideModalAndWait(loadingInstance, loadingModal);
+            removeDroppedStudent();
             successMessage.textContent = `Student “${pendingName}” has been dropped from your class.`;
             successInstance = bootstrap.Modal.getOrCreateInstance(successModal);
             successInstance.show();
         } catch (error) {
-            await hideModalAndWait(loadingInstance, loadingModal);
             window.alert(error.message || 'Unable to drop the student right now.');
         } finally {
             continueButton.disabled = false;
         }
     });
 
-    successOk.addEventListener('click', function () {
+    function removeDroppedStudent() {
         const row = pendingTrigger?.closest('tr');
         const card = pendingTrigger?.closest('.student-card');
         row?.remove();
         card?.remove();
         const count = document.getElementById('enrolledStudentCount');
         if (count) count.textContent = `${Math.max(0, (parseInt(count.textContent, 10) || 0) - 1)} enrolled`;
+    }
+
+    successOk.addEventListener('click', function () {
         successInstance?.hide();
         pendingTrigger = null;
     });
