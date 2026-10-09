@@ -174,6 +174,23 @@ class ChirpRoutingTests(SimpleTestCase):
                         self.assertEqual(options['location'], 'asia-southeast1' if model == 'chirp_2' else 'us')
         ffmpeg.assert_not_called()
 
+    @patch('pabasa_app.views.uses_knowlez_stt', return_value=True)
+    @patch('pabasa_app.views.transcribe_audio_bytes_with_model', return_value=('bata', 'chirp_3', ''))
+    def test_official_crla_forces_google_chirp3_over_saved_preferences(self, transcribe, knowlez):
+        request = self.request('chirp_2', language='English')
+        request.POST = request.POST.copy()
+        request.POST['official_crla_assessment'] = '1'
+
+        response = reading_transcribe_api(request)
+
+        self.assertEqual(response.status_code, 200)
+        result = json.loads(response.content)
+        self.assertEqual(result['stt_provider'], 'google')
+        self.assertEqual(result['stt_model'], 'chirp_3')
+        self.assertEqual(transcribe.call_args.kwargs['model'], 'chirp_3')
+        self.assertFalse(transcribe.call_args.kwargs['allow_fallback'])
+        knowlez.assert_not_called()
+
     @override_settings(GOOGLE_STT_API_KEY='test-key')
     @patch('pabasa_app.views.transcribe_audio_bytes_with_model', return_value=('bata', 'chirp_3', ''))
     def test_filipino_defaults_to_chirp3_without_hints_or_fallback(self, transcribe):
