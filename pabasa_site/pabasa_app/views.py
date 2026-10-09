@@ -24348,10 +24348,13 @@ def reading_transcribe_api(request):
             activity_syllables = []
         is_clap_phase2 = request.POST.get('phase2_strict') == '1'
         matching_transcript = transcript
-        # Lesson 4 Gawain 1 only: preserve raw ``manga`` while canonicalizing
-        # the processed transcript for the target ``mangga``.
+        # Chirp 3 can omit the doubled consonant in ``mangga``. Preserve the
+        # raw provider transcript while canonicalizing this known variant only
+        # for the prescribed activities that use ``mangga`` as the target.
         if (
-            request.POST.get('prescribed_activity_key') == 'lesson-4-gawain-1'
+            request.POST.get('prescribed_activity_key') in {
+                'lesson-4-gawain-1', 'lesson7-gawain2b',
+            }
             and mode == 'reading'
             and ReadingMatcher.normalize_word(target_text) == 'mangga'
             and ReadingMatcher.normalize_word(transcript) == 'manga'

@@ -58,5 +58,25 @@ class BasahinReadingVerdictTests(SimpleTestCase):
         self.assertFalse(self.transcribe('tsek', 'check', prescribed_activity_key='another-activity')['complete'])
         self.assertFalse(self.transcribe('tsek', 'checker', prescribed_activity_key='session-7-lesson-20-21-gawain-1')['complete'])
 
+    def test_lesson7_mangga_accepts_chirp_single_g_transcript(self):
+        result = self.transcribe(
+            'mangga', 'manga', prescribed_activity_key='lesson7-gawain2b',
+        )
+        self.assertTrue(result['complete'])
+        self.assertEqual(result['processed_transcript'], 'mangga')
+        self.assertEqual(result['transcript'], 'mangga')
+        self.assertEqual(result['raw_transcript'], 'manga')
+
+    def test_mangga_alias_is_scoped_to_lesson7_target(self):
+        self.assertFalse(self.transcribe('mangga', 'manga')['complete'])
+        self.assertFalse(self.transcribe(
+            'mangga', 'manga', prescribed_activity_key='another-activity',
+        )['complete'])
+        unchanged = self.transcribe(
+            'manga', 'manga', prescribed_activity_key='lesson7-gawain2b',
+        )
+        self.assertEqual(unchanged['processed_transcript'], 'manga')
+        self.assertEqual(unchanged['raw_transcript'], 'manga')
+
     def test_empty_speech_is_not_correct(self):
         self.assertFalse(self.transcribe('bata', '')['complete'])
