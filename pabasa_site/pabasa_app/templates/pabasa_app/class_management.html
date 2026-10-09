@@ -1286,7 +1286,7 @@
 
             <hr class="section-information-divider">
 
-        <section class="section-information-students">
+        <section class="section-information-students" data-section-id="{{ section.id }}">
             <div class="card-header">
                 <div class="section-title-group">
                     <div class="section-heading">
@@ -1324,7 +1324,7 @@
                     </thead>
                     <tbody>
                         {% for student in students_table %}
-                        <tr data-student-key="{{ student.pabasa_id|default_if_none:'' }}" data-student-name="{{ student.name|default_if_none:'' }}" data-search="{{ student.name|default_if_none:'' }} {{ student.pabasa_id|default_if_none:'' }} {{ student.email|default_if_none:'' }}" data-sort-name="{{ student.name|default_if_none:'' }}" data-sort-pabasa="{{ student.pabasa_id|default_if_none:'' }}" data-sort-reading="{{ student.reading_level|default:'Pending' }}" data-sort-joined="{{ student.joined_at|default_if_none:'' }}" data-sort-outcome="{{ student.outcome_label|default:'Not Finalized' }}">
+                        <tr data-student-id="{{ student.id }}" data-student-key="{{ student.pabasa_id|default_if_none:'' }}" data-student-name="{{ student.name|default_if_none:'' }}" data-search="{{ student.name|default_if_none:'' }} {{ student.pabasa_id|default_if_none:'' }} {{ student.email|default_if_none:'' }}" data-sort-name="{{ student.name|default_if_none:'' }}" data-sort-pabasa="{{ student.pabasa_id|default_if_none:'' }}" data-sort-reading="{{ student.reading_level|default:'Pending' }}" data-sort-joined="{{ student.joined_at|default_if_none:'' }}" data-sort-outcome="{{ student.outcome_label|default:'Not Finalized' }}">
                             <td class="student-name-cell"><strong>{{ student.name }}</strong></td>
                             <td class="student-pabasa-id"><span class="pabasa-badge">{{ student.pabasa_id }}</span></td>
                             <td>{{ student.email }}</td>
@@ -1357,7 +1357,7 @@
 
             <div class="student-cards" aria-label="Enrolled students list">
                 {% for student in students_table %}
-                <article class="student-card" data-student-key="{{ student.pabasa_id|default_if_none:'' }}" data-student-name="{{ student.name|default_if_none:'' }}" data-search="{{ student.name|default_if_none:'' }} {{ student.pabasa_id|default_if_none:'' }} {{ student.email|default_if_none:'' }}" data-sort-name="{{ student.name|default_if_none:'' }}" data-sort-pabasa="{{ student.pabasa_id|default_if_none:'' }}" data-sort-reading="{{ student.reading_level|default:'Pending' }}" data-sort-joined="{{ student.joined_at|default_if_none:'' }}" data-sort-outcome="{{ student.outcome_label|default:'Not Finalized' }}">
+                <article class="student-card" data-student-id="{{ student.id }}" data-student-key="{{ student.pabasa_id|default_if_none:'' }}" data-student-name="{{ student.name|default_if_none:'' }}" data-search="{{ student.name|default_if_none:'' }} {{ student.pabasa_id|default_if_none:'' }} {{ student.email|default_if_none:'' }}" data-sort-name="{{ student.name|default_if_none:'' }}" data-sort-pabasa="{{ student.pabasa_id|default_if_none:'' }}" data-sort-reading="{{ student.reading_level|default:'Pending' }}" data-sort-joined="{{ student.joined_at|default_if_none:'' }}" data-sort-outcome="{{ student.outcome_label|default:'Not Finalized' }}">
                     <div class="student-card-top">
                         <div>
                             <h3 class="student-card-name">{{ student.name }}</h3>
@@ -1686,8 +1686,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const tableBody = document.querySelector('.student-table tbody');
     const noResults = document.getElementById('studentNoResults');
     const pagination = document.getElementById('studentPagination');
-    const rows = Array.from(document.querySelectorAll('.student-table tbody tr[data-search]'));
-    const cards = Array.from(document.querySelectorAll('.student-cards .student-card[data-search]'));
+    let rows = Array.from(document.querySelectorAll('.student-table tbody tr[data-search]'));
+    let cards = Array.from(document.querySelectorAll('.student-cards .student-card[data-search]'));
     if (!searchInput || !sortSelect || !directionButton || !tableBody) return;
 
     let descending = false;
@@ -1740,7 +1740,76 @@ document.addEventListener('DOMContentLoaded', function () {
     searchInput.addEventListener('input', () => { currentPage = 1; refreshStudents(); });
     sortSelect.addEventListener('change', () => { currentPage = 1; refreshStudents(); });
     directionButton.addEventListener('click', () => { descending = !descending; refreshStudents(); });
+    window.refreshStudentDirectory = function () {
+        rows = Array.from(document.querySelectorAll('.student-table tbody tr[data-search]'));
+        cards = Array.from(document.querySelectorAll('.student-cards .student-card[data-search]'));
+        currentPage = Math.min(currentPage, Math.max(1, Math.ceil(rows.length / pageSize)));
+        refreshStudents();
+    };
     refreshStudents();
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const studentsSection = document.querySelector('.section-information-students[data-section-id]');
+    const tableBody = document.querySelector('.student-table tbody');
+    const cardContainer = document.querySelector('.student-cards');
+    const count = document.getElementById('enrolledStudentCount');
+    const sectionId = studentsSection?.dataset.sectionId;
+    if (!studentsSection || !tableBody || !sectionId) return;
+
+    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+    const studentRow = student => {
+        const id = escapeHtml(student.id);
+        const name = escapeHtml(student.name || '');
+        const pabasaId = escapeHtml(student.custom_id || '');
+        const email = escapeHtml(student.email || '');
+        const search = escapeHtml(`${student.name || ''} ${student.custom_id || ''} ${student.email || ''}`);
+        return `<tr data-student-id="${id}" data-student-key="${pabasaId}" data-student-name="${name}" data-search="${search}" data-sort-name="${name}" data-sort-pabasa="${pabasaId}" data-sort-reading="Pending" data-sort-joined="${escapeHtml(student.joined_at_display || '')}" data-sort-outcome="Not Finalized"><td class="student-name-cell"><strong>${name}</strong></td><td class="student-pabasa-id"><span class="pabasa-badge">${pabasaId}</span></td><td>${email}</td><td class="student-reading-level"><span class="status-chip reading-level-chip" data-reading-level="Pending">Pending</span></td><td class="student-year-end-outcome"><div class="year-end-outcome-group"><div class="year-end-outcome-status"><span class="status-chip">Not Finalized</span></div></div></td><td class="student-actions"><button type="button" class="btn btn-sm btn-outline-danger drop-student-btn" data-bs-toggle="modal" data-bs-target="#dropStudentModal" data-student-id="${id}" data-student-name="${name}"><i class="bi bi-person-dash me-1"></i>Drop Student</button></td></tr>`;
+    };
+    const studentCard = student => {
+        const id = escapeHtml(student.id);
+        const name = escapeHtml(student.name || '');
+        const pabasaId = escapeHtml(student.custom_id || '');
+        const email = escapeHtml(student.email || '');
+        const search = escapeHtml(`${student.name || ''} ${student.custom_id || ''} ${student.email || ''}`);
+        return `<article class="student-card" data-student-id="${id}" data-student-key="${pabasaId}" data-student-name="${name}" data-search="${search}" data-sort-name="${name}" data-sort-pabasa="${pabasaId}" data-sort-reading="Pending" data-sort-joined="${escapeHtml(student.joined_at_display || '')}" data-sort-outcome="Not Finalized"><div class="student-card-top"><div><h3 class="student-card-name">${name}</h3><div class="student-card-meta"><span class="student-card-pill">${pabasaId}</span><span>Pending</span></div></div><span class="student-card-pill">Enrolled</span></div><div class="student-card-meta"><span><i class="bi bi-envelope me-1"></i>${email}</span></div><div class="student-card-actions"><span class="status-chip reading-level-chip" data-reading-level="Pending">Pending</span><span class="status-chip">Not Finalized</span><button type="button" class="btn btn-sm btn-outline-danger drop-student-btn" data-bs-toggle="modal" data-bs-target="#dropStudentModal" data-student-id="${id}" data-student-name="${name}"><i class="bi bi-person-dash me-1"></i>Drop Student</button></div></article>`;
+    };
+    let lastIds = new Set(Array.from(document.querySelectorAll('[data-student-id]')).map(element => element.dataset.studentId));
+    let polling = false;
+    async function syncEnrollmentRows() {
+        if (polling || document.hidden) return;
+        polling = true;
+        try {
+            const response = await fetch(`{% url 'get_teacher_students_api' %}?section_id=${encodeURIComponent(sectionId)}`, {credentials: 'same-origin', cache: 'no-store', headers: {'Accept': 'application/json'}});
+            const data = await response.json();
+            if (!response.ok || !data.success || String(data.crla?.section_id || sectionId) !== String(sectionId)) return;
+            const students = Array.isArray(data.students) ? data.students : [];
+            const nextIds = new Set(students.map(student => String(student.id)));
+            if (nextIds.size === lastIds.size && [...nextIds].every(id => lastIds.has(id))) return;
+            tableBody.querySelectorAll('tr[data-student-id]').forEach(row => { if (!nextIds.has(row.dataset.studentId)) row.remove(); });
+            cardContainer?.querySelectorAll('.student-card[data-student-id]').forEach(card => { if (!nextIds.has(card.dataset.studentId)) card.remove(); });
+            tableBody.querySelectorAll('tr:not([data-student-id]):not(#studentNoResults)').forEach(row => row.remove());
+            cardContainer?.querySelectorAll('.student-card:not([data-student-id])').forEach(card => card.remove());
+            const existingIds = new Set(Array.from(tableBody.querySelectorAll('tr[data-student-id]')).map(row => row.dataset.studentId));
+            const newStudents = students.filter(student => !existingIds.has(String(student.id)));
+            if (newStudents.length) {
+                tableBody.insertAdjacentHTML('beforeend', newStudents.map(studentRow).join(''));
+                cardContainer?.insertAdjacentHTML('beforeend', newStudents.map(studentCard).join(''));
+            } else if (!nextIds.size) {
+                tableBody.insertAdjacentHTML('beforeend', '<tr data-enrollment-empty><td colspan="6" class="text-center py-4 text-muted">No students have joined yet.</td></tr>');
+                cardContainer?.insertAdjacentHTML('beforeend', '<div class="student-card text-muted" data-enrollment-empty>No students have joined yet.</div>');
+            }
+            if (count) count.textContent = `${nextIds.size} enrolled`;
+            lastIds = nextIds;
+            window.refreshStudentDirectory?.();
+        } catch (error) {
+            // Polling is best-effort; the existing table remains usable offline.
+        } finally {
+            polling = false;
+        }
+    }
+    window.setInterval(syncEnrollmentRows, 1000);
 });
 </script>
 <script>
