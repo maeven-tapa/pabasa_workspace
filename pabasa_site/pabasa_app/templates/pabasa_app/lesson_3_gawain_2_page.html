@@ -283,6 +283,8 @@ body.gawain-2:has(#game .complete) #game .complete-done{text-decoration:none!imp
   </script>
 <style>
   @font-face{font-family:Lesson3Fredoka;src:url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');font-display:swap}
+  @font-face{font-family:Fredoka;src:url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');font-display:swap}
+  .gawain-2,.gawain-2 *{font-family:Fredoka,Lesson3Fredoka,Nunito,"Segoe UI",sans-serif!important}
   .gawain-2{min-height:100dvh;height:100dvh;padding:16px clamp(16px,4vw,42px) 22px;overflow:hidden;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed!important;color:#183e63;font-family:Lesson3Fredoka,Nunito,"Segoe UI",sans-serif}
   .gawain-2::before{background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed;filter:none;transform:none}
   .gawain-2 .app{height:100dvh;padding:0;display:block;position:relative}
@@ -325,6 +327,26 @@ body.gawain-2:has(#game .complete) #game .complete-done{text-decoration:none!imp
   @media(min-width:651px){.gawain-2 #game.game,.gawain-2 #game.game:has(#listen){height:calc(100dvh - 145px)!important;max-height:calc(100dvh - 145px)!important;margin-top:0!important}}
   @media(max-width:650px){.gawain-2 .pairs{gap:12px}.gawain-2 .pairs .word,.gawain-2 .pairs .word:nth-child(2){height:170px;border-radius:22px}.gawain-2 .pairs .word img{height:100px}.gawain-2 .read,.gawain-2 .listen{min-height:64px;font-size:1rem}.gawain-2 .segments{gap:6px}.gawain-2 .segments i{width:30px!important;height:30px!important;font-size:.76rem}}
 </style>
+<style>
+  /* Keep Part 1 title and eyebrow on Fredoka after all activity overrides. */
+  .gawain-2 #game h1,
+  .gawain-2 #game p.eyebrow {
+    font-family: Fredoka, Lesson3Fredoka, Nunito, "Segoe UI", sans-serif !important;
+  }
+</style>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const game = document.querySelector('.gawain-2 #game');
+    if (!game) return;
+    const applyFredoka = function () {
+      game.querySelectorAll('h1, p.eyebrow').forEach(function (element) {
+        element.style.setProperty('font-family', 'Fredoka, Lesson3Fredoka, Nunito, "Segoe UI", sans-serif', 'important');
+      });
+    };
+    applyFredoka();
+    new MutationObserver(applyFredoka).observe(game, {childList: true, subtree: true});
+  });
+</script>
 </body>
 </html>
 <script>
@@ -675,7 +697,8 @@ body.gawain-2:has(#game .complete)::before {
 .gawain-2 #game.game:has(#listen) .header{display:block!important;width:100%!important;margin:0 auto 12px!important;padding:0 12px!important;background:transparent!important;border:0!important;box-shadow:none!important;text-align:center!important}
 .gawain-2 #game.game:has(#listen) .brand{width:100%!important;text-align:center!important}
 .gawain-2 #game.game:has(#listen) .brand h1{margin:0!important;color:#183e63!important;font-family:Fredoka,Nunito,"Segoe UI",sans-serif!important;font-size:clamp(2rem,4vw,3.7rem)!important;font-weight:900!important;line-height:1.08!important}
-.gawain-2 #game.game:has(#listen) .brand p.eyebrow{display:inline-flex!important;margin:0 auto 12px!important;padding:10px 30px!important;border-radius:999px!important;background:#277f82!important;color:#fff!important;font:900 clamp(.85rem,1.4vw,1.05rem)/1.15 Nunito,"Segoe UI",sans-serif!important;letter-spacing:.02em!important}
+.gawain-2 #game.game:has(#listen) .brand p.eyebrow{display:inline-flex!important;margin:0 auto 12px!important;padding:10px 30px!important;border-radius:999px!important;background:#277f82!important;color:#fff!important;font:900 clamp(.85rem,1.4vw,1.05rem)/1.15 Fredoka,Lesson3Fredoka,Nunito,"Segoe UI",sans-serif!important;letter-spacing:.02em!important}
+.gawain-2 #game.game:has(#listen) .brand h1{font-family:Fredoka,Lesson3Fredoka,Nunito,"Segoe UI",sans-serif!important}
 .gawain-2 #game.game:has(#listen) .progress{position:absolute!important;top:clamp(24px,3.3vh,42px)!important;right:clamp(20px,6vw,80px)!important;margin:0!important;text-align:right!important;font:900 .9rem Nunito,"Segoe UI",sans-serif!important;color:#526e75!important}
 .gawain-2 #game.game:has(#listen) .instruction{margin:18px auto 14px!important;background:#fffffff0!important}
 .gawain-2 #game.game:has(#listen) .pairs{width:min(900px,100%)!important;gap:18px!important;margin:auto!important}
