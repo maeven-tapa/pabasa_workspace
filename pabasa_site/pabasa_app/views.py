@@ -24263,6 +24263,7 @@ def reading_transcribe_api(request):
     phrase_hints = [] if language_code.lower() == 'fil-ph' else list(dict.fromkeys(
         phrase_hints_for(language, mode) + target_phrase_hints(target_text, language_code)
     ))
+    official_crla_assessment = request.POST.get('official_crla_assessment') == '1'
     if (
         request.POST.get('prescribed_activity_key') == 'lesson-15-gawain-2-angkop-na-pantig'
         and language_code.lower() == 'fil-ph'
@@ -24272,7 +24273,7 @@ def reading_transcribe_api(request):
     api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
     project_id = getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', '').strip()
     stt_model = getattr(settings, 'GOOGLE_STT_MODEL', 'chirp_3').strip()
-    selected_model = _requested_chirp_model(request)
+    selected_model = 'chirp_3' if official_crla_assessment else _requested_chirp_model(request)
     # Filipino defaults to Chirp 3 without phrase boosting.
     if language_code.lower() == 'fil-ph' and not selected_model:
         stt_model = 'chirp_3'
@@ -24280,7 +24281,7 @@ def reading_transcribe_api(request):
     location = _chirp_location(stt_model)
     credentials_file = str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or '')
 
-    knowlez_selected = uses_knowlez_stt(request)
+    knowlez_selected = not official_crla_assessment and uses_knowlez_stt(request)
     local_api_key_fallback = (
         not knowlez_selected
         and _local_api_key_stt_fallback(request, api_key, credentials_file, selected_model)

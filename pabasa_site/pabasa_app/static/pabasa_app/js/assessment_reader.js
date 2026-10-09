@@ -431,11 +431,11 @@
         let hasHeardSinceLastChunk = false;
         let ambientNoiseFloor = 0;
         let speechFrameCount = 0;
-        // Sentences, phrases, and paragraphs need enough context for reliable recognition.
-        // Keep fast feedback for word/vowel assessments, but allow longer
-        // recordings for continuous reading while remaining below Google's
-        // 12-second transcription timeout.
-        let speechChunkMs = ["sentence", "phrase", "paragraph"].includes(mode) ? 10000 : 2400;
+        // Multisyllable words need the same uninterrupted capture window as
+        // longer reading modes. A short fixed chunk can stop after the first
+        // syllable, and capture is paused while that chunk is sent to STT.
+        // Keep all chunks below Google's 12-second transcription timeout.
+        let speechChunkMs = ["word", "sentence", "phrase", "paragraph"].includes(mode) ? 10000 : 2400;
         const speechLevelThreshold = 0.014;
         const speechNoiseMultiplier = 3.2;
         let micDeviceOptionButtons = [];
@@ -450,7 +450,7 @@
                 shell.classList.toggle(`reader-${itemMode}`, itemMode === mode);
                 readerCard?.classList.toggle(`content-${itemMode}`, itemMode === mode);
             }
-            speechChunkMs = ["sentence", "phrase", "paragraph"].includes(mode) ? 10000 : 2400;
+            speechChunkMs = ["word", "sentence", "phrase", "paragraph"].includes(mode) ? 10000 : 2400;
         }
 
         function setSpeechDebugPanelVisible(isVisible, persist = true) {
@@ -4409,6 +4409,9 @@
             formData.append("current_syllable_index", String(context.syllableIndex));
             formData.append("mode", mode);
             formData.append("language", currentMaterialLanguage || "");
+            if (isOfficialAssessmentLaunch && isCrla) {
+                formData.append("official_crla_assessment", "1");
+            }
             if (currentAssessmentBranch === "rhymes") formData.append("crla_rhymes", "1");
             if (isOfficialAssessmentLaunch && isCrla && mode === "paragraph" && currentStoryState === "story_reading") {
                 formData.append("crla_story_reading", "1");
