@@ -138,6 +138,7 @@
               window.clearTimeout(timer);
               if (settled) return;
               const blob = new Blob(chunks, {type: recorder.mimeType || type || 'audio/webm'});
+              Object.defineProperty(blob, 'duration_ms', {value: recordingStartedAt ? Math.round(performance.now() - recordingStartedAt) : 0, enumerable: false});
               vad.takeSpeech();
               diagnostic('stop', {bytes:blob.size,chunkCount:chunks.length,durationMs:recordingStartedAt?Math.round(performance.now()-recordingStartedAt):0,speechDetected:speechStarted});
               finish(speechStarted && blob.size ? null : noSpeechError(), blob);
@@ -285,7 +286,7 @@
           state('processing');
           const result = await (options.transcribe || transcribe)(blob, fields, {signal: controller.signal, url: options.url});
           if (controller.signal.aborted || current !== controller) return;
-          const done = await onResult?.(result);
+          const done = await onResult?.(result, blob);
           if (controller.signal.aborted || (done ?? result.complete) || options.continuous === false) return;
           state('waiting');
         }
@@ -314,13 +315,14 @@
   // separate activity attempts. A real mismatch finishes the attempt.
   async function read(fields, options = {}) {
     if (options.button && fields.language) options.button.dataset.basahinLanguage = fields.language;
-    let finalResult, failure;
+    let finalResult, failure, lastAudioBlob;
     const nextFields = {...fields}, transcripts = [], rawTranscripts = [];
     const reader = create({
       ...options, button: undefined, visualButton: options.button, continuous: true,
       getFields: () => nextFields,
       onError: error => { failure = error; },
-      onResult(result) {
+      onResult(result, audioBlob) {
+        lastAudioBlob = audioBlob;
         if (!String(result.transcript || '').trim()) throw noSpeechError();
         transcripts.push(result.transcript);
         rawTranscripts.push(result.raw_transcript ?? result.transcript);
@@ -332,7 +334,7 @@
         if (result.word_results && nextFields.crla_sentence_word_scoring) nextFields.sentence_word_results = result.word_results;
         options.onProgress?.(result);
         if (options.continuous === false || result.complete || (!progressed && !stitching)) {
-          finalResult = {...result, transcript: transcripts.join(' '), raw_transcript: rawTranscripts.join(' ')};
+          finalResult = {...result, transcript: transcripts.join(' '), raw_transcript: rawTranscripts.join(' '), audio_blob: lastAudioBlob, audio_duration_ms: lastAudioBlob?.duration_ms || null, audio_mime_type: lastAudioBlob?.type || '', target_text: fields.target_text, item_index: fields.item_index, attempt_id: fields.attempt_id};
           return true;
         }
         return false;

@@ -2244,6 +2244,14 @@ class StudentActivityRecordingSubmission(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
     checked_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='checked_activity_recordings')
     checked_at = models.DateTimeField(null=True, blank=True)
+    # Additive reading-review metadata. Legacy binary recording activities do
+    # not use these fields and continue to use teacher_score (0/1).
+    expected_text = models.TextField(blank=True, default="")
+    recognized_transcript = models.TextField(blank=True, default="")
+    stt_match = models.BooleanField(null=True, blank=True)
+    fluency_classification = models.CharField(max_length=20, blank=True, default="")
+    classification_source = models.CharField(max_length=20, blank=True, default="")
+    review_status = models.CharField(max_length=20, default="not_required")
     submitted_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -2270,6 +2278,56 @@ class StudentActivityRecordingSubmission(models.Model):
                 name="unique_staged_activity_recording",
             ),
         ]
+
+
+class PrescribedReadingAttempt(models.Model):
+    """Immutable per-attempt evidence for the target reading activity."""
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='prescribed_reading_attempts')
+    school_calendar = models.ForeignKey('SchoolCalendar', on_delete=models.PROTECT, null=True, blank=True)
+    term = models.PositiveSmallIntegerField(choices=SchoolCalendar.TERM_CHOICES, null=True, blank=True)
+    activity_key = models.CharField(max_length=100)
+    item_index = models.PositiveIntegerField()
+    attempt_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    attempt_number = models.PositiveIntegerField(default=1)
+    expected_text = models.TextField(blank=True, default='')
+    audio_file = models.FileField(upload_to='activity_recordings/%Y/%m/%d/')
+    audio_mime_type = models.CharField(max_length=100, blank=True, default='')
+    duration_seconds = models.FloatField(null=True, blank=True)
+    recognized_transcript = models.TextField(blank=True, default='')
+    stt_match = models.BooleanField(null=True, blank=True)
+    stt_provider = models.CharField(max_length=40, blank=True, default='')
+    stt_model = models.CharField(max_length=80, blank=True, default='')
+    stt_word_metadata = models.JSONField(default=list, blank=True)
+    classification = models.CharField(max_length=20, blank=True, default='')
+    classification_confidence = models.FloatField(null=True, blank=True)
+    classification_source = models.CharField(max_length=20, blank=True, default='')
+    review_status = models.CharField(max_length=20, default='not_required')
+    classifier_version = models.CharField(max_length=40, blank=True, default='')
+    audio_features = models.JSONField(null=True, blank=True)
+    audio_analysis_status = models.CharField(max_length=32, default='pending')
+    audio_analysis_error = models.CharField(max_length=80, blank=True, default='')
+    audio_analysis_version = models.CharField(max_length=80, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'prescribed_reading_attempts'
+        ordering = ['created_at', 'id']
+        constraints = [models.UniqueConstraint(fields=('student', 'activity_key', 'item_index', 'attempt_number'), name='unique_prescribed_reading_attempt')]
+
+
+class PrescribedReadingValidationLabel(models.Model):
+    """Independent human label used only for validation, never student grading."""
+    LABEL_CHOICES = [('GREEN', 'Nabasa nang maayos'), ('YELLOW', 'Nabasa pero putol-putol'), ('RED', 'Di nabasa'), ('UNRESOLVED', 'Hindi matukoy')]
+    attempt = models.ForeignKey(PrescribedReadingAttempt, on_delete=models.CASCADE, related_name='validation_labels')
+    reviewer = models.ForeignKey(User, on_delete=models.PROTECT, related_name='prescribed_reading_validation_labels')
+    label = models.CharField(max_length=12, choices=LABEL_CHOICES)
+    notes = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'prescribed_reading_validation_labels'
+        ordering = ['created_at', 'id']
+        constraints = [models.UniqueConstraint(fields=('attempt', 'reviewer'), name='unique_prescribed_validation_label')]
 
 
 class LiveAssessmentSession(models.Model):

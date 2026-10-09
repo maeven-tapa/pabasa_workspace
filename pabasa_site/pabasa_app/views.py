@@ -30,6 +30,7 @@ import base64
 import json
 import os
 import mimetypes
+import hashlib
 import shutil
 import math
 import calendar as py_calendar
@@ -67,7 +68,8 @@ from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_
 from django.db import transaction
 import re
 import traceback
-from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, MaterialStudentAssignment, SupplementaryMaterialPublication, SupplementaryStudentAssignment, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization, StudentActivityProgress, StudentActivityRecordingSubmission, PrescribedActivityAccessSettings
+from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, MaterialStudentAssignment, SupplementaryMaterialPublication, SupplementaryStudentAssignment, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization, StudentActivityProgress, StudentActivityRecordingSubmission, PrescribedReadingAttempt, PrescribedReadingValidationLabel, PrescribedActivityAccessSettings
+from .audio_fluency import AudioAnalysisError, extract_audio_features
 from .system_clock import invalidate_override_cache, now as system_now, real_now, today as system_today
 from .models import PracticeDebugSettings
 from .section_configuration import ensure_salawag_grade_two_sections
@@ -377,10 +379,31 @@ def _unlocked_prescribed_activity_keys(student, lifecycle=None):
     unlocked = set()
     for index, key in enumerate(ordered_keys):
         if index == 0 or ordered_keys[index - 1] in completed:
+            if ordered_keys[index - 1:index] == ['session-5-lesson-14-gawain-4'] and key not in completed and not _lesson14_gawain4_fully_evaluated(student, lifecycle):
+                break
             unlocked.add(key)
         else:
             break
     return unlocked
+
+
+def _lesson14_gawain4_fully_evaluated(student, lifecycle=None):
+    """Return true only when all 22 items have persisted final classifications."""
+    progress = _current_progress_queryset(student, lifecycle).filter(activity_key='session-5-lesson-14-gawain-4').first()
+    state = progress.state if progress and isinstance(progress.state, dict) else {}
+    classifications = state.get('fluency_classifications') if isinstance(state.get('fluency_classifications'), dict) else {}
+    sources = state.get('classification_sources') if isinstance(state.get('classification_sources'), dict) else {}
+    rows = {row.item_index: row for row in StudentActivityRecordingSubmission.objects.filter(student=student, activity_key='session-5-lesson-14-gawain-4', item_index__isnull=False)}
+    for index in range(22):
+        row = rows.get(index)
+        classification = row.fluency_classification if row else classifications.get(str(index), '')
+        source = row.classification_source if row else sources.get(str(index), '')
+        if classification in {'GREEN', 'YELLOW'}:
+            continue
+        if classification == 'RED' and source in {'teacher', 'skipped'}:
+            continue
+        return False
+    return True
 
 
 def _student_can_open_prescribed_activity(student, activity_key, lifecycle=None):
@@ -11902,6 +11925,222 @@ def student_assessment_access_status(request):
         'request_approved': _student_has_approved_assessment_request(student, section),
     })
 
+@csrf_protect
+@require_http_methods(['POST'])
+def session_5_lesson_14_gawain_4_recording(request):
+    """Persist the latest per-item reading evidence for Session 5 Gawain 4."""
+    student = _active_prescribed_student(request)
+    if not student:
+        return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
+    try:
+        item_index = int(request.POST.get('item_index', -1))
+    except (TypeError, ValueError):
+        item_index = -1
+    activity = prescribed_activity('session-5-lesson-14-gawain-4') or {}
+    items = activity.get('items') or []
+    audio = request.FILES.get('audio')
+    if not audio or item_index not in range(len(items)):
+        return JsonResponse({'success': False, 'error': 'A valid reading recording is required.'}, status=400)
+    raw_attempt_id = str(request.POST.get('attempt_id') or '').strip()
+    try:
+        attempt_id = uuid.UUID(raw_attempt_id) if raw_attempt_id else None
+    except ValueError:
+        return JsonResponse({'success': False, 'error': 'Invalid attempt ID.'}, status=400)
+    transcript = str(request.POST.get('transcript') or '')[:4000]
+    raw_transcript = str(request.POST.get('raw_transcript') or transcript)[:4000]
+    match_value = request.POST.get('stt_match')
+    stt_match = None if match_value in ('', 'null', 'None', None) else match_value.lower() == 'true'
+    # The legacy target page advances its DOM before the wrapper uploads the
+    # returned blob. For a confirmed match, safely repair that one-step race
+    # only when the transcript identifies the preceding item exactly.
+    if stt_match and item_index > 0:
+        normalize = lambda value: re.sub(r'[^a-z0-9]', '', str(value or '').lower())
+        if normalize(transcript) == normalize(items[item_index - 1].get('text')):
+            item_index -= 1
+    expected = str(items[item_index].get('text') or '')
+    student_lifecycle = _current_learning_context(student)
+    with transaction.atomic():
+        row = StudentActivityRecordingSubmission.objects.select_for_update().filter(
+            student=student, activity_key='session-5-lesson-14-gawain-4', item_index=item_index,
+        ).first()
+        if row and row.audio_file:
+            row.audio_file.delete(save=False)
+        if not row:
+            row = StudentActivityRecordingSubmission(student=student, activity_key='session-5-lesson-14-gawain-4', item_index=item_index)
+        row.audio_file = audio
+        row.duration_seconds = int(request.POST.get('duration_seconds') or 0) or None
+        row.expected_text = expected
+        row.recognized_transcript = transcript
+        row.stt_match = stt_match
+        row.fluency_classification = 'PENDING_REVIEW'
+        row.classification_source = 'stt'
+        row.review_status = 'pending'
+        row.status = 'submitted'
+        row.teacher_score = None
+        row.checked_by = None
+        row.checked_at = None
+        row.save()
+        try:
+            audio.seek(0)
+            audio_bytes = audio.read()
+            audio.seek(0)
+            audio_features = extract_audio_features(audio_bytes, mime_type=getattr(audio, 'content_type', '') or '', item_index=item_index)
+            analysis_status, analysis_error = 'complete', ''
+        except AudioAnalysisError as exc:
+            audio_features, analysis_status, analysis_error = None, 'failed', str(exc)[:80]
+        except Exception:
+            audio_features, analysis_status, analysis_error = None, 'failed', 'analysis_failed'
+        if attempt_id:
+            lifecycle = _current_learning_context(student)
+            existing_attempt = PrescribedReadingAttempt.objects.filter(attempt_id=attempt_id).first()
+            if existing_attempt and (existing_attempt.student_id != student.id or existing_attempt.activity_key != 'session-5-lesson-14-gawain-4' or existing_attempt.item_index != item_index):
+                return JsonResponse({'success': False, 'error': 'Attempt ownership validation failed.'}, status=403)
+            if not existing_attempt:
+                attempt_number = PrescribedReadingAttempt.objects.filter(
+                    student=student, activity_key='session-5-lesson-14-gawain-4', item_index=item_index,
+                ).count() + 1
+                try:
+                    duration = float(request.POST.get('duration_seconds') or 0) or None
+                except (TypeError, ValueError):
+                    duration = None
+                try:
+                    word_metadata = json.loads(request.POST.get('word_metadata') or '[]')
+                except (TypeError, ValueError, json.JSONDecodeError):
+                    word_metadata = []
+                PrescribedReadingAttempt.objects.create(
+                    attempt_id=attempt_id, student=student, school_calendar=lifecycle.get('school_calendar'), term=lifecycle.get('term'),
+                    activity_key='session-5-lesson-14-gawain-4', item_index=item_index,
+                    attempt_number=attempt_number, expected_text=expected,
+                    audio_file=row.audio_file.name, audio_mime_type=getattr(audio, 'content_type', '') or '',
+                    duration_seconds=duration, recognized_transcript=transcript, stt_match=stt_match,
+                    stt_provider=str(request.POST.get('stt_provider') or '')[:40], stt_model=str(request.POST.get('stt_model') or '')[:80],
+                    stt_word_metadata=word_metadata if isinstance(word_metadata, list) else [],
+                    classification='PENDING_REVIEW', classification_source='stt', review_status='pending',
+                    audio_features=audio_features, audio_analysis_status=analysis_status,
+                    audio_analysis_error=analysis_error, audio_analysis_version='shadow-1',
+                )
+    return JsonResponse({'success': True, 'submission_id': row.id, 'item_index': item_index, 'review_status': row.review_status})
+
+
+@login_required(role='teacher')
+@require_http_methods(['GET'])
+def teacher_session_5_lesson_14_gawain_4_recordings(request):
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    try:
+        student_id = int(request.GET.get('student_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'A valid student is required.'}, status=400)
+    if str(student_id) not in {str(value) for value in _teacher_session4_student_ids(teacher)}:
+        return JsonResponse({'success': False, 'error': 'Student access denied.'}, status=403)
+    activity = prescribed_activity('session-5-lesson-14-gawain-4') or {}
+    rows = {row.item_index: row for row in StudentActivityRecordingSubmission.objects.filter(
+        student_id=student_id, activity_key='session-5-lesson-14-gawain-4', item_index__isnull=False,
+    )}
+    progress = _current_progress_queryset(User.objects.get(pk=student_id)).filter(activity_key='session-5-lesson-14-gawain-4').first()
+    progress_state = progress.state if progress and isinstance(progress.state, dict) else {}
+    progress_classes = progress_state.get('fluency_classifications') if isinstance(progress_state.get('fluency_classifications'), dict) else {}
+    progress_sources = progress_state.get('classification_sources') if isinstance(progress_state.get('classification_sources'), dict) else {}
+    return JsonResponse({'success': True, 'items': [{
+        'item_index': index, 'expected_text': item.get('text', ''),
+        'submission_id': (row.id if (row := rows.get(index)) else None),
+        'transcript': row.recognized_transcript if row else '',
+        'stt_match': row.stt_match if row else None,
+        'classification': row.fluency_classification if row else progress_classes.get(str(index), ''),
+        'classification_source': row.classification_source if row else progress_sources.get(str(index), ''),
+        'review_status': row.review_status if row else ('skipped' if progress_sources.get(str(index)) == 'skipped' else 'missing'),
+        'recording_url': reverse('teacher_session_5_lesson_14_gawain_4_audio', args=[row.id]) if row and row.audio_file else None,
+        'duration_seconds': row.duration_seconds if row else None,
+        'reviewed_at': row.checked_at.isoformat() if row and row.checked_at else None,
+    } for index, item in enumerate(activity.get('items') or [])]})
+
+
+@login_required(role='teacher')
+@csrf_protect
+@require_http_methods(['POST'])
+def teacher_session_5_lesson_14_gawain_4_classify(request):
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    if not teacher:
+        return JsonResponse({'success': False, 'error': 'Teacher authorization required.'}, status=403)
+    try:
+        payload = json.loads(request.body or '{}')
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({'success': False, 'error': 'Invalid request.'}, status=400)
+    classification = str(payload.get('classification') or '').upper()
+    if classification not in {'GREEN', 'YELLOW', 'RED'}:
+        return JsonResponse({'success': False, 'error': 'Invalid classification.'}, status=400)
+    submission = StudentActivityRecordingSubmission.objects.filter(
+        pk=payload.get('submission_id'), activity_key='session-5-lesson-14-gawain-4',
+    ).first()
+    if not submission or str(submission.student_id) not in {str(value) for value in _teacher_session4_student_ids(teacher)}:
+        return JsonResponse({'success': False, 'error': 'Recording access denied.'}, status=403)
+    submission.fluency_classification = classification
+    submission.classification_source = 'teacher'
+    submission.review_status = 'reviewed'
+    submission.status = 'checked'
+    submission.checked_by = teacher
+    submission.checked_at = system_now()
+    submission.save(update_fields=['fluency_classification', 'classification_source', 'review_status', 'status', 'checked_by', 'checked_at', 'updated_at'])
+    return JsonResponse({'success': True, 'submission_id': submission.id, 'classification': classification, 'review_status': submission.review_status})
+
+
+@login_required(role='teacher')
+@require_http_methods(['GET'])
+def teacher_session_5_lesson_14_gawain_4_audio(request, submission_id):
+    submission = StudentActivityRecordingSubmission.objects.filter(pk=submission_id, activity_key='session-5-lesson-14-gawain-4').first()
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    allowed = {str(value) for value in _teacher_session4_student_ids(teacher)}
+    if not submission or str(submission.student_id) not in allowed or not submission.audio_file:
+        return HttpResponseForbidden('Recording unavailable.')
+    response = FileResponse(submission.audio_file.open('rb'), content_type=mimetypes.guess_type(submission.audio_file.name)[0] or 'audio/webm')
+    response['Content-Disposition'] = 'inline'
+    return response
+
+@login_required(role='teacher')
+@require_http_methods(['GET'])
+def prescribed_reading_validation_items(request):
+    reviewer = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    allowed = {str(value) for value in _teacher_session4_student_ids(reviewer)}
+    rows = PrescribedReadingAttempt.objects.filter(activity_key='session-5-lesson-14-gawain-4', student_id__in=allowed).select_related('student')
+    return JsonResponse({'success': True, 'items': [{'attempt_id': str(row.attempt_id), 'participant_id': hashlib.sha256(f'pabasa-validation:{row.student_id}'.encode()).hexdigest()[:16], 'item_index': row.item_index, 'content_type': 'word' if row.item_index < 7 else ('phrase' if row.item_index < 17 else 'sentence'), 'expected_text': row.expected_text, 'transcript': row.recognized_transcript, 'stt_match': row.stt_match, 'audio_available': bool(row.audio_file), 'audio_url': reverse('teacher_session_5_lesson_14_gawain_4_audio', args=[row.id]) if row.audio_file else None, 'analysis_version': row.audio_analysis_version} for row in rows]})
+
+@login_required(role='teacher')
+@csrf_protect
+@require_http_methods(['POST'])
+def prescribed_reading_validation_label(request):
+    reviewer = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    if not reviewer: return JsonResponse({'success': False, 'error': 'Evaluator authorization required.'}, status=403)
+    try:
+        payload = json.loads(request.body or '{}')
+        attempt = PrescribedReadingAttempt.objects.get(attempt_id=payload.get('attempt_id'), activity_key='session-5-lesson-14-gawain-4')
+    except (TypeError, ValueError, json.JSONDecodeError, PrescribedReadingAttempt.DoesNotExist):
+        return JsonResponse({'success': False, 'error': 'Valid attempt required.'}, status=400)
+    if str(attempt.student_id) not in {str(value) for value in _teacher_session4_student_ids(reviewer)}: return JsonResponse({'success': False, 'error': 'Recording access denied.'}, status=403)
+    label = str(payload.get('label') or '').upper()
+    if label not in {'GREEN', 'YELLOW', 'RED', 'UNRESOLVED'}: return JsonResponse({'success': False, 'error': 'Invalid validation label.'}, status=400)
+    try:
+        row = PrescribedReadingValidationLabel.objects.create(attempt=attempt, reviewer=reviewer, label=label, notes=str(payload.get('notes') or '')[:2000])
+    except IntegrityError: return JsonResponse({'success': False, 'error': 'This evaluator already labeled the attempt.'}, status=409)
+    return JsonResponse({'success': True, 'label_id': row.id, 'attempt_id': str(attempt.attempt_id), 'label': row.label, 'created_at': row.created_at.isoformat()})
+
+@login_required(role='teacher')
+@require_http_methods(['GET'])
+def prescribed_reading_validation_report(request):
+    reviewer = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    allowed = {str(value) for value in _teacher_session4_student_ids(reviewer)}
+    rows = PrescribedReadingAttempt.objects.filter(activity_key='session-5-lesson-14-gawain-4', student_id__in=allowed).prefetch_related('validation_labels')
+    groups = {}
+    for row in rows:
+        content_type = 'word' if row.item_index < 7 else ('phrase' if row.item_index < 17 else 'sentence')
+        group = groups.setdefault(content_type, {'recordings': 0, 'usable_recordings': 0, 'labels': {'GREEN': 0, 'YELLOW': 0, 'RED': 0, 'UNRESOLVED': 0}, 'features': []})
+        group['recordings'] += 1
+        if row.audio_analysis_status == 'complete' and row.audio_features: group['usable_recordings'] += 1
+        for label in row.validation_labels.all():
+            group['labels'][label.label] = group['labels'].get(label.label, 0) + 1
+            feature = dict(row.audio_features or {}); feature.update({'label': label.label, 'participant_id': hashlib.sha256(f'pabasa-validation:{row.student_id}'.encode()).hexdigest()[:16], 'item_index': row.item_index})
+            group['features'].append(feature)
+    return JsonResponse({'success': True, 'groups': groups, 'automatic_accuracy': None, 'note': 'Feature distributions only; no classifier accuracy is calculated.'})
+
+
 @login_required(role='teacher')
 @require_http_methods(["GET"])
 def teacher_assessment_requests(request):
@@ -17639,6 +17878,49 @@ def prescribed_activity_progress(request, activity_key):
                     'correct_items': 0, 'total_items': len(activity['items']),
                     'activity_completed': False, 'state': reset_state,
                 }})
+            if data.get('action') in {'skip', 'continue_review'}:
+                action = data.get('action')
+                item_index = int(data.get('item_index', -1))
+                expected_version = int(data.get('state_version', -1))
+                if expected_version < 0:
+                    return JsonResponse({'success': False, 'error': 'A current progress version is required.'}, status=409)
+                with transaction.atomic():
+                    progress = query.select_for_update().first()
+                    if not progress:
+                        return JsonResponse({'success': False, 'error': 'Progress not found.'}, status=409)
+                    old = progress.state if isinstance(progress.state, dict) else {}
+                    current = int(old.get('current_index', progress.current_index) or 0)
+                    version = int(old.get('state_version', 0) or 0)
+                    if item_index != current:
+                        if item_index < current:
+                            return JsonResponse({'success': True, 'already_processed': True, 'progress': {'state': old, 'activity_completed': progress.activity_completed}})
+                        return JsonResponse({'success': False, 'error': 'The reading item is no longer current.'}, status=409)
+                    if expected_version >= 0 and expected_version != version:
+                        return JsonResponse({'success': False, 'error': 'This activity changed in another window. Please refresh.'}, status=409)
+                    total = len(activity['items'])
+                    completed = set(old.get('completed_reading_items') or [])
+                    completed.add(current)
+                    statuses = dict(old.get('statuses') or {})
+                    statuses[str(current)] = 'not_read' if action == 'skip' else 'pending_review'
+                    classifications = dict(old.get('fluency_classifications') or {})
+                    classifications[str(current)] = 'RED' if action == 'skip' else 'PENDING_REVIEW'
+                    sources = dict(old.get('classification_sources') or {})
+                    sources[str(current)] = 'skipped' if action == 'skip' else 'stt'
+                    matches = dict(old.get('reading_matches') or {})
+                    if action == 'skip':
+                        matches[str(current)] = None
+                    state = dict(old, current_index=min(total, current + 1),
+                                 completed_reading_items=sorted(completed), statuses=statuses,
+                                 fluency_classifications=classifications,
+                                 classification_sources=sources, reading_matches=matches,
+                                 state_version=version + 1)
+                    progress.current_index = state['current_index']
+                    progress.completed_items = len(completed)
+                    progress.total_items = total
+                    progress.activity_completed = progress.current_index >= total
+                    progress.state = state
+                    progress.save(update_fields=['current_index', 'completed_items', 'total_items', 'activity_completed', 'state', 'updated_at'])
+                return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': len(completed), 'activity_completed': progress.activity_completed}})
             existing = query.first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             incoming = data.get('state') if isinstance(data.get('state'), dict) else {}
@@ -17655,9 +17937,14 @@ def prescribed_activity_progress(request, activity_key):
             state = {'current_index': index, 'completed_reading_items': completed,
                      'reading_attempts': attempts, 'transcripts': transcripts,
                      'reading_matches': matches, 'statuses': statuses,
+                     'fluency_classifications': incoming.get('fluency_classifications', old.get('fluency_classifications', {})),
+                     'classification_sources': incoming.get('classification_sources', old.get('classification_sources', {})),
                      'state_version': max(int(incoming.get('state_version') or 0), int(old.get('state_version') or 0) + 1)}
             progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': len(completed), 'correct_items': 0,
-                          'total_items': total, 'activity_completed': False, 'state': state})
+                          'total_items': total, 'activity_completed': index >= total, 'state': state})
+            if index >= total and not progress.activity_completed:
+                progress.activity_completed = True
+                progress.save(update_fields=['activity_completed', 'updated_at'])
             return JsonResponse({'success': True, 'progress': {'state': state, 'completed_items': len(completed), 'correct_items': 0, 'total_items': total, 'activity_completed': False}})
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)

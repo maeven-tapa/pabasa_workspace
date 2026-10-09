@@ -10661,6 +10661,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 <script>
     // Handle both server-rendered and dynamically rendered course cards without
     // relying on a global function for an inline onclick attribute.
+    document.addEventListener('change', function(event) {
+        const select = event.target.closest('.session5-fluency-select');
+        if (!select || select.disabled) return;
+        const row = select.closest('.session5-fluency-row'), submissionId = row?.dataset.submissionId;
+        if (!submissionId) return;
+        const previous = select.dataset.previousValue || '', selected = select.value;
+        if (!selected) { select.value = previous; return; }
+        select.disabled = true;
+        ensureCsrfToken().then(token => fetch('{% url "teacher_session_5_lesson_14_gawain_4_classify" %}', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':token}, body:JSON.stringify({submission_id:Number(submissionId), classification:selected})})).then(response => response.json().then(data => ({response,data}))).then(({response,data}) => { if (!response.ok || !data.success) throw new Error(data.error || 'Classification could not be saved.'); select.dataset.previousValue=selected; row.querySelector('.session5-review-state')?.replaceChildren('reviewed'); showToast('Grade saved successfully.', 'success'); }).catch(error => { select.value=previous; showToast(error.message || 'Classification could not be saved.', 'error'); }).finally(() => { select.disabled=false; });
+    });
+
     document.addEventListener('click', function(event) {
         const courseTrigger = event.target.closest('[data-open-course]');
         if (!courseTrigger) return;
@@ -13424,6 +13435,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         }] }];
                         return [String(rawId), null];
                     }
+                    if (String(rawId) === 'prescribed-session-5-lesson-14-gawain-4') {
+                        const res = await fetch('{% url "teacher_session_5_lesson_14_gawain_4_recordings" %}?student_id=' + encodeURIComponent(window.__studentProgressStudentId || ''), { credentials: 'same-origin' });
+                        const data = await res.json();
+                        if (res.ok && data.success) return [String(rawId), { attempts: [{
+                            student_id: window.__studentProgressStudentId, activity_type: 'session_5_fluency',
+                            status: 'completed', session5_recordings: data.items || [],
+                            session5_reviewed_items: (data.items || []).filter(item => item.review_status === 'reviewed').length,
+                            session5_total_items: (data.items || []).length,
+                        }] }];
+                        return [String(rawId), null];
+                    }
                     if (String(rawId) === 'prescribed-session-4-gawain-2') {
                         const res = await fetch('{% url "teacher_session_4_gawain_2_recordings" %}?student_id=' + encodeURIComponent(window.__studentProgressStudentId || ''), { credentials: 'same-origin' });
                         const data = await res.json();
@@ -14722,6 +14744,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 activityType: 'lesson_13_gawain_1',
                 activityLabel: 'Session 5',
             });
+            tasks.push({
+                title: 'Lesson 14 · Gawain 4',
+                assessmentId: 'prescribed-session-5-lesson-14-gawain-4',
+                source_type: 'prescribed',
+                activityType: 'session_5_fluency',
+                activityLabel: 'Session 5',
+            });
 
             return tasks;
         }
@@ -14869,6 +14898,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const isSession4Gawain1 = activityType === 'session_4_gawain_1';
                     const isSession4Gawain2 = activityType === 'session_4_gawain_2';
                     const isLesson13Gawain1 = activityType === 'lesson_13_gawain_1';
+                    const isSession5Fluency = activityType === 'session_5_fluency';
                     const usesLetterSoundScores = isLesson29TraceSay || isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1;
                     const timeSpent = isLesson1Recording && attempt?.recording_duration_seconds !== undefined
                         ? attempt.recording_duration_seconds
@@ -14895,6 +14925,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const retellRecordingAvailable = (isRetellStory || isStoryResponse || isLesson1Recording) && attempt?.recording_available && attempt?.recording_url;
                     const lesson29Recordings = isLesson29TraceSay && Array.isArray(attempt?.recordings) ? attempt.recordings : [];
                     const session4Recordings = usesLetterSoundScores && Array.isArray(attempt?.session4_recordings) ? attempt.session4_recordings : [];
+                    const session5Recordings = isSession5Fluency && Array.isArray(attempt?.session5_recordings) ? attempt.session5_recordings : [];
+                    const session5Finalized = session5Recordings.filter(recording => ['GREEN','YELLOW'].includes(recording.classification) || (recording.classification === 'RED' && ['teacher','skipped'].includes(recording.classification_source))).length;
+                    const session5RecordingHtml = `<div class="session5-evaluation-summary"><strong>Reading Evaluation — ${session5Finalized} / 22 Graded</strong><span>Pending Review: ${session5Recordings.filter(recording => recording.review_status === 'pending').length} · Skipped: ${session5Recordings.filter(recording => recording.classification === 'RED' && recording.classification_source === 'skipped').length} · Unresolved: ${session5Recordings.filter(recording => recording.classification === 'UNRESOLVED').length}</span></div><div class="session5-fluency-table"><div class="session5-fluency-header"><span>#</span><span>Reading Item</span><span>Student Recording</span><span>Classification</span></div>${Array.from({length:22}, (_, index) => { const recording=session5Recordings.find(item => Number(item.item_index)===index) || {}; const value=['GREEN','YELLOW','RED'].includes(recording.classification) ? recording.classification : ''; const skipped=value==='RED' && recording.classification_source==='skipped'; return `<div class="session5-fluency-row" data-submission-id="${escapeHtml(recording.submission_id || '')}"><span class="session5-fluency-number">${index+1}</span><span class="session5-fluency-text"><strong>${escapeHtml(recording.expected_text || 'No item data')}</strong><small>${escapeHtml(recording.transcript || 'No transcript')}</small></span><span class="session5-fluency-audio">${recording.recording_url ? `<audio controls preload="metadata" src="${escapeHtml(recording.recording_url)}"></audio>` : '<span class="text-muted">No recording</span>'}</span><span><select class="form-select form-select-sm session5-fluency-select" data-previous-value="${value}" ${!recording.submission_id || skipped ? 'disabled' : ''}><option value="" ${!value ? 'selected' : ''}>Select Grade</option><option value="GREEN" ${value==='GREEN' ? 'selected' : ''}>🟢 Nabasa nang maayos</option><option value="YELLOW" ${value==='YELLOW' ? 'selected' : ''}>🟡 Nabasa pero medyo putol-putol</option><option value="RED" ${value==='RED' ? 'selected' : ''}>🔴 Di nabasa</option></select><small class="session5-review-state">${escapeHtml(skipped ? 'Skipped · RED' : (recording.review_status || 'Pending Review'))}</small></span></div>`; }).join('')}</div>`;
                     const session4Reviewed = usesLetterSoundScores && session4Recordings.length > 0 && session4Recordings.every(recording => recording.teacher_score !== null && recording.teacher_score !== undefined);
                     const session4Score = usesLetterSoundScores
                         ? (session4Reviewed ? `${attempt.session4_correct_items}/${attempt.session4_total_items}` : 'Awaiting teacher')
@@ -14938,9 +14971,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Time Spent</span><span class="student-progress-stat-value">${timeSpent !== undefined && timeSpent !== null && timeSpent !== '' ? escapeHtml(formatCourseReportDuration(timeSpent)) : '—'}</span></div>
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Score</span><span class="student-progress-stat-value student-progress-score">${scoreValue}</span></div>
                             </div>
-                            ${(isRetellStory || isStoryResponse || isLesson1Recording || isLesson29TraceSay || isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1) ? `<div class="student-progress-recording" data-recording-key="${escapeHtml(retellRecordingKey)}">
+                            ${(isRetellStory || isStoryResponse || isLesson1Recording || isLesson29TraceSay || isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1 || isSession5Fluency) ? `<div class="student-progress-recording" data-recording-key="${escapeHtml(retellRecordingKey)}">
                                 <div class="student-progress-recording-panel">
-                                    ${recordingHtml}
+                                    ${isSession5Fluency ? `<div class="session5-fluency-review"><h6>Teacher Review</h6><p>Listen to the reading and choose the final classification.</p>${session5RecordingHtml || '<span>Walang recording na isinumite.</span>'}</div>` : recordingHtml}
                                     ${isLesson1Recording && (attempt?.can_retry || attempt?.can_check) ? `<div class="d-flex gap-2 mt-2 lesson1-review-actions"><button type="button" class="btn btn-outline-secondary btn-sm student-progress-lesson1-action" data-id="${escapeHtml(attempt.submission_id || '')}" data-action="retry" ${attempt.can_retry ? '' : 'disabled'}>Retry</button><button type="button" class="btn btn-primary btn-sm student-progress-lesson1-action" data-id="${escapeHtml(attempt.submission_id || '')}" data-action="checked" ${attempt.can_check ? '' : 'disabled'}>Mark as Checked</button></div>` : ''}
                                     ${isLesson29TraceSay && (attempt?.can_retry || attempt?.can_check) ? `<div class="d-flex gap-2 mt-2 lesson29-review-actions"><button type="button" class="btn btn-outline-secondary btn-sm student-progress-lesson29-action" data-student-id="${escapeHtml(attempt.student_id || '')}" data-action="retry" ${attempt.can_retry ? '' : 'disabled'}>Retry</button><button type="button" class="btn btn-primary btn-sm student-progress-lesson29-action" data-student-id="${escapeHtml(attempt.student_id || '')}" data-action="checked" ${attempt.can_check ? '' : 'disabled'}>Mark as Complete</button></div>` : ''}
                                 </div>
@@ -15008,6 +15041,25 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     });
 
     document.addEventListener('click', function(event) {
+        const fluencyButton = event.target.closest('[data-fluency-classification]');
+        if (fluencyButton) {
+            const row = fluencyButton.closest('.session5-fluency-row');
+            const submissionId = row?.dataset.submissionId;
+            if (!submissionId) return;
+            row.querySelectorAll('[data-fluency-classification]').forEach(button => button.disabled = true);
+            ensureCsrfToken().then(token => fetch('{% url "teacher_session_5_lesson_14_gawain_4_classify" %}', {
+                method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRFToken': token},
+                body: JSON.stringify({submission_id: Number(submissionId), classification: fluencyButton.dataset.fluencyClassification})
+            })).then(response => response.json().then(data => ({response, data}))).then(({response, data}) => {
+                if (!response.ok || !data.success) throw new Error(data.error || 'Classification could not be saved.');
+                row.querySelectorAll('[data-fluency-classification]').forEach(button => button.classList.toggle('selected', button === fluencyButton));
+                const state = row.querySelector('.session5-review-state'); if (state) state.textContent = 'reviewed';
+                showToast('Reading classification saved', 'success');
+            }).catch(error => showToast(error.message || 'Classification could not be saved.', 'error')).finally(() => {
+                row.querySelectorAll('[data-fluency-classification]').forEach(button => button.disabled = false);
+            });
+            return;
+        }
         const session4ScoreButton = event.target.closest('.session4-score-button');
         if (session4ScoreButton) {
             const row = session4ScoreButton.closest('.session4-letter-recording');
@@ -24658,4 +24710,7 @@ document.addEventListener('DOMContentLoaded', () => {
     preview?.querySelector('.lesson28-identify-preview > p')?.replaceChildren(instruction);
 });
 </script>
+<style>
+.session5-evaluation-summary{display:flex;justify-content:space-between;gap:1rem;align-items:center;margin:1rem 0;padding:.75rem 1rem;border-radius:.75rem;background:#eef7fb;color:#16465d;flex-wrap:wrap}.session5-evaluation-summary span{font-size:.82rem;color:#5d7480}.session5-fluency-table{display:grid;gap:.35rem}.session5-fluency-header,.session5-fluency-row{display:grid;grid-template-columns:3rem minmax(12rem,1.5fr) minmax(12rem,1fr) minmax(13rem,1fr);gap:1rem;align-items:center}.session5-fluency-header{padding:.5rem .75rem;color:#58717e;font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.session5-fluency-row{padding:.7rem .75rem;border-radius:.75rem;background:#fbfdfe}.session5-fluency-number{font-weight:800;color:#176078}.session5-fluency-text{min-width:0}.session5-fluency-text strong,.session5-fluency-text small{display:block;overflow-wrap:anywhere}.session5-fluency-text small{margin-top:.2rem;color:#617984}.session5-fluency-audio audio{width:100%;max-width:260px}.session5-fluency-select{min-width:12rem}.session5-review-state{display:block;margin-top:.25rem;color:#6c7d84;font-size:.75rem}@media(max-width:900px){.session5-fluency-header{display:none}.session5-fluency-row{grid-template-columns:2rem 1fr;gap:.6rem}.session5-fluency-audio,.session5-fluency-row>span:last-child{grid-column:2}.session5-fluency-select{width:100%}}
+</style>
 {% endblock %}
