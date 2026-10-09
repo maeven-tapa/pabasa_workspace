@@ -84,20 +84,6 @@ document.addEventListener('DOMContentLoaded',()=>{
 	(async()=>{try{await speak(heading.textContent.trim());await speak(paragraph.textContent.trim());await speak('Magsimula na tayo!')}catch(error){}finally{button.disabled=false}})();
 });
 </script>
-<script type="text/plain" data-lesson4-g1-bootstrap>
-/* Use prescribed audio for Lesson 4 Gawain 1 target-word playback only. */
-(function(){
-  document.addEventListener('DOMContentLoaded',()=>{
-    const wordAudioFiles={manok:'manok.mp3',manika:'manika (2).mp3',susi:'susi.mp3',mangga:'mangga.mp3',mais:'mais.mp3',mani:'mani (2).mp3'};
-    const wordAudioBase='/static/pabasa_app/prescribed/audio/SESSION%202/LESSON%204/GAWAIN%201/';
-    const playWordAudio=async word=>{const audio=new Audio(wordAudioBase+wordAudioFiles[String(word||'').toLowerCase()]);await audio.play();await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=reject})};
-    const bind=()=>{const button=document.getElementById('read');if(button&&typeof phase==='string'&&phase==='listen')button.onclick=()=>playWordAudio(items[index].word).catch(()=>{})};
-    const currentRender=window.render;
-    if(typeof currentRender==='function')window.render=function(){const result=currentRender.apply(this,arguments);bind();return result};
-    bind();
-  }, {once:true});
-})();
-</script>
 <style>
 .lesson-4-responsive .lesson4-audio-actions{display:flex!important;align-items:stretch!important;justify-content:center!important;gap:10px!important;width:100%!important}
 .lesson-4-responsive .lesson4-audio-actions .listen{flex:1 1 0!important;width:auto!important;min-width:0!important;margin:0!important}
@@ -424,7 +410,7 @@ setTimeout(function(){
     };
 })();
 </script>
- <script>window.__lessonStartProgress.activityLabel='SESSION 2 · LESSON 4 · GAWAIN 1';window.__lessonStartProgress.activityTitle='Letrang Mm';</script>
+ <script>window.__lessonStartProgress=window.__lessonStartProgress||{};window.__lessonStartProgress.activityLabel='SESSION 2 · LESSON 4 · GAWAIN 1';window.__lessonStartProgress.activityTitle='Letrang Mm';</script>
  <script>document.querySelectorAll('.eyebrow').forEach(function(el){el.textContent=el.textContent.replace(/\s*·\s*Written\s*$/,'')});</script>
  <script>
 (function () {
@@ -482,7 +468,7 @@ setTimeout(function(){
     });
   };
 }());
-</script><script>window.__lessonStartProgress={activityKey:'lesson-4-gawain-1',progress:JSON.parse(document.getElementById('lesson-four-data').textContent||'{}').progress||null,totalItems:6,progressUrl:'{% url "lesson_4_activity_progress" %}',storageKeys:[]};</script><script src="{% static 'pabasa_app/js/lesson_start_modal.js' %}?v=6"></script>
+</script><script>window.__lessonStartProgress={activityKey:'lesson-4-gawain-1',progress:JSON.parse(document.getElementById('lesson-four-data').textContent||'{}').progress||null,totalItems:6,progressUrl:'{% url "lesson_4_activity_progress" %}',storageKeys:[],activityLabel:'SESSION 2 · LESSON 4 · GAWAIN 1',activityTitle:'Letrang Mm'};</script><script src="{% static 'pabasa_app/js/lesson_start_modal.js' %}?v=6"></script>
 <script>
 (function () {
   const files = {
@@ -557,3 +543,76 @@ body.lesson-4-responsive:has(.complete) .complete-card #done{font-size:0!importa
 body.lesson-4-responsive:has(.complete) .complete-card #done::after{font-size:clamp(1.05rem,1.8vw,1.25rem)!important;line-height:1.2!important}
 body.lesson-4-responsive:has(.complete) .card>.overview{display:none!important}
 </style>
+<script>(function(){const originalFetch=window.fetch.bind(window);window.fetch=function(input,init){const url=String(input?.url||input||'');const body=init?.body;if(url.includes('/api/reading/transcribe/')&&body instanceof FormData){body.set('prescribed_activity_key','lesson-4-gawain-1')}return originalFetch(input,init)}})();</script>
+<script type="text/plain" data-lesson4-g1-bootstrap>(function(){if(typeof render!=='function')return;const originalRender=render;render=function(){if(typeof phase==='string'&&phase==='read'&&typeof tries==='number'&&tries>0&&tries<3&&document.querySelector('#app .focused')){const status=document.querySelector('#app .focused #status');const button=document.querySelector('#app .focused #read');if(status)status.textContent='Subukan muli ('+tries+'/3)';if(button){button.disabled=false;button.classList.remove('listening','processing');button.textContent=window.BasahinButton?.LABEL||'Basahin'}return}return originalRender.apply(this,arguments)}})();</script>
+<script type="text/plain" data-lesson4-g1-bootstrap>(function(){if(typeof render!=='function')return;const originalRender=render;let played=false;render=function(){const focused=document.querySelector('#app .focused');if(focused&&typeof tries==='number'&&tries>=3&&typeof phase==='string'&&phase==='listen'){const status=focused.querySelector('#status'),button=focused.querySelector('#read');if(status)status.textContent='Subukan muli (3/3)';if(button){button.disabled=false;button.classList.remove('listening','processing');button.textContent=window.BasahinButton?.LABEL||'Basahin'}if(!played){played=true;fetch('{% url "reading_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||'','Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({target_text:'Subukan muli',language:'Filipino',mode:'reading'})}).then(r=>r.json()).then(result=>{if(result.success){const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);audio.play().catch(()=>{})}}).catch(()=>{})}return}if(typeof phase==='string'&&phase==='read'&&typeof tries==='number'&&tries>0&&tries<3&&focused){const status=focused.querySelector('#status'),button=focused.querySelector('#read');if(status)status.textContent='Subukan muli ('+tries+'/3)';if(button){button.disabled=false;button.classList.remove('listening','processing');button.textContent=window.BasahinButton?.LABEL||'Basahin'}return}return originalRender.apply(this,arguments)}})();</script>
+<script>
+(function () {
+  const localRetryAudio = '/static/pabasa_app/prescribed/audio/SESSION%202/LESSON%204/GAWAIN%201/OTHERS/subukan_muli.mp3';
+  const previousFetch = window.fetch.bind(window);
+  window.fetch = async function (input, init) {
+    const url = typeof input === 'string' ? input : input?.url || '';
+    const body = init?.body;
+    let target = '';
+    if (body instanceof URLSearchParams) target = body.get('target_text') || '';
+    else if (typeof body === 'string') target = new URLSearchParams(body).get('target_text') || '';
+    if (url.includes('/api/reading/read-aloud/') && target.trim() === 'Subukan muli') {
+      const audioResponse = await previousFetch(localRetryAudio, { credentials: 'same-origin', cache: 'no-store' });
+      if (!audioResponse.ok) return audioResponse;
+      const bytes = new Uint8Array(await audioResponse.arrayBuffer());
+      let binary = '';
+      for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+      }
+      return new Response(JSON.stringify({ success: true, mime_type: 'audio/mpeg', audio_content: btoa(binary) }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    return previousFetch(input, init);
+  };
+}());
+</script>
+<script>
+(function () {
+  const syncTargetCircle = function () {
+    document.querySelectorAll('#app .wheel').forEach(function (wheel) {
+      wheel.querySelectorAll('.item').forEach(function (item) {
+        item.classList.toggle('circled', item.classList.contains('active'));
+      });
+    });
+  };
+  const app = document.getElementById('app');
+  if (app) {
+    new MutationObserver(syncTargetCircle).observe(app, { childList: true, subtree: true });
+    syncTargetCircle();
+  }
+}());
+</script>
+<script>
+(function () {
+  let normalizing = false;
+  const normalizeThirdRetry = function () {
+    if (normalizing || typeof phase !== 'string' || typeof tries !== 'number' || tries < 3 || phase !== 'listen') return;
+    normalizing = true;
+    phase = 'read';
+    introReady = true;
+    const focused = document.querySelector('#app .focused');
+    const button = focused?.querySelector('#read');
+    const status = focused?.querySelector('#status');
+    if (status) status.textContent = 'Subukan muli (3/3)';
+    if (button) {
+      button.disabled = false;
+      button.classList.remove('listening', 'processing');
+      button.textContent = window.BasahinButton?.LABEL || 'Basahin';
+      if (typeof window.record === 'function' && window.Basahin?.getActivity(button) !== window.record) {
+        window.Basahin.bindActivity(button, window.record);
+      }
+    }
+    normalizing = false;
+  };
+  const app = document.getElementById('app');
+  if (app) new MutationObserver(normalizeThirdRetry).observe(app, { childList: true, subtree: true });
+  normalizeThirdRetry();
+}());
+</script>

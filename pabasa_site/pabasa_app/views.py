@@ -24347,6 +24347,16 @@ def reading_transcribe_api(request):
             activity_syllables = []
         is_clap_phase2 = request.POST.get('phase2_strict') == '1'
         matching_transcript = transcript
+        # Lesson 4 Gawain 1 only: preserve raw ``manga`` while canonicalizing
+        # the processed transcript for the target ``mangga``.
+        if (
+            request.POST.get('prescribed_activity_key') == 'lesson-4-gawain-1'
+            and mode == 'reading'
+            and ReadingMatcher.normalize_word(target_text) == 'mangga'
+            and ReadingMatcher.normalize_word(transcript) == 'manga'
+        ):
+            matching_transcript = 'mangga'
+            analysis_transcript = 'mangga'
         # Activity 2 is sentence-based, so apply its known short-word
         # recognition allowance across the complete line. This also returns
         # the learner-facing spelling ("mat") instead of Google's "math".
@@ -24523,6 +24533,7 @@ def reading_transcribe_api(request):
             analysis['transcript'] = target_text
         if g3_c_to_se:
             analysis['transcript'] = target_text
+        analysis['processed_transcript'] = analysis.get('transcript', '')
         logger.warning(
             "FREE_MODE_STT_DIAGNOSTIC processed_transcript=%r raw_transcript=%r",
             analysis.get('transcript'),
