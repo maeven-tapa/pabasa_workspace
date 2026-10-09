@@ -4568,15 +4568,7 @@
         }
 
         async function handleMissedAssessmentNotification(notifications) {
-            const items = (Array.isArray(notifications) ? notifications : [notifications]).filter(notification => notification && !notification.is_read);
-            if (!items.length) return false;
-            const missedItems = items.filter(notification => {
-                const title = String(notification.title || '').toLowerCase();
-                const message = String(notification.message || '').toLowerCase();
-                return title.includes('missed a reading activity') || title.includes('missed some reading activities') || message.includes('you missed this reading activity') || message.includes('you missed these reading activities');
-            });
-            if (!missedItems.length) return false;
-            return showMissedAssessmentNotification(missedItems);
+            return false;
         }
 
         async function checkForLiveAssessmentNotification() {
@@ -4611,7 +4603,11 @@
                     })) : [],
                 });
                 if (!data.success) throw new Error(data.error || "Unable to load notifications.");
-                const notifications = Array.isArray(data.notifications) ? data.notifications : [];
+                const notifications = (Array.isArray(data.notifications) ? data.notifications : []).filter(notification => {
+                    const title = String(notification.title || '').toLowerCase();
+                    const message = String(notification.message || '').toLowerCase();
+                    return !(title.includes('missed a reading activity') || title.includes('missed some reading activities') || message.includes('you missed this reading activity') || message.includes('you missed these reading activities'));
+                });
                 const missedNotifications = notifications.filter(n => {
                     const title = String(n.title || '').toLowerCase();
                     const message = String(n.message || '').toLowerCase();
@@ -4668,7 +4664,11 @@
                 });
                 const data = await response.json();
                 if (!data.success) throw new Error(data.error || "Unable to load notifications.");
-                notifications = Array.isArray(data.notifications) ? data.notifications : [];
+                notifications = (Array.isArray(data.notifications) ? data.notifications : []).filter(notification => {
+                    const title = String(notification.title || '').toLowerCase();
+                    const message = String(notification.message || '').toLowerCase();
+                    return !(title.includes('missed a reading activity') || title.includes('missed some reading activities') || message.includes('you missed this reading activity') || message.includes('you missed these reading activities'));
+                });
             } catch (error) {
                 container.innerHTML = '<div class="p-5 text-center text-muted small"><i class="bi bi-wifi-off d-block fs-1 mb-3 opacity-25"></i> Notifications are unavailable right now.</div>';
                 return;
@@ -4817,26 +4817,22 @@
         document.addEventListener('DOMContentLoaded', () => {
             window.debugLiveCRLAInvitation = checkForActiveLiveAssessmentInvitation;
             updateInAppNotifications();
-            startLiveAssessmentWatch();
             startActiveLiveAssessmentInviteWatch();
             checkForActiveLiveAssessmentInvitation();
         });
         window.addEventListener('pabasa:notifications-updated', () => {
             updateInAppNotifications();
-            startLiveAssessmentWatch();
             startActiveLiveAssessmentInviteWatch();
             checkForActiveLiveAssessmentInvitation();
         });
         window.addEventListener('pabasa:preferences-updated', () => {
             updateInAppNotifications();
-            startLiveAssessmentWatch();
             startActiveLiveAssessmentInviteWatch();
             checkForActiveLiveAssessmentInvitation();
         });
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
                 updateInAppNotifications();
-                startLiveAssessmentWatch();
                 startActiveLiveAssessmentInviteWatch();
                 checkForActiveLiveAssessmentInvitation();
             }

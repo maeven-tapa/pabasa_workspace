@@ -27110,43 +27110,15 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
                     student_state['items_completed'] = student_state.get('items_completed', 0)
                     student_state['items_total'] = student_state.get('items_total', 0)
 
-                # An actively attempted CRLA that is terminated by End
-                # Session is an interrupted live attempt, not a student
-                # missed-activity notification. Keep the internal terminal
-                # state above, but reserve this notification for students who
-                # never began the assessment.
-                if student_user and not has_active_attempt:
-                    logger.warning(
-                        'LIVE_CRLA_MISSED_SERVER_DEBUG notification_attempt session_id=%s student_id=%s reason=not_has_active_attempt',
-                        session.id,
-                        student_user.id,
-                    )
-                    existing_title = '😔 Oops! You Missed a Reading Activity'
-                    existing_message = (
-                        f"You missed this reading activity:\n\n📖 {session.material.title or 'Reading Activity'}\n\n"
-                        "The reading activity is already over.\n\n"
-                        "Please tell your teacher if you still need to do today's reading."
-                    )
-                    try:
-                        Notification.objects.get_or_create(
-                            recipient=student_user,
-                            created_by=session.teacher,
-                            title=existing_title,
-                            message=existing_message,
-                            notification_type='assessment',
-                            action_url=reverse('dashboard'),
-                        )
-                    except Exception:
-                        logger.exception('Failed to create missed-assessment notification for student %s', student_user.id)
-                else:
-                    logger.warning(
-                        'LIVE_CRLA_MISSED_SERVER_DEBUG notification_skipped session_id=%s student_id=%s reason=%s has_active_attempt=%s student_found=%s',
-                        session.id,
-                        student_id,
-                        'active_attempt' if has_active_attempt else 'student_not_found',
-                        has_active_attempt,
-                        bool(student_user),
-                    )
+                # Ending the session still finalizes the internal student state,
+                # but does not create an interruptive missed-activity notice.
+                logger.warning(
+                    'LIVE_CRLA_MISSED_SERVER_DEBUG notification_disabled session_id=%s student_id=%s has_active_attempt=%s student_found=%s',
+                    session.id,
+                    student_id,
+                    has_active_attempt,
+                    bool(student_user),
+                )
             states[student_key] = student_state
             logger.warning(
                 'LIVE_CRLA_MISSED_SERVER_DEBUG end_student_state_after session_id=%s student_id=%s status=%s connection_status=%s progress=%s current_item=%s items_completed=%s items_total=%s',
