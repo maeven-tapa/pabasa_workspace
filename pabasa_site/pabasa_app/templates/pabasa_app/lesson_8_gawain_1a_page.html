@@ -27,6 +27,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   window.setTimeout(fallback,250);
 });
 </script>
+<style>
+body:has(#app .done)>.page>a.back{display:none!important}
+body:has(#app .done)>.page>#app.card{width:100%!important;max-width:none!important;height:auto!important;max-height:none!important;min-height:0!important;padding:0!important;border:0!important;background:transparent!important;backdrop-filter:none!important;box-shadow:none!important;overflow:visible!important}
+</style>
 <script>document.addEventListener('DOMContentLoaded',()=>document.querySelector('.back')?.setAttribute('data-leave-label','← Bumalik sa Aking Aralin'),{once:true});</script>
 <style>
 html body .page>#app.card{top:54%!important}
