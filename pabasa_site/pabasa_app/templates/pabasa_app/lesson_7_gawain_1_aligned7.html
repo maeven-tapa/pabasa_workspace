@@ -131,6 +131,7 @@ window.record=async function(){
     const result=await window.Basahin.read({target_text:item.word,language:'Filipino',mode:'reading',prescribed_activity_key:'lesson7-gawain1'},{button:read});
     if(result.success&&result.complete===true){phase='classify';render();return}
     tries++;
+    document.getElementById('status').textContent='Subukan muli. ('+tries+'/3)';
     if(tries>=3){pakingganUnlocked=true;listen.hidden=false;tries=0}
     read.disabled=Boolean(window.lesson7PakingganPlaying);
     read.textContent=window.BasahinButton.LABEL;
