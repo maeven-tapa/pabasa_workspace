@@ -47,7 +47,7 @@
   }
 
   .school-sections-table .list-group-item {
-    padding: 0.8rem 1rem;
+    padding: 0.65rem 1rem;
     transition: background-color 0.15s ease;
   }
 
@@ -86,7 +86,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem 1rem;
-    margin-top: 0.35rem;
+    margin-top: 0.25rem;
   }
 
   .school-section-meta strong {
@@ -105,10 +105,53 @@
     font-weight: 700;
     justify-content: center;
     line-height: 1.25;
-    min-height: 2.25rem;
-    padding: 0.5rem 0.75rem;
+    min-height: 2.1rem;
+    padding: 0.4rem 0.7rem;
     transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, transform 0.15s ease;
     white-space: nowrap;
+  }
+
+  .school-section-actions .dropdown-menu {
+    min-width: 10rem;
+  }
+
+  .admin-school-toast-container {
+    left: auto;
+    max-width: min(24rem, calc(100vw - 40px));
+    position: fixed;
+    right: 20px;
+    top: 20px;
+    z-index: 1090;
+  }
+
+  .admin-school-toast {
+    background: #fff;
+    border: 0;
+    border-left: 4px solid #198754;
+    border-radius: .65rem;
+    box-shadow: 0 .5rem 1.25rem rgba(16, 70, 110, .16);
+    color: #183153;
+    min-width: min(22rem, 100%);
+  }
+
+  .admin-school-toast.is-error { border-left-color: #dc3545; }
+  .admin-school-toast.is-warning { border-left-color: #f0ad00; }
+  .admin-school-toast .toast-body { align-items:flex-start; display:flex; gap:.65rem; padding:.75rem .8rem; }
+  .admin-school-toast .toast-icon { color:#198754; flex:0 0 auto; font-size:1.05rem; line-height:1.4; }
+  .admin-school-toast.is-error .toast-icon { color:#dc3545; }
+  .admin-school-toast.is-warning .toast-icon { color:#c48700; }
+  .admin-school-toast .toast-message { font-size:.88rem; line-height:1.35; }
+  .admin-school-toast .btn-close { margin-left:auto; padding:.45rem; }
+
+  @media (max-width: 991.98px) {
+    .admin-school-toast-container { left:auto; max-width:calc(100vw - 32px); right:16px; }
+  }
+
+  .school-section-actions .section-action-menu {
+    color: #495057;
+    min-width: 2.1rem;
+    padding-left: .45rem;
+    padding-right: .45rem;
   }
 
   .school-section-actions form {
@@ -165,34 +208,36 @@
   }
 </style>
 <div class="container-fluid py-2">
-  {% for message in messages %}
-  <div class="alert {% if message.tags == 'warning' %}alert-warning{% else %}alert-success{% endif %}" role="alert">{{ message }}</div>
-  {% endfor %}
-  {% if error_message %}<div class="alert alert-danger">{{ error_message }}</div>{% endif %}
+  <div class="admin-school-toast-container position-fixed top-0 end-0 p-0" aria-live="polite" aria-atomic="true">
+    {% for message in messages %}
+    <div class="toast admin-school-toast{% if message.tags == 'error' %} is-error{% elif message.tags == 'warning' %} is-warning{% endif %}" role="alert" aria-live="assertive" data-bs-delay="4000">
+      <div class="toast-body"><i class="toast-icon bi {% if message.tags == 'error' %}bi-exclamation-circle{% elif message.tags == 'warning' %}bi-exclamation-triangle{% else %}bi-check-circle{% endif %}" aria-hidden="true"></i><span class="toast-message">{{ message }}</span><button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button></div>
+    </div>
+    {% endfor %}
+    {% if error_message %}<div class="toast admin-school-toast is-error" role="alert" aria-live="assertive" data-bs-delay="4000"><div class="toast-body"><i class="toast-icon bi bi-exclamation-circle" aria-hidden="true"></i><span class="toast-message">{{ error_message }}</span><button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button></div></div>{% endif %}
+    {% if principal_error %}<div class="toast admin-school-toast is-error" role="alert" aria-live="assertive" data-bs-delay="4000"><div class="toast-body"><i class="toast-icon bi bi-exclamation-circle" aria-hidden="true"></i><span class="toast-message">{{ principal_error }}</span><button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button></div></div>{% endif %}
+  </div>
 
   {% if school %}
     <div class="card shadow-sm border-0 mb-4">
-      <div class="card-body p-4">
+      <div class="card-body p-3 p-lg-4">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4 pb-3 border-bottom">
           <div><h2 class="h3 mb-0">{{ school.name }}</h2></div>
           <span class="badge rounded-pill {% if school.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %}">{% if school.is_active %}Active{% else %}Archived{% endif %}</span>
         </div>
-        <section class="mb-4" aria-labelledby="schoolInformationHeading">
-          <h2 class="h5 mb-3" id="schoolInformationHeading">School Information</h2>
-          <dl class="row mb-0">
-            <dt class="col-sm-4 col-lg-3 text-secondary">School Name</dt>
-            <dd class="col-sm-8 col-lg-9">{{ school.name }}</dd>
-            <dt class="col-sm-4 col-lg-3 text-secondary">School ID</dt>
-            <dd class="col-sm-8 col-lg-9">{{ school.code }}</dd>
-            <dt class="col-sm-4 col-lg-3 text-secondary">School Address</dt>
-            <dd class="col-sm-8 col-lg-9 mb-0">{{ school.address }}</dd>
-          </dl>
+        <section class="mb-3" aria-labelledby="schoolInformationHeading">
+          <h2 class="h5 mb-2" id="schoolInformationHeading">School Information</h2>
+          <div class="row gy-2 gx-4 small">
+            <div class="col-12 col-md-4"><span class="text-secondary d-block">School Name</span><strong id="schoolDisplayName" class="d-block text-break">{{ school.name }}</strong></div>
+            <div class="col-12 col-md-3"><span class="text-secondary d-block">School ID</span><strong id="schoolDisplayCode" class="d-block text-break">{{ school.code }}</strong></div>
+            <div class="col-12 col-md-5"><span class="text-secondary d-block">School Address</span><strong id="schoolDisplayAddress" class="d-block text-break">{{ school.address }}</strong></div>
+          </div>
         </section>
 
         <section class="border rounded-3 p-3 bg-light-subtle" aria-labelledby="principalDetailsHeading">
-        <div class="d-flex justify-content-between align-items-start gap-3 mb-3"><h2 class="h5 mb-0" id="principalDetailsHeading">Principal</h2>{% if principal %}<a class="btn btn-sm btn-outline-primary flex-shrink-0" href="{% url 'admin_school_principal_detail' school.id principal.id %}">View</a>{% endif %}</div>
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3"><h2 class="h5 mb-0" id="principalDetailsHeading">Principal</h2></div>
         {% if principal %}
-          <div class="row gy-2 small"><div class="col-12 col-md-6"><span class="text-muted d-block">Name</span><strong>{{ principal.first_name }}{% if principal.middle_initial %} {{ principal.middle_initial }}.{% endif %} {{ principal.last_name }}{% if principal.suffix %} {{ principal.suffix }}{% endif %}</strong></div><div class="col-12 col-md-6"><span class="text-muted d-block">Principal ID</span><strong>{{ principal.custom_id }}</strong></div><div class="col-12 col-md-6"><span class="text-muted d-block">Email</span><strong class="text-break">{{ principal.email }}</strong></div><div class="col-12 col-md-6"><span class="text-muted d-block">Contact Number</span><strong>{{ principal.contact_no|default:'Not provided' }}</strong></div><div class="col-12"><span class="text-muted d-block">Status</span><span class="badge {% if principal.is_archived %}text-bg-secondary{% else %}text-bg-success{% endif %}">{% if principal.is_archived %}Archived{% else %}Active{% endif %}</span></div></div>
+          <div class="row gy-2 gx-4 small"><div class="col-12 col-md-6"><span class="text-muted d-block">Name</span><strong class="d-block text-break">{{ principal.first_name }}{% if principal.middle_initial %} {{ principal.middle_initial }}.{% endif %} {{ principal.last_name }}{% if principal.suffix %} {{ principal.suffix }}{% endif %}</strong></div><div class="col-12 col-md-6"><span class="text-muted d-block">Principal ID</span><strong class="d-block text-break">{{ principal.custom_id }}</strong></div><div class="col-12 col-md-6"><span class="text-muted d-block">Email</span><strong class="d-block text-break">{{ principal.email }}</strong></div><div class="col-12 col-md-6"><span class="text-muted d-block">Contact Number</span><strong class="d-block text-break">{{ principal.contact_no|default:'Not provided' }}</strong></div></div><div class="border-top mt-3 pt-3 d-flex flex-wrap justify-content-end gap-2 principal-card-actions"><button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#editPrincipalModal"><i class="bi bi-pencil me-1"></i>Edit</button><button class="btn btn-sm btn-outline-warning" type="button" data-bs-toggle="modal" data-bs-target="#resetPrincipalPasswordModal" {% if principal.is_archived %}disabled{% endif %}><i class="bi bi-key me-1"></i>Reset Password</button>{% if principal.is_archived %}<button class="btn btn-sm btn-outline-success" type="button" data-bs-toggle="modal" data-bs-target="#reactivatePrincipalModal"><i class="bi bi-arrow-counterclockwise me-1"></i>Reactivate</button>{% else %}<button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deactivatePrincipalModal"><i class="bi bi-person-x me-1"></i>Deactivate</button>{% endif %}</div>
         {% else %}
           <div class="text-muted">Not assigned</div>
           {% if school.status == 'active' and school.is_active %}
@@ -240,15 +285,14 @@
         {% if archived_principals and not principal %}
         <div class="modal fade" id="confirmPrincipalReplacementModal" tabindex="-1" aria-labelledby="confirmPrincipalReplacementTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title h5" id="confirmPrincipalReplacementTitle">Create a New Principal Account?</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p class="mb-2">Proceeding creates the new Principal account for {{ school.name }}.</p><p class="text-secondary mb-0">After the new account is created successfully, the deactivated Principal account will be permanently removed.</p></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="submit" form="createPrincipalAccountForm" name="confirm_replacement" value="1">Confirm and Create</button></div></div></div></div>
         {% endif %}
-        {% if principal_error %}<div class="alert alert-danger mt-3 mb-0">{{ principal_error }}</div>{% endif %}
         {% if archived_principals %}
-        <div class="mt-3 pt-3 border-top"><span class="small text-muted d-block mb-2">Inactive Principal Accounts</span>{% for archived_principal in archived_principals %}<a class="btn btn-sm btn-outline-secondary me-2 mb-2" href="{% url 'admin_school_principal_detail' school.id archived_principal.id %}">{{ archived_principal.first_name }} {{ archived_principal.last_name }} <span class="text-muted">(Inactive)</span></a>{% endfor %}</div>
+        <div class="mt-3 pt-3 border-top"><span class="small text-muted d-block mb-2">Inactive Principal Accounts</span>{% for archived_principal in archived_principals %}<span class="badge text-bg-secondary me-2 mb-2">{{ archived_principal.first_name }} {{ archived_principal.last_name }} (Inactive)</span>{% endfor %}</div>
         {% endif %}
         </section>
       </div>
     </div>
 
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3"><div class="d-flex flex-column align-items-start"><h2 class="h4 mb-1">Grade 2 Sections</h2><span class="small text-muted">Manage teachers, student assignments, and section statuses.</span></div><button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#returningStudentsModal"><i class="bi bi-arrow-repeat me-1"></i>Returning Students <span class="badge text-bg-info ms-1">{{ returning_students|length }}</span></button></div><div class="school-sections-table">{% for grade, sections in sections_by_grade.items %}{% if grade == "Grade 2" %}<section class="card shadow-sm border-0 h-100"><ul class="list-group list-group-flush">{% for section in sections %}<li class="list-group-item"><div class="d-flex flex-wrap gap-3 justify-content-between align-items-center"><div class="flex-grow-1"><div class="school-section-heading"><span class="school-section-status {% if section.teacher %}{% if section.teacher.is_archived %}school-section-status--inactive{% else %}school-section-status--active{% endif %}{% else %}school-section-status--unassigned{% endif %}" role="img" aria-label="{% if section.teacher %}{% if section.teacher.is_archived %}Teacher inactive{% else %}Teacher assigned{% endif %}{% else %}No teacher assigned{% endif %}"></span><strong class="text-uppercase">{{ section.section }}</strong></div><div class="school-section-meta"><span>Teacher: <strong>{% if section.teacher %}{{ section.teacher.first_name }} {{ section.teacher.last_name }}{% else %}Not assigned{% endif %}</strong></span><span>Active students: <strong>{{ section.student_count }}</strong></span></div></div><div class="school-section-actions d-flex flex-wrap gap-2"><button class="btn section-action-{% if section.teacher %}change{% else %}assign{% endif %}" type="button" data-assign-teacher data-section-id="{{ section.id }}" data-section-name="{{ section.section }}" data-current-teacher-id="{{ section.teacher.id|default:'' }}" data-current-teacher-name="{% if section.teacher %}{{ section.teacher.first_name }} {{ section.teacher.last_name }}{% endif %}" data-action="{% if section.teacher %}change_teacher{% else %}assign_teacher{% endif %}" data-update-url="{% url 'admin_school_section_update' section.id %}">{% if section.teacher %}Change Teacher{% else %}Assign Teacher{% endif %}</button><a class="btn section-action-manage" href="{% url 'admin_class_edit' section.id %}">Manage Section</a><form method="post" action="{% url 'admin_school_section_update' section.id %}">{% csrf_token %}<input type="hidden" name="action" value="{% if section.is_active %}deactivate{% else %}reactivate{% endif %}"><button class="btn {% if section.is_active %}section-action-deactivate{% else %}section-action-assign{% endif %}">{% if section.is_active %}Deactivate{% else %}Activate{% endif %}</button></form></div></div></li>{% empty %}<li class="list-group-item text-muted">Start a school year first to configure sections.</li>{% endfor %}</ul></section>{% endif %}{% endfor %}</div>
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3"><div class="d-flex flex-column align-items-start"><h2 class="h4 mb-1">Grade 2 Sections</h2><span class="small text-muted">Manage teachers, student assignments, and section statuses.</span></div><button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#returningStudentsModal"><i class="bi bi-arrow-repeat me-1"></i>Returning Students <span class="badge text-bg-info ms-1">{{ returning_students|length }}</span></button></div><div class="school-sections-table">{% for grade, sections in sections_by_grade.items %}{% if grade == "Grade 2" %}<section class="card shadow-sm border-0 h-100"><ul class="list-group list-group-flush">{% for section in sections %}<li class="list-group-item"><div class="d-flex flex-wrap gap-3 justify-content-between align-items-center"><div class="flex-grow-1 min-w-0"><div class="school-section-heading"><span class="school-section-status {% if section.teacher %}{% if section.teacher.is_archived %}school-section-status--inactive{% else %}school-section-status--active{% endif %}{% else %}school-section-status--unassigned{% endif %}" role="img" aria-label="{% if section.teacher %}{% if section.teacher.is_archived %}Teacher inactive{% else %}Teacher assigned{% endif %}{% else %}No teacher assigned{% endif %}"></span><strong class="text-uppercase">{{ section.section }}</strong></div><div class="school-section-meta"><span>Teacher: <strong>{% if section.teacher %}{{ section.teacher.first_name }} {{ section.teacher.last_name }}{% else %}Not assigned{% endif %}</strong></span><span>Active students: <strong>{{ section.student_count }}</strong></span></div></div><div class="school-section-actions d-flex flex-wrap gap-2"><button class="btn section-action-{% if section.teacher %}change{% else %}assign{% endif %}" type="button" data-assign-teacher data-section-id="{{ section.id }}" data-section-name="{{ section.section }}" data-current-teacher-id="{{ section.teacher.id|default:'' }}" data-current-teacher-name="{% if section.teacher %}{{ section.teacher.first_name }} {{ section.teacher.last_name }}{% endif %}" data-action="{% if section.teacher %}change_teacher{% else %}assign_teacher{% endif %}" data-update-url="{% url 'admin_school_section_update' section.id %}">{% if section.teacher %}Change Teacher{% else %}Assign Teacher{% endif %}</button><a class="btn section-action-manage" href="{% url 'admin_class_edit' section.id %}">Manage</a><div class="dropdown"><button class="btn section-action-menu dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More actions for {{ section.section }}"><i class="bi bi-three-dots-vertical" aria-hidden="true"></i></button><ul class="dropdown-menu dropdown-menu-end">{% if section.is_active %}<li><button class="dropdown-item text-danger" type="button" data-bs-toggle="modal" data-bs-target="#deactivateSectionModal{{ section.id }}">Deactivate</button></li>{% else %}<li><form method="post" action="{% url 'admin_school_section_update' section.id %}">{% csrf_token %}<input type="hidden" name="action" value="reactivate"><button class="dropdown-item text-success" type="submit">Reactivate</button></form></li>{% endif %}</ul></div></div></div><div class="modal fade" id="deactivateSectionModal{{ section.id }}" tabindex="-1" aria-labelledby="deactivateSectionModalLabel{{ section.id }}" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header"><h2 class="modal-title h5" id="deactivateSectionModalLabel{{ section.id }}">Deactivate {{ section.section }}?</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p class="mb-0">This will deactivate the section while preserving its records and assignments.</p></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><form method="post" action="{% url 'admin_school_section_update' section.id %}">{% csrf_token %}<input type="hidden" name="action" value="deactivate"><button class="btn btn-danger" type="submit">Deactivate</button></form></div></div></div></div></li>{% empty %}<li class="list-group-item text-muted">Start a school year first to configure sections.</li>{% endfor %}</ul></section>{% endif %}{% endfor %}</div>
   {% else %}
     <div class="d-flex flex-column gap-3">{% for item in schools %}<article class="card shadow-sm border-0"><div class="card-body p-4"><div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-4"><div class="min-w-0"><h2 class="h4 mb-3 text-break">{{ item.name }}</h2><div class="row gy-2 gx-5"><div class="col-12 col-sm-auto"><div class="small text-muted">School ID</div><div class="fw-semibold text-break">{{ item.code }}</div></div><div class="col-12 col-sm-auto"><div class="small text-muted">Principal</div><div class="fw-semibold text-break">{{ item.principal_name }}</div></div><div class="col-12 col-sm-auto"><div class="small text-muted">Status</div><span class="badge rounded-pill {% if item.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %}">{{ item.status_label }}</span></div></div></div><a class="btn btn-outline-primary flex-shrink-0" href="{% url 'admin_school_detail' item.id %}">Manage</a></div></div></article>{% empty %}<div class="text-muted">No schools yet.</div>{% endfor %}</div>
   {% endif %}
@@ -325,6 +369,26 @@
 </div>
 
 <script>
+function showAdminSchoolToast(message, type) {
+  const container = document.querySelector('.admin-school-toast-container');
+  if (!container || !window.bootstrap) return;
+  const toast = document.createElement('div');
+  toast.className = `toast admin-school-toast${type === 'error' ? ' is-error' : ''}`;
+  toast.setAttribute('role', 'alert');
+  toast.setAttribute('aria-live', 'assertive');
+  toast.dataset.bsDelay = '4000';
+  toast.innerHTML = `<div class="toast-body"><i class="toast-icon bi ${type === 'error' ? 'bi-exclamation-circle' : 'bi-check-circle'}" aria-hidden="true"></i><span class="toast-message"></span><button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button></div>`;
+  toast.querySelector('.toast-message').textContent = message;
+  container.appendChild(toast);
+  bootstrap.Toast.getOrCreateInstance(toast).show();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.admin-school-toast').forEach(function (toast) {
+    bootstrap.Toast.getOrCreateInstance(toast).show();
+  });
+});
+
 document.addEventListener('DOMContentLoaded', function () {
   const form = document.getElementById('createPrincipalAccountForm');
   const submitButton = document.getElementById('createPrincipalSubmitButton');
@@ -419,6 +483,91 @@ document.addEventListener('DOMContentLoaded', function () {
       form.submit();
     });
   }
+});
+</script>
+{% endif %}
+{% if school and principal %}
+<div class="modal fade" id="resetPrincipalPasswordModal" tabindex="-1" aria-labelledby="resetPrincipalPasswordModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header"><h2 class="modal-title h5" id="resetPrincipalPasswordModalLabel">Reset Principal Password?</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p class="mb-2">This replaces the current password with a newly generated temporary password.</p><p class="text-secondary mb-0">The temporary password is sent only to the Principal's saved email. If SMTP is unavailable, it cannot be displayed or recovered by Admin.</p></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><form method="post" action="{% url 'admin_school_principal_reset_password' school.id principal.id %}">{% csrf_token %}<button type="submit" class="btn btn-warning">Reset Password</button></form></div></div></div>
+</div>
+<div class="modal fade" id="deactivatePrincipalModal" tabindex="-1" aria-labelledby="deactivatePrincipalModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header"><h2 class="modal-title h5" id="deactivatePrincipalModalLabel">Deactivate Principal Account?</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p class="mb-2">The Principal will no longer be able to log in to the system.</p><p class="text-secondary mb-0">All associated school data, reports, reading materials, assessments, and historical records will remain intact.</p></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><form method="post" action="{% url 'admin_school_principal_status' school.id principal.id %}">{% csrf_token %}<input type="hidden" name="action" value="deactivate"><button type="submit" class="btn btn-danger">Deactivate Account</button></form></div></div></div>
+</div>
+<div class="modal fade" id="reactivatePrincipalModal" tabindex="-1" aria-labelledby="reactivatePrincipalModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header"><h2 class="modal-title h5" id="reactivatePrincipalModalLabel">Reactivate Principal Account?</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p class="mb-0">Restore this Principal's access to the system?</p></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><form method="post" action="{% url 'admin_school_principal_status' school.id principal.id %}">{% csrf_token %}<input type="hidden" name="action" value="reactivate"><button type="submit" class="btn btn-success">Reactivate Account</button></form></div></div></div>
+</div>
+<style>
+  #editPrincipalModal .modal-content { border:0; border-radius:1rem; box-shadow:0 1rem 3rem rgba(16,70,110,.2); }
+  #editPrincipalModal .modal-header, #editPrincipalModal .modal-footer { background:#f8fbfe; }
+  #editPrincipalModal .modal-body { max-height:calc(100dvh - 10rem); overflow-y:auto; }
+  #editPrincipalModal .form-label { margin-bottom:.25rem; }
+  #editPrincipalModal .form-control { padding-bottom:.45rem; padding-top:.45rem; }
+  #editPrincipalModal #editPrincipalSchoolAddress { resize:none; }
+  #editPrincipalModal .modal-error { display:none; }
+</style>
+<div class="modal fade" id="editPrincipalModal" tabindex="-1" aria-labelledby="editPrincipalModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <form id="editPrincipalForm" method="post" action="{% url 'admin_school_principal_edit' school.id principal.id %}">
+        <div class="modal-header">
+          <h2 class="modal-title h5 fw-bold" id="editPrincipalModalLabel"><i class="bi bi-pencil-square me-2"></i>Edit School &amp; Principal Information</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger modal-error mb-3" id="editPrincipalError" role="alert"></div>
+          {% csrf_token %}
+          <h3 class="h6 fw-bold mb-2">Principal Details</h3>
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-md-5"><label class="form-label fw-bold" for="editPrincipalFirstName">First Name</label><input class="form-control" id="editPrincipalFirstName" name="first_name" value="{{ principal.first_name }}" required></div>
+            <div class="col-6 col-md-2"><label class="form-label fw-bold" for="editPrincipalMiddleInitial">Middle Name</label><input class="form-control" id="editPrincipalMiddleInitial" name="middle_initial" maxlength="1" value="{{ principal.middle_initial }}"></div>
+            <div class="col-12 col-md-3"><label class="form-label fw-bold" for="editPrincipalLastName">Last Name</label><input class="form-control" id="editPrincipalLastName" name="last_name" value="{{ principal.last_name }}" required></div>
+            <div class="col-6 col-md-2"><label class="form-label fw-bold" for="editPrincipalSuffix">Suffix</label><input class="form-control" id="editPrincipalSuffix" name="suffix" maxlength="10" value="{{ principal.suffix }}"></div>
+            <div class="col-12 col-md-6"><label class="form-label fw-bold" for="editPrincipalEmail">Email</label><input class="form-control" id="editPrincipalEmail" type="email" name="email" value="{{ principal.email }}" required></div>
+            <div class="col-12 col-md-6"><label class="form-label fw-bold" for="editPrincipalContactNo">Contact Number</label><input class="form-control" id="editPrincipalContactNo" type="tel" name="contact_no" value="{{ principal.contact_no|default:'' }}"></div>
+          </div>
+          <h3 class="h6 fw-bold mb-2">School Information</h3>
+          <div class="row g-2">
+            <div class="col-12 col-md-6"><label class="form-label fw-bold" for="editPrincipalSchoolName">School Name</label><input class="form-control" id="editPrincipalSchoolName" name="school_name" value="{{ school.name }}" required></div>
+            <div class="col-12 col-md-6"><label class="form-label fw-bold" for="editPrincipalSchoolCode">School ID / School Code</label><input class="form-control" id="editPrincipalSchoolCode" name="school_code" value="{{ school.code }}" required></div>
+            <div class="col-12"><label class="form-label fw-bold" for="editPrincipalSchoolAddress">School Address</label><textarea class="form-control" id="editPrincipalSchoolAddress" name="school_address" rows="2">{{ school.address }}</textarea></div>
+          </div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="submit" id="editPrincipalSaveButton"><i class="bi bi-check2 me-1"></i>Save Changes</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.getElementById('editPrincipalForm');
+  const modal = document.getElementById('editPrincipalModal');
+  const error = document.getElementById('editPrincipalError');
+  const save = document.getElementById('editPrincipalSaveButton');
+  if (!form || !modal || !error || !save) return;
+  form.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    error.style.display = 'none';
+    save.disabled = true;
+    try {
+      const response = await fetch(form.action, { method:'POST', body:new FormData(form), headers:{'X-Requested-With':'XMLHttpRequest'} });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'Unable to save principal details.');
+      const values = document.querySelectorAll('#principalDetailsHeading')?.[0]?.closest('section')?.querySelectorAll('.row strong');
+      if (values?.[0]) values[0].textContent = result.name;
+      if (values?.[2]) values[2].textContent = result.email;
+      if (values?.[3]) values[3].textContent = result.contact_no;
+      const schoolName = document.getElementById('schoolDisplayName');
+      const schoolCode = document.getElementById('schoolDisplayCode');
+      const schoolAddress = document.getElementById('schoolDisplayAddress');
+      if (schoolName) schoolName.textContent = result.school_name;
+      if (schoolCode) schoolCode.textContent = result.school_code;
+      if (schoolAddress) schoolAddress.textContent = result.school_address;
+      bootstrap.Modal.getOrCreateInstance(modal).hide();
+      showAdminSchoolToast('School and principal information updated successfully.', 'success');
+    } catch (submitError) {
+      error.textContent = submitError.message; error.style.display = 'block';
+    } finally { save.disabled = false; }
+  });
 });
 </script>
 {% endif %}

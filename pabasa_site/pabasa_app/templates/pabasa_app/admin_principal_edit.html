@@ -1,14 +1,33 @@
 {% extends "pabasa_app/admin_base.html" %}
 
 {% block content %}
-<div class="admin-panel">
-    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+<style>
+    .admin-principal-edit-panel .admin-principal-edit-heading { margin-bottom:1rem; }
+    .admin-principal-edit-panel .admin-principal-edit-heading .btn { margin-bottom:.65rem !important; }
+    .admin-principal-edit-panel .admin-principal-edit-form h3 { margin-bottom:.5rem !important; }
+    .admin-principal-edit-panel .admin-principal-edit-form .row { --bs-gutter-y:.65rem; }
+    .admin-principal-edit-panel .admin-principal-edit-form .form-label { margin-bottom:.25rem; }
+    .admin-principal-edit-panel .admin-principal-edit-form .form-control { padding-bottom:.35rem; padding-top:.35rem; }
+    .admin-principal-edit-panel #schoolAddress { resize:none; }
+    .admin-principal-edit-panel .admin-principal-edit-form .form-text { font-size:.78rem; margin-top:.25rem; }
+    .admin-principal-edit-panel .admin-principal-edit-actions { margin-top:1rem !important; }
+
+    @media (min-width: 992px) {
+        html:has(.admin-principal-edit-panel),
+        body:has(.admin-principal-edit-panel) { height:100%; min-height:0; overflow:hidden; }
+        body:has(.admin-principal-edit-panel) .admin-app-shell { height:100dvh; min-height:0; overflow:hidden; }
+        .admin-main:has(.admin-principal-edit-panel) { display:flex; flex-direction:column; height:100%; min-height:0; overflow:hidden; }
+        .admin-main:has(.admin-principal-edit-panel) > .admin-content { display:flex; flex:1 1 0; flex-direction:column; height:0; min-height:0; max-width:none; overflow:hidden; width:100%; }
+        .admin-main:has(.admin-principal-edit-panel) .admin-principal-edit-panel { flex:1 1 0; min-height:0; overflow:hidden; width:100%; }
+    }
+</style>
+<div class="admin-panel admin-principal-edit-panel">
+    <div class="admin-principal-edit-heading d-flex flex-wrap justify-content-between align-items-start gap-2">
         <div>
             <a class="btn btn-sm btn-outline-secondary mb-3" href="{% url 'admin_school_principal_detail' school.id managed_user.id %}">
                 <i class="bi bi-arrow-left me-1"></i>Back
             </a>
             <h2 class="h4 fw-bold mb-1">Edit {{ managed_user_name|default:managed_user.custom_id }}</h2>
-            <p class="text-secondary mb-0">Principal ID: {{ managed_user.custom_id }}</p>
         </div>
     </div>
 
@@ -16,10 +35,10 @@
     <div class="alert alert-danger" role="alert">{{ error_message }}</div>
     {% endif %}
 
-    <form method="post">
+    <form class="admin-principal-edit-form" method="post">
         {% csrf_token %}
         <h3 class="h6 fw-bold mb-3">Principal Details</h3>
-        <div class="row g-3 mb-4">
+        <div class="row g-2 mb-3">
             <div class="col-12 col-md-5">
                 <label class="form-label fw-bold" for="firstName">First Name</label>
                 <input class="form-control" id="firstName" type="text" name="first_name" value="{{ managed_user.first_name }}" required>
@@ -44,14 +63,10 @@
                 <label class="form-label fw-bold" for="contactNo">Contact Number <span class="text-secondary fw-normal">(optional)</span></label>
                 <input class="form-control" id="contactNo" type="tel" name="contact_no" value="{{ managed_user.contact_no|default:'' }}">
             </div>
-            <div class="col-12 col-md-6">
-                <label class="form-label fw-bold" for="position">Position</label>
-                <input class="form-control" id="position" type="text" name="position" value="{{ principal_profile_info.position|default:'Principal' }}">
-            </div>
         </div>
 
-        <h3 class="h6 fw-bold mb-3">School Information</h3>
-        <div class="row g-3">
+        <h3 class="h6 fw-bold mb-2">School Information</h3>
+        <div class="row g-2">
             <div class="col-12 col-md-6">
                 <label class="form-label fw-bold" for="schoolName">School Name</label>
                 <input class="form-control" id="schoolName" type="text" value="{% if managed_user.school_record %}{{ managed_user.school_record.name }}{% else %}{{ managed_user.school }}{% endif %}" readonly>
@@ -62,12 +77,12 @@
             </div>
             <div class="col-12">
                 <label class="form-label fw-bold" for="schoolAddress">School Address</label>
-                <textarea class="form-control" id="schoolAddress" rows="3" readonly>{% if managed_user.school_record %}{{ managed_user.school_record.address|default:'Not configured' }}{% else %}Not configured{% endif %}</textarea>
+                <textarea class="form-control" id="schoolAddress" rows="2" readonly>{% if managed_user.school_record %}{{ managed_user.school_record.address|default:'Not configured' }}{% else %}Not configured{% endif %}</textarea>
                 <div class="form-text">School ownership and School information are read-only here.</div>
             </div>
         </div>
 
-        <div class="d-flex flex-wrap justify-content-end gap-2 mt-4">
+        <div class="admin-principal-edit-actions d-flex flex-wrap justify-content-end gap-2">
             <a class="btn btn-outline-secondary" href="{% url 'admin_school_principal_detail' school.id managed_user.id %}">Cancel</a>
             <button class="btn btn-primary" type="submit">
                 <i class="bi bi-check2 me-1"></i>Save changes

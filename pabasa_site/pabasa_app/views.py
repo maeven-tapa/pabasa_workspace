@@ -7482,16 +7482,41 @@ def admin_school_principal_edit(request, school_id, user_id):
         profile_info = {}
     context = _admin_user_template_context(request, user, 'Edit Principal')
     context.update({'school': school, 'principal_profile_info': profile_info})
+    modal_request = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if request.method == 'POST':
         email = request.POST.get('email', '').strip().lower()
+        school_name = request.POST.get('school_name', school.name).strip()
+        school_code = request.POST.get('school_code', school.code).strip()
+        school_address = request.POST.get('school_address', school.address).strip()
         if not request.POST.get('first_name', '').strip() or not request.POST.get('last_name', '').strip():
             context['error_message'] = 'First name and last name are required.'
+            if modal_request:
+                return JsonResponse({'success': False, 'error': context['error_message']}, status=400)
             return render(request, 'pabasa_app/admin_principal_edit.html', context, status=400)
         if not email:
             context['error_message'] = 'Email is required.'
+            if modal_request:
+                return JsonResponse({'success': False, 'error': context['error_message']}, status=400)
+            return render(request, 'pabasa_app/admin_principal_edit.html', context, status=400)
+        if not school_name or not school_code:
+            context['error_message'] = 'School name and School ID / School Code are required.'
+            if modal_request:
+                return JsonResponse({'success': False, 'error': context['error_message']}, status=400)
+            return render(request, 'pabasa_app/admin_principal_edit.html', context, status=400)
+        if School.objects.filter(name__iexact=school_name).exclude(pk=school.pk).exists():
+            context['error_message'] = 'School name is already used by another school.'
+            if modal_request:
+                return JsonResponse({'success': False, 'error': context['error_message']}, status=400)
+            return render(request, 'pabasa_app/admin_principal_edit.html', context, status=400)
+        if School.objects.filter(code__iexact=school_code).exclude(pk=school.pk).exists():
+            context['error_message'] = 'School ID / School Code is already used by another school.'
+            if modal_request:
+                return JsonResponse({'success': False, 'error': context['error_message']}, status=400)
             return render(request, 'pabasa_app/admin_principal_edit.html', context, status=400)
         if User.objects.filter(email__iexact=email).exclude(id=user.id).exists():
             context['error_message'] = 'Email is already used by another account.'
+            if modal_request:
+                return JsonResponse({'success': False, 'error': context['error_message']}, status=400)
             return render(request, 'pabasa_app/admin_principal_edit.html', context, status=400)
         user.first_name = request.POST.get('first_name', '').strip()
         user.middle_initial = request.POST.get('middle_initial', '').strip()[:1]
@@ -7499,6 +7524,10 @@ def admin_school_principal_edit(request, school_id, user_id):
         user.suffix = request.POST.get('suffix', '').strip()
         user.email = email
         user.contact_no = request.POST.get('contact_no', '').strip()
+        school.name = school_name
+        school.code = school_code
+        school.address = school_address
+        school.save(update_fields=['name', 'code', 'address', 'updated_at'])
         user.school = school.name
         user.save(update_fields=['first_name', 'middle_initial', 'last_name', 'suffix', 'email', 'contact_no', 'school', 'updated_at'])
         profile_info.update({
@@ -7506,7 +7535,17 @@ def admin_school_principal_edit(request, school_id, user_id):
             'full_name': _admin_user_full_name(user),
         })
         _set_profile_dict(user, 'principal_profile_info', profile_info)
-        return redirect('admin_school_principal_detail', school_id=school.id, user_id=user.id)
+        if modal_request:
+            return JsonResponse({
+                'success': True,
+                'name': _admin_user_full_name(user),
+                'email': user.email,
+                'contact_no': user.contact_no or 'Not provided',
+                'school_name': school.name,
+                'school_code': school.code,
+                'school_address': school.address,
+            })
+        return redirect('admin_school_detail', school_id=school.id)
     return render(request, 'pabasa_app/admin_principal_edit.html', context)
 
 
@@ -7516,7 +7555,7 @@ def admin_school_principal_reset_password(request, school_id, user_id):
     school, user = _school_principal_or_404(school_id, user_id)
     if user.is_archived:
         messages.warning(request, 'An inactive Principal account cannot have its password reset.')
-        return redirect('admin_school_principal_detail', school_id=school.id, user_id=user.id)
+        return redirect('admin_school_detail', school_id=school.id)
     with transaction.atomic():
         user = User.objects.select_for_update().get(id=user.id, role='principal', school_record=school)
         temporary_password = _principal_temporary_password(user.last_name)
@@ -7527,7 +7566,7 @@ def admin_school_principal_reset_password(request, school_id, user_id):
         messages.success(request, "Principal password reset successfully. The temporary credentials were sent to the Principal's email.")
     else:
         messages.warning(request, 'Principal password reset successfully, but the temporary credentials email could not be sent.')
-    return redirect('admin_school_principal_detail', school_id=school.id, user_id=user.id)
+    return redirect('admin_school_detail', school_id=school.id)
 
 
 @admin_required

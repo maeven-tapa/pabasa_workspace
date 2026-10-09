@@ -16,6 +16,8 @@
     line-height: 1.25;
     padding: 0.45rem 0.7rem;
     text-decoration: none;
+    align-self: flex-start;
+    width: auto;
     transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
   }
 
@@ -81,11 +83,33 @@
     row-gap: 0.75rem !important;
   }
 
+  .section-management-page .section-information-card { flex:0 0 auto; }
+  .section-management-page .section-information-divider { border-top:1px solid #e9eef3; margin-top:.5rem; padding-top:.65rem; width:100%; }
+  .section-management-page .section-teacher-grid { row-gap:.45rem; }
+  .section-management-page .section-teacher-grid .form-label-like { color:#6c757d; display:block; font-size:.78rem; margin-bottom:.1rem; }
+  .section-management-page .section-teacher-grid strong { display:block; overflow-wrap:anywhere; }
+  .section-management-page .section-teacher-email { overflow-wrap:normal; word-break:normal; }
+  .section-management-page .section-students-card { display:flex; flex:1 1 0; flex-direction:column; min-height:0; }
+  .section-management-page .section-students-card .card-body { display:flex; flex:1 1 0; flex-direction:column; min-height:0; }
+  .section-management-page .section-students-scroll { flex:1 1 0; min-height:0; overflow:auto; }
+  .section-management-page .section-students-scroll thead th { background:#fff; position:sticky; top:0; z-index:1; }
+
+  @media (min-width: 992px) {
+    html:has(.section-management-page), body:has(.section-management-page) { height:100%; min-height:0; overflow:hidden; }
+    body:has(.section-management-page) .admin-app-shell { height:100dvh; min-height:0; overflow:hidden; }
+    .admin-main:has(.section-management-page) { display:flex; flex-direction:column; height:100%; min-height:0; overflow:hidden; }
+    .admin-main:has(.section-management-page) > .admin-content { display:flex; flex:1 1 0; flex-direction:column; height:0; min-height:0; max-width:none; overflow:hidden; width:100%; }
+    .section-management-page { display:flex; flex:1 1 0; flex-direction:column; min-height:0; width:100%; }
+  }
+
   .section-students-heading {
     align-items: center;
     display: inline-flex;
     gap: 0.35rem;
   }
+
+  .section-students-heading-row { align-items:center; display:flex; justify-content:space-between; }
+  .section-students-controls-row { margin-top:.75rem; }
 
   .section-student-controls {
     align-items: center;
@@ -130,65 +154,60 @@
   }
 </style>
 
-<div class="container-fluid py-2">
+<div class="container-fluid py-2 section-management-page">
   <a href="{% url 'admin_school_detail' section.school_id %}" class="section-back-link">
     <i class="bi bi-arrow-left" aria-hidden="true"></i>
     <span>Back to School</span>
   </a>
 
-  <div class="card shadow-sm border-0 mt-3 mb-4">
-    <div class="card-body p-4">
-      <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-start gap-3">
-        <div class="min-w-0">
+  <div class="card shadow-sm border-0 mt-2 mb-2 section-information-card">
+    <div class="card-body p-3">
+      <div class="d-flex flex-column gap-2">
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-start gap-2">
+          <div class="min-w-0">
           <div class="small text-muted text-uppercase">Section Information</div>
-          <h1 class="h3 section-information-title mb-2">{{ section.grade_level }} — {{ section.section|default:section.class_name }}</h1>
-          <div class="text-muted">Section code: {{ section.class_code }} · ID: {{ section.id }}</div>
-        </div>
-        <div class="d-flex flex-column align-items-end gap-2">
+          <h1 class="h3 section-information-title mb-1">{{ section.grade_level }} — {{ section.section|default:section.class_name }}</h1>
+          </div>
+          <div class="d-flex flex-column align-items-end gap-2">
           <span class="badge rounded-pill section-status-badge {% if section.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %}">
             <span class="section-status-badge__dot" aria-hidden="true"></span>{{ status }}
           </span>
+          </div>
+        </div>
+        <div class="section-information-divider">
+          <h2 class="h6 fw-bold mb-1">Assigned Teacher</h2>
+          {% if teacher %}
+            <div class="row section-teacher-grid small">
+              <div class="col-12 col-sm-6 col-lg-3"><span class="form-label-like">Teacher ID</span><strong>{{ teacher.custom_id }}</strong></div>
+              <div class="col-12 col-sm-6 col-lg-3"><span class="form-label-like">Name</span><strong>{{ teacher.first_name }} {{ teacher.last_name }}</strong></div>
+              <div class="col-12 col-sm-6 col-lg-4"><span class="form-label-like">Email</span><strong class="section-teacher-email">{{ teacher.email }}</strong></div>
+              <div class="col-12 col-sm-6 col-lg-2"><span class="form-label-like">Status</span><strong>{% if teacher.is_archived %}Archived{% else %}Active{% endif %}</strong></div>
+            </div>
+          {% else %}
+            <p class="text-muted mb-0">Not assigned</p>
+          {% endif %}
         </div>
       </div>
     </div>
   </div>
 
-  <div class="row g-4">
-    <div class="col-12 col-lg-4">
-      <section class="card shadow-sm border-0 h-100">
-        <div class="card-body p-4">
-          <h2 class="h5">Assigned Teacher</h2>
-          {% if teacher %}
-            <dl class="small row">
-              <dt class="col-5">Teacher ID</dt><dd class="col-7">{{ teacher.custom_id }}</dd>
-              <dt class="col-5">Name</dt><dd class="col-7">{{ teacher.first_name }} {{ teacher.last_name }}</dd>
-              <dt class="col-5">Email</dt><dd class="col-7 text-break">{{ teacher.email }}</dd>
-              <dt class="col-5">Status</dt><dd class="col-7">{% if teacher.is_archived %}Archived{% else %}Active{% endif %}</dd>
-            </dl>
-          {% else %}
-            <p class="text-muted">Not assigned</p>
-          {% endif %}
-        </div>
-      </section>
-    </div>
-    <div class="col-12 col-lg-8">
-      <section class="card shadow-sm border-0">
-        <div class="card-body p-4">
-          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 section-students-toolbar">
-            <h2 class="h5 mb-0 section-students-heading">Students <span class="badge text-bg-light border" id="sectionStudentCount">{{ enrollments|length }}</span></h2>
-            <div class="section-student-controls" role="search">
-              <input class="form-control form-control-sm" id="sectionStudentSearch" type="search" placeholder="Search students" aria-label="Search current section students">
-              <select class="form-select form-select-sm" id="sectionStudentSort" aria-label="Sort current section students">
+  <section class="card shadow-sm border-0 section-students-card">
+        <div class="card-body p-3 p-lg-4">
+          <div class="section-students-toolbar mb-3">
+            <div class="section-students-heading-row"><h2 class="h5 mb-0 section-students-heading">Class List <span class="badge text-bg-light border" id="sectionStudentCount">{{ enrollments|length }}</span></h2></div>
+            <div class="row g-2 section-students-controls-row" role="search">
+              <div class="col-12 col-lg-8"><input class="form-control form-control-sm" id="sectionStudentSearch" type="search" placeholder="Search students" aria-label="Search current section students"></div>
+              <div class="col-12 col-lg-4"><select class="form-select form-select-sm" id="sectionStudentSort" aria-label="Sort current section students">
                 <option value="name-asc">Name A–Z</option>
                 <option value="name-desc">Name Z–A</option>
                 <option value="id-asc">Student ID ascending</option>
                 <option value="id-desc">Student ID descending</option>
                 <option value="lrn-asc">LRN ascending</option>
                 <option value="lrn-desc">LRN descending</option>
-              </select>
+              </select></div>
             </div>
           </div>
-          <div class="table-responsive">
+          <div class="table-responsive section-students-scroll">
             <table class="table" id="sectionStudentsTable">
               <thead><tr><th>Student ID</th><th>LRN</th><th>Name</th><th>Status</th><th>Actions</th></tr></thead>
               <tbody>
@@ -207,9 +226,7 @@
             </table>
           </div>
         </div>
-      </section>
-    </div>
-  </div>
+  </section>
 </div>
 <div class="modal fade" id="moveStudentModal" tabindex="-1" aria-labelledby="moveStudentTitle" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">

@@ -23,6 +23,23 @@
         overflow: auto;
     }
 
+    @media (min-width: 992px) {
+        html:has(.admin-users-panel),
+        body:has(.admin-users-panel) { height:100%; min-height:0; overflow:hidden; }
+        body:has(.admin-users-panel) .admin-app-shell { height:100dvh; min-height:0; overflow:hidden; }
+        .admin-main:has(.admin-users-panel) { display:flex; flex:1 1 auto; flex-direction:column; height:100%; min-height:0; overflow:hidden; }
+        .admin-main:has(.admin-users-panel) > .admin-content { display:flex; flex:1 1 0; flex-direction:column; height:0; min-height:0; max-width:none; overflow:hidden; width:100%; }
+        .admin-main:has(.admin-users-panel) .admin-users-panel { display:flex; flex:1 1 0; flex-direction:column; height:0; min-height:0; overflow:hidden; width:100%; }
+        .admin-users-panel > form { flex:0 0 auto; }
+        .admin-users-panel > .table-responsive { flex:1 1 0; min-height:0; overflow:auto; }
+        .admin-users-panel > .table-responsive thead th { position:sticky; top:0; z-index:1; }
+    }
+
+    .admin-users-panel,
+    .admin-users-panel > form,
+    .admin-users-panel > .table-responsive,
+    .admin-users-panel > .table-responsive table { max-width:100%; min-width:0; width:100%; }
+
     @media (max-width: 991.98px) {
         .admin-content:has(.admin-users-panel) {
             padding-top: clamp(0.75rem, 2vw, 1.25rem);
@@ -32,23 +49,20 @@
 </style>
 <div class="admin-panel admin-users-panel">
     <form class="row g-2 align-items-end mb-3" method="get" data-admin-auto-filter>
-        <div class="col-12 col-lg-6">
+        <div class="col-12 col-lg-8">
             <label class="form-label small fw-bold text-secondary" for="userSearch">Search users</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                 <input class="form-control" id="userSearch" type="search" name="q" value="{{ search_query }}" placeholder="Name, identifier, or email">
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-lg-3">
+        <div class="col-12 col-sm-6 col-lg-4">
             <label class="form-label small fw-bold text-secondary" for="categoryFilter">Category</label>
             <select class="form-select" id="categoryFilter" name="category">
                 {% for value, label in category_options %}
                 <option value="{{ value }}" {% if category_filter == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
-        </div>
-        <div class="col-12 col-sm-6 col-lg-3 d-flex gap-2">
-            <a class="btn btn-outline-secondary admin-filter-clear-btn flex-fill" href="{% url 'admin_users' %}" aria-label="Clear filters"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
         </div>
     </form>
 
@@ -100,7 +114,7 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="{{ table_headers|length }}" class="text-center text-secondary py-5">No users found.</td></tr>
+                <tr><td colspan="6" class="text-center text-secondary py-5">No users found.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
