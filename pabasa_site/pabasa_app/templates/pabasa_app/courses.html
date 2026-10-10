@@ -2,6 +2,8 @@
 {% load static %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="{% static 'pabasa_app/css/student_activity_review.css' %}?v=3">
+<script src="{% static 'pabasa_app/js/student_activity_review.js' %}?v=3" defer></script>
 <link rel="stylesheet" href="{% static 'pabasa_app/css/aral_session_folder_icon.css' %}?v=20261010-2">
 <script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[data-prescribed-activity="lesson-7-gawain-1"]').forEach(x=>x.dataset.prescribedActivity='lesson-7-gawain-1')});</script>
 <script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[data-prescribed-activity="letrang-msa"]').forEach(x=>x.dataset.prescribedActivity='lesson-6-gawain-1');document.querySelectorAll('[data-prescribed-preview="letrang-msa"]').forEach(x=>x.dataset.prescribedPreview='lesson-6-gawain-1')});</script>
@@ -14595,6 +14597,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     const studentProgressRetellGrades = new Map();
     let activeStudentProgressAudio = null;
     const stopStudentProgressAudio = () => {
+        document.querySelectorAll('.student-progress-recording audio').forEach(audio => audio.pause());
         if (activeStudentProgressAudio) {
             activeStudentProgressAudio.pause();
             activeStudentProgressAudio.currentTime = 0;
@@ -14605,6 +14608,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             button.setAttribute('aria-label', 'Play recording');
         });
     };
+    document.addEventListener('pabasa:stop-student-progress-audio', stopStudentProgressAudio);
     const formatStudentProgressAudioTime = value => {
         const seconds = Number(value);
         if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
@@ -14795,6 +14799,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!modalEl.dataset.studentProgressAudioBound) {
                 modalEl.dataset.studentProgressAudioBound = 'true';
                 modalEl.addEventListener('hidden.bs.modal', stopStudentProgressAudio);
+                modalEl.addEventListener('hidden.bs.modal', () => window.StudentActivityReview.closeAll(list));
             }
 
             const tasks = courseProgressTasks(course, studentId);
@@ -14855,6 +14860,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 return Number.isFinite(value) ? value / 100 : null;
             };
             const sortRows = (rows, mode) => rows.slice().sort((a, b) => {
+                if (mode === 'session') return window.StudentActivityReview.compareTasks(a.task, b.task);
                 if (mode === 'title-asc' || mode === 'title-desc') {
                     const direction = mode === 'title-asc' ? 1 : -1;
                     return direction * String(a.task.title || '').localeCompare(String(b.task.title || ''), undefined, { sensitivity: 'base' });
@@ -14871,10 +14877,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const direction = mode === 'oldest' ? 1 : -1;
                 const aTime = completionTime(a.attempt);
                 const bTime = completionTime(b.attempt);
-                if (aTime === null && bTime === null) return 0;
+                if (aTime === null && bTime === null) return window.StudentActivityReview.compareTasks(a.task, b.task);
                 if (aTime === null) return 1;
                 if (bTime === null) return -1;
-                return direction * (aTime - bTime);
+                return direction * (aTime - bTime) || window.StudentActivityReview.compareTasks(a.task, b.task);
             });
             const renderRows = () => {
                 const query = String(searchInput?.value || '').trim().toLowerCase();
@@ -14883,7 +14889,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     if (studentProgressSourceFilter === 'prescribed' ? !isPrescribed : isPrescribed) return false;
                     return `${task.title || ''} ${task.activityLabel || ''}`.toLowerCase().includes(query);
                 });
-                const sortedRows = sortRows(visibleRows, sortInput?.value || 'latest');
+                const sortedRows = sortRows(visibleRows, sortInput?.value || 'session');
                 const rows = sortedRows.map(({ task, attempt }) => {
                     const status = normalizeProgressStatus(attempt ? [attempt] : []);
                     const completedAt = attempt?.completed_at || attempt?.completedAt || '';
@@ -14980,7 +14986,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         </article>
                     `;
                 });
+                window.StudentActivityReview.closeAll(list);
                 list.innerHTML = rows.length ? rows.join('') : '<div class="student-progress-empty">No reading activities found.</div>';
+                window.StudentActivityReview.mount(list);
                 hydrateStudentProgressAudioDurations(list);
             };
             if (searchInput && !searchInput.dataset.bound) {
@@ -15105,7 +15113,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             })).then(response => response.json().then(data => ({ response, data }))).then(({ response, data }) => {
                 if (!response.ok || !data.success) throw new Error(data.error || 'Review action failed.');
                 showToast(lesson29Action.dataset.action === 'checked' ? 'Activity marked complete' : 'Activity sent for retry', 'success');
-                lesson29Action.closest('.student-progress-recording')?.remove();
+                window.StudentActivityReview.removeRecording(lesson29Action.closest('.student-progress-recording'));
             }).catch(error => showToast(error.message || 'Review action failed.', 'error'));
             return;
         }
@@ -24685,7 +24693,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="student-progress-sort-wrap">
                         <label class="student-progress-sort-label" for="studentProgressSort">Sort by</label>
                         <select class="form-select" id="studentProgressSort" aria-label="Sort student progress activities">
-                            <option value="latest" selected>Latest Completed</option>
+                            <option value="session" selected>Session &amp; Activity</option>
+                            <option value="latest">Latest Completed</option>
                             <option value="oldest">Oldest Completed</option>
                             <option value="title-asc">Activity Title A–Z</option>
                             <option value="title-desc">Activity Title Z–A</option>

@@ -1,0 +1,21 @@
+.student-progress-review-trigger{display:flex;align-items:center;justify-content:space-between;gap:1rem;width:100%;margin-top:.85rem;padding:.9rem 1rem;border:1px solid #cce0e9;border-radius:.8rem;background:#f5fbfe;color:#176078;text-align:left;font:inherit;cursor:pointer}
+.student-progress-review-trigger strong,.student-progress-review-trigger small{display:block}
+.student-progress-review-trigger small{margin-top:.25rem;color:#637b88;font-size:.82rem}
+.student-progress-review-trigger:hover{background:#eaf6fa;border-color:#2483a4}
+.student-progress-review-trigger:focus-visible{outline:3px solid #2483a4;outline-offset:3px}
+.student-progress-review-dialog{--review-viewport-width:100vw;--review-viewport-height:100dvh;box-sizing:border-box;width:min(1120px,calc(var(--review-viewport-width) - 32px));max-width:none;max-height:calc(var(--review-viewport-height) - 48px);margin:auto;padding:0;border:1px solid #dce8ed;border-radius:1rem;background:#fff;color:#203746;font:inherit;box-shadow:0 24px 70px #173f6355;overflow:hidden}
+/* Native dialogs retain their dashboard ancestor's zoom in the top layer. */
+@media(min-width:992px){.dashboard-app-shell .student-progress-review-dialog{--review-viewport-width:var(--dashboard-normalized-viewport-width,100vw);--review-viewport-height:var(--dashboard-normalized-viewport-height,100dvh)}}
+.student-progress-review-dialog:not([open]){display:none}
+.student-progress-review-dialog[open]{display:grid;grid-template-rows:auto minmax(0,1fr)}
+.student-progress-review-dialog::backdrop{background:#102b3f88}
+.student-progress-review-header{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid #dce8ed}
+.student-progress-review-header small{color:#176078;font-size:.75rem;letter-spacing:.04em;text-transform:uppercase}
+.student-progress-review-header h2{margin:.25rem 0 0;font-size:1.15rem;font-weight:800;overflow-wrap:anywhere}
+.student-progress-review-close{flex-shrink:0;width:36px;height:36px;border:1px solid #dce8ed;border-radius:50%;background:#f5fbfe;color:#176078;font-size:1.5rem;line-height:1;cursor:pointer}
+.student-progress-review-body{min-height:0;padding:1rem 1.25rem;overflow:auto;overscroll-behavior:contain}
+.student-progress-review-body .student-progress-recording{margin:0;padding:0;border:0}
+.student-progress-review-body .session4-recording-review{margin-top:0}
+body.dark-theme .student-progress-review-trigger,body.dark-theme .student-progress-review-dialog,body.dark-theme .student-progress-review-close{background:#172c38;color:#edf5f8;border-color:#395260}
+body.dark-theme .student-progress-review-trigger small,body.dark-theme .student-progress-review-header small{color:#a9ccd9}
+@media(max-width:600px){.student-progress-review-dialog{width:calc(var(--review-viewport-width) - 20px);max-height:calc(var(--review-viewport-height) - 24px)}.student-progress-review-header,.student-progress-review-body{padding:.9rem}}
