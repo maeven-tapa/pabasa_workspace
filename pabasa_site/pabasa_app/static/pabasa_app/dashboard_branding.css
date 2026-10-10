@@ -1,0 +1,21 @@
+/* Complete PABASA artwork in desktop sidebars, mobile bars, and drawers. */
+.sidebar-logo-link .dashboard-navbar-logo {
+    display: block;
+    flex: 0 1 auto;
+    width: 12rem;
+    max-width: 100%;
+    height: auto;
+}
+
+.admin-homepage-logo:has(.dashboard-navbar-logo) {
+    max-width: 100%;
+    padding: .2rem 0;
+}
+
+.mobile-dashboard-logo .dashboard-navbar-logo,
+.mobile-admin-logo .dashboard-navbar-logo {
+    display: block;
+    width: 9rem;
+    max-width: 100%;
+    height: auto;
+}
