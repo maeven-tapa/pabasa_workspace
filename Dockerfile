@@ -23,8 +23,8 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-# WhiteNoise serves these generated static assets in production.
-RUN python pabasa_site/manage.py collectstatic --noinput
+# WhiteNoise serves compact source assets and installed-package static folders.
+# No collectstatic copy or image recompression is needed.
 
 EXPOSE 8080
 

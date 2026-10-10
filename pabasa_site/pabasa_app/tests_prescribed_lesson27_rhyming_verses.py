@@ -68,3 +68,39 @@ class Lesson27VerseRecognitionTests(SimpleTestCase):
         for fields in ({'mode': 'reading'}, {'language': 'Filipino'}):
             with self.subTest(fields=fields):
                 self.assertFalse(self.recognize('Who love to chat with a fat bat?', **fields)['complete'])
+
+    def test_partial_verse_credits_only_the_correct_prefix(self):
+        for transcript, count, mismatch in (
+            ('The cat', 2, False),
+            ('The cat ate a cap', 2, True),
+            ('The cat ate wore a hat', 2, True),
+            ('The dog wore a hat', 1, True),
+            ('wore a hat', 0, True),
+        ):
+            with self.subTest(transcript=transcript):
+                result = self.recognize(transcript, target_text='The cat wore a hat,')
+                self.assertEqual(result['correct_word_count'], count)
+                self.assertFalse(result['complete'])
+                self.assertEqual(result['reading_mismatch'], mismatch)
+
+    def test_continues_from_correct_prefix_or_accepts_full_rereading(self):
+        partial = self.recognize('The cat', target_text='The cat wore a hat,')
+        for transcript in ('wore a hat', 'The cat wore a hat'):
+            with self.subTest(transcript=transcript):
+                result = self.recognize(transcript, target_text='The cat wore a hat,',
+                                        current_syllable_index=partial['current_syllable_index'])
+                self.assertTrue(result['complete'])
+                self.assertEqual(result['correct_word_count'], 5)
+
+    def test_incorrect_retry_does_not_erase_correct_prefix_or_skip_words(self):
+        result = self.recognize('ate a hat', target_text='The cat wore a hat,', current_syllable_index=2)
+        self.assertEqual(result['correct_word_count'], 2)
+        self.assertFalse(result['complete'])
+        self.assertTrue(result['reading_mismatch'])
+
+    def test_official_crla_keeps_its_sentence_scorer(self):
+        result = self.recognize('The cat ate a hat', target_text='The cat wore a hat,',
+                                official_crla_assessment='1', crla_sentence_word_scoring='1')
+        self.assertNotIn('reading_mismatch', result)
+        self.assertIn('word_results', result)
+        self.assertEqual(result['word_results'][2]['result'], 'miscue')

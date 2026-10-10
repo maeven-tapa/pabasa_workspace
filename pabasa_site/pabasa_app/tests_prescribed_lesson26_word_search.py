@@ -212,7 +212,8 @@ class PrescribedLesson26WordSearchTests(TestCase):
         self.assertIn('outline:3px solid var(--line)', template)
         script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js/prescribed_rhyming_verses_lesson27_activity1.js').read_text(encoding='utf-8')
         self.assertIn('Rhyming Verses. Read each verse', script)
-        self.assertIn("window.Basahin.read({target_text:target, language:'English', mode:'sentence'}", script)
+        self.assertIn("target_text:target, language:'English', mode:'sentence', prescribed_activity_key:'lesson-27-gawain-1'", script)
+        self.assertIn('window.Basahin.create({', script)
         self.assertIn("const correct = result.complete === true;", script)
         self.assertNotIn('speechSynthesis', script)
         self.assertIn('data-prescribed-leave-prefix="prescribed-l27a1"', template)
@@ -253,6 +254,37 @@ class PrescribedLesson26WordSearchTests(TestCase):
         progress.refresh_from_db()
         self.assertEqual(progress.state['state_version'], 7)
         self.assertEqual(progress.current_index, 1)
+
+    def test_lesson27_partial_reading_survives_retry_and_leave(self):
+        def post(payload):
+            response = self.client.post(self.lesson27_progress_url, data=json.dumps(payload), content_type='application/json')
+            self.assertEqual(response.status_code, 200, response.content)
+            return response.json()['progress']['state']
+        state = post({'action': 'verse_progress', 'item_index': 0, 'verse_index': 0, 'current_syllable_index': 2})
+        self.assertEqual(state['verse_word_index'], 2)
+        self.assertEqual(state['verse_index'], 0)
+        self.assertEqual(state['attempts'], 0)
+        state = post({'action': 'verse_read', 'item_index': 0, 'verse_index': 0, 'success': False})
+        self.assertEqual(state['attempts'], 1)
+        self.assertEqual(state['verse_syllable_index'], 2)
+        state = post({'action': 'state_sync'})
+        self.assertEqual(state['verse_word_index'], 2)
+        page = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.lesson27_key}))
+        self.assertEqual(page.context['prescribed_activity_data']['progress']['state']['verse_word_index'], 2)
+        state = post({'action': 'verse_read', 'item_index': 0, 'verse_index': 0, 'success': True})
+        self.assertEqual(state['verse_index'], 1)
+        self.assertEqual(state['verse_syllable_index'], 0)
+        self.assertEqual(state['verse_word_index'], 0)
+
+    def test_lesson27_partial_reading_rejects_stale_or_invalid_progress(self):
+        for payload in (
+            {'item_index': 0, 'verse_index': 1, 'current_syllable_index': 2},
+            {'item_index': 1, 'verse_index': 0, 'current_syllable_index': 2},
+            {'item_index': 0, 'verse_index': 0, 'current_syllable_index': 999},
+        ):
+            with self.subTest(payload=payload):
+                response = self.client.post(self.lesson27_progress_url, data=json.dumps({'action': 'verse_progress', **payload}), content_type='application/json')
+                self.assertEqual(response.status_code, 400)
 
     def test_lesson28_activities_use_their_dedicated_ui_flows(self):
         activity1 = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.lesson28_activity1_key}))
