@@ -7671,11 +7671,30 @@
         function getLocalCrlaStoryAudioUrl() {
             if (!isCrla || mode !== "paragraph" || currentStoryState !== "story_reading") return "";
             const title = String(currentSelectedStory?.title || "").trim().toLocaleLowerCase("fil-PH");
-            if (title !== "ang pagong at ang kuneho") return "";
+            const storyAudioConfig = {
+                "ang pagong at ang kuneho": {
+                    folder: "ang%20pagong%20at%20ang%20kuneho",
+                    filePrefix: "ang_pagong_at_ang_kuneho_segment_",
+                    segmentCount: 8,
+                },
+                // The seeded official title is "Isang Kakaibang Araw";
+                // accept the user-facing shortened title as well.
+                "isang kakaibang araw": {
+                    folder: "ang%20kakaibang%20araw",
+                    filePrefix: "ang_kakaibang_araw_segment_",
+                    segmentCount: 4,
+                },
+                "ang kakaibang araw": {
+                    folder: "ang%20kakaibang%20araw",
+                    filePrefix: "ang_kakaibang_araw_segment_",
+                    segmentCount: 4,
+                },
+            }[title];
+            if (!storyAudioConfig) return "";
             const segmentIndex = Math.max(0, Number(currentPageIndex) || 0) + 1;
-            if (segmentIndex > 8) return "";
+            if (segmentIndex > storyAudioConfig.segmentCount) return "";
             const segment = String(segmentIndex).padStart(2, "0");
-            return `/static/pabasa_app/crla/ang%20pagong%20at%20ang%20kuneho/ang_pagong_at_ang_kuneho_segment_${segment}.mp3`;
+            return `/static/pabasa_app/crla/${storyAudioConfig.folder}/${storyAudioConfig.filePrefix}${segment}.mp3`;
         }
 
         function getLocalCrlaComprehensionAudioUrl(button) {
