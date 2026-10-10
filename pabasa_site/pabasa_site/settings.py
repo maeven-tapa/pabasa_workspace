@@ -159,16 +159,24 @@ if DJANGO_ENV == 'production':
     CSRF_COOKIE_SECURE = True
     SECURE_SSL_REDIRECT = True
 
-# Email settings for Gmail
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
+# SMTP settings. Cloud Run supplies the password through Secret Manager.
+EMAIL_BACKEND = 'pabasa_site.email_backend.FallbackSMTPBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
-EMAIL_HOST_USER = 'pabasa.tupc@gmail.com'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'pabasa.tupc@gmail.com')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = 'pabasa.tupc@gmail.com'
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'pabasa.tupc@gmail.com')
 EMAIL_TIMEOUT = 15
+
+# A separate secret enables Gmail fallback; never reuse Brevo's SMTP key here.
+EMAIL_BACKUP_HOST = os.environ.get('EMAIL_BACKUP_HOST', 'smtp.gmail.com')
+EMAIL_BACKUP_HOST_USER = os.environ.get('EMAIL_BACKUP_HOST_USER', 'pabasa.tupc@gmail.com')
+EMAIL_BACKUP_HOST_PASSWORD = os.environ.get('EMAIL_BACKUP_HOST_PASSWORD', '')
+EMAIL_BACKUP_FROM_EMAIL = os.environ.get(
+    'EMAIL_BACKUP_FROM_EMAIL', 'PABASA <pabasa.tupc@gmail.com>'
+)
 
 # Google Cloud Speech-to-Text settings used by the reading assessment UI.
 GOOGLE_STT_API_KEY = os.environ.get('GOOGLE_API_KEY', '')
