@@ -92,6 +92,40 @@ both-provider failure, silent failure, and the three OTP email helpers. Run:
 .\.venv\Scripts\python.exe pabasa_site/manage.py check
 ```
 
+## Verified release
+
+- Application commit: `e9ebf36256d481abe0b906bd89b80e49d074bc13`.
+- Build: `8f4a7539-ba32-4ea9-978e-cd4b08bccfcc`, completed successfully.
+- Image digest: `sha256:a658c98cd0a80612de1db15adf288bd9d36cdeb3b32331f65253335e2119ab45`.
+- Active revision: `pabasa-01210-vor`, serving 100% of traffic.
+- Primary password: `brevo_emailpass:1`; backup: `pabasa_apppassword:1`.
+- The release job uses the web service's `pabasa-db-micro` connection and
+  runtime identity. Executions `pabasa-brevo-release-lknwx` and
+  `pabasa-brevo-release-lg5bf` passed recorded migration readiness,
+  `migrate --check`, and `migrate --noinput` (no migrations to apply).
+- Both providers passed STARTTLS authentication inside Cloud Run. The second
+  execution also verified homepage and login responses using Django's test
+  client with the production hostname. No email was sent by these checks.
+- The web revision passed active startup with the same image digest and both
+  startup guards. Live homepage, login, and dashboard-to-login probes returned
+  HTTP 200. One initial local HTTP connection closed before a response; the
+  subsequent login probe succeeded. The temporary tag hostname was rejected
+  by Django's host validation, so pre-activation page checks ran inside the
+  release job using `tupcpabasa.app`.
+- All 16 email backend tests and the Django system check passed locally.
+- Migration output warned of existing model changes without migrations.
+  This email release changes no models or migration files and applied no
+  schema changes. Broader signup/digest tests previously showed the same
+  failures with both the original settings and the email settings.
+- The previous revision `pabasa-01206-q8m` is retained for traffic rollback.
+
+The normal GitHub deployment trigger is unchanged. The application image was
+built and checked separately to preserve migration-before-deployment ordering.
+The release record commit uses `[skip ci]` to avoid rebuilding and redeploying
+the already-verified application image. Temporary build-source IAM grants were
+removed after the build. A successful SMTP login does not prove inbox delivery;
+actual received OTPs and delivery headers still need to be checked by a user.
+
 Brevo's free allowance is 300 emails per day, shared by OTPs, resends,
 confirmations, and other messages. Messages queued after reaching the allowance
 can arrive after PABASA's 10-minute OTP expiry.
@@ -102,3 +136,4 @@ References:
 - [Brevo domain authentication](https://help.brevo.com/hc/en-us/articles/12163873383186-Authenticate-your-domain-with-Brevo-Brevo-code-DKIM-DMARC)
 - [Brevo SMTP troubleshooting](https://help.brevo.com/hc/en-us/articles/115000188150-Troubleshooting-Issues-with-Brevo-SMTP)
 - [Cloud Run secrets](https://docs.cloud.google.com/run/docs/configuring/services/secrets)
+- [Cloud Build trigger skipping](https://docs.cloud.google.com/build/docs/automating-builds/create-manage-triggers)
