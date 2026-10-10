@@ -74,6 +74,20 @@ function walk(node, visit) {
       isMuted: false, muted: false, paused: false, currentIndex: 0,
       generation: 0, speechGeneration: 0, selectedMicDeviceId: '', stream: null,
       pendingRetryAudio: '',
+      readVerseContinuously: async (target, button) => {
+        calls++;
+        assert.equal(file, 'prescribed_rhyming_verses_lesson27_activity1.js');
+        assert.equal(target, args[0]);
+        assert.ok(button);
+        cancel();
+      },
+      readSentenceWithProgress: async (target, button) => {
+        calls++;
+        assert.equal(file, 'prescribed_fill_blank_lesson26_activity2.js');
+        assert.equal(target, item.sentence);
+        assert.ok(button);
+        cancel();
+      },
       words: ['cat'], state, s: state, data, d: data,
       publishDebug: noop, debug: noop, emitDebug: noop, setButtonState: noop,
       setBusyButton: noop, sentenceText: () => item.sentence,

@@ -79,6 +79,8 @@ from .section_configuration import ensure_salawag_grade_two_sections
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
 from .knowlez_stt import KnowlezSpeechError, transcribe_knowlez_audio, uses_knowlez_stt
+from .lesson27_reading import analyze_verse_reading
+from .lesson26_reading import analyze_sentence_continuation
 from .reading_stt import (
     CRLA_TTS_VOICES,
     stt_word_metadata,
@@ -19493,10 +19495,23 @@ def prescribed_activity_progress(request, activity_key):
             phase = old.get('phase', 'reading')
             attempts = max(0, int(old.get('attempts', 0))); help_visible = bool(old.get('help_visible', False))
             selected = sorted(set(str(x) for x in (old.get('selected') or []))); completed_items = max(0, min(len(activity['items']), int(old.get('completed_items', 0))))
-            if action == 'verse_read':
+            verse_syllable_index = max(0, int(old.get('verse_syllable_index', 0)))
+            verse_word_index = max(0, int(old.get('verse_word_index', 0)))
+            if action == 'verse_progress':
+                if phase != 'reading' or int(data.get('item_index', -1)) != item_index or int(data.get('verse_index', -1)) != verse_index:
+                    raise ValueError('Read the verses in order.')
+                matcher = ReadingMatcher(activity['items'][item_index]['verses'][verse_index])
+                cursor = int(data.get('current_syllable_index', -1))
+                boundaries = {end: index + 1 for index, (_, end) in enumerate(matcher.word_syllable_ranges)}
+                if cursor not in boundaries or cursor < verse_syllable_index:
+                    raise ValueError('Invalid verse reading progress.')
+                verse_syllable_index = cursor
+                verse_word_index = boundaries[cursor]
+            elif action == 'verse_read':
                 if phase != 'reading' or int(data.get('item_index', -1)) != item_index or int(data.get('verse_index', -1)) != verse_index:
                     raise ValueError('Read the verses in order.')
                 if bool(data.get('success')):
+                    verse_syllable_index = 0; verse_word_index = 0
                     attempts = 0; help_visible = False; verse_index += 1
                     if verse_index >= len(activity['items'][item_index]['verses']): phase = 'rhymes'; selected = []
                 else:
@@ -19511,11 +19526,13 @@ def prescribed_activity_progress(request, activity_key):
                 else: accepted = False
                 target_count = sum(1 for line in activity['items'][item_index]['verses'] for match in re.finditer(r"[A-Za-z]+", line) if match.group(0).lower().endswith('at'))
                 if len(selected) >= target_count:
+                    verse_syllable_index = 0; verse_word_index = 0
                     completed_items += 1; item_index = completed_items; verse_index = 0; phase = 'reading' if completed_items < len(activity['items']) else 'complete'; selected = []
             elif action == 'state_sync':
                 synced_state = {
                     'activity_key': activity_key, 'phase': phase, 'item_index': item_index,
                     'verse_index': verse_index, 'attempts': attempts, 'help_visible': help_visible,
+                    'verse_syllable_index': verse_syllable_index, 'verse_word_index': verse_word_index,
                     'selected': selected, 'completed_items': completed_items,
                     'state_version': int(old.get('state_version') or 0),
                 }
@@ -19524,7 +19541,7 @@ def prescribed_activity_progress(request, activity_key):
                     'activity_completed': phase == 'complete', 'state': synced_state,
                 }})
             else: raise ValueError('Invalid activity action.')
-            saved = {'activity_key': activity_key, 'phase': phase, 'item_index': item_index, 'verse_index': verse_index, 'attempts': attempts, 'help_visible': help_visible, 'selected': selected, 'completed_items': completed_items, 'state_version': int(old.get('state_version') or 0) + 1}
+            saved = {'activity_key': activity_key, 'phase': phase, 'item_index': item_index, 'verse_index': verse_index, 'verse_syllable_index': verse_syllable_index, 'verse_word_index': verse_word_index, 'attempts': attempts, 'help_visible': help_visible, 'selected': selected, 'completed_items': completed_items, 'state_version': int(old.get('state_version') or 0) + 1}
             finished = phase == 'complete'
             progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': completed_items, 'completed_items': completed_items, 'correct_items': completed_items, 'total_items': len(activity['items']), 'activity_completed': finished, 'state': saved})
             return JsonResponse({'success': True, 'accepted': locals().get('accepted'), 'progress': {'completed_items': completed_items, 'total_items': len(activity['items']), 'activity_completed': finished, 'state': saved}})
@@ -19550,6 +19567,8 @@ def prescribed_activity_progress(request, activity_key):
             placements = dict(old.get('placements') or {})
             sentence_attempts = max(0, int(old.get('sentence_attempts', 0)))
             sentence_help = bool(old.get('sentence_help', False))
+            sentence_syllable_index = max(0, int(old.get('sentence_syllable_index', 0)))
+            sentence_word_index = max(0, int(old.get('sentence_word_index', 0)))
             completed_items = max(0, min(len(activity['items']), int(old.get('completed_items', 0))))
             action = data.get('action')
             if action == 'choice_read':
@@ -19576,10 +19595,26 @@ def prescribed_activity_progress(request, activity_key):
                 if accepted:
                     placements[str(blank_index)] = word
                 saved_item_complete = len(placements) == len(activity['items'][current_item]['answers'])
+            elif action == 'sentence_progress' and activity_key == 'lesson-26-gawain-2':
+                if (phase != 'sentence' or int(data.get('item_index', -1)) != current_item
+                        or len(placements) != len(activity['items'][current_item]['answers'])):
+                    raise ValueError('Complete the current sentence first.')
+                item = activity['items'][current_item]
+                text = ''.join(part + (' ' + item['answers'][index] + ' '
+                                      if index < len(item['answers']) else '')
+                               for index, part in enumerate(item['parts']))
+                matcher = ReadingMatcher(text, language_code='en-PH')
+                cursor = int(data.get('current_syllable_index', -1))
+                boundaries = {end: index + 1 for index, (_, end) in enumerate(matcher.word_syllable_ranges)}
+                if cursor not in boundaries or cursor < sentence_syllable_index:
+                    raise ValueError('Invalid sentence reading progress.')
+                sentence_syllable_index = cursor
+                sentence_word_index = boundaries[cursor]
             elif action == 'sentence_reading':
                 if phase != 'sentence' or len(placements) != len(activity['items'][current_item]['answers']):
                     raise ValueError('Complete the sentence first.')
                 if bool(data.get('success')):
+                    sentence_syllable_index = 0; sentence_word_index = 0
                     completed_items += 1; current_item = completed_items; sentence_attempts = 0; sentence_help = False; sentence_read = False; placements = {}
                     if completed_items >= len(activity['items']): phase = 'complete'
                 else:
@@ -19589,6 +19624,7 @@ def prescribed_activity_progress(request, activity_key):
             saved = {'activity_key': activity_key, 'phase': phase, 'choice_index': choice_index, 'choice_attempts': choice_attempts,
                      'choice_help': choice_help, 'current_item': current_item, 'sentence_read': sentence_read,
                      'placements': placements, 'sentence_attempts': sentence_attempts, 'sentence_help': sentence_help,
+                     'sentence_syllable_index': sentence_syllable_index, 'sentence_word_index': sentence_word_index,
                      'completed_items': completed_items, 'state_version': int(old.get('state_version') or 0) + 1}
             progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': completed_items, 'completed_items': completed_items, 'correct_items': completed_items,
                           'total_items': len(activity['items']), 'activity_completed': False, 'state': saved},
@@ -25043,7 +25079,19 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
             language_code,
             allow_non_filipino=is_clap_phase2 and mode == "word",
         )
-        if mode == "sentence" and request.POST.get('crla_sentence_word_scoring') == '1':
+        if (request.POST.get('prescribed_activity_key') == 'lesson-27-gawain-1'
+                and language_code.lower().startswith('en') and mode == 'sentence'
+                and not official_crla_assessment):
+            analysis = analyze_verse_reading(
+                target_text, current_syllable_index, analysis_transcript, language_code,
+            )
+        elif (request.POST.get('prescribed_activity_key') == 'lesson-26-gawain-2'
+              and language_code.lower().startswith('en') and mode == 'sentence'
+              and not official_crla_assessment):
+            analysis = analyze_sentence_continuation(
+                target_text, current_syllable_index, analysis_transcript, language_code,
+            )
+        elif mode == "sentence" and request.POST.get('crla_sentence_word_scoring') == '1':
             try:
                 sentence_word_results = json.loads(request.POST.get('sentence_word_results') or '[]')
             except (TypeError, ValueError, json.JSONDecodeError):
