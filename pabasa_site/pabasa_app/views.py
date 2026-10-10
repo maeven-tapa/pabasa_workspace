@@ -24,7 +24,7 @@ from django.db.models import Count, F, Prefetch, Q
 from django.db.models.functions import Lower
 from django.utils.text import slugify
 from functools import wraps
-from urllib.parse import quote, urlencode, urlparse
+from urllib.parse import quote, unquote, urlencode, urlparse
 import logging
 import base64
 import json
@@ -67,6 +67,7 @@ OCR_ENGINE_UNAVAILABLE_MESSAGE = (
 from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_items
 from .class_materials import ClassMaterialsProgress, listing_summary
 from .email_branding import email_logo_html
+from .static_assets import canonical_asset_name, original_asset_name
 from django.db import transaction
 import re
 import traceback
@@ -4091,7 +4092,7 @@ def _build_reading_report_pdf(report, message='', course=None, teacher=None, rec
         class_text = ', '.join([str(item) for item in joined_classes if item]) or 'Not yet available'
 
     elements = []
-    logo_path = settings.BASE_DIR / 'pabasa_app' / 'static' / 'pabasa_app' / 'images' / 'pabasalogo.png'
+    logo_path = settings.BASE_DIR / 'pabasa_app' / 'static' / canonical_asset_name('pabasa_app/images/pabasalogo.png')
     header_parts = []
     if logo_path.exists():
         header_parts.append(Image(str(logo_path), width=0.75 * inch, height=0.75 * inch))
@@ -6068,7 +6069,9 @@ def home(request):
 
         reading_animation_frames = [
             f"pabasa_app/animation/Reading/{frame.name}"
-            for frame in sorted(animation_dir.glob('*.png'), key=frame_sort_key)
+            for frame in sorted((entry for entry in animation_dir.iterdir()
+                                 if entry.is_file() and entry.suffix.lower() in {'.png', '.webp', '.avif'}),
+                                key=frame_sort_key)
         ]
 
     return render(request, 'pabasa_app/home.html', {
@@ -23310,7 +23313,7 @@ def word_decoding_page(request):
     return response
 
 
-PICTURE_WORD_IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp'}
+PICTURE_WORD_IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp', '.avif'}
 
 
 def _picture_word_label_from_filename(value):
@@ -23394,7 +23397,10 @@ def _find_picture_word_catalog_item(catalog, *, filename='', set_key='', source_
     english_word = str(english_word or '').strip().casefold()
     filipino_word = str(filipino_word or '').strip().casefold()
     for item in candidates:
-        if filename and str(item.get('image') or '').casefold() == filename:
+        image_name = unquote(urlparse(str(item.get('image_path') or '')).path)
+        image_name = image_name.removeprefix(settings.STATIC_URL)
+        legacy_filename = Path(original_asset_name(image_name)).name.casefold()
+        if filename and filename in {str(item.get('image') or '').casefold(), legacy_filename}:
             return item
         if english_word and filipino_word and str(item.get('englishWord') or '').casefold() == english_word and str(item.get('filipinoWord') or '').casefold() == filipino_word:
             return item
@@ -25807,7 +25813,9 @@ def _student_practice_context(request, mode=None):
 
         return [
             f"pabasa_app/animation/{folder_name}/{frame.name}"
-            for frame in sorted(folder.glob('*.png'), key=frame_sort_key)
+            for frame in sorted((entry for entry in folder.iterdir()
+                                 if entry.is_file() and entry.suffix.lower() in {'.png', '.webp', '.avif'}),
+                                key=frame_sort_key)
         ]
 
     mascot_animation_frames = {
@@ -38047,10 +38055,10 @@ def _principal_report_csv_response(report_type, headers, rows):
 def _principal_report_logo_path(analytics):
     logo_value = (analytics or {}).get('school_logo') or ''
     if logo_value.startswith('pabasa_app/'):
-        candidate = settings.BASE_DIR / 'pabasa_app' / 'static' / logo_value
+        candidate = settings.BASE_DIR / 'pabasa_app' / 'static' / canonical_asset_name(logo_value)
         if candidate.exists():
             return candidate
-    return settings.BASE_DIR / 'pabasa_app' / 'static' / 'pabasa_app' / 'images' / 'pabasalogo.png'
+    return settings.BASE_DIR / 'pabasa_app' / 'static' / canonical_asset_name('pabasa_app/images/pabasalogo.png')
 
 
 def _principal_report_pdf_response(request, analytics, report_type, grade_filter, headers, rows):

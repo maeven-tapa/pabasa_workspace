@@ -71,7 +71,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'pabasa_app.static_images.OptimizedImageMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'pabasa_app.middleware.PersistentSessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -148,7 +148,19 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Serve installed app/package assets directly; no collected duplicate directory.
+STATIC_ROOT = None
+WHITENOISE_USE_FINDERS = True
+# Production indexes source files once at startup, retaining WhiteNoise caching.
+WHITENOISE_AUTOREFRESH = DEBUG
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'pabasa_app.static_assets.CompactAppDirectoriesFinder',
+]
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'pabasa_app.static_assets.CompactStaticFilesStorage'},
+}
 SITE_URL = 'https://tupcpabasa.app'
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

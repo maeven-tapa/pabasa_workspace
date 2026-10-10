@@ -7,6 +7,7 @@ from django.urls import reverse
 
 from .models import Material, School, Section, User
 from .sound_detective import catalog, validate_configuration
+from .static_assets import canonical_asset_name
 from .views import _sound_detective_launch_url
 
 
@@ -56,7 +57,7 @@ class SoundDetectiveCatalogTests(SimpleTestCase):
         filipino_t = bank["Filipino"]["sets"][2]["items"][-1]
         self.assertEqual(
             filipino_t["image_url"],
-            "/static/pabasa_app/images/sound_detective/filipino/Set_5/itik.png",
+            "/static/" + canonical_asset_name("pabasa_app/images/sound_detective/filipino/Set_5/itik.png"),
         )
 
     def test_launch_url_uses_activity_route_prefixed_material_and_section(self):

@@ -4,6 +4,8 @@ from pathlib import Path
 
 from django.conf import settings
 
+from .static_assets import canonical_asset_name
+
 
 SOUNDS = {
     "English": ["m", "s", "t", "p", "b", "k", "f", "n", "r", "d"],
@@ -53,6 +55,7 @@ def catalog():
                     (language, set_index, asset_word),
                     f"pabasa_app/images/sound_detective/{folder}/Set_{set_index}/{filename}",
                 )
+                relative = canonical_asset_name(relative)
                 items.append({
                     "id": f"{folder[:2]}_set_{set_index}_{item_index}",
                     "word": display_word,
