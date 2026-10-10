@@ -7700,11 +7700,27 @@
         function getLocalCrlaComprehensionAudioUrl(button) {
             if (!isCrla || button !== crlaQuestionReadAloudBtn) return "";
             const title = String(currentSelectedStory?.title || "").trim().toLocaleLowerCase("fil-PH");
-            if (title !== "ang pagong at ang kuneho") return "";
+            const config = {
+                "ang pagong at ang kuneho": {
+                    folder: "crla%20comprehension_%20ang%20pagong%20at%20ang%20kuneho",
+                    filePrefix: "ang_pagong_at_ang_kuneho_question_",
+                },
+                // The seeded official title is "Isang Kakaibang Araw";
+                // accept the user-facing shortened title as well.
+                "isang kakaibang araw": {
+                    folder: "crla%20comprehension%20_%20ang%20kakaibang%20araw",
+                    filePrefix: "ang_kakaibang_araw_question_",
+                },
+                "ang kakaibang araw": {
+                    folder: "crla%20comprehension%20_%20ang%20kakaibang%20araw",
+                    filePrefix: "ang_kakaibang_araw_question_",
+                },
+            }[title];
+            if (!config) return "";
             const questionNumber = Number(currentStoryQuestionIndex) + 1;
             if (questionNumber < 1 || questionNumber > 6) return "";
             const number = String(questionNumber).padStart(2, "0");
-            return `/static/pabasa_app/crla/crla%20comprehension_%20ang%20pagong%20at%20ang%20kuneho/ang_pagong_at_ang_kuneho_question_${number}.mp3`;
+            return `/static/pabasa_app/crla/${config.folder}/${config.filePrefix}${number}.mp3`;
         }
 
         function getActiveCrlaRhymeWord(displayText) {
