@@ -7568,7 +7568,8 @@
             const localCrlaWordUrl = getLocalCrlaWordAudioUrl(text);
             const localCrlaSentenceUrl = getLocalCrlaSentenceAudioUrl(text);
             const localCrlaStoryUrl = getLocalCrlaStoryAudioUrl();
-            const localCrlaUrl = localCrlaWordUrl || localCrlaSentenceUrl || localCrlaStoryUrl;
+            const localCrlaComprehensionUrl = getLocalCrlaComprehensionAudioUrl(button);
+            const localCrlaUrl = localCrlaWordUrl || localCrlaSentenceUrl || localCrlaStoryUrl || localCrlaComprehensionUrl;
             if (localCrlaUrl) {
                 try {
                     readAloudAudio = new Audio(localCrlaUrl);
@@ -7675,6 +7676,16 @@
             if (segmentIndex > 8) return "";
             const segment = String(segmentIndex).padStart(2, "0");
             return `/static/pabasa_app/crla/ang%20pagong%20at%20ang%20kuneho/ang_pagong_at_ang_kuneho_segment_${segment}.mp3`;
+        }
+
+        function getLocalCrlaComprehensionAudioUrl(button) {
+            if (!isCrla || button !== crlaQuestionReadAloudBtn) return "";
+            const title = String(currentSelectedStory?.title || "").trim().toLocaleLowerCase("fil-PH");
+            if (title !== "ang pagong at ang kuneho") return "";
+            const questionNumber = Number(currentStoryQuestionIndex) + 1;
+            if (questionNumber < 1 || questionNumber > 6) return "";
+            const number = String(questionNumber).padStart(2, "0");
+            return `/static/pabasa_app/crla/crla%20comprehension_%20ang%20pagong%20at%20ang%20kuneho/ang_pagong_at_ang_kuneho_question_${number}.mp3`;
         }
 
         function getActiveCrlaRhymeWord(displayText) {
