@@ -7566,9 +7566,11 @@
             // lookup narrowly scoped so regular assessments, sentences,
             // passages, and template activities retain their existing API TTS.
             const localCrlaWordUrl = getLocalCrlaWordAudioUrl(text);
-            if (localCrlaWordUrl) {
+            const localCrlaSentenceUrl = getLocalCrlaSentenceAudioUrl(text);
+            const localCrlaUrl = localCrlaWordUrl || localCrlaSentenceUrl;
+            if (localCrlaUrl) {
                 try {
-                    readAloudAudio = new Audio(localCrlaWordUrl);
+                    readAloudAudio = new Audio(localCrlaUrl);
                     readAloudAudio.preload = "auto";
                     readAloudAudio.onended = stopReadAloud;
                     readAloudAudio.onerror = () => {
@@ -7649,6 +7651,19 @@
             if (!localWords.has(word)) return "";
             const folder = isCrlaRhymes ? "rhymes" : "words";
             return `/static/pabasa_app/crla/${folder}/${encodeURIComponent(word[0].toLocaleUpperCase("fil-PH") + word.slice(1))}.mp3`;
+        }
+
+        function getLocalCrlaSentenceAudioUrl(text) {
+            if (!isCrla || mode !== "sentence" || currentAssessmentBranch !== "sentences") return "";
+            const sentence = String(text || "").trim().replace(/\s+/g, " ").toLocaleLowerCase("fil-PH");
+            const files = {
+                "naglalaba si tatay sa palanggana.": "naglalaba_si_tatay_sa_palanggana.mp3",
+                "magpapalit ako ng kamiseta mamaya.": "magpapalit_ako_ng_kamiseta_mamaya.mp3",
+                "nilinis nila ang agiw rito.": "nilinis_nila_ang_agiw_rito.mp3",
+                "bumili kami ng bagong suklay.": "bumili_kami_ng_bagong_suklay.mp3",
+            };
+            const file = files[sentence];
+            return file ? `/static/pabasa_app/crla/sentence/${file}` : "";
         }
 
         function getActiveCrlaRhymeWord(displayText) {
