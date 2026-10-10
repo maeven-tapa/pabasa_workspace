@@ -236,6 +236,12 @@ L22_C_SYLLABLE_ALIASES = {
     'les': {'les'},
 }
 
+# Chirp 3 (en-PH) has been observed to transcribe the isolated Filipino
+# syllable /bu/ as the English spelling ``boo``. This is deliberately not a
+# general sound-alike rule: it belongs only to the indexed Gawain 1 evaluator
+# while its displayed target is exactly ``bu``.
+L22_G1_BU_STT_ALIASES = {'bu', 'boo'}
+
 # The English context is deliberately used as an STT hint for the C sound.
 # Google can therefore return the complete hinted word for the first pantig;
 # allow only the context word paired with that exact pantig.
@@ -250,7 +256,7 @@ L22_C_CONTEXT_ALIASES = {
 }
 
 
-def l22_c_pronunciation_match(expected_syllable, target_word, transcript, c_sound):
+def l22_c_pronunciation_match(expected_syllable, target_word, transcript, c_sound, activity_key=''):
     """Match one indexed Lesson 22 Cc pantig with strict STT aliases.
 
     The displayed pantig remains authoritative.  Only exact normalized
@@ -266,6 +272,8 @@ def l22_c_pronunciation_match(expected_syllable, target_word, transcript, c_soun
         return False
 
     accepted = set(L22_C_SYLLABLE_ALIASES.get(expected, {expected}))
+    if activity_key == 'aral-l22-g1-c-syllable-builder' and expected == 'bu':
+        accepted = set(L22_G1_BU_STT_ALIASES)
     if expected.startswith('c'):
         sound = str(c_sound or '').strip().lower()
         if sound == 'hard':

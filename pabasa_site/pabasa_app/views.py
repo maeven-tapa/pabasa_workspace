@@ -20377,6 +20377,7 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
                     request.POST.get('target_text'),
                     raw_transcript,
                     request.POST.get('l22_c_sound'),
+                    activity_key,
                 )
             elif activity_key == 'aral-l23-g1-n-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
                 event = dict(event)
@@ -25127,6 +25128,7 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
                 target_text,
                 transcript,
                 request.POST.get('l22_c_sound'),
+                request.POST.get('prescribed_activity_key'),
             )
             analysis['complete'] = l22_match
             analysis['l22_c_pronunciation_match'] = l22_match

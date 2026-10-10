@@ -253,6 +253,29 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertFalse(l22_c_pronunciation_match('ca', 'Cagayan', 'cactus', 'hard'))
         self.assertTrue(l22_c_pronunciation_match('Ce', 'Celeste', '  se!  ', 'soft'))
 
+    def test_lesson22_gawain1_bu_accepts_observed_boo_only_for_the_exact_target(self):
+        activity = get_activity('aral-l22-g1-c-syllable-builder')
+        match = lambda expected, transcript, key=activity['activity_key']: l22_c_pronunciation_match(
+            expected, 'Cebu', transcript, 'soft', key,
+        )
+
+        self.assertTrue(match('bu', 'bu'))
+        self.assertTrue(match('bu', 'Boo.'))
+        self.assertTrue(match('bu', '  BOO  '))
+        for rejected in ('bow', 'bo', 'ba', 'bi', 'be', 'bus', 'book', 'boo now'):
+            self.assertFalse(match('bu', rejected), rejected)
+        self.assertFalse(match('ca', 'boo'))
+        self.assertFalse(match('bu', 'boo', 'aral-l22-g2-c-word-reading'))
+
+        state = initial_state()
+        apply_event(activity, state, {'action': 'reading_started'})
+        apply_event(activity, state, {
+            'action': 'reading_syllable_attempt', 'transcript': 'bu',
+        }, match('bu', 'Boo.'))
+        self.assertEqual(state['index'], 1)
+        self.assertEqual(state['reading_attempts'], 0)
+        self.assertEqual(state['last_feedback'], 'Tama!')
+
     def test_lesson22_cock_alias_does_not_leak_to_other_pantig(self):
         self.assertFalse(l22_c_pronunciation_match('ce', 'Cebu', 'cock', 'soft'))
         self.assertFalse(l22_c_pronunciation_match('tus', 'cactus', 'cock', 'hard'))
@@ -750,6 +773,40 @@ class PrescribedWorkbookFlowTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(response.json()['state']['index'], 1)
         self.assertEqual(response.json()['state']['last_transcript'], 'cock')
+
+    def test_lesson22_boo_alias_advances_through_the_normal_correct_result_path(self):
+        key = 'aral-l22-g1-c-syllable-builder'
+        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
+        state = initial_state()
+        response = self.client.post(
+            progress_url,
+            json.dumps({'action': 'reading_started', 'revision': state['revision']}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        state = response.json()['state']
+
+        def observed_stt_response(request):
+            expected = request.POST['l22_c_syllable']
+            transcript = 'Boo.' if expected == 'bu' else expected
+            return JsonResponse({
+                'success': True, 'transcript': transcript,
+                'raw_transcript': transcript, 'complete': False,
+            })
+
+        with patch('pabasa_app.views.reading_transcribe_api', side_effect=observed_stt_response):
+            for expected in ('cac', 'ce', 'ca', 'bu'):
+                response = self.client.post(progress_url, {
+                    'action': 'reading_syllable_attempt', 'revision': state['revision'],
+                    'audio': SimpleUploadedFile('reading.webm', b'audio', content_type='audio/webm'),
+                })
+                self.assertEqual(response.status_code, 200, response.content)
+                state = response.json()['state']
+                self.assertEqual(state['last_feedback'], 'Tama!')
+                self.assertEqual(state['reading_attempts'], 0)
+
+        self.assertEqual(state['index'], 4)
+        self.assertEqual(state['last_transcript'], 'bu')
 
     @patch('pabasa_app.views.synthesize_read_aloud_audio', return_value='encoded-audio')
     def test_lesson_22_read_aloud_uses_prescribed_filipino_voice(self, synthesize):
