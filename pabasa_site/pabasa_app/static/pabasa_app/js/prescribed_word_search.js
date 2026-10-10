@@ -286,7 +286,7 @@
       if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
         throw new Error('Microphone recording is not available in this browser.');
       }
-      const result = await window.Basahin.read({target_text:targetWord, language:'English', mode:'reading'}, {button:button, url:data.transcribe_url, deviceId:selectedMicDeviceId}); if (isActivityPaused) return;
+      const result = await window.Basahin.read({target_text:targetWord, language:'English', mode:'reading', prescribed_activity_key:'lesson-26-gawain-1'}, {button:button, url:data.transcribe_url, deviceId:selectedMicDeviceId}); if (isActivityPaused) return;
       const transcript = String(result.raw_transcript || result.transcript || '').trim();
       const saidTarget = result.complete === true;
       publishDebug({status: saidTarget ? 'Completed' : 'Error', transcript, normalized: normalizedWord(transcript), result: saidTarget ? 'Match' : 'Not Match', error: '—'}, `Transcript: ${transcript || '(empty)'} | Expected: ${targetWord} | Result: ${saidTarget ? 'Match' : 'Not Match'}`);

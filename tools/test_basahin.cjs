@@ -66,6 +66,89 @@ function environment({level = t => t % 4000 >= 800 && t % 4000 < 1500 ? 0.15 : 0
   return {api: window.Basahin, clock, recordings, contexts, streams, states, timers, window, makeStream};
 }
 
+function enableStreaming(e, {startError, finishError, hasSpeech = true, deferredFinish = false} = {}) {
+  const instances = [];
+  Object.defineProperty(e.window.AudioContext.prototype, 'audioWorklet', {configurable:true, value:{}});
+  e.window.WebSocket = class {};
+  e.window.AudioWorkletNode = class {};
+  e.window.location = {pathname:'/dashboard/assessment/activity/prescribed/lesson-13-gawain-3/'};
+  e.window.__PABASA_CRLA_PCM_WORKLET__ = '/worklet.js';
+  e.window.CrlaSpeechStream = class {
+    constructor(options) { this.options = options; this.active = true; instances.push(this); }
+    async start(stream) { this.stream = stream; if (startError) throw startError; }
+    async finish() {
+      if (finishError) throw finishError;
+      if (deferredFinish) await new Promise(resolve => {this.resolveFinish = resolve;});
+      this.resultToken = 'signed-final'; this.hasSpeech = hasSpeech;
+    }
+    stop() { this.active = false; this.resolveFinish?.(); }
+  };
+  return instances;
+}
+
+test('prescribed capture streams during speech, keeps audio and attaches only flushed signed results', async () => {
+  const e = environment(), live = enableStreaming(e, {deferredFinish:true});
+  let settled = false;
+  const captured = e.api.capture({fields:{language:'English'}}).then(blob => {settled = true; return blob;});
+  await e.clock.tick(1000);
+  assert.equal(live.length, 1); assert.equal(live[0].options.fields.language, 'English');
+  live[0].options.onInterim('The cat');
+  assert.equal(e.states.at(-1).provisional, true);
+  assert.equal(settled, false);
+  await e.clock.tick(3000);
+  assert.equal(settled, false, 'grading waits for provider flush');
+  live[0].resolveFinish(); await flush();
+  const blob = await captured, form = new FormData();
+  assert.ok(blob.size); assert.ok(blob.duration_ms);
+  e.api.attachStreamResult(form, blob);
+  assert.equal(form.get('prescribed_stream_token'), 'signed-final');
+  assert.equal(form.get('prescribed_stream_activity'), 'lesson-13-gawain-3');
+  assert.equal(live[0].active, false); assert.equal(e.streams[0].getTracks()[0].stops, 1);
+});
+
+test('startup unavailability preserves the complete clip but access rejection does not fall back', async () => {
+  for (const status of [503, 403]) {
+    const e = environment(); enableStreaming(e, {startError:Object.assign(Error('Unavailable'), {status})});
+    const promise = e.api.capture().catch(error => error);
+    await e.clock.tick(4000);
+    const result = await promise;
+    if (status === 503) { assert.ok(result.size); assert.equal(result.prescribedStream, undefined); }
+    else { assert.equal(result.status, 403); assert.equal(result.basahinCapture, true); }
+  }
+});
+
+test('active stream failure and empty finals cannot become wrong attempts or clip retries', async () => {
+  for (const failure of ['active', 'flush', 'empty']) {
+    const e = environment();
+    const live = enableStreaming(e, {hasSpeech:failure !== 'empty', finishError:failure === 'flush' ? Error('Flush failed') : null});
+    const promise = e.api.capture().catch(error => error);
+    await e.clock.tick(1000);
+    if (failure === 'active') live[0].options.onError(Error('Disconnected'));
+    await e.clock.tick(3000);
+    const error = await promise;
+    assert.equal(error.basahinCapture, true); assert.equal(error.size, undefined);
+    if (failure === 'empty') assert.equal(error.name, 'NoSpeechError');
+    assert.equal(live[0].active, false);
+  }
+});
+
+test('cancel during provider flush discards late signed results and releases capture', async () => {
+  const e = environment(), live = enableStreaming(e, {deferredFinish:true});
+  const pending = e.api.capture().catch(error => error);
+  await e.clock.tick(4000); e.api.cancelAll(); await flush();
+  assert.equal((await pending).name, 'AbortError'); assert.equal(live[0].active, false);
+  assert.equal(e.streams[0].getTracks()[0].stops, 1);
+});
+
+test('explicit Knowlez and Chirp 2 selections retain their original clip provider', async () => {
+  for (const selection of ['knowlez', 'chirp_2']) {
+    const e = environment(), live = enableStreaming(e);
+    e.window.PrescribedSttSettings = {selection};
+    const captured = e.api.capture(); await e.clock.tick(4000);
+    assert.ok((await captured).size); assert.equal(live.length, 0);
+  }
+});
+
 test('VAD ignores calibration and quiet audio; accepts sustained speech', () => {
   const {api} = environment(), vad = api.createVad();
   assert.equal(vad.sample(0.002, 0).calibrating, true);

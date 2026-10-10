@@ -12,6 +12,44 @@
   const emit = (state, detail = {}) => window.dispatchEvent(new CustomEvent('basahin:state', {detail: {state, ...detail}}));
   const noSpeechError = () => Object.assign(new Error('Walang narinig na boses. Pindutin ang Basahin upang subukan muli.'), {name: 'NoSpeechError'});
 
+  function prescribedContext(options) {
+    const path = window.location?.pathname || '';
+    let pageContext = {};
+    for (const node of document.querySelectorAll?.('script[type="application/json"]') || []) {
+      try {
+        const data = JSON.parse(node.textContent || '{}');
+        const candidate = data.activity || data;
+        if (candidate.activity_key) { pageContext = candidate; break; }
+      } catch (_) {}
+    }
+    const requestedKey = options.fields?.prescribed_activity_key || options.activityKey || window.__PABASA_PRESCRIBED_ACTIVITY__
+      || pageContext.activity_key
+      || document.querySelector?.('[data-activity-bootstrap]')?.dataset?.activityBootstrap
+      || path.match(/\/activity\/prescribed\/([^/]+)/)?.[1]
+      || path.match(/\/courses\/prescribed\/activity\/([^/]+)/)?.[1]
+      || path.match(/\/assessment\/activity\/(lesson-\d+-gawain-\d+)\//)?.[1]
+      || path.match(/\/assessment\/(lesson-\d+)\/(gawain-\d+)\//)?.slice(1).join('-');
+    const key = {'lesson2-gawain1': 'lesson-2-gawain-1', 'lesson3-gawain1': 'lesson-3-gawain-1'}[requestedKey] || requestedKey;
+    if (!key || options.streaming === false || options.diagnostics || options.onRecordingStarted) return null;
+    const selection = window.PrescribedSttSettings?.selection || 'google';
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!['google', 'chirp_3'].includes(selection) || !window.CrlaSpeechStream
+        || !window.WebSocket || !window.AudioWorkletNode || !AudioContext?.prototype
+        || !('audioWorklet' in AudioContext.prototype)
+        || !window.__PABASA_CRLA_PCM_WORKLET__) return null;
+    return {activity_key: key, language: options.fields?.language
+      || options.language || options.button?.dataset?.basahinLanguage || pageContext.language
+      || (document.documentElement?.lang === 'en' ? 'English' : 'Filipino')};
+  }
+
+  // Keep the original decodable audio for saved recordings, and carry only
+  // the server-signed, completely flushed transcript into the existing grader.
+  function attachStreamResult(form, audio) {
+    if (!audio?.prescribedStream) return;
+    form.set('prescribed_stream_token', audio.prescribedStream.token);
+    form.set('prescribed_stream_activity', audio.prescribedStream.activityKey);
+  }
+
   // Same adaptive RMS threshold as the CRLA reader. Frame counting deliberately
   // uses hysteresis: quiet frames decrease evidence instead of resetting it.
   function createVad() {
@@ -81,7 +119,8 @@
     const cancel = () => controller.abort();
     signal?.addEventListener('abort', cancel, {once: true});
     activeCaptures.add(cancel);
-    let stream, context, source, analyser, recorder, frame, timer;
+    let stream, context, source, analyser, recorder, frame, timer, live, opening, liveError;
+    let clipFallback = false;
     let ended = false, captured = false;
     const owned = !suppliedStream || !options.keepStream;
     let visualState;
@@ -138,7 +177,7 @@
               window.clearTimeout(timer);
               if (settled) return;
               const blob = new Blob(chunks, {type: recorder.mimeType || type || 'audio/webm'});
-              Object.defineProperty(blob, 'duration_ms', {value: recordingStartedAt ? Math.round(performance.now() - recordingStartedAt) : 0, enumerable: false});
+              Object.defineProperty(blob, 'duration_ms', {value: recordingStartedAt != null ? Math.round(performance.now() - recordingStartedAt) : 0, enumerable: false});
               vad.takeSpeech();
               diagnostic('stop', {bytes:blob.size,chunkCount:chunks.length,durationMs:recordingStartedAt?Math.round(performance.now()-recordingStartedAt):0,speechDetected:speechStarted});
               finish(speechStarted && blob.size ? null : noSpeechError(), blob);
@@ -146,6 +185,28 @@
             onRecorder?.(recorder);
             recordingStartedAt = performance.now();
             recorder.start();
+            const readingContext = prescribedContext(options);
+            if (readingContext) {
+              live = new window.CrlaSpeechStream({
+                fields: readingContext, startUrl: '/api/reading/prescribed-stream/start/',
+                csrf: () => decodeURIComponent(document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/)?.[1] || ''),
+                onInterim: transcript => {
+                  if (controller.signal.aborted || ended) return;
+                  options.onInterim?.(transcript);
+                  emit('interim', {transcript, provisional: true, button: options.button});
+                },
+                onFinal: () => {},
+                onError: error => { liveError = error; controller.abort(); },
+              });
+              controller.signal.addEventListener('abort', () => live.stop(), {once: true});
+              opening = live.start(stream).catch(error => {
+                // The complete MediaRecorder clip includes startup audio.
+                // Permission/context errors must never be hidden by fallback.
+                if (error.status === 400 || error.status === 403 || liveError) {
+                  liveError = error; controller.abort();
+                } else { clipFallback = true; live.stop(); }
+              });
+            }
             diagnostic('start', {mimeType:recorder.mimeType||type||'',at:Math.round(recordingStartedAt)});
             onRecordingStarted?.(recorder);
           } catch (error) { diagnostic('start_error', {name:error?.name||'Error'}); finish(error); }
@@ -192,13 +253,29 @@
           meter();
         }
       });
+      if (opening) {
+        setState('processing');
+        await opening;
+        if (controller.signal.aborted) throw liveError || abortError();
+        if (!clipFallback) {
+          await live.finish();
+          if (controller.signal.aborted || liveError) throw liveError || abortError();
+          if (!live.resultToken) throw new Error('Final speech result did not arrive. Please restart the microphone.');
+          if (live.hasSpeech === false) throw noSpeechError();
+          Object.defineProperty(audio, 'prescribedStream', {value: {
+            token: live.resultToken, activityKey: live.options.fields.activity_key,
+          }});
+        }
+      }
       captured = true;
       return audio;
     } catch (error) {
+      error = liveError || error;
       error.basahinCapture = true;
       throw error;
     } finally {
       ended = true;
+      live?.stop();
       window.clearTimeout(timer);
       window.cancelAnimationFrame(frame);
       if (recorder) {
@@ -220,6 +297,7 @@
       if (value !== undefined && value !== null) form.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
     }
     form.append('audio', audio, audio.type.includes('ogg') ? 'reading.ogg' : 'reading.webm');
+    attachStreamResult(form, audio);
     const csrf = decodeURIComponent(document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/)?.[1] || '');
     let timedOut = false;
     const request = new AbortController(), cancel = () => request.abort();
@@ -276,6 +354,7 @@
         for (let count = 0; count < (options.maxChunks ?? 25); count += 1) {
           const fields = {...getFields()};
           const blob = await capture({stream, button: visualButton, keepStream: true, signal: controller.signal, vad, startedAt,
+            fields, streaming: options.streaming, onInterim: options.onInterim,
             silenceMs: options.silenceMs, maxRecordingMs: options.maxRecordingMs,
             onState: (name, detail) => {
               options.onVad?.(name, detail);
@@ -365,5 +444,5 @@
   const isCaptureError = error => Boolean(error?.basahinCapture || ['AbortError', 'NoSpeechError'].includes(error?.name));
   const bindActivity = (button, action) => window.BasahinButton.bindActivity(button, action);
   const getActivity = button => window.BasahinButton.getActivity(button);
-  window.Basahin = Object.freeze({CHUNK_MS, SILENCE_MS, MAX_RECORDING_MS, createVad, openMicrophone, capture, transcribe, create, read, cancelAll, isCaptureError, bindActivity, getActivity});
+  window.Basahin = Object.freeze({CHUNK_MS, SILENCE_MS, MAX_RECORDING_MS, createVad, openMicrophone, capture, transcribe, create, read, cancelAll, isCaptureError, bindActivity, getActivity, attachStreamResult});
 })();

@@ -8167,7 +8167,7 @@ def admin_prescribed_activity_screen(request, activity_key):
         response = prescribed_activity_page(request, activity_key)
     if response.status_code == 200:
         script = (f'<script>window.__PABASA_ADMIN_PRESCRIBED_KEY__={json.dumps(activity_key)};</script>'
-                  f'<script src="{static("pabasa_app/js/admin_prescribed_preview.js")}"></script>')
+                  f'<script src="{static("pabasa_app/js/admin_prescribed_preview.js")}?v=prescribed-stream-1"></script>')
         response.content = response.content.decode(response.charset).replace('<head>', '<head>' + script, 1)
         response['Cache-Control'] = 'no-store'
     return response
@@ -24657,6 +24657,12 @@ def lesson_1_gawain_1_transcribe_api(request):
     if not audio or not target_text:
         return JsonResponse({'success': False, 'error': 'Audio is required.'}, status=400)
 
+    from .crla_stream import prescribed_stream_transcript
+    try:
+        streamed = prescribed_stream_transcript(request, 'fil-PH')
+    except PermissionError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=403)
+
     if uses_knowlez_stt(request):
         try:
             transcript, model_used, _ = transcribe_knowlez_audio(audio, 'fil-PH')
@@ -24671,14 +24677,17 @@ def lesson_1_gawain_1_transcribe_api(request):
     if selected_model:
         words = []
         try:
-            transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
-                audio.read(), getattr(settings, 'GOOGLE_STT_API_KEY', '').strip(),
-                language_code='fil-PH', model=selected_model,
-                project_id=getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', '').strip(),
-                location=_chirp_location(selected_model),
-                credentials_file=str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or ''),
-                word_details=words, allow_fallback=False,
-            )
+            if streamed is not None:
+                transcript, model_used, fallback_reason = streamed, 'chirp_3', ''
+            else:
+                transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
+                    audio.read(), getattr(settings, 'GOOGLE_STT_API_KEY', '').strip(),
+                    language_code='fil-PH', model=selected_model,
+                    project_id=getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', '').strip(),
+                    location=_chirp_location(selected_model),
+                    credentials_file=str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or ''),
+                    word_details=words, allow_fallback=False,
+                )
             return JsonResponse({
                 'success': True, 'raw_transcript': transcript, 'transcript': transcript,
                 'stt_model': model_used, 'stt_provider': 'google', 'language_code': 'fil-PH',
@@ -24813,6 +24822,12 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
     if local_api_key_fallback:
         stt_model = 'latest_short'
         location = _chirp_location(stt_model)
+    from .crla_stream import prescribed_stream_transcript
+    if stream_transcript is None:
+        try:
+            stream_transcript = prescribed_stream_transcript(request, language_code)
+        except PermissionError as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=403)
     words = []
     try:
         if stream_transcript is not None:

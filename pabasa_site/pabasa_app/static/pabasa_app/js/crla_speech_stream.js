@@ -21,7 +21,7 @@
             const ticketTimeout = setTimeout(() => controller.abort(), 8000);
             let response;
             try {
-                response = await fetch('/api/reading/crla-stream/start/', {
+                response = await fetch(this.options.startUrl || '/api/reading/crla-stream/start/', {
                     method: 'POST', credentials: 'same-origin', signal: controller.signal,
                     headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.options.csrf()},
                     body: JSON.stringify(this.options.fields),
@@ -31,7 +31,7 @@
                 if (this.ticketController === controller) this.ticketController = null;
             }
             const result = await response.json();
-            if (!response.ok || !result.success || !this.active) throw new Error(result.error || 'Live speech is unavailable.');
+            if (!response.ok || !result.success || !this.active) throw Object.assign(new Error(result.error || 'Live speech is unavailable.'), {status: response.status});
             const url = new URL(result.path, window.location.href);
             url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
             const socket = new WebSocket(url.href);
@@ -61,6 +61,8 @@
                             if (this.active) await this.options.onFinal(message);
                         }).catch(error => this.fail(error)).finally(() => { this.queuedFinals--; });
                     } else if (message.type === 'finished') {
+                        this.resultToken = message.result_token;
+                        this.hasSpeech = message.has_speech;
                         serverEnded = true;
                         finishResolver(true);
                         if (!this.finishing) this.fail(new Error('Live speech ended unexpectedly. Please restart the microphone.'));

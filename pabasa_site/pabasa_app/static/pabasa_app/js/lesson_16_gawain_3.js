@@ -103,7 +103,7 @@
       stream = await window.Basahin.openMicrophone({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}},{signal:controller.signal});
       const blob = await window.Basahin.capture({button:document.getElementById('oral'),stream,signal:controller.signal});
       if (gen !== generation) return;
-      const form = new FormData(); form.append('audio',blob,'lesson16-gawain3-reading.webm');
+      const form = new FormData(); form.append('audio',blob,'lesson16-gawain3-reading.webm');window.Basahin.attachStreamResult?.(form,blob);
       form.append('target_text',screen.current_word); form.append('language','Filipino'); form.append('mode','reading');
       form.append('prescribed_activity_key','lesson-16-gawain-3');
       const response = await fetch(data.transcribe_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form,signal:controller.signal});

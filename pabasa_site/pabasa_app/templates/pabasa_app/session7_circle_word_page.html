@@ -254,7 +254,7 @@
           const blob = await window.Basahin.capture({button,stream,onRecorder:()=>{}});
           debugState({recorder:'Processing',vad:'Processing'}); stopTracks(); debugState({mic:'Stopped'});
           if (mine !== requestId) return;
-          const form = new FormData(); form.append('audio',blob,'session7-lesson19-gawain3.webm'); form.append('target_text',word); form.append('language','Filipino'); form.append('mode','reading');
+          const form = new FormData(); form.append('audio',blob,'session7-lesson19-gawain3.webm');window.Basahin.attachStreamResult?.(form,blob); form.append('target_text',word); form.append('language','Filipino'); form.append('mode','reading');
           window.__session7L19G3ExpectedText = String(form.get('target_text'));
           const expectedField = document.getElementById('prescribed-s7-l19-g3-debug-expected'); if (expectedField) expectedField.textContent = window.__session7L19G3ExpectedText;
           const response = await fetch(d.transcribe_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form});

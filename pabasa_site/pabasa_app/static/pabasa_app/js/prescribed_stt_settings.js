@@ -42,7 +42,8 @@
   window.fetch = (input, options) => {
     const url = new URL(input?.url || input, window.location.href);
     const method = String(options?.method || input?.method || 'GET').toUpperCase();
-    const transcription = url.pathname === '/api/reading/transcribe/'
+    const transcription = url.pathname === '/api/reading/prescribed-stream/start/'
+      || url.pathname === '/api/reading/transcribe/'
       || url.pathname === '/api/reading/lesson-1-gawain-1/transcribe/';
     const workbookRecording = /^\/api\/dashboard\/assessment\/activity\/prescribed\/[^/]+\/progress\/$/.test(url.pathname)
       && options?.body instanceof FormData && options.body.has('audio');
@@ -55,6 +56,6 @@
     }
     return originalFetch(input, options);
   };
-  window.PrescribedSttSettings = Object.freeze({init});
+  window.PrescribedSttSettings = Object.freeze({init, get selection() { return selection; }});
   init();
 })();

@@ -46,7 +46,7 @@ test('selector routes recordings to Knowlez, preserves request data, and switche
   env.first.change('knowlez');
   assert.match(env.first.status.textContent, /Knowlez/);
   assert.equal(env.storage.get('pabasa.prescribed.stt-provider'), 'knowlez');
-  for (const url of ['/api/reading/transcribe/', '/api/reading/lesson-1-gawain-1/transcribe/',
+  for (const url of ['/api/reading/prescribed-stream/start/', '/api/reading/transcribe/', '/api/reading/lesson-1-gawain-1/transcribe/',
     '/api/dashboard/assessment/activity/prescribed/aral-l22-g1-c-syllable-builder/progress/']) {
     await env.window.fetch(url, options);
     const sent = env.calls.at(-1).options;
@@ -130,7 +130,7 @@ test('Chirp choices persist and route model headers on every supported recording
 });
 
 test('speech debug shows raw word values, nulls, and the confidence limitation', () => {
-  const window = {};
+  const window = {addEventListener() {}};
   const debug = fs.readFileSync(path.join(__dirname,
     '../pabasa_site/pabasa_app/static/pabasa_app/js/speech_debug.js'), 'utf8');
   vm.runInNewContext(debug, {window, document: {querySelector: () => null}});
@@ -142,10 +142,10 @@ test('speech debug shows raw word values, nulls, and the confidence limitation',
 });
 
 test('workbook recording responses publish word values without consuming the response', async () => {
-  const output = {textContent: ''};
+  const output = {textContent: '', dataset: {}, closest: () => null};
   let payload = {transcript: 'bata', stt_model: 'chirp_2', stt_words: [{word: 'bata', confidence: 0.84}]};
   const response = {ok: true, clone: () => ({json: async () => payload})};
-  const window = {fetch: async () => response};
+  const window = {fetch: async () => response, addEventListener() {}};
   const debug = fs.readFileSync(path.join(__dirname,
     '../pabasa_site/pabasa_app/static/pabasa_app/js/speech_debug.js'), 'utf8');
   vm.runInNewContext(debug, {window, document: {

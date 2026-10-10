@@ -222,7 +222,7 @@
       render('Pinoproseso…');
       await speak('Pinoproseso…');
       const form = new FormData();
-      form.append('audio', blob, 'lesson24-gawain3-repeat.webm');
+      form.append('audio', blob, 'lesson24-gawain3-repeat.webm');window.Basahin.attachStreamResult?.(form,blob);
       form.append('action', 'reading');
       form.append('item_index', String(current()));
       form.append('revision', String(state.revision || 0));

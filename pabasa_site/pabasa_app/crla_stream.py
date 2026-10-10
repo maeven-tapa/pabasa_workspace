@@ -19,6 +19,7 @@ from django.views.decorators.http import require_POST
 logger = logging.getLogger(__name__)
 TICKET_SALT = 'crla-stream-start-v1'
 FINAL_SALT = 'crla-stream-final-v1'
+PRESCRIBED_RESULT_SALT = 'prescribed-stream-result-v1'
 STREAM_PATH = '/ws/reading/crla/'
 MAX_FRAME_BYTES = 12800
 
@@ -48,6 +49,95 @@ def decode_ticket(token, salt, session, max_age):
     if not constant_time_compare(payload['session'], session_binding(session)):
         raise PermissionError('Speech session expired. Start recording again.')
     return payload
+
+
+def authorize_prescribed(request, activity_key):
+    from . import views
+    user = views._current_user(request)
+    if (not user or user.is_archived or user.account_status == 'archived'
+            or user.role not in {'student', 'teacher', 'admin'}
+            or user.role != request.session.get('user_role')):
+        raise PermissionError('Sign in again to use speech recognition.')
+    activity = views.prescribed_activity(activity_key)
+    if not activity:
+        activity = next((item for item in views.LEGACY_SESSION_PROGRESS_ACTIVITIES
+                         if item['activity_key'] == activity_key), None)
+    if not activity:
+        raise PermissionError('This prescribed activity is unavailable.')
+    if user.role == 'student' and not views._student_can_open_prescribed_activity(user, activity_key):
+        raise PermissionError('This activity is not available for your account.')
+    return activity
+
+
+@csrf_protect
+@require_POST
+def prescribed_stream_ticket(request):
+    """Recognition only; the activity's existing endpoint still owns grading."""
+    from . import views
+    from .reading_stt import language_code_for
+    if not getattr(settings, 'CRLA_STREAMING_ENABLED', True):
+        return JsonResponse({'success': False, 'error': 'Streaming is disabled.'}, status=503)
+    try:
+        data = json.loads(request.body)
+        activity_key = str(data['activity_key'])
+        activity = authorize_prescribed(request, activity_key)
+        if data.get('language') and str(data['language']).lower() not in {'filipino', 'tagalog', 'english', 'fil-ph', 'en-ph', 'en-us'}:
+            raise ValueError('Invalid language.')
+        language = language_code_for(data.get('language') or activity.get('language', 'Filipino'), 'reading')
+        if language not in {'fil-PH', 'en-PH', 'en-US'}:
+            raise ValueError('Invalid language.')
+        model = views._requested_chirp_model(request) or getattr(settings, 'GOOGLE_STT_MODEL', 'chirp_3').strip()
+        if language == 'fil-PH' and not views._requested_chirp_model(request):
+            model = 'chirp_3'
+        if views.uses_knowlez_stt(request) or model != 'chirp_3':
+            return JsonResponse({'success': False, 'error': 'This provider uses clip recognition.'}, status=409)
+        payload = {'session': session_binding(request.session), 'purpose': 'prescribed',
+                   'activity_key': activity_key,
+                   'fields': {'language': language, 'mode': 'reading'}}
+        return JsonResponse({'success': True, 'ticket': signing.dumps(payload, salt=TICKET_SALT, compress=True),
+                             'path': STREAM_PATH})
+    except PermissionError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=403)
+    except (ValueError, TypeError, KeyError):
+        return JsonResponse({'success': False, 'error': 'Invalid reading context.'}, status=400)
+
+
+def prescribed_stream_transcript(request, language_code):
+    """Accept only a completed, signed provider utterance for this login/activity."""
+    token = request.POST.get('prescribed_stream_token')
+    if not token:
+        return None
+    from . import views
+    from .reading_stt import language_code_for
+    try:
+        result = decode_ticket(token, PRESCRIBED_RESULT_SALT, request.session, 300)
+        activity_key = result['activity_key']
+        if result.get('purpose') != 'prescribed' or not isinstance(result['transcript'], str):
+            raise ValueError('Invalid speech result.')
+        if not result['transcript'].strip():
+            raise ValueError('No final speech was received.')
+        authorize_prescribed(request, activity_key)
+        # Workbook endpoints supply the target from their locked current state.
+        # Never allow a recognition token to enable the official CRLA path.
+        expected = request.POST.get('prescribed_stream_activity')
+        if expected != activity_key or (request.POST.get('prescribed_activity_key')
+                                       and request.POST['prescribed_activity_key'] != activity_key):
+            raise ValueError('Speech activity changed.')
+        if '/activity/prescribed/' in request.path:
+            path_key = request.path.split('/activity/prescribed/', 1)[1].split('/', 1)[0]
+            path_key = {'lesson2-gawain1': 'lesson-2-gawain-1',
+                        'lesson3-gawain1': 'lesson-3-gawain-1'}.get(path_key, path_key)
+            if path_key != activity_key:
+                raise ValueError('Speech activity changed.')
+        if (request.POST.get('official_crla_assessment') == '1'
+                or request.POST.get('official_assessment_id')
+                or views.uses_knowlez_stt(request)
+                or views._requested_chirp_model(request) not in {'', 'chirp_3'}
+                or language_code_for(result['fields']['language'], 'reading') != language_code):
+            raise ValueError('Speech provider or language changed.')
+        return result['transcript']
+    except (signing.BadSignature, PermissionError, ValueError, TypeError, KeyError) as exc:
+        raise PermissionError('Speech session is unavailable. Start recording again.') from exc
 
 
 @csrf_protect
@@ -136,7 +226,10 @@ def validate_socket_ticket(token, session):
     request = HttpRequest()
     request.method = 'POST'
     request.session = session
-    authorize(request, int(payload['fields']['official_assessment_id']))
+    if payload.get('purpose') == 'prescribed':
+        authorize_prescribed(request, payload['activity_key'])
+    else:
+        authorize(request, int(payload['fields']['official_assessment_id']))
     return payload
 
 
@@ -224,6 +317,8 @@ async def crla_websocket(scope, receive, send):
         async def recognize():
             stream_id = uuid.uuid4().hex
             sequence = 0
+            utterance = []
+            transcript_size = 0
             responses = await client.streaming_recognize(requests=requests(), retry=None, timeout=260)
             await emit({'type': 'ready'})
             async for response in responses:
@@ -234,6 +329,15 @@ async def crla_websocket(scope, receive, send):
                     if not transcript:
                         continue
                     if result.is_final:
+                        if payload.get('purpose') == 'prescribed':
+                            transcript_size += len(transcript)
+                            if transcript_size > 20000:
+                                raise ValueError('Speech result exceeded the limit.')
+                            utterance.append(transcript)
+                            # Provisional display only; no grading until the entire
+                            # voiced utterance and the provider stream are flushed.
+                            await emit({'type': 'interim', 'transcript': ' '.join(utterance)})
+                            continue
                         sequence += 1
                         final = {**payload, 'transcript': transcript, 'id': f'{stream_id}:{sequence}'}
                         await emit({'type': 'final', 'id': final['id'], 'transcript': transcript,
@@ -241,7 +345,13 @@ async def crla_websocket(scope, receive, send):
                     else:
                         await emit({'type': 'interim', 'transcript': transcript})
             if not disconnected:
-                await emit({'type': 'finished'})
+                finished = {'type': 'finished'}
+                if payload.get('purpose') == 'prescribed':
+                    finished['has_speech'] = bool(utterance)
+                    finished['result_token'] = signing.dumps(
+                        {**payload, 'transcript': ' '.join(utterance)},
+                        salt=PRESCRIBED_RESULT_SALT, compress=True)
+                await emit(finished)
 
         reader = asyncio.create_task(read_audio())
         provider = asyncio.create_task(recognize())

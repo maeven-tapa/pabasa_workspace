@@ -144,7 +144,7 @@
         stream?.getTracks().forEach(track => track.stop()); stream = null;
         setDebug('mic', 'Inactive · Unmuted'); setDebug('status', 'Processing');
         if (mine !== token) return;
-        const form = new FormData(); form.append('audio',blob,'prescribed-reading.webm'); form.append('target_text',word); form.append('language','Filipino'); form.append('mode','reading');
+        const form = new FormData(); form.append('audio',blob,'prescribed-reading.webm');window.Basahin.attachStreamResult?.(form,blob); form.append('target_text',word); form.append('language','Filipino'); form.append('mode','reading');
         const response = await fetch('{% url "reading_transcribe_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form});
         const result = await response.json();
         restoreReadButton();

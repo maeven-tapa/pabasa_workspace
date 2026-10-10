@@ -52,6 +52,9 @@ const root = path.resolve(__dirname, '../pabasa_site/pabasa_app/static/pabasa_ap
       gain.gain.value = 0;
       tone.connect(gain).connect(output); tone.start();
       gain.gain.setValueAtTime(0.2, context.currentTime + 1.5);
+      gain.gain.setValueAtTime(0, context.currentTime + 2.7);
+      gain.gain.setValueAtTime(0.2, context.currentTime + 6);
+      gain.gain.setValueAtTime(0, context.currentTime + 7.2);
       navigator.mediaDevices.getUserMedia = async () => output.stream;
     });
     assert.equal(await page.locator('#record-verse').textContent(), 'Read');

@@ -456,7 +456,7 @@
       const audio=await window.Basahin.capture({button:document.getElementById('wb-basahin'),stream,onRecorder:value=>{recorder=activeRecorder=value;}});stream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
       if(!audio.size)throw Error('Hindi nakuha ang iyong boses. Subukan muli.');
       if(requestActivity!==a.activity_key||requestIndex!==Number(state.index||0)||requestRevision!==Number(state.revision||0))return;
-      setG7Feedback('Sinusuri ang iyong pagbasa...');await playPrescribedAudio('Sinusuri ang iyong pagbasa...',true);const form=new FormData();form.append('audio',audio,'reading.webm');
+      setG7Feedback('Sinusuri ang iyong pagbasa...');await playPrescribedAudio('Sinusuri ang iyong pagbasa...',true);const form=new FormData();form.append('audio',audio,'reading.webm');window.Basahin.attachStreamResult?.(form,audio);
       await send({action:'reading_attempt',item_index:requestIndex},form,false);render();
       if(state.completed)await playPrescribedAudio('Magaling! Natapos mo ang Gawain 7.',true);else if(state.last_feedback)await playPrescribedAudio(state.last_feedback,true).catch(()=>{});
     }catch(e){stream?.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;const denied=e?.name==='NotAllowedError'||e?.name==='SecurityError';const text=denied?'Hindi pinayagan ang mikropono.':e.message||'Hindi nakuha ang iyong boses. Subukan muli.';setG7Feedback(text,true);if(L24_G7_WORD_READING_MAPPED_TEXT.has(text))await playPrescribedAudio(text,true).catch(()=>{});
@@ -658,7 +658,7 @@
       stream.getTracks().forEach(t=>t.stop());if(activeStream===stream)activeStream=null;if(activeRecorder===recorder)activeRecorder=null;
       if(requestIndex!==Number(state.index||0)||requestRevision!==Number(state.revision||0))return;
       if(!audio?.size)throw Error('Hindi nakuha ang boses. Subukan muli.');
-      const form=new FormData();form.append('audio',audio,'reading.webm');
+      const form=new FormData();form.append('audio',audio,'reading.webm');window.Basahin.attachStreamResult?.(form,audio);
       attempt.submitted=true;console.info('L24_G4_GUIDED_SUBMIT',{word:target.text,at:performance.now(),count:1});
       const saved=await send({action:'reading_attempt',item_index:requestIndex},form,false,null,()=>pictureGuidedAttempt===attempt&&!attempt.controller.signal.aborted&&requestIndex===Number(state.index||0)&&requestRevision===Number(state.revision||0));
       console.info('L24_G4_GUIDED_API_RESULT',{word:target.text,at:performance.now(),success:Boolean(saved),accepted:saved?state.last_feedback==='Tama! Magaling!'||state.last_feedback==='Magaling! Natapos mo ang gawain.':false});
@@ -711,7 +711,7 @@
       const audio=await window.Basahin.capture({button:document.getElementById('wb-basahin'),stream,onRecorder:value=>{recorder=activeRecorder=value;}});stream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
       if(!audio.size)throw Error('Hindi nakuha ang iyong boses. Subukan muli.');
       if(requestActivity!==a.activity_key||requestId!==Number(state.index||0))return;
-      setJFeedback('Sinusuri...');if(jReading||qReading)await playPrescribedAudio('Sinusuri...',true);const form=new FormData();form.append('audio',audio,'reading.webm');
+      setJFeedback('Sinusuri...');if(jReading||qReading)await playPrescribedAudio('Sinusuri...',true);const form=new FormData();form.append('audio',audio,'reading.webm');window.Basahin.attachStreamResult?.(form,audio);
       await send({action:'reading_attempt'},form,false);render();
       if(l23G3){if(state.completed){await playPrescribedAudio('Mahusay!',true);await playPrescribedAudio('Natapos mo ang gawain!',true);}else if(G3_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}
       if(qReading){if(state.completed){await playPrescribedAudio('Mahusay!',true);await playPrescribedAudio('Natapos mo ang gawain!',true);}else if(G7_FEEDBACK_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}
@@ -829,10 +829,10 @@
       activeStream=await window.Basahin.openMicrophone({audio:true},{timeoutMs:8000});
       setG1ReadingState('listening');
       message('Nakikinig...');
-      const audio=await window.Basahin.capture({button:document.getElementById('wb-basahin'),stream:activeStream,onRecorder:value=>{recorder=activeRecorder=value;}});activeStream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
+      const audio=await window.Basahin.capture({button:document.getElementById('wb-basahin'),stream:activeStream,language:l22G1&&a.reading_contexts?.[a.items[requestIndex]?.id]?'English':a.language||'Filipino',onRecorder:value=>{recorder=activeRecorder=value;}});activeStream.getTracks().forEach(t=>t.stop());activeStream=null;activeRecorder=null;
       if(!audio.size)throw new Error('Walang nakuha sa recording. Subukan muli.');
       if(requestActivity!==a.activity_key||requestIndex!==Number(state.index||0))return;
-      const form=new FormData();form.append('audio',audio,'reading.webm');message('Sinusuri ang iyong pagbasa...');
+      const form=new FormData();form.append('audio',audio,'reading.webm');window.Basahin.attachStreamResult?.(form,audio);message('Sinusuri ang iyong pagbasa...');
       setG1ReadingState('processing');
       await send({action:'reading_syllable_attempt',item_index:requestIndex},form,false);render();
       pendingSpeech=state.read_aloud_completed?'Magaling! Nabasa mo nang tama ang lahat ng pantig.':state.last_feedback==='Tama!'?'Tama!':'Subukan muli.';
@@ -1062,7 +1062,7 @@
       stream=await window.Basahin.openMicrophone({audio:true});
       message(fil?'Nakikinig...':'Listening...');
       const audio=await window.Basahin.capture({button:document.getElementById('wb-basahin'),stream});
-      stream.getTracks().forEach(t=>t.stop());message(fil?'Pinakikinggan ang iyong pagbasa…':'Checking your reading…');const form=new FormData();form.append('audio',audio,'reading.webm');await send(null,form);render();
+      stream.getTracks().forEach(t=>t.stop());message(fil?'Pinakikinggan ang iyong pagbasa…':'Checking your reading…');const form=new FormData();form.append('audio',audio,'reading.webm');window.Basahin.attachStreamResult?.(form,audio);await send(null,form);render();
     }catch(e){message(e.message||'Microphone unavailable. Please try again.',true);}finally{stream?.getTracks().forEach(t=>t.stop());busy=false;lock();}
   }
   async function aloud(){

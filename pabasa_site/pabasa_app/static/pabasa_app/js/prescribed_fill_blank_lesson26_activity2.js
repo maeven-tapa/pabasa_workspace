@@ -132,7 +132,7 @@
     }
     button.textContent = 'Listening…'; if (status) status.textContent = 'Listening…';
     try {
-      const attempt = generation; const result = await window.Basahin.read({target_text:word, language:'English', mode:'reading'}, {button:button, url:data.transcribe_url}); if (attempt !== generation || isPaused) return;
+      const attempt = generation; const result = await window.Basahin.read({target_text:word, language:'English', mode:'reading', prescribed_activity_key:'lesson-26-gawain-2'}, {button:button, url:data.transcribe_url}); if (attempt !== generation || isPaused) return;
       const rawTranscript = String(result.raw_transcript || result.transcript || ''); const transcript = rawTranscript.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').match(/[a-z]+/g) || [];
       const correct = result.complete === true;
       publishDebug({status:'Processing', transcript:rawTranscript || 'No transcript returned.', normalized:transcript.join(' '), result:correct?'Match':'Not Match', recorder:'inactive'}, `Transcript: ${rawTranscript || '(empty)'}`);
@@ -270,7 +270,7 @@
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { if (status) status.textContent = 'Microphone recording is not available in this browser.'; button?.classList.remove('is-busy'); busy = false; await announce(RETRY_FEEDBACK); return; }
     button.textContent = 'Listening…';
     try {
-      const attempt = generation; const result = await window.Basahin.read({target_text:target, language:'English', mode:'sentence'}, {button:button, url:data.transcribe_url}); if (attempt !== generation || isPaused) return;
+      const attempt = generation; const result = await window.Basahin.read({target_text:target, language:'English', mode:'sentence', prescribed_activity_key:'lesson-26-gawain-2'}, {button:button, url:data.transcribe_url}); if (attempt !== generation || isPaused) return;
       const spokenText = String(result.raw_transcript || result.transcript || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\bhot\b/g, 'hat');
       const transcript = normalize(spokenText), correct = result.complete === true;
       publishDebug({status:'Processing', transcript:result.raw_transcript || result.transcript || 'No transcript returned.', normalized:transcript, result:correct?'Match':'Not Match', recorder:'inactive'}, `Transcript: ${result.raw_transcript || result.transcript || '(empty)'}`);

@@ -18,7 +18,7 @@ document.addEventListener('click',async event=>{
   try{
     if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('Hindi available ang mikropono.');
     stream=await window.Basahin.openMicrophone({audio:true});let chunks=[],recorder=null;const blob = await window.Basahin.capture({button:document.querySelector('[data-basahin-button]'),stream: stream, onRecorder: value => { recorder = value; }});
-    stream.getTracks().forEach(track=>track.stop());button.textContent='Sinusuri...';const form=new FormData();form.append('audio',blob,'lesson5-read.webm');form.append('target_text',x.word);form.append('language','Filipino');form.append('mode','reading');
+    stream.getTracks().forEach(track=>track.stop());button.textContent='Sinusuri...';const form=new FormData();form.append('audio',blob,'lesson5-read.webm');window.Basahin.attachStreamResult?.(form,blob);form.append('target_text',x.word);form.append('language','Filipino');form.append('mode','reading');
     const response=await fetch('{% url "reading_transcribe_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':token()},body:form}),result=await response.json();
     const heard=String(result.raw_transcript||result.transcript||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     if(result.success&&result.complete===true){phase='classify';tries=0;listens=0;render()}else{tries++;status.textContent=result.error||'Hindi narinig nang tama. Subukan muli.';if(tries>=3){document.getElementById('aloud').hidden=false}button.disabled=false;button.textContent=window.BasahinButton.LABEL}

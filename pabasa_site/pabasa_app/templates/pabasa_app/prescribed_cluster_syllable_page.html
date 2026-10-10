@@ -87,7 +87,7 @@ function render(message='',kind=''){
         stream=await window.Basahin.openMicrophone({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
         const chunks=[];const mimeType=recordingMimeType();const blob = await window.Basahin.capture({button:document.querySelector('[data-basahin-button]'),stream: stream});
         stopMedia();if(!blob.size)throw Error('Walang narinig na boses. Subukan muli.');if(mine!==requestId)return;
-        button.textContent='Pinoproseso...';const form=new FormData();form.append('audio',blob,'session7-lesson20-21.webm');form.append('target_text',items[index].word);form.append('language','Filipino');form.append('mode','reading');form.append('prescribed_activity_key',d.activity_key);
+        button.textContent='Pinoproseso...';const form=new FormData();form.append('audio',blob,'session7-lesson20-21.webm');window.Basahin.attachStreamResult?.(form,blob);form.append('target_text',items[index].word);form.append('language','Filipino');form.append('mode','reading');form.append('prescribed_activity_key',d.activity_key);
         debugEvent({status:'Processing',recorder:'Stopping',message:'Recording stop'});
         const response=await fetch(d.transcribe_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form}),data=await response.json().catch(()=>({}));
         if(mine!==requestId)return;

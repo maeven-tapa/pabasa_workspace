@@ -32,7 +32,7 @@
         stream,
       });
       const form = new FormData();
-      form.append('audio', blob, 'rhyme.webm');
+      form.append('audio', blob, 'rhyme.webm');window.Basahin.attachStreamResult?.(form,blob);
       form.append('target_text', expectedWord);
       form.append('language', 'Filipino');
       form.append('mode', 'reading');

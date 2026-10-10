@@ -137,7 +137,7 @@ const mine=++request,b=app.querySelector('#oral');
 try{narrationRequest++;stop();playStartCue();if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('Hindi available ang mikropono.');b.disabled=true;b.textContent='Nakikinig...';stream=await window.Basahin.openMicrophone({audio:true});
 let parts=[],rec=null;const blob = await window.Basahin.capture({button:document.querySelector('[data-basahin-button]'),stream: stream, onRecorder: value => { rec = value; }});stop();
 if(mine!==request)return;b.textContent='Pinoproseso...';
-const f=new FormData();f.append('audio',blob,'session7-lesson19-gawain2.webm');f.append('target_text',items[n].word);f.append('language','Filipino');f.append('mode','reading');
+const f=new FormData();f.append('audio',blob,'session7-lesson19-gawain2.webm');window.Basahin.attachStreamResult?.(f,blob);f.append('target_text',items[n].word);f.append('language','Filipino');f.append('mode','reading');
 const r=await fetch(d.transcribe_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:f}),j=await r.json().catch(()=>({}));
  if(mine!==request)return;
  if(r.ok&&j.success&&j.complete===true){s.completed_oral_reads=[...new Set([...s.completed_oral_reads,n])];s.stt_attempts[key(n)]=0;s.tts_plays[key(n)]=0;s.phase='written_answer';await save();void narrate('Tama ang pagbasa! Isulat naman ang pantig.');render('','',{suppressNarration:true})}else throw Error('Subukan muli. Basahin nang dahan-dahan.')}catch(e){if(mine===request){if(!window.Basahin.isCaptureError(e)){s.stt_attempts[key(n)]=Math.min(3,(s.stt_attempts[key(n)]||0)+1);}

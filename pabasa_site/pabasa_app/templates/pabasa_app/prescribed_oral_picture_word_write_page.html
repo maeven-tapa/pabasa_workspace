@@ -159,7 +159,7 @@
         if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('Hindi available ang mikropono.');
         button.disabled=true;button.textContent='Nakikinig…';stream=await window.Basahin.openMicrophone({audio:true});
         const blob=await window.Basahin.capture({button,stream,keepStream:false});stopMic();if(mine!==request)return;
-        const form=new FormData();form.append('audio',blob,'prescribed-reading.webm');form.append('target_text',items[index].answer);form.append('language','Filipino');form.append('mode','reading');
+        const form=new FormData();form.append('audio',blob,'prescribed-reading.webm');window.Basahin.attachStreamResult?.(form,blob);form.append('target_text',items[index].answer);form.append('language','Filipino');form.append('mode','reading');
         const response=await fetch('{% url "reading_transcribe_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form});const result=await response.json().catch(()=>({}));if(mine!==request)return;
         if(response.ok&&result.success&&result.complete===true){state.completed_oral_reads=[...new Set([...(state.completed_oral_reads||[]),index])];state.oral_attempts[String(index)]=0;state.read_aloud_plays[String(index)]=0;state.phase='written_answer';await save();render();await playFiles(['tama_pagbasa_isulat_salita_tts.mp3'])}
         else{state.oral_attempts[String(index)]=Math.min(3,(state.oral_attempts[String(index)]||0)+1);await save();render('Hindi pa. Subukan muli.','bad');await playFiles(['hindi_pa_tama_tts.mp3'])}

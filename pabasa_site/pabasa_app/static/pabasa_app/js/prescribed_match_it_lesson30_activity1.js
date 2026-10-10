@@ -105,7 +105,7 @@
     if(listenButton){listenButton.disabled=true;listenButton.classList.add('is-busy')}
     try{
       if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('Microphone recording is not available in this browser.');
-      const j = await window.Basahin.read({target_text:target, language:'English', mode:'reading'}, {button:document.getElementById('read'), url:d.transcribe_url}); if(attemptGeneration!==generation||paused)return; const heard=String(j.raw_transcript||j.transcript||''),ok=Boolean(j.success&&j.complete===true);
+      const j = await window.Basahin.read({target_text:target, language:'English', mode:'reading', prescribed_activity_key:'lesson-30-gawain-1'}, {button:document.getElementById('read'), url:d.transcribe_url}); if(attemptGeneration!==generation||paused)return; const heard=String(j.raw_transcript||j.transcript||''),ok=Boolean(j.success&&j.complete===true);
       emitDebug({status:ok?'Correct':'Try again',transcript:heard||'No transcript yet.',normalized:norm(heard)||'—',result:ok?'Correct':'Try again',mic:`Inactive · ${muted?'Muted':'Unmuted'}`,recorder:'inactive',vad:'waiting',error:'—',raw:`Transcript: ${heard||'No transcript yet.'} · Result: ${ok?'Correct':'Try again'}`});
       if(!ok){
         s.stt_attempts[target]=Math.min(3,Number(s.stt_attempts[target]||0)+1);

@@ -155,7 +155,7 @@
       try {
         stream = await window.Basahin.openMicrophone({audio: true});
         const blob = await window.Basahin.capture({button: read, stream});
-        const form = new FormData(); form.append('audio', blob, 'rhyme.webm'); form.append('target_text', word); form.append('language', 'Filipino'); form.append('mode', 'reading');
+        const form = new FormData(); form.append('audio', blob, 'rhyme.webm');window.Basahin.attachStreamResult?.(form,blob); form.append('target_text', word); form.append('language', 'Filipino'); form.append('mode', 'reading');
         const result = await (await fetch(config.transcribeUrl, {method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrf()}, body: form})).json();
         const normalizedTranscript = normalize(result.transcript);
         const actualCorrect = Boolean(result.success && result.complete === true);

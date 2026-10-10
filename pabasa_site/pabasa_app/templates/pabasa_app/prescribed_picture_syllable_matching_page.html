@@ -103,7 +103,7 @@
         const basahinAudio=await window.Basahin.capture({button:document.querySelector('[data-basahin-button]'),stream,signal:controller.signal});
           stopOral();
           try{
-            oralStatus='⏳ Pinoproseso…';renderOral('Pinoproseso ang iyong pagbasa…','good');const form=new FormData();form.append('audio',basahinAudio,'oral-reading.webm');form.append('target_text',items[oralIndex].label);form.append('language','Filipino');form.append('mode','reading');
+            oralStatus='⏳ Pinoproseso…';renderOral('Pinoproseso ang iyong pagbasa…','good');const form=new FormData();form.append('audio',basahinAudio,'oral-reading.webm');window.Basahin.attachStreamResult?.(form,basahinAudio);form.append('target_text',items[oralIndex].label);form.append('language','Filipino');form.append('mode','reading');
             if(mine!==oralRequest)return;
             const response=await fetch('{% url "reading_transcribe_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form,signal:controller.signal});
             const result=await response.json();if(!response.ok||!result.success||result.complete!==true)throw Error('Hindi pa malinaw ang pagbasa.');

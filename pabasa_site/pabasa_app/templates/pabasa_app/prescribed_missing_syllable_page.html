@@ -289,7 +289,7 @@
         if (attempt !== attemptVersion || controller.signal.aborted) return;
         button.textContent = 'Sinusuri…';
         if (attempt !== attemptVersion || controller.signal.aborted) return;
-        const form = new FormData(); form.append('audio', audio, 'prescribed-reading.webm'); form.append('target_text', item.word); form.append('language', 'Filipino'); form.append('mode', 'reading');
+        const form = new FormData(); form.append('audio', audio, 'prescribed-reading.webm');window.Basahin.attachStreamResult?.(form,audio); form.append('target_text', item.word); form.append('language', 'Filipino'); form.append('mode', 'reading');
         const response = await fetch('{% url "reading_transcribe_api" %}', {method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrf()}, body: form, signal: controller.signal});
         const result = await response.json();
         if (attempt !== attemptVersion || controller.signal.aborted) return;

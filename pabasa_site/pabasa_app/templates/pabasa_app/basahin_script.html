@@ -1,5 +1,9 @@
 {% load static %}
 <link rel="stylesheet" href="{% static 'pabasa_app/css/basahin.css' %}?v=3">
 <script src="{% static 'pabasa_app/js/basahin_button.js' %}?v=5"></script>
-<script src="{% static 'pabasa_app/js/basahin.js' %}?v=5"></script>
+{% firstof prescribed_activity_data.activity_key workbook_payload.activity.activity_key handwriting_activity_data.activity_key as basahin_activity_key %}
+{% if basahin_activity_key %}<script>window.__PABASA_PRESCRIBED_ACTIVITY__ = "{{ basahin_activity_key|escapejs }}";</script>{% endif %}
+<script>window.__PABASA_CRLA_PCM_WORKLET__ = "{% static 'pabasa_app/js/crla_pcm_worklet.js' %}";</script>
+<script src="{% static 'pabasa_app/js/crla_speech_stream.js' %}?v=prescribed-1"></script>
+<script src="{% static 'pabasa_app/js/basahin.js' %}?v=6"></script>
 <script src="{% static 'pabasa_app/js/numbered_progress_indicator.js' %}?v=21"></script>

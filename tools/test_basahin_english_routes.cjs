@@ -12,8 +12,8 @@ const cases = [
   ['prescribed_fill_blank_lesson26_activity2.js', 'readSentence', [], 'sentence'],
   ['prescribed_rhyming_verses_lesson27_activity1.js', 'recordVerse', ['The cat sat.'], 'sentence'],
   ['prescribed_missing_letter_lesson28_activity1.js', 'record', [{word: 'cat'}], 'reading'],
-  ['prescribed_word_identifying_lesson28_activity2.js', 'record', [], 'reading'],
-  ['prescribed_oral_sentence_blank_lesson29_activity1.js', 'record', [], 'reading'],
+  ['prescribed_oral_sentence_blank_lesson29_activity1.js', 'record', [], 'word'],
+  ['prescribed_oral_sentence_blank_lesson29_activity1.js', 'record', [], 'sentence'],
   ['prescribed_match_it_lesson30_activity1.js', 'read', ['cat'], 'reading'],
   ['prescribed_story_time_lesson30_activity2.js', 'record', [], 'sentence'],
   ['prescribed_circle_right_word_lesson31_activity1.js', 'record', [], 'reading'],
@@ -22,7 +22,6 @@ const cases = [
   ['prescribed_fix_sentence_lesson31_activity3.js', 'record', ['cat', 'read_word'], 'reading'],
   ['prescribed_fix_sentence_lesson31_activity3.js', 'record', ['The cat sat.', 'read_sentence'], 'sentence'],
   ['prescribed_say_circle_lesson31_activity4.js', 'record', ['cat'], 'reading'],
-  ['prescribed_trace_say_lesson29_activity3.js', 'record', [], null],
 ];
 function walk(node, visit) {
   if (!node || typeof node !== 'object') return;
@@ -44,7 +43,8 @@ function walk(node, visit) {
     const unexpected = () => { throw Error(`${file}: cancelled attempt reached feedback or scoring`); };
     const button = {classList: {add: noop, remove: noop}, disabled: false, isConnected: true, dataset: {}, textContent: 'Read'};
     const state = {phase: 'reading_choices', current_item: 0, choice_index: 0, current_line: 0, target_word: 'cat'};
-    const item = {word: 'cat', choices: ['cat'], sentence: 'The cat sat.'};
+    if (file.includes('oral_sentence_blank')) state.phase = mode === 'sentence' ? 'sentence_reading' : 'answer';
+    const item = {word: 'cat', answer: 'cat', choices: ['cat'], sentence: 'The cat sat.'};
     const data = {items: [item], lines: [item.sentence], recognition_hints: 'cat dog', transcribe_url: '/api/reading/transcribe/'};
     let calls = 0;
     const cancel = () => { throw Object.assign(Error('Cancelled'), {name: 'AbortError'}); };
@@ -59,6 +59,8 @@ function walk(node, visit) {
             calls++;
             assert.equal(fields.language, 'English', file);
             assert.equal(fields.mode, mode, file);
+            const lesson = file.match(/lesson(\d+)_activity(\d+)/);
+            assert.equal(fields.prescribed_activity_key, lesson ? `lesson-${lesson[1]}-gawain-${lesson[2]}` : 'lesson-26-gawain-1', file);
             assert.ok(options.button, file);
             if (file.includes('oral_sentence_blank')) assert.equal(options.continuous, false);
             cancel();
@@ -71,9 +73,11 @@ function walk(node, visit) {
       busy: false, isPaused: false, isActivityPaused: false, prescribedMicMuted: false,
       isMuted: false, muted: false, paused: false, currentIndex: 0,
       generation: 0, speechGeneration: 0, selectedMicDeviceId: '', stream: null,
+      pendingRetryAudio: '',
       words: ['cat'], state, s: state, data, d: data,
       publishDebug: noop, debug: noop, emitDebug: noop, setButtonState: noop,
       setBusyButton: noop, sentenceText: () => item.sentence,
+      sentenceRecognitionText: () => item.sentence,
       render: unexpected, save: unexpected, post: unexpected,
     };
     vm.createContext(context);

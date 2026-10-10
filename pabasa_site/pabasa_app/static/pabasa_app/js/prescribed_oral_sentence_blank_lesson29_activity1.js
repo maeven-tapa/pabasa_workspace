@@ -110,7 +110,7 @@
     emitDebug({status:'Listening', expected:readingSentence ? target : item.answer, mic:'Active · Unmuted', recorder:'Recording', vad:'waiting', error:'—', raw:'Listening for speech...'});
     try {
       // Word mode preserves extra spoken words so phase 1 can reject whole sentences.
-      const result = await window.Basahin.read({target_text:target, language:'English', mode:readingSentence ? 'sentence' : 'word'}, {button:document.getElementById('read'), url:data.transcribe_url, continuous:false});
+      const result = await window.Basahin.read({target_text:target, language:'English', mode:readingSentence ? 'sentence' : 'word', prescribed_activity_key:'lesson-29-gawain-1'}, {button:document.getElementById('read'), url:data.transcribe_url, continuous:false});
       if (attemptGeneration !== generation || paused) return;
       const rawHeard = String(result.raw_transcript || result.transcript || '');
       const heard = readingSentence ? sentenceTranscript(item, rawHeard) : rawHeard;

@@ -44,6 +44,11 @@
       const detail = event.detail || {}, state = detail.state;
       document.querySelectorAll('[data-speech-debug-output]').forEach(output => {
         const panel = panelFor(output);
+        if (state === 'interim') {
+          setPanelValue(panel, 'status', 'Listening (provisional)');
+          setPanelValue(panel, 'result', `Hearing: ${detail.transcript || ''}`);
+          return;
+        }
         if (state === 'level') {
           setPanelValue(panel, 'vad', detail.speaking ? 'Speaking' : (detail.calibrating ? 'Calibrating' : 'Quiet'));
           setPanelValue(panel, 'mic', 'Active · Unmuted');

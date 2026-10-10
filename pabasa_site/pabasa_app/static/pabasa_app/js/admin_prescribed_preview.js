@@ -18,6 +18,7 @@
     Object.defineProperty(window, 'localStorage', {value: previewStorage});
     const evaluationPaths = new Set([
         '/api/reading/transcribe/', '/api/reading/read-aloud/',
+        '/api/reading/prescribed-stream/start/',
         '/api/template-activities/read-aloud/', '/api/template-activities/transcribe/',
         '/api/assessment/story-answer/check/', '/api/assessment/story-answer/transcribe/',
     ]);

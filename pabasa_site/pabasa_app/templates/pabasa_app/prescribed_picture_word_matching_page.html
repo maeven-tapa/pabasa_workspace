@@ -106,7 +106,7 @@
         const recording = await window.Basahin.capture({button, stream, signal:controller.signal});
         if (attempt !== attemptVersion || controller.signal.aborted) return;
         stopOral(); oralStatus = '⏳ Pinoproseso…'; renderOral('Pinoproseso ang iyong pagbasa…', 'good');
-        const form = new FormData(); form.append('audio', recording, 'lesson16-gawain3-reading.webm'); form.append('target_text', item.read_word); form.append('language', 'Filipino'); form.append('mode', 'reading');
+        const form = new FormData(); form.append('audio', recording, 'lesson16-gawain3-reading.webm');window.Basahin.attachStreamResult?.(form,recording); form.append('target_text', item.read_word); form.append('language', 'Filipino'); form.append('mode', 'reading');
         const response = await fetch(data.transcribe_url, {method:'POST', credentials:'same-origin', headers:{'X-CSRFToken':csrf()}, body:form, signal:controller.signal}), result = await response.json().catch(() => ({}));
         if (attempt !== attemptVersion || controller.signal.aborted) return;
         if (!response.ok || !result.success || result.complete !== true) throw Error('Hindi pa. Subukan muli.');
