@@ -7562,6 +7562,34 @@
             button?.classList.add("is-playing");
             if (button) button.innerHTML = '<i class="bi bi-hourglass-split"></i> Loading';
 
+            // Official CRLA Words uses the reviewed local recordings. Keep this
+            // lookup narrowly scoped so regular assessments, sentences,
+            // passages, and template activities retain their existing API TTS.
+            const localCrlaWordUrl = getLocalCrlaWordAudioUrl(text);
+            if (localCrlaWordUrl) {
+                try {
+                    readAloudAudio = new Audio(localCrlaWordUrl);
+                    readAloudAudio.preload = "auto";
+                    readAloudAudio.onended = stopReadAloud;
+                    readAloudAudio.onerror = () => {
+                        setSpeechStatus("Read aloud had trouble.", "The local word audio is unavailable.");
+                        stopReadAloud();
+                    };
+                    if (button) button.innerHTML = '<i class="bi bi-stop-fill"></i> Stop Audio';
+                    button?.classList.add("is-playing");
+                    button?.removeAttribute("disabled");
+                    await readAloudAudio.play();
+                } catch (error) {
+                    if (controller.signal.aborted || readAloudController !== controller) return;
+                    console.warn("PABASA: Local CRLA word audio failed", error);
+                    setSpeechStatus("Read aloud had trouble.", "The local word audio is unavailable.");
+                    stopReadAloud();
+                } finally {
+                    if (readAloudController === controller) isReadAloudLoading = false;
+                }
+                return;
+            }
+
             const formData = new FormData();
             formData.append("target_text", text);
             formData.append("mode", mode);
@@ -7603,6 +7631,17 @@
             } finally {
                 if (readAloudController === controller) isReadAloudLoading = false;
             }
+        }
+
+        function getLocalCrlaWordAudioUrl(text) {
+            if (!isCrla || mode !== "word") return "";
+            const word = String(text || "").trim().toLocaleLowerCase("fil-PH");
+            const localWords = new Set([
+                "binti", "pito", "tubig", "pagod", "kanta",
+                "regalo", "butiki", "halaman", "malapot", "gagamba",
+            ]);
+            if (!localWords.has(word)) return "";
+            return `/static/pabasa_app/crla/words/${encodeURIComponent(word[0].toLocaleUpperCase("fil-PH") + word.slice(1))}.mp3`;
         }
 
         function stopReadAloud() {
