@@ -812,7 +812,13 @@
         if(window.confirm(`Sigurado ka bang gusto mong magsimula muli? Mawawala ang kasalukuyang progreso sa ${qBuilder?'Gawain 6':'Gawain 1'}.`)) perform({action:'restart'});
       },false);
       restart.classList.add('wb-secondary');
-      if(l22G1){restart.id='wb-l22-reset';readingPanel.appendChild(restart);}
+     }else if(!preview&&l22G1){
+       const restart=button('Ulitin Mula sa Simula',()=>{
+         if(window.confirm('Sigurado ka bang gusto mong magsimula muli? Mawawala ang kasalukuyang progreso sa Gawain 1.')) perform({action:'restart'});
+       },false);
+       restart.classList.add('wb-secondary');
+       restart.id='wb-l22-reset';
+       readingPanel.appendChild(restart);
     }
   }
   async function startCReading(){

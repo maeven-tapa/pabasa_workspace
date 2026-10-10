@@ -143,6 +143,14 @@ class Lesson22Gawain1AudioTests(SimpleTestCase):
         self.assertNotIn('wb-l22-g1-start-audio-retry', self.template)
         self.assertIn('id="wb-instruction-replay"', self.template)
 
+    def test_gawain1_restart_control_is_target_scoped_and_reachable(self):
+        self.assertIn("}else if(!preview&&l22G1){", self.js)
+        self.assertIn("restart.id='wb-l22-reset';", self.js)
+        self.assertIn("perform({action:'restart'})", self.js)
+        workbook = (Path(__file__).parent / 'prescribed_workbook.py').read_text(encoding='utf-8')
+        self.assertIn("def _apply_l22_c_builder", workbook)
+        self.assertIn("if action == 'restart':", workbook)
+
     def test_instruction_recording_hash_is_stable(self):
         digest = hashlib.sha256((self.audio_dir / 'Basahin_ang_mga_pantig_mula_sa_Bid_box_TTS.mp3').read_bytes()).hexdigest()
         self.assertEqual(digest, 'dcd6d619b12abd1505e2fc508632f8dcb7269d9aa662d4e0c841b9bff3b26599')
