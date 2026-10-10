@@ -22871,8 +22871,6 @@ def session_4_gawain_5_page(request):
     progress = StudentActivityProgress.objects.filter(
         student=_active_prescribed_student(request), activity_key=activity_key
     ).first()
-    if progress and progress.activity_completed:
-        return redirect('assessment')
     raw_state = progress.state if progress and isinstance(progress.state, dict) else {}
     total_items = len(activity['items'])
     try:

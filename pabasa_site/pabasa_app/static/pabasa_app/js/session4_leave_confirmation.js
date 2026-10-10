@@ -11,6 +11,7 @@
       const no = document.getElementById(`${prefix}-leave-no`);
       const yes = document.getElementById(`${prefix}-leave-yes`);
       const pause = document.getElementById(`${prefix}-pause-modal`);
+      const pauseBack = config.pauseBackSelector ? document.querySelector(config.pauseBackSelector) : null;
       const back = document.querySelector(config.backSelector);
       if (!modal || !no || !yes) return;
       if (modal.dataset.leaveInitialized === 'true') return;
@@ -32,6 +33,11 @@
         open('activity');
       });
 
+      pauseBack?.addEventListener('click', event => {
+        event.preventDefault();
+        open('pause');
+      });
+
       no.addEventListener('click', event => {
         event.preventDefault();
         close();
@@ -51,7 +57,7 @@
             throw new Error('Session 4 leave save adapter is unavailable.');
           }
           await config.saveCurrentProgress(state);
-          window.location.href = '/dashboard/assessment/';
+          window.location.href = config.returnUrl || '/dashboard/assessment/';
         } catch (error) {
           console.error(`[${prefix} leave] save failed`, error);
           if (message) message.textContent = ERROR;
