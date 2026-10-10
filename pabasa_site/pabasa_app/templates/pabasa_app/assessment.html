@@ -1109,40 +1109,9 @@ document.addEventListener('DOMContentLoaded',()=>{setTimeout(()=>{const g=docume
         const fetchMaterialsFromDatabase = async (sectionId, classCode) => {
             try {
                 if (!sectionId) return null;
-                const selector = `section_id=${encodeURIComponent(sectionId)}`;
-                const response = await fetch(`/api/class/materials/?${selector}`);
-                const data = await response.json();
+                const data = await window.PabasaMaterials.load(sectionId);
                 if (data.success) {
-                    const officialKeys = [];
-                    Object.values(data.materials || {}).forEach((list) => {
-                        (Array.isArray(list) ? list : []).forEach((material) => {
-                            if (material && material.system_assessment_key) {
-                                officialKeys.push(material.system_assessment_key);
-                            }
-                        });
-                    });
-                    console.log("PABASA_OFFICIAL_TRACE", {
-                        stage: "fetch_materials_response",
-                        section_id: sectionId,
-                        official_keys: officialKeys,
-                        word_titles: (data.materials?.word || []).map((material) => material?.title || ""),
-                    });
-                    // Sync to localStorage for components like sidebar badges
-                    const readings = getStoredObject(readingsStorageKey);
-                    readings[String(sectionId)] = {
-                        materials: data.materials,
-                        official_assessments: data.official_assessments || [],
-                    };
-                    localStorage.setItem(readingsStorageKey, JSON.stringify(readings));
-
-                    // Store class metadata to ensure titles match what the teacher set
-                    const metadata = getStoredObject("pabasa_section_metadata");
-                    metadata[String(sectionId)] = {
-                        name: data.class_name || "Reading Class", 
-                        subject: data.subject || "Reading" 
-                    };
-                    localStorage.setItem("pabasa_section_metadata", JSON.stringify(metadata));
-                    
+                    // The shared loader updates the section-keyed listing once.
                     return data.materials;
                 }
             } catch (error) {
@@ -1173,10 +1142,10 @@ document.addEventListener('DOMContentLoaded',()=>{setTimeout(()=>{const g=docume
             const allKnownClasses = [...teacherClasses, ...studentClasses];
             
             // Autoritative sync: Fetch materials from DB for each joined class
-            for (const sectionId of joinedCodes) {
+            await Promise.all(joinedCodes.map(async (sectionId) => {
                 const knownClass = allKnownClasses.find((item) => String(item.id || item.section_id) === String(sectionId));
                 await fetchMaterialsFromDatabase(sectionId, knownClass?.code || '');
-            }
+            }));
 
             const metadataMap = getStoredObject("pabasa_section_metadata");
 

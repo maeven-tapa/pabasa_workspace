@@ -655,6 +655,7 @@ var getStudentClassData = window.getStudentClassData = function() {
                         classes_count: data.classes.length,
                     });
                     const studentSectionIds = data.classes.map(cls => cls.section_id || cls.id).filter(Boolean).map(String);
+                    window.PabasaMaterials.prune(studentSectionIds);
                     localStorage.setItem("pabasaStudentSectionIds", JSON.stringify(studentSectionIds));
                     localStorage.setItem("pabasa_student_joined_sections", JSON.stringify(data.classes));
                     localStorage.setItem("pabasaStudentSectionJoined", studentSectionIds.length > 0 ? "1" : "0");
@@ -670,9 +671,8 @@ var getStudentClassData = window.getStudentClassData = function() {
                     localStorage.setItem("pabasa_section_metadata", JSON.stringify(metadata));
 
                     // Fetch materials for each joined Section to keep the section-keyed cache up-to-date.
-                    const readings = {};
                     const materialsLoopStartedAt = performance.now();
-                    for (const cls of data.classes) {
+                    await Promise.all(window.PabasaMaterials.orderedClasses(data.classes).map(async (cls) => {
                         const materialFetchStartedAt = performance.now();
                         console.warn('PABASA_FRONTEND_PROFILE', {
                             stage: 'student_bootstrap_class_materials_fetch_start',
@@ -680,34 +680,23 @@ var getStudentClassData = window.getStudentClassData = function() {
                             timestamp: Math.round(materialFetchStartedAt * 100) / 100,
                         });
                         try {
-                            const materialSelector = `section_id=${encodeURIComponent(cls.section_id || cls.id)}`;
-                            const materialResponse = await fetch(`/api/class/materials/?${materialSelector}`);
+                            const materialData = await window.PabasaMaterials.load(cls.section_id || cls.id);
                             const responseDoneAt = performance.now();
-                            let materialJsonStartedAt = performance.now();
-                            const materialData = await materialResponse.json();
-                            const materialJsonDoneAt = performance.now();
                             console.warn('PABASA_FRONTEND_PROFILE', {
                                 stage: 'student_bootstrap_class_materials_fetch_complete',
                                 section_id: cls.section_id || cls.id,
                                 elapsed_fetch_ms: Math.round((responseDoneAt - materialFetchStartedAt) * 100) / 100,
-                                json_parse_ms: Math.round((materialJsonDoneAt - materialJsonStartedAt) * 100) / 100,
-                                status: materialResponse.status,
-                                ok: materialResponse.ok,
-                                materials_count: Array.isArray(materialData?.materials) ? materialData.materials.length : null,
+                                materials_count: Object.values(materialData.materials || {}).reduce((count, items) => count + (Array.isArray(items) ? items.length : 0), 0),
                             });
-                            if (materialData.success) {
-                                readings[String(cls.section_id || cls.id)] = materialData.materials;
-                            }
                         } catch (e) {
                             console.error(`Error fetching materials for class ${cls.code}:`, e);
                         }
-                    }
+                    }));
                     console.warn("PABASA_DASHBOARD_PROFILE", {
                         stage: 'student_bootstrap_materials_fetch_complete',
                         elapsed_ms: Math.round((performance.now() - materialsLoopStartedAt) * 100) / 100,
                         classes_count: data.classes.length,
                     });
-                    localStorage.setItem("pabasa_section_readings", JSON.stringify(readings));
                     
                     // Trigger updates for any components relying on these local storage keys
                     window.dispatchEvent(new CustomEvent('pabasa:student-class-updated', { bubbles: true }));

@@ -448,8 +448,7 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
         const proceedButton = modal.querySelector('.story-score-done');
         proceedButton.disabled = true;
         modal.hidden = false; document.body.style.overflow = 'hidden'; proceedButton.focus();
-        fetch(`/api/class/materials/?section_id=${encodeURIComponent(data.section_id || '')}`, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
-            .then(response => response.json()).then(payload => {
+        window.PabasaMaterials.load(data.section_id, { fresh: true }).then(payload => {
                 const materials = Object.values(payload.materials || {}).flat();
                 const normalizeMaterialId = value => String(value ?? '').trim().replace(/^material-/, '');
                 const storyId = normalizeMaterialId(data.material_id || data.id);

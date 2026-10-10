@@ -2343,6 +2343,9 @@
                     return false;
                 }
                 markMaterialSeen(data.material_id || materialId);
+                window.dispatchEvent(new CustomEvent('pabasa:practice-completed', {
+                    detail: { materialId: data.material_id || materialId },
+                }));
                 return isHuntMode ? submitHuntStarAward(metrics).then(() => true) : true;
             })
             .catch(e => {

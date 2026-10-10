@@ -916,9 +916,9 @@ class Assessment(models.Model):
         attempts = self.get_attempts(student)
         return attempts[-1] if attempts else None
 
-    def get_latest_attempt_summary(self, student=None):
+    def get_latest_attempt_summary(self, student=None, *, attempts=None):
         """Return a normalized view of the latest attempt metrics."""
-        attempt = self.get_latest_attempt(student)
+        attempt = self.get_latest_attempt(student) if attempts is None else (attempts[-1] if attempts else None)
         if not attempt:
             return {}
         return {

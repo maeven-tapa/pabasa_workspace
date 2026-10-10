@@ -65,6 +65,7 @@ OCR_ENGINE_UNAVAILABLE_MESSAGE = (
     'No OCR engine is currently configured. Image text extraction is temporarily unavailable.'
 )
 from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_items
+from .class_materials import ClassMaterialsProgress, listing_summary
 from django.db import transaction
 import re
 import traceback
@@ -33957,10 +33958,11 @@ def get_class_materials(request):
     """
     Returns all materials (assessments) for a class, organized by reading type.
     Accessible by both teachers (owners) and students (enrolled in class).
-    Query params: section_id
+    Query params: section_id, optional view=summary for compact card listings.
     Returns: { 'success': True, 'materials': { word: [...], sentence: [...], paragraph: [...] } }
     """
     try:
+        summary = request.GET.get('view') == 'summary'
         section_id = (request.GET.get('section_id') or '').strip()
         if not section_id:
             return JsonResponse({'success': False, 'error': 'section_id parameter required'}, status=400)
@@ -33971,7 +33973,7 @@ def get_class_materials(request):
             return JsonResponse({'success': False, 'error': 'Class access denied'}, status=403)
 
         try:
-            section = Section.objects.filter(pk=int(section_id), is_active=True).first()
+            section = Section.objects.select_related('teacher').filter(pk=int(section_id), is_active=True).first()
         except (TypeError, ValueError):
             return JsonResponse({'success': False, 'error': 'Invalid section_id'}, status=400)
         
@@ -34092,7 +34094,16 @@ def get_class_materials(request):
             practices_qs = practices_qs.filter(status='published')
 
         # Limit practice sets to the most recent 100 to avoid payload bloat
-        practices_qs = practices_qs[:100]
+        practices_qs = practices_qs.select_related('material')[:100]
+
+        materials_qs = materials_qs.select_related('assessment__section').prefetch_related(
+            Prefetch('assigned_sections', queryset=Section.objects.only('id', 'class_code')),
+        )
+        assessments_qs = assessments_qs.select_related('section').prefetch_related(
+            Prefetch('materials', queryset=Material.objects.only(
+                'id', 'assessment_id', 'content_text', 'prompt_text', 'created_at',
+            ).order_by('created_at'), to_attr='listing_materials'),
+        )
 
         # Build combined list sorted by created_at descending
         combined = []
@@ -34112,6 +34123,33 @@ def get_class_materials(request):
         for p in practices_qs:
             combined.append(('practice', p))
         combined.sort(key=lambda tup: getattr(tup[1], 'created_at', system_now()), reverse=True)
+
+        listing_materials = [obj for kind, obj in combined if kind == 'material']
+        listing_assessments = [obj for kind, obj in combined if kind == 'assessment']
+        listing_assessments.extend(mat.assessment for mat in listing_materials if mat.assessment_id)
+        listing_practices = [obj for kind, obj in combined if kind == 'practice']
+        progress = ClassMaterialsProgress(
+            request_user if is_requesting_student else None,
+            listing_materials, listing_assessments, listing_practices,
+        )
+        # These values are request-local. Never share learner state across users.
+        lifecycle = None
+        response_materials = [m for m in listing_materials if (
+            _is_story_response_material(m) or _is_retell_story_material(m)
+        )]
+        response_material_ids = [material.id for material in response_materials]
+        if is_requesting_student and any(
+            _is_story_reading_material(m) or m.id in response_material_ids for m in listing_materials
+        ):
+            lifecycle = _current_learning_context(request_user)
+        supplementary_scope = None
+        if is_requesting_student and response_materials:
+            try:
+                supplementary_scope = _current_supplementary_scope(
+                    request_user, response_materials[0], lifecycle,
+                )
+            except ValueError:
+                pass
 
         all_materials_flat = []
         materials = {'word': [], 'sentence': [], 'paragraph': [], 'story_reading': [], 'vowel': []}
@@ -34142,7 +34180,9 @@ def get_class_materials(request):
                 if is_requesting_student and request_user and is_dedicated_fluency_reading:
                     # A Fluency card is complete only after its dedicated audio
                     # submission is scored.  Generic rows must not mark it done.
-                    completed_result = _fluency_reading_completed_result(m, request_user)
+                    completed_result = progress.completed_result(
+                        m, remarks_prefix=ARAL_RESULT_PREFIXES['fluency-reading'],
+                    )
                     if completed_result:
                         student_has_completed = True
                         completed_attempt_count = 1
@@ -34157,14 +34197,7 @@ def get_class_materials(request):
                 elif is_requesting_student and request_user and _is_story_reading_material(m):
                     # Story Reading completion is recorded directly against the
                     # material. It is independent of any teacher grading state.
-                    lifecycle = _current_learning_context(request_user)
-                    completed_result = m.assessment_results.filter(
-                        student=request_user,
-                        attempt_status='completed',
-                        completed_at__isnull=False,
-                        supplementary_school_calendar=lifecycle.get('school_calendar'),
-                        supplementary_term=lifecycle.get('term'),
-                    ).order_by('-completed_at', '-created_at', '-id').first() if lifecycle.get('state') == 'ARAL_ACTIVE' else None
+                    completed_result = progress.completed_result(m, scope=lifecycle) if lifecycle.get('state') == 'ARAL_ACTIVE' else None
                     if completed_result:
                         student_has_completed = True
                         completed_attempt_count = 1
@@ -34177,16 +34210,10 @@ def get_class_materials(request):
                             'total_score': completed_result.total_score,
                         }
                 elif is_requesting_student and request_user and (_is_story_response_material(m) or _is_retell_story_material(m)):
-                    lifecycle = _current_learning_context(request_user)
-                    scope = None
-                    try:
-                        scope = _current_supplementary_scope(request_user, m, lifecycle)
-                    except ValueError:
-                        scope = None
-                    story_response_submission = StoryResponseSubmission.objects.filter(
-                        student=request_user, material=m,
-                        school_calendar=scope['school_calendar'], term=scope['term'],
-                    ).only('id', 'grade', 'status', 'submitted_at').first() if scope else None
+                    scope = supplementary_scope
+                    story_response_submission = progress.submission(
+                        m, scope, response_material_ids,
+                    )
                     if story_response_submission:
                         story_response_is_graded = (
                             story_response_submission.status == 'graded'
@@ -34197,13 +34224,7 @@ def get_class_materials(request):
                         # service has created a completed assessment result.
                         # Teacher grading is a separate, still-pending state.
                         if _is_retell_story_material(m):
-                            completed_result = m.assessment_results.filter(
-                                student=request_user,
-                                attempt_status='completed',
-                                completed_at__isnull=False,
-                                supplementary_school_calendar=scope['school_calendar'],
-                                supplementary_term=scope['term'],
-                            ).order_by('-completed_at', '-created_at', '-id').first() if scope else None
+                            completed_result = progress.completed_result(m, scope=scope) if scope else None
                             student_has_completed = completed_result is not None
                             completed_attempt_count = 1 if student_has_completed else 0
                         else:
@@ -34216,13 +34237,14 @@ def get_class_materials(request):
                         }
                 elif m.assessment:
                     if is_requesting_student and request_user:
-                        attempt_count = m.assessment.get_student_attempt_count(request_user)
+                        attempts = progress.attempts(m.assessment)
+                        attempt_count = len(attempts)
                         completed_attempt_count = len([
-                            attempt for attempt in m.assessment.get_attempts(request_user)
+                            attempt for attempt in attempts
                             if attempt.get('status') == 'completed'
                         ])
                         student_has_completed = completed_attempt_count > 0
-                        latest_attempt_summary = m.assessment.get_latest_attempt_summary(request_user)
+                        latest_attempt_summary = m.assessment.get_latest_attempt_summary(request_user, attempts=attempts)
                         if latest_attempt_summary.get('time_score') is not None:
                             latest_time_score = _clamp_score(latest_attempt_summary.get('time_score'))
 
@@ -34231,11 +34253,7 @@ def get_class_materials(request):
                         # direct material result is still authoritative for the
                         # student's completed state in this activity card.
                         if not student_has_completed:
-                            completed_result = m.assessment_results.filter(
-                                student=request_user,
-                                attempt_status='completed',
-                                completed_at__isnull=False,
-                            ).order_by('-completed_at', '-created_at', '-id').first()
+                            completed_result = progress.completed_result(m)
                             if completed_result:
                                 student_has_completed = True
                                 completed_attempt_count = 1
@@ -34312,11 +34330,14 @@ def get_class_materials(request):
                 # list.  Material status is user-entered/legacy data in a few
                 # places, so do not make Story Reading classification depend
                 # on the exact casing of "published".
+                if summary:
+                    item = listing_summary(item, kind=kind)
                 if _is_story_reading_material(m) and str(m.status or '').strip().lower() == 'published':
                     materials['story_reading'].append(item)
             elif kind == 'assessment':
                 a = obj
-                content_value = a.content or ''
+                first_material = a.listing_materials[0] if a.listing_materials else None
+                content_value = (first_material.content_text or first_material.prompt_text or '') if first_material else ''
                 title_value = a.title or (content_value[:150] + '...' if len(content_value) > 150 else content_value)
                 items_count = 1
                 # Compute completion state for this assessment. Attempt count is
@@ -34327,13 +34348,14 @@ def get_class_materials(request):
                 latest_attempt_summary = {}
                 latest_time_score = None
                 if is_requesting_student and request_user:
-                    attempt_count = a.get_student_attempt_count(request_user)
+                    attempts = progress.attempts(a)
+                    attempt_count = len(attempts)
                     completed_attempt_count = len([
-                        attempt for attempt in a.get_attempts(request_user)
+                        attempt for attempt in attempts
                         if attempt.get('status') == 'completed'
                     ])
                     student_has_completed = completed_attempt_count > 0
-                    latest_attempt_summary = a.get_latest_attempt_summary(request_user)
+                    latest_attempt_summary = a.get_latest_attempt_summary(request_user, attempts=attempts)
                     if latest_attempt_summary.get('time_score') is not None:
                         latest_time_score = _clamp_score(latest_attempt_summary.get('time_score'))
                 elif teacher_user and teacher_user.role == 'teacher':
@@ -34377,7 +34399,7 @@ def get_class_materials(request):
                 items_count = len(_practice_material_items(p))
                 # compute attempt count for practice
                 if is_requesting_student and request_user:
-                    attempt_count = len(p.get_attempts(request_user))
+                    attempt_count = progress.practice_attempt_count(p)
                 else:
                     attempt_count = len(p.get_attempts())
 
@@ -34405,6 +34427,8 @@ def get_class_materials(request):
                     'student_access': bool(getattr(p, 'student_access', False)),
                 }
 
+            if summary and kind != 'material':
+                item = listing_summary(item, kind=kind)
             item_type = str(item.get('item_type') or '').strip().lower()
             if item_type in materials:
                 materials[item_type].append(item)
@@ -34412,22 +34436,27 @@ def get_class_materials(request):
                 materials['word' if item_type == 'words' else 'vowel'].append(item)
             else:
                 materials.setdefault(item_type, []).append(item)
-            all_materials_flat.append(item)
+            if not summary:
+                all_materials_flat.append(item)
         
         logger.debug(f"Retrieved materials for section {section.id}: {sum(len(m) for m in materials.values())} total")
         
-        return JsonResponse({
+        payload = {
             'success': True,
             'section_id': section.id,
             'assessment_week_enabled': assessment_week_enabled,
             'official_crla_completed': official_crla_completed,
             'materials': materials,
             'official_assessments': official_assessments,
-            'all_materials': all_materials_flat,
             'class_code': section.class_code,
             'class_name': section.class_name,
             'subject': section.subject or 'Reading',
-        })
+        }
+        if not summary:
+            payload['all_materials'] = all_materials_flat
+        response = JsonResponse(payload)
+        response['Cache-Control'] = 'private, no-store'
+        return response
     
     except Exception as e:
         logger.error(f"Error getting class materials: {e}", exc_info=True)
