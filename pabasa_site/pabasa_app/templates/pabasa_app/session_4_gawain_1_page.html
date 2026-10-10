@@ -44,14 +44,17 @@ document.addEventListener('DOMContentLoaded',()=>{const instructionUrl="{% stati
 .lesson-13-gawain-1-page .lesson-13-button:disabled,.lesson-13-gawain-1-page .lesson-13-button:disabled:hover,.lesson-13-gawain-1-page .lesson-13-button:disabled:active{transform:none!important;filter:none!important;box-shadow:none!important;cursor:not-allowed!important}
 </style><script>
 (()=>{const d=JSON.parse(document.getElementById('lesson13-data').textContent||'{}'),progress=d.progress||{},state=progress.state||{},modal=document.getElementById('lesson-13-start'),start=document.getElementById('lesson-13-start-button'),later=document.getElementById('lesson-13-later-button');console.log('[Session 4 Gawain 1] saved progress:',progress);console.log('[Session 4 Gawain 1] has incomplete progress:',d.has_incomplete_progress);if(!modal||!start||!later||progress.activity_completed||!d.has_incomplete_progress)return;console.log('[Session 4 Gawain 1] showing resume modal');const closeModal=()=>{modal.style.display='none';modal.setAttribute('aria-hidden','true');modal.remove()};const label=modal.querySelector('.lesson-13-start-label'),title=modal.querySelector('.lesson-13-start-title');if(label)label.textContent='MAY NA-SAVE KANG PROGRESO!';if(title)title.textContent='May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?';start.textContent='IPAGPATULOY';later.textContent='MAGSIMULA MULI';const csrf='{{ csrf_token }}';const postReset=()=>fetch(d.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf,'X-Requested-With':'XMLHttpRequest'},body:JSON.stringify({reset:true,activity_key:d.activity_key,state:{current_index:0,completed_items:0,correct_items:0,total_items:Number(d.total_items||4),activity_completed:false,phase:'initial',state_version:0}})}).then(async response=>{const body=await response.json().catch(()=>({}));if(!response.ok||!body.success)throw new Error(body.error||'Hindi na-reset ang gawain.');return body});start.onclick=()=>{start.disabled=true;closeModal();window.__session4PlayInstructionForNewItem?.()};later.onclick=()=>{later.disabled=true;closeModal();postReset().then(()=>{window.location.href=d.test_resume_modal?window.location.pathname+'?resume_test=0':window.location.href}).catch(()=>{window.location.reload()})}})();
-</script>{% include 'pabasa_app/session4_prescribed_controls.html' with prefix='prescribed-s4g1' speech=False help_text='Basahin ang letra at sabihin ang tunog nito. Pakinggan ang halimbawa kung kailangan.' %}
+</script>{% include 'pabasa_app/session4_prescribed_controls.html' with prefix='prescribed-s4g1' speech=False help_variant='session-4-gawain-1' help_text='Basahin ang letra at sabihin ang tunog nito. Pakinggan ang halimbawa kung kailangan.' %}
+<script>(()=>{const ack=document.getElementById('prescribed-s4g1-help-ack'),close=document.getElementById('prescribed-s4g1-help-close');if(ack&&close&&ack.dataset.closeBound!=='true'){ack.dataset.closeBound='true';ack.addEventListener('click',()=>close.click())}})();</script>
 <style>.lesson-13-gawain-1-page #prescribed-s4g1-leave-modal{z-index:31;pointer-events:auto}.lesson-13-gawain-1-page #prescribed-s4g1-leave-no,.lesson-13-gawain-1-page #prescribed-s4g1-leave-yes{pointer-events:auto;cursor:pointer;transition:background-color .16s ease,transform .16s ease,box-shadow .16s ease}.lesson-13-gawain-1-page #prescribed-s4g1-leave-no:hover{background:#d9ece9}.lesson-13-gawain-1-page #prescribed-s4g1-leave-yes:hover{background:#218783;transform:translateY(-1px);box-shadow:0 5px 0 #187b7a,0 10px 18px #187b7a30}.lesson-13-gawain-1-page #prescribed-s4g1-leave-no:focus-visible,.lesson-13-gawain-1-page #prescribed-s4g1-leave-yes:focus-visible{outline:4px solid #f5d47c;outline-offset:3px}</style><div class="prescribed-s4-modal" id="prescribed-s4g1-leave-modal" role="dialog" aria-modal="true" aria-labelledby="prescribed-s4g1-leave-title" hidden><section class="prescribed-s4-modal-card"><div class="prescribed-s4-modal-head"><h2 id="prescribed-s4g1-leave-title">Sigurado ka bang gusto mong umalis?</h2></div><p id="prescribed-s4g1-leave-message">Babalikan mo ito kung saan ka huminto.</p><div class="prescribed-s4-pause-actions"><button class="secondary" id="prescribed-s4g1-leave-no" type="button">Manatili</button><button class="primary" id="prescribed-s4g1-leave-yes" type="button">Umalis</button></div></section></div>
 {% include 'pabasa_app/session4_prescribed_bootstrap.html' with prefix='prescribed-s4g1' speech=False data_id='lesson13-data' %}
 <script>
 (()=>{
+  const data=JSON.parse(document.getElementById('lesson13-data')?.textContent||'{}');
   const back=document.querySelector('.lesson-13-back');
   const pause=document.getElementById('prescribed-s4g1-pause-modal');
   const leave=document.getElementById('prescribed-s4g1-leave-modal');
+  const pauseBack=document.getElementById('prescribed-s4g1-back');
   const message=document.getElementById('prescribed-s4g1-leave-message');
   if(!back||!pause||!leave)return;
   back.addEventListener('click',event=>{
@@ -62,6 +65,17 @@ document.addEventListener('DOMContentLoaded',()=>{const instructionUrl="{% stati
     leave.hidden=false;
     document.getElementById('prescribed-s4g1-leave-no')?.focus();
   },true);
+  if(pauseBack&&pauseBack.dataset.pageLeaveBound!=='true'){
+    pauseBack.dataset.pageLeaveBound='true';
+    pauseBack.addEventListener('click',event=>{
+      event.preventDefault();
+      if(message)message.textContent='Babalikan mo ito kung saan ka huminto.';
+      leave.dataset.source='pause';
+      pause.hidden=true;
+      leave.hidden=false;
+      document.getElementById('prescribed-s4g1-leave-no')?.focus();
+    });
+  }
 })();
 </script>
 <script>
@@ -117,7 +131,8 @@ document.addEventListener('DOMContentLoaded',()=>{const instructionUrl="{% stati
         console.log('[S4G1 PAGE] saving before exit');
         await saveProgress();
         console.log('[S4G1 PAGE] save success');
-        window.location.href='/dashboard/assessment/';
+        if(!data.back_url)throw new Error('The prescribed return URL is unavailable.');
+        window.location.assign(data.back_url);
       }catch(error){
         console.error('[S4G1 PAGE] save failed',error);
         if(message)message.textContent='Hindi na-save ang iyong gawain. Subukan muli.';
@@ -192,3 +207,95 @@ document.addEventListener('DOMContentLoaded',()=>{const instructionUrl="{% stati
 </style>
 <script>document.addEventListener('DOMContentLoaded',()=>{const d=JSON.parse(document.getElementById('lesson13-data')?.textContent||'{}');if(!d.progress?.activity_completed)return;const app=document.getElementById('lesson-13-app');document.getElementById('lesson-13-start')?.remove();if(app&&!app.querySelector('.lesson-13-completion'))app.innerHTML='<div class="lesson-13-completion" role="dialog" aria-modal="true"><h2>Tapos na ang gawain! 🎉</h2><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><a class="lesson-13-button" href="'+d.back_url+'">BALIK SA AKING ARALIN</a></div>'},{once:true});</script>
 <script>window.showCompletion=()=>{const d=JSON.parse(document.getElementById('lesson13-data')?.textContent||'{}'),app=document.getElementById('lesson-13-app');document.getElementById('lesson-13-start')?.remove();if(app)app.innerHTML='<div class="lesson-13-completion" role="dialog" aria-modal="true"><h2>Tapos na ang gawain! 🎉</h2><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><a class="lesson-13-button" href="'+d.back_url+'">BALIK SA AKING ARALIN</a></div>'};</script>
+<style>
+  .lesson-13-gawain-1-page .lesson-13-title{height:auto!important;min-height:0!important;margin:0 auto 4px;font-size:clamp(1.45rem,2.9vw,2.7rem)!important;font-weight:700;line-height:1.12;text-wrap:balance}
+  .lesson-13-gawain-1-page .lesson-13-eyebrow{margin-bottom:10px}
+  .lesson-13-gawain-1-page .lesson-13-letter-area{width:min(390px,82vw);height:clamp(190px,26vh,235px);margin:12px auto 14px;border-width:4px;border-radius:28px;box-shadow:0 8px 20px #187b7a1c}
+  .lesson-13-gawain-1-page .lesson-13-letter{font-size:clamp(8rem,15vw,12rem);line-height:1}
+  .lesson-13-gawain-1-page .lesson-13-actions{width:min(680px,100%);margin:0 auto;gap:14px}
+  .lesson-13-gawain-1-page .lesson-13-actions .lesson-13-button{flex:1 1 260px;max-width:330px;height:72px;min-height:72px;padding:14px 22px;border-radius:22px;gap:12px;font-size:clamp(1.05rem,1.6vw,1.4rem);font-weight:800}
+  .lesson-13-gawain-1-page .lesson-13-actions #speak,.lesson-13-gawain-1-page .lesson-13-actions #listen{width:min(330px,100%);min-width:0;height:72px}
+  .lesson-13-gawain-1-page .lesson-13-actions .lesson-13-button i{font-size:1.65rem;line-height:1}
+  .lesson-13-gawain-1-page .lesson-13-actions #speak>span{font-size:clamp(1.05rem,1.6vw,1.4rem)!important;font-weight:800}
+  .lesson-13-gawain-1-page .lesson-13-progress{margin-top:16px}
+  @media(hover:hover) and (pointer:fine){
+    .lesson-13-gawain-1-page .lesson-13-button:not(:disabled):hover{background:#238f8b;transform:translateY(-2px);box-shadow:0 7px 15px #187b7a30,0 0 0 1px #187b7a10}
+    .lesson-13-gawain-1-page .lesson-13-button.secondary:not(:disabled):hover{background:#eaf8f5;color:#146d6b;box-shadow:0 7px 15px #187b7a22}
+  }
+  .lesson-13-gawain-1-page .lesson-13-button:not(:disabled):active{transform:translateY(0) scale(.98);box-shadow:0 2px 6px #187b7a25}
+  @media(max-width:520px){
+    .lesson-13-gawain-1-page .lesson-13-title{font-size:clamp(1.35rem,5.6vw,1.65rem)!important}
+    .lesson-13-gawain-1-page .lesson-13-letter-area{width:min(390px,82vw);height:clamp(180px,23vh,210px);margin:10px auto 12px}
+    .lesson-13-gawain-1-page .lesson-13-actions{gap:10px}
+    .lesson-13-gawain-1-page .lesson-13-actions .lesson-13-button,.lesson-13-gawain-1-page .lesson-13-actions #speak,.lesson-13-gawain-1-page .lesson-13-actions #listen{flex:1 1 100%;width:100%;max-width:none;height:64px;min-height:64px}
+    .lesson-13-gawain-1-page .lesson-13-progress{margin-top:12px}
+  }
+  @media(prefers-reduced-motion:reduce){.lesson-13-gawain-1-page .lesson-13-button{transition:none!important}.lesson-13-gawain-1-page .lesson-13-button:not(:disabled):hover,.lesson-13-gawain-1-page .lesson-13-button:not(:disabled):active{transform:none!important}}
+</style>
+<style>
+  .lesson-13-gawain-1-page #prescribed-s4g1-pause-modal .prescribed-s4-pause-actions button{transition:background-color .2s ease,color .2s ease,transform .2s ease,box-shadow .2s ease;cursor:pointer}
+  .lesson-13-gawain-1-page #prescribed-s4g1-pause-modal .prescribed-s4-pause-actions button:focus-visible{outline:3px solid #299e9a;outline-offset:3px}
+  @media(hover:hover) and (pointer:fine){
+    .lesson-13-gawain-1-page #prescribed-s4g1-pause-modal .prescribed-s4-pause-actions button:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 6px 14px #187b7a26}
+    .lesson-13-gawain-1-page #prescribed-s4g1-pause-modal .prescribed-s4-pause-actions .primary:not(:disabled):hover{background:#238f8b}
+    .lesson-13-gawain-1-page #prescribed-s4g1-pause-modal .prescribed-s4-pause-actions .secondary:not(:disabled):hover{background:#d9ece9;color:#194c51}
+  }
+  .lesson-13-gawain-1-page #prescribed-s4g1-pause-modal .prescribed-s4-pause-actions button:not(:disabled):active{transform:translateY(0) scale(.98);box-shadow:0 2px 6px #187b7a22}
+  @media(prefers-reduced-motion:reduce){.lesson-13-gawain-1-page #prescribed-s4g1-pause-modal .prescribed-s4-pause-actions button{transition:none}.lesson-13-gawain-1-page #prescribed-s4g1-pause-modal .prescribed-s4-pause-actions button:hover,.lesson-13-gawain-1-page #prescribed-s4g1-pause-modal .prescribed-s4-pause-actions button:active{transform:none}}
+</style>
+<style>
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal{padding:16px}
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-card{width:min(460px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow-y:auto;padding:22px 24px 20px;border-radius:22px}
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-head{margin-bottom:15px}
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-title{display:flex;align-items:center;gap:11px;min-width:0}
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-mark{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;border-radius:50%;background:#e4f5f2;color:#187b7a;font-size:1.35rem;font-weight:900}
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-head h2{color:#183e63;font-size:1.35rem;line-height:1.15;font-weight:800}
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-modal-close{flex:0 0 36px;transition:background-color .2s ease,color .2s ease,transform .2s ease}
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-steps{gap:9px}
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-step{align-items:center;gap:12px;padding:10px 11px;border:1px solid #e4eeed;border-radius:14px;background:#fbfdfd;color:#183e63}
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-icon{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border-radius:12px;font-size:1.1rem}
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-icon-book{background:#e4f5f2;color:#187b7a}
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-icon-mic{background:#eaf1fb;color:#416da0}
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-icon-next{background:#fff3d9;color:#9b742a}
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-step strong{color:#183e63;font-size:.95rem;line-height:1.25;font-weight:800}
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-step div>span{margin-top:3px;color:#405c6a;font-family:Nunito,"Segoe UI",sans-serif;font-size:.9rem;line-height:1.45;font-weight:500}
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-ack{display:flex;align-items:center;justify-content:center;min-height:48px;margin:16px auto 0;padding:11px 24px;border:0;border-radius:13px;background:#299e9a;color:#fff;font:inherit;font-size:.95rem;font-weight:800;cursor:pointer;box-shadow:0 4px 10px #187b7a24;transition:background-color .2s ease,transform .2s ease,box-shadow .2s ease}
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-ack:focus-visible{outline:3px solid #f5d47c;outline-offset:3px}
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-modal-close:focus-visible{outline:3px solid #299e9a;outline-offset:3px}
+  @media(hover:hover) and (pointer:fine){
+    .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-modal-close:hover{background:#dff3f0;color:#126c6b;transform:scale(1.04)}
+    .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-ack:hover{background:#218783;transform:translateY(-2px);box-shadow:0 7px 15px #187b7a30}
+  }
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-modal-close:active{transform:scale(.96)}
+  .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-ack:active{transform:translateY(0) scale(.98);box-shadow:0 2px 6px #187b7a25}
+  @media(max-width:520px){
+    .lesson-13-gawain-1-page #prescribed-s4g1-help-modal{padding:12px}
+    .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-card{width:calc(100vw - 28px);max-height:calc(100vh - 24px);padding:18px 16px 16px;border-radius:20px}
+    .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-head{margin-bottom:12px}
+    .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-step{gap:10px;padding:9px}
+    .lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-icon{flex-basis:36px;width:36px;height:36px}
+  }
+  @media(prefers-reduced-motion:reduce){.lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-modal-close,.lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-ack{transition:none}.lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-modal-close:hover,.lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-modal-close:active,.lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-ack:hover,.lesson-13-gawain-1-page #prescribed-s4g1-help-modal .prescribed-s4-help-ack:active{transform:none}}
+</style>
+<style>
+  .lesson-13-gawain-1-page .lesson-13-card:not(:has(.lesson-13-completion)){width:100%;max-width:960px;margin-inline:auto}
+  .lesson-13-gawain-1-page .lesson-13-actions{width:min(680px,100%);margin-inline:auto;gap:14px}
+  .lesson-13-gawain-1-page .lesson-13-actions .lesson-13-button{box-sizing:border-box;flex:1 1 0;max-width:330px;min-width:0;height:72px;min-height:72px;border:2px solid transparent;border-radius:22px}
+  .lesson-13-gawain-1-page .lesson-13-actions #speak,.lesson-13-gawain-1-page .lesson-13-actions #listen{flex:1 1 0;width:min(330px,100%);max-width:330px;min-width:0;height:72px;min-height:72px;padding:14px 22px!important;border:2px solid transparent!important;border-radius:22px!important;gap:12px!important;font-family:inherit!important;font-size:clamp(1.05rem,1.6vw,1.4rem)!important;font-weight:800!important;line-height:1.2!important}
+  .lesson-13-gawain-1-page .lesson-13-actions #speak:not(:disabled),.lesson-13-gawain-1-page .lesson-13-actions #listen:not(:disabled){box-shadow:0 6px 14px #187b7a24!important;transition:background-color .2s ease,color .2s ease,border-color .2s ease,transform .2s ease,box-shadow .2s ease!important}
+  .lesson-13-gawain-1-page .lesson-13-actions #speak:not(:disabled){background:#299e9a!important;color:#fff!important;border-color:transparent!important}
+  .lesson-13-gawain-1-page .lesson-13-actions #listen:not(:disabled){background:#fff!important;color:#187b7a!important;border-color:#94d9d6!important}
+  .lesson-13-gawain-1-page .lesson-13-actions #speak>span,.lesson-13-gawain-1-page .lesson-13-actions #listen>span{font-family:inherit!important;font-size:clamp(1.05rem,1.6vw,1.4rem)!important;font-weight:800!important;line-height:1.2!important}
+  .lesson-13-gawain-1-page .lesson-13-actions #speak [data-basahin-icon],.lesson-13-gawain-1-page .lesson-13-actions #listen i{width:1.25em;height:1.25em;flex:0 0 1.25em;font-size:inherit!important;line-height:1!important}
+  @media(hover:hover) and (pointer:fine){
+    .lesson-13-gawain-1-page .lesson-13-actions #speak:not(:disabled):hover,.lesson-13-gawain-1-page .lesson-13-actions #listen:not(:disabled):hover{transform:translateY(-2px)!important;box-shadow:0 8px 16px #187b7a2b!important;filter:none!important}
+    .lesson-13-gawain-1-page .lesson-13-actions #speak:not(:disabled):hover{background:#238f8b!important}
+    .lesson-13-gawain-1-page .lesson-13-actions #listen:not(:disabled):hover{background:#eaf8f5!important;color:#146d6b!important;border-color:#94d9d6!important}
+  }
+  .lesson-13-gawain-1-page .lesson-13-actions #speak:not(:disabled):active,.lesson-13-gawain-1-page .lesson-13-actions #listen:not(:disabled):active{transform:translateY(0) scale(.98)!important;box-shadow:0 2px 6px #187b7a25!important}
+  @media(max-width:520px){
+    .lesson-13-gawain-1-page .lesson-13-actions{width:min(100%,360px);gap:10px}
+    .lesson-13-gawain-1-page .lesson-13-actions #speak,.lesson-13-gawain-1-page .lesson-13-actions #listen{flex:1 1 100%;width:100%;max-width:none;height:64px;min-height:64px}
+  }
+  @media(prefers-reduced-motion:reduce){.lesson-13-gawain-1-page .lesson-13-actions #speak,.lesson-13-gawain-1-page .lesson-13-actions #listen{transition:none!important}.lesson-13-gawain-1-page .lesson-13-actions #speak:hover,.lesson-13-gawain-1-page .lesson-13-actions #listen:hover,.lesson-13-gawain-1-page .lesson-13-actions #speak:active,.lesson-13-gawain-1-page .lesson-13-actions #listen:active{transform:none!important}}
+</style>
