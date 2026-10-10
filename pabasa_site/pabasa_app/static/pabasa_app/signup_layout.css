@@ -1,0 +1,59 @@
+/* Shared spacing for student and teacher registration cards. */
+.signup-card-header {
+    flex-shrink: 0;
+    padding-bottom: 1rem;
+    margin-bottom: 1.1rem;
+    border-bottom: 1px solid rgba(16, 70, 110, .2);
+}
+
+.signup-card-header [data-signup-title] { margin-bottom: .4rem; }
+.signup-card-header [data-signup-login] { margin-bottom: 0; }
+.signup-error-row:has(#errorMessage.d-none) { display: none; }
+.signup-error-row .alert { margin-bottom: 0; }
+.signup-step > .birth-fields-row { gap: 1rem; }
+
+:is(.student-signup-form, .teacher-signup-form) .form-actions {
+    margin-top: 0;
+    padding-top: .9rem;
+    border-top: 1px solid rgba(16, 70, 110, .16);
+}
+
+@media (max-width: 767.98px) {
+    .signup-step > .col-md-4,
+    .signup-step > .col-md-2 { grid-column: span 6; }
+    .birth-fields-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+}
+
+@media (max-width: 575.98px) {
+    :is(.student-signup-form, .teacher-signup-form) .form-actions .btn {
+        min-width: 0;
+    }
+    :is(.student-signup-form, .teacher-signup-form) .form-actions .secondary-actions-row,
+    :is(.student-signup-form, .teacher-signup-form) .form-actions .step-actions-group {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+    .form-actions .secondary-actions-row .back-button { width: 100%; }
+    :is(.student-signup-form, .teacher-signup-form) .form-actions.is-privacy-step {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    :is(.student-signup-form, .teacher-signup-form) .form-actions.is-privacy-step .secondary-actions-row {
+        flex: 1 1 0;
+    }
+    :is(.student-signup-form, .teacher-signup-form) .form-actions.is-privacy-step .step-actions-group {
+        flex: 1 1 0;
+        width: auto;
+    }
+    :is(.student-signup-form, .teacher-signup-form) .form-actions.is-privacy-step .privacy-login-link {
+        order: 3;
+        flex: 1 0 100%;
+    }
+}
+
+@media (max-width: 359.98px) {
+    .signup-step > .col-md-4,
+    .signup-step > .col-md-2,
+    .signup-step > .col-md-6 { grid-column: 1 / -1; }
+    .birth-fields-row { grid-template-columns: 1fr; }
+}

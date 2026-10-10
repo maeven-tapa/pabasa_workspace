@@ -66,6 +66,7 @@ OCR_ENGINE_UNAVAILABLE_MESSAGE = (
 )
 from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_items
 from .class_materials import ClassMaterialsProgress, listing_summary
+from .email_branding import email_logo_html
 from django.db import transaction
 import re
 import traceback
@@ -4654,7 +4655,7 @@ def _send_pabasa_otp_email(subject, text_message, recipient_email, first_name, o
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                                 <tr>
                                     <td>
-                                        <div style="display: inline-block; background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.28); border-radius: 18px; color: #ffffff; font-family: Arial, sans-serif; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; padding: 8px 12px; text-transform: uppercase;">PABASA</div>
+                                        {email_logo_html()}
                                         <h1 style="color: #ffffff; font-family: Arial, sans-serif; font-size: 30px; line-height: 1.15; margin: 18px 0 8px;">{safe_heading}</h1>
                                         <p style="color: rgba(255,255,255,0.86); font-family: Arial, sans-serif; font-size: 14px; line-height: 1.55; margin: 0;">{safe_eyebrow}</p>
                                     </td>
@@ -4734,7 +4735,7 @@ def _send_pabasa_email(subject, text_message, recipients, *, heading=None, eyebr
         action_html = f'''<tr><td align="center" style="padding: 4px 0 18px;"><a href="{safe_action_url}" style="display: inline-block; background: #2EA8E5; color: #ffffff; font-family: Arial, sans-serif; font-size: 14px; font-weight: 800; text-decoration: none; padding: 13px 22px; border-radius: 999px; box-shadow: 0 10px 22px rgba(46, 168, 229, 0.22);">{safe_action_label}</a></td></tr>'''
     html_message = f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{safe_heading}</title></head>
 <body style="margin: 0; padding: 0; background: #F0F8FF;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: #F0F8FF; margin: 0; padding: 32px 12px;"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 620px; background: #ffffff; border-radius: 28px; overflow: hidden; border: 1px solid rgba(16, 70, 110, 0.12); box-shadow: 0 18px 42px rgba(16, 70, 110, 0.12);">
-<tr><td style="background: linear-gradient(135deg, #10466E 0%, #2EA8E5 72%, #FFD639 100%); padding: 28px 30px;"><div style="display: inline-block; background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.28); border-radius: 18px; color: #ffffff; font-family: Arial, sans-serif; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; padding: 8px 12px; text-transform: uppercase;">PABASA</div><h1 style="color: #ffffff; font-family: Arial, sans-serif; font-size: 30px; line-height: 1.15; margin: 18px 0 8px;">{safe_heading}</h1><p style="color: rgba(255,255,255,0.86); font-family: Arial, sans-serif; font-size: 14px; line-height: 1.55; margin: 0;">{safe_eyebrow}</p></td></tr>
+<tr><td style="background: linear-gradient(135deg, #10466E 0%, #2EA8E5 72%, #FFD639 100%); padding: 28px 30px;">{email_logo_html()}<h1 style="color: #ffffff; font-family: Arial, sans-serif; font-size: 30px; line-height: 1.15; margin: 18px 0 8px;">{safe_heading}</h1><p style="color: rgba(255,255,255,0.86); font-family: Arial, sans-serif; font-size: 14px; line-height: 1.55; margin: 0;">{safe_eyebrow}</p></td></tr>
 <tr><td style="padding: 30px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td>{_email_paragraphs(text_message)}</td></tr>{action_html}<tr><td style="padding-top: 6px;"><p style="color: #0F2D45; font-family: Arial, sans-serif; font-size: 14px; font-weight: 700; line-height: 1.6; margin: 0;">Thank you,<br>The PABASA Team</p></td></tr></table></td></tr>
 </table></td></tr></table></body></html>'''
     email = EmailMultiAlternatives(subject, text_message, settings.DEFAULT_FROM_EMAIL, recipients)
@@ -4746,7 +4747,7 @@ def _pabasa_email_shell(heading, eyebrow, content_html):
     """Use the OTP email's visual language for rich emails and attachments too."""
     return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{escape(heading)}</title></head>
 <body style="margin:0;padding:0;background:#F0F8FF;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#F0F8FF;padding:32px 12px;"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border-radius:28px;overflow:hidden;border:1px solid rgba(16,70,110,.12);box-shadow:0 18px 42px rgba(16,70,110,.12);">
-<tr><td style="background:linear-gradient(135deg,#10466E 0%,#2EA8E5 72%,#FFD639 100%);padding:28px 30px;"><div style="display:inline-block;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);border-radius:18px;color:#fff;font-family:Arial,sans-serif;font-size:12px;font-weight:800;letter-spacing:.12em;padding:8px 12px;">PABASA</div><h1 style="color:#fff;font-family:Arial,sans-serif;font-size:30px;line-height:1.15;margin:18px 0 8px;">{escape(heading)}</h1><p style="color:rgba(255,255,255,.86);font-family:Arial,sans-serif;font-size:14px;line-height:1.55;margin:0;">{escape(eyebrow)}</p></td></tr>
+<tr><td style="background:linear-gradient(135deg,#10466E 0%,#2EA8E5 72%,#FFD639 100%);padding:28px 30px;">{email_logo_html()}<h1 style="color:#fff;font-family:Arial,sans-serif;font-size:30px;line-height:1.15;margin:18px 0 8px;">{escape(heading)}</h1><p style="color:rgba(255,255,255,.86);font-family:Arial,sans-serif;font-size:14px;line-height:1.55;margin:0;">{escape(eyebrow)}</p></td></tr>
 <tr><td style="padding:30px;">{content_html}<p style="color:#0F2D45;font-family:Arial,sans-serif;font-size:14px;font-weight:700;line-height:1.6;margin:20px 0 0;">Thank you,<br>The PABASA Team</p></td></tr>
 </table></td></tr></table></body></html>'''
 

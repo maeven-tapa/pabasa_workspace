@@ -5,12 +5,12 @@
 <link rel="stylesheet" href="{% static 'pabasa_app/signup_dropdowns.css' %}">
 <script src="{% static 'pabasa_app/js/signup_dropdowns.js' %}" defer></script>
 <style>
-    /* Keep this sign-up flow within the visible browser viewport. */
+    /* Allow short and narrow viewports to scroll without clipping the form. */
     html,
     body.auth-layout {
-        height: 100%;
         min-height: 100svh;
-        overflow: hidden;
+        overflow-x: hidden;
+        overflow-y: auto;
     }
 
     .auth-nav-wrap {
@@ -22,12 +22,12 @@
 
     body.auth-layout > main.flex-grow-1 {
         min-height: 0;
-        overflow: hidden;
+        overflow: visible;
     }
 
     body.auth-layout > main.flex-grow-1 > .container {
-        max-height: 100%;
-        overflow: hidden;
+        max-height: none;
+        overflow: visible;
     }
 
     body {
@@ -55,7 +55,7 @@
     }
 
     .account-card .card-body {
-        padding: clamp(1.5rem, 4vw, 2.25rem) !important;
+        padding: clamp(1.25rem, 3vw, 1.75rem) !important;
     }
 
     .account-card h1,
@@ -176,7 +176,9 @@
     }
 
     .teacher-signup-form {
-        row-gap: 1.2rem;
+        display: grid;
+        gap: 1rem;
+        margin: 0;
     }
 
     .teacher-signup-form .form-actions {
@@ -217,7 +219,8 @@
     .signup-step.is-active {
         display: grid;
         grid-template-columns: repeat(12, minmax(0, 1fr));
-        gap: 1.05rem 1.15rem;
+        gap: 1rem 1.15rem;
+        align-items: start;
         width: 100%;
     }
 
@@ -227,12 +230,14 @@
         padding: 0;
         display: grid;
         gap: 0.45rem;
+        align-content: start;
     }
 
     .signup-step > [class*="col-"] .form-label {
-        min-height: 3.2rem;
+        min-height: 0;
         display: flex;
         align-items: flex-end;
+        margin-bottom: 0;
     }
 
     .signup-step > .col-12,
@@ -252,27 +257,24 @@
         grid-column: span 2;
     }
 
-    /* Keep School 2/4 as a stable 2x2 grid; feedback never participates in layout. */
+    /* Keep the school fields aligned without reserving empty label rows. */
     .signup-step[data-signup-step="1"] {
-        grid-auto-rows: 7.8rem;
+        grid-auto-rows: auto;
     }
 
     .signup-step[data-signup-step="1"] > .col-md-6 {
         position: relative;
-        display: block;
-        min-height: 7.8rem;
+        display: grid;
+        align-content: start;
     }
 
     .signup-step[data-signup-step="1"] > .col-md-6 > .form-label {
-        min-height: 3.2rem;
-        margin-bottom: 0.45rem;
+        min-height: 0;
+        margin-bottom: 0;
     }
 
     .signup-step[data-signup-step="1"] .signup-duplicate-feedback {
-        position: absolute;
-        top: 6.5rem;
-        left: 0;
-        right: 0;
+        position: static;
         min-height: 1.25rem;
         margin: 0;
     }
@@ -290,9 +292,10 @@
     }
 
     .birth-fields-row .form-label {
-        min-height: 3.2rem;
+        min-height: 0;
         display: flex;
         align-items: flex-end;
+        margin-bottom: 0;
     }
 
     @media (max-width: 767px) {
@@ -1125,6 +1128,7 @@
         height: auto;
     }
 </style>
+<link rel="stylesheet" href="{% static 'pabasa_app/signup_layout.css' %}?v=20261011-compact">
 {% endblock %}
 
 {% block content %}
@@ -1132,15 +1136,17 @@
     <div class="col-12 col-lg-9 col-xl-8 mx-auto">
         <article class="account-card card teacher-signup-card mx-auto">
             <div class="card-body p-4 p-md-5">
-                <div class="signup-card-topline">
-                    <span class="modern-chip mb-0">Teacher Account</span>
-                    <span class="signup-step-pill" data-step-status>Personal 1/3</span>
-                </div>
+                <div class="signup-card-header">
+                    <div class="signup-card-topline">
+                        <span class="modern-chip mb-0">Teacher Account</span>
+                        <span class="signup-step-pill" data-step-status>Personal 1/3</span>
+                    </div>
                     <h1 class="h4" data-signup-title>Create a Teacher Account</h1>
                     <p class="small" data-signup-login>Already have an account? <a href="{% url 'auth' %}">Login</a></p>
-                <form id="teacherSignupForm" method="post" class="row g-3 teacher-signup-form">
+                </div>
+                <form id="teacherSignupForm" method="post" class="teacher-signup-form">
                     {% csrf_token %}
-                    <div class="col-12">
+                    <div class="col-12 signup-error-row">
                         <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
                     </div>
                     <div class="signup-step is-active" data-signup-step="0">

@@ -3495,6 +3495,7 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="{% static 'pabasa_app/dashboard_branding.css' %}?v=20261011-sidebar-slide">
 </head>
 <body class="admin-preloading">
     <script>
@@ -3527,7 +3528,7 @@
             <div class="admin-sidebar-top">
                     <div class="admin-logo-row">
                         <a class="sidebar-logo-link admin-homepage-logo" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
-                            {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="pabasa-logo-svg" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" pnb_id="pnb-admin" pnbk_id="pnbk-admin" %}
+                            {% include "pabasa_app/partials/_pabasa_image_logo.html" with collapsible=True %}
                         </a>
 
                 </div>
@@ -3582,7 +3583,7 @@
                     <div class="admin-sidebar-top">
                         <div class="admin-logo-row">
                             <a class="sidebar-logo-link admin-homepage-logo" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
-                                {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="pabasa-logo-svg" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" pnb_id="pnb-admin-mobile" pnbk_id="pnbk-admin-mobile" %}
+                                {% include "pabasa_app/partials/_pabasa_image_logo.html" %}
                             </a>
                             <button class="admin-mobile-sidebar-close-btn" type="button" data-bs-dismiss="offcanvas" aria-label="Close sidebar">
                                 <i class="bi bi-x-lg" aria-hidden="true"></i>
@@ -3632,7 +3633,7 @@
                 <i class="bi bi-list"></i>
             </button>
             <a class="mobile-admin-logo admin-homepage-logo" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
-                {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="pabasa-logo-svg" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" pnb_id="adminMobilePnb" pnbk_id="adminMobilePnbk" %}
+                {% include "pabasa_app/partials/_pabasa_image_logo.html" %}
             </a>
         </div>
         <header class="admin-topbar d-none">
@@ -3834,6 +3835,7 @@
             } catch (e) { /* ignore storage errors */ }
 
             collapseBtn.addEventListener('click', function() {
+                document.body.classList.add('sidebar-motion-ready');
                 const next = !document.body.classList.contains('admin-sidebar-collapsed');
                 setCollapsed(next);
                 try { localStorage.setItem(key, next ? '1' : '0'); } catch (e) {}

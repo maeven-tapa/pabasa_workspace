@@ -1,0 +1,5 @@
+{% load static %}
+<img class="{{ logo_image_class|default:'dashboard-navbar-logo' }}" src="{% static 'pabasa_app/images/pabasa_logo.png' %}" alt="PABASA" width="2172" height="724">
+{% if collapsible %}
+<img class="dashboard-navbar-mascot" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA" width="2000" height="2000">
+{% endif %}

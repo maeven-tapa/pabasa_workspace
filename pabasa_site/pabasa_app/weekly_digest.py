@@ -5,12 +5,12 @@ from html import escape
 
 from django.conf import settings
 from django.core.mail import send_mail
-from django.templatetags.static import static
 from django.utils import timezone
 from .system_clock import now as system_now
 from django.utils.dateparse import parse_datetime
 
 from .models import Assessment, Course, Practice, Section, User
+from .email_branding import email_logo_html, email_logo_url
 
 
 def _settings_for_user(user):
@@ -381,11 +381,7 @@ def _format_delta(value):
 
 
 def _digest_logo_url():
-    base_url = getattr(settings, "SITE_URL", "") or getattr(settings, "BASE_URL", "")
-    logo_path = static("pabasa_app/images/pabasalogo.png")
-    if base_url and logo_path.startswith("/"):
-        return f"{base_url.rstrip('/')}{logo_path}"
-    return logo_path
+    return email_logo_url()
 
 
 def _metric_card(label, value, accent="#0f766e"):
@@ -423,7 +419,6 @@ def render_digest_html(digest):
     name = _student_label(user)
     start = digest["start"].date().isoformat()
     end = (digest["end"] - timedelta(days=1)).date().isoformat()
-    logo_url = _digest_logo_url()
 
     if digest["role"] == "teacher":
         metrics = [
@@ -505,8 +500,8 @@ def render_digest_html(digest):
                 <table role="presentation" class="email-container" width="640" cellspacing="0" cellpadding="0" style="width: 640px; max-width: 640px; background: #ffffff; border-radius: 28px; overflow: hidden; border: 1px solid rgba(16, 70, 110, 0.12); box-shadow: 0 18px 42px rgba(16, 70, 110, 0.12);">
                     <tr>
                         <td class="mobile-padding" style="padding: 28px 30px; background: linear-gradient(135deg, #10466E 0%, #2EA8E5 72%, #FFD639 100%);">
-                            <img src="{escape(logo_url)}" alt="PABASA" width="72" style="display: block; border: 0; margin-bottom: 14px;">
-                            <h1 style="margin: 0; color: #ffffff; font-size: 26px; line-height: 34px;">Your Weekly PABASA Digest</h1>
+                            {email_logo_html()}
+                            <h1 style="margin: 14px 0 0; color: #ffffff; font-size: 26px; line-height: 34px;">Your Weekly PABASA Digest</h1>
                             <p style="margin: 8px 0 0; color: rgba(255,255,255,0.86); font-size: 14px; line-height: 22px;">{escape(start)} to {escape(end)}</p>
                         </td>
                     </tr>
@@ -526,7 +521,7 @@ def render_digest_html(digest):
                     {''.join(detail_cards)}
                     <tr>
                         <td align="center" style="padding: 22px 24px 28px; color: #60777b; font-size: 12px; line-height: 20px;">
-                            <strong style="color: #10466E;">PABASA</strong><br>
+                            {email_logo_html(width=144)}<br>
                             Copyright &copy; {system_now().year} PABASA. This email was generated automatically from your account activity.
                         </td>
                     </tr>

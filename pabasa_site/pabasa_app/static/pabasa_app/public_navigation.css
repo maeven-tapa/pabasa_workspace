@@ -16,6 +16,7 @@ body:has(.global-nav-links) { padding-top: var(--public-header-height, 62px); }
 .public-site-footer__bottom { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,.18); color: rgba(255,255,255,.58); font-size: .8rem; }
 .modern-nav-wrap:not(.auth-nav-wrap) .modern-nav-shell { align-items: flex-start; min-height: 0; }
 .modern-nav-wrap:not(.auth-nav-wrap) .modern-brand-panel { height: var(--public-global-nav-height); min-height: var(--public-global-nav-height); box-sizing: border-box; padding-block: .2rem; }
+.modern-brand-panel .public-navbar-logo { display: block; width: clamp(9rem, 14vw, 10rem); height: auto; }
 .modern-nav-wrap:not(.auth-nav-wrap) .modern-nav-area { align-self: stretch; padding-right: clamp(1rem, 2.2vw, 1.8rem); }
 .modern-nav-wrap:not(.auth-nav-wrap) .modern-nav-content { min-height: var(--public-global-nav-height); }
 .global-nav-links { display: flex; align-items: center; justify-content: flex-start; gap: clamp(.75rem, 1.8vw, 1.5rem); min-height: var(--public-global-nav-height); }

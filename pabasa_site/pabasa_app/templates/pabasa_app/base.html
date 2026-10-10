@@ -1839,7 +1839,7 @@
 
         /* ── end cute pass ── */
     </style>
-    <link rel="stylesheet" href="{% static 'pabasa_app/public_navigation.css' %}?v=20261008-public-nav">
+    <link rel="stylesheet" href="{% static 'pabasa_app/public_navigation.css' %}?v=20261011-navbar-logo">
     {% block extra_head %}{% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100{% if request.resolver_match.url_name == 'auth' or request.resolver_match.url_name == 'signup' or request.resolver_match.url_name == 'teacher_signup' or request.resolver_match.url_name == 'student_signup' or request.resolver_match.url_name == 'forgot_password' or request.resolver_match.url_name == 'request_password_reset' or request.resolver_match.url_name == 'forgot_password_otp' or request.resolver_match.url_name == 'verify_forgot_password_otp' or request.resolver_match.url_name == 'forgot_password_reset' or request.resolver_match.url_name == 'reset_password' %} auth-layout{% endif %}">
@@ -1853,7 +1853,11 @@
             <div class="w-100">
                 <div class="modern-nav-shell">
                     <a class="modern-brand-panel" href="{% url 'home' %}" aria-label="PABASA home">
+                        {% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'pabasa_info' or request.resolver_match.url_name == 'about' or request.resolver_match.url_name == 'faq' or request.resolver_match.url_name == 'terms' or request.resolver_match.url_name == 'privacy' %}
+                        <img class="public-navbar-logo" src="{% static 'pabasa_app/images/pabasa_logo.png' %}" alt="PABASA" width="2172" height="724">
+                        {% else %}
                         {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="pabasa-logo-svg" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" %}
+                        {% endif %}
                     </a>
 
                     <div class="modern-nav-area">

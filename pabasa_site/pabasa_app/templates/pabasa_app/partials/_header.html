@@ -3,6 +3,6 @@
         <i class="bi bi-list" aria-hidden="true"></i>
     </button>
     <a class="mobile-dashboard-logo" href="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" aria-label="Go to dashboard">
-        {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="mobile-pabasa-logo-svg" letters_class="mobile-pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" pnb_id="mobilePnb" pnbk_id="mobilePnbk" %}
+        {% include "pabasa_app/partials/_pabasa_image_logo.html" %}
     </a>
 </header>

@@ -3643,6 +3643,7 @@
             background: linear-gradient(145deg, #13507a 0%, #10466e 70%, #0b3552 100%) !important;
         }
     </style>
+    <link rel="stylesheet" href="{% static 'pabasa_app/dashboard_branding.css' %}?v=20261011-sidebar-slide">
 </head>
 <body class="dashboard-body dashboard-preloading{% if nav_role == 'teacher' %} teacher-dashboard-body{% endif %}" data-student-theme="{% if nav_role == 'student' %}{{ student_theme_slug|default:'sky' }}{% endif %}">
     <script>
@@ -3895,7 +3896,7 @@
         window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
     </script>
     <script src="{% static 'pabasa_app/js/class_materials.js' %}?v=20261010-summary-1"></script>
-    <script src="{% static 'pabasa_app/js/base_dashboard.js' %}?v=20261010-materials-summary-1"></script>
+    <script src="{% static 'pabasa_app/js/base_dashboard.js' %}?v=20261011-sidebar-slide"></script>
     <script src="{% static 'pabasa_app/js/notifications_shared.js' %}"></script>
     <script>
         (() => {

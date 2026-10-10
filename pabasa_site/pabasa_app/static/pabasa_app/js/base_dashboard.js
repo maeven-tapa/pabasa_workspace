@@ -743,6 +743,7 @@ var getStudentClassData = window.getStudentClassData = function() {
     setCollapsed(window.localStorage.getItem(key) === "1");
 
     collapseBtn.addEventListener("click", function () {
+        document.body.classList.add("sidebar-motion-ready");
         const next = !document.body.classList.contains("sidebar-collapsed");
         window.localStorage.setItem(key, next ? "1" : "0");
         setCollapsed(next);
