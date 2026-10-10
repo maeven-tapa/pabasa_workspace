@@ -3495,7 +3495,7 @@
             }
         }
     </style>
-    <link rel="stylesheet" href="{% static 'pabasa_app/dashboard_branding.css' %}?v=20261011-logo">
+    <link rel="stylesheet" href="{% static 'pabasa_app/dashboard_branding.css' %}?v=20261011-sidebar-slide">
 </head>
 <body class="admin-preloading">
     <script>
@@ -3528,7 +3528,7 @@
             <div class="admin-sidebar-top">
                     <div class="admin-logo-row">
                         <a class="sidebar-logo-link admin-homepage-logo" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
-                            {% include "pabasa_app/partials/_pabasa_image_logo.html" %}
+                            {% include "pabasa_app/partials/_pabasa_image_logo.html" with collapsible=True %}
                         </a>
 
                 </div>
@@ -3835,6 +3835,7 @@
             } catch (e) { /* ignore storage errors */ }
 
             collapseBtn.addEventListener('click', function() {
+                document.body.classList.add('sidebar-motion-ready');
                 const next = !document.body.classList.contains('admin-sidebar-collapsed');
                 setCollapsed(next);
                 try { localStorage.setItem(key, next ? '1' : '0'); } catch (e) {}

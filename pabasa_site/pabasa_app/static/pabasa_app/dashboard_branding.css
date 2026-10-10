@@ -7,6 +7,26 @@
     height: auto;
 }
 
+.dashboard-navbar-mascot {
+    display: none;
+}
+
+@media (min-width: 992px) {
+    body.sidebar-collapsed .dashboard-sidebar .dashboard-navbar-logo,
+    body.admin-sidebar-collapsed .admin-app-shell > .admin-sidebar .dashboard-navbar-logo {
+        display: none;
+    }
+
+    body.sidebar-collapsed .dashboard-sidebar .dashboard-navbar-mascot,
+    body.admin-sidebar-collapsed .admin-app-shell > .admin-sidebar .dashboard-navbar-mascot {
+        display: block;
+        flex: 0 0 42px;
+        width: 42px;
+        height: 42px;
+        object-fit: contain;
+    }
+}
+
 .admin-homepage-logo:has(.dashboard-navbar-logo) {
     max-width: 100%;
     padding: .2rem 0;
@@ -18,4 +38,31 @@
     width: 9rem;
     max-width: 100%;
     height: auto;
+}
+
+/* Animate only user toggles, keeping the content and edge control in sync. */
+.dashboard-app-shell > .dashboard-sidebar,
+.dashboard-app-shell > .dashboard-main,
+.dashboard-sidebar .sidebar-collapse-row,
+.admin-app-shell > .admin-sidebar,
+.admin-app-shell > .admin-main,
+.admin-app-shell > .admin-sidebar .admin-sidebar-collapse-row {
+    transition: none;
+}
+
+@media (min-width: 992px) and (prefers-reduced-motion: no-preference) {
+    body.sidebar-motion-ready .dashboard-app-shell > .dashboard-sidebar,
+    body.sidebar-motion-ready .admin-app-shell > .admin-sidebar {
+        transition: width 200ms cubic-bezier(.2, .7, .3, 1);
+    }
+
+    body.sidebar-motion-ready .dashboard-app-shell > .dashboard-main,
+    body.sidebar-motion-ready .admin-app-shell > .admin-main {
+        transition: margin-left 200ms cubic-bezier(.2, .7, .3, 1);
+    }
+
+    body.sidebar-motion-ready .dashboard-sidebar .sidebar-collapse-row,
+    body.sidebar-motion-ready .admin-app-shell > .admin-sidebar .admin-sidebar-collapse-row {
+        transition: left 200ms cubic-bezier(.2, .7, .3, 1);
+    }
 }
