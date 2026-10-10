@@ -658,9 +658,8 @@ PRESCRIBED_ACTIVITIES = {
         'gawain_number': 4, 'title': 'Letrang Oo', 'instruction': 'Magsanay Magsulat',
         'interaction': 'handwriting',
         'items': [
-            {'word': 'Oo', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_o/orasan.png'},
-            {'word': 'Oo', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_o/orasan.png'},
-            {'word': 'Oo', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_o/orasan.png'},
+            {'word': 'O', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_o/orasan.png'},
+            {'word': 'o', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_o/orasan.png'},
         ],
     },
     'lesson8-gawain1': {
@@ -668,9 +667,8 @@ PRESCRIBED_ACTIVITIES = {
         'gawain_number': 1, 'title': 'Letrang Ee', 'instruction': 'Magsanay Magsulat',
         'interaction': 'handwriting',
         'items': [
-            {'word': 'Ee', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_e/gawain_1a/elepante.png'},
-            {'word': 'Ee', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_e/gawain_1a/eroplano.png'},
-            {'word': 'Ee', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_e/gawain_1a/espada.png'},
+            {'word': 'E', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_e/gawain_1a/elepante.png'},
+            {'word': 'e', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_e/gawain_1a/eroplano.png'},
         ],
     },
     'lesson8-gawain1a': {
@@ -785,7 +783,7 @@ PRESCRIBED_ACTIVITIES = {
         'title': 'Letrang Ii',
         'instruction': 'Magsanay Magsulat',
         'interaction': 'handwriting',
-        'items': [{'word': 'Ii', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_i/ilaw.png'}, {'word': 'Ii', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_i/itlog.png'}, {'word': 'Ii', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_i/ilong.png'}],
+        'items': [{'word': 'I', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_i/ilaw.png'}, {'word': 'i', 'stem': '', 'answer': '', 'image_path': 'pabasa_app/images/letrang_i/itlog.png'}],
     },
     'lesson-16-gawain-1': {
         'activity_key': 'lesson-16-gawain-1', 'session_key': 'session-6',

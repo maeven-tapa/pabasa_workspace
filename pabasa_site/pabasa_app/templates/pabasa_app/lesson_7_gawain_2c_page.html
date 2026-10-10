@@ -11,7 +11,7 @@
     @font-face{font-family:Fredoka;src:url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');font-display:swap}
     :root{--ink:#183e63;--teal:#299e9a;--teal-dark:#187b7a;--guide-blue:#2b83bd;--guide-red:#df5b62;--guide-border:#94d9d6}*{box-sizing:border-box}html,body{height:100%;margin:0;overflow:hidden;background:#d8f1ef;color:var(--ink);font-family:Fredoka,Nunito,"Segoe UI",sans-serif}body{background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover no-repeat}.page{width:min(1250px,100%);height:100vh;margin:auto;padding:16px clamp(16px,4vw,42px) 22px;display:flex;flex-direction:column}.back{align-self:flex-start;display:inline-flex;align-items:center;justify-content:center;width:280px;min-height:64px;padding:10px 24px;border:0;border-radius:999px;background:#fff;color:var(--ink);font:inherit;font-size:1.15rem;font-weight:900;box-shadow:0 8px 17px #145ca744;text-decoration:none}.card{width:100%;flex:1;min-height:0;margin:14px auto 0;padding:clamp(22px,3.2vh,38px) clamp(18px,6vw,80px) 18px;overflow:hidden;border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63;backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35;text-align:center}.eyebrow{width:max-content;max-width:100%;margin:0 auto 12px;padding:10px 30px;border-radius:999px;background:#277f82;color:#fff;font-size:clamp(.8rem,1.3vw,1.05rem);font-weight:900;letter-spacing:.02em}.card h1{margin:0;font-size:clamp(2rem,4vw,3.7rem);line-height:1.08}.instruction{margin:8px auto 12px;font-size:clamp(1rem,1.7vw,1.25rem);font-weight:900}.progress{height:12px;max-width:760px;margin:0 auto 14px;border-radius:999px;background:#ffffffe8}.progress i{display:block;height:100%;border-radius:inherit;background:#f4c866}.sheet{width:min(850px,88vw);margin:auto;padding:clamp(8px,1.5vh,14px) clamp(14px,2.5vw,30px);border:5px solid var(--guide-border);border-radius:34px;background:#ffffffe8}.canvas-wrap{height:clamp(58px,9.4vh,82px);margin-top:9px;position:relative;background:linear-gradient(var(--guide-blue),var(--guide-blue)) 0 12%/100% 3px no-repeat,linear-gradient(var(--guide-red),var(--guide-red)) 0 50%/100% 3px no-repeat,linear-gradient(var(--guide-blue),var(--guide-blue)) 0 88%/100% 3px no-repeat}.canvas-wrap:first-child{margin-top:0}.canvas-wrap canvas{position:absolute;inset:0;z-index:2;width:100%;height:100%;touch-action:none;cursor:crosshair}.canvas-wrap.locked{opacity:.55}.canvas-wrap.locked canvas{pointer-events:none}.model{position:absolute;z-index:1;top:0;left:13%;font-size:clamp(3.4rem,7vh,5rem);font-weight:900;color:#398ac533;pointer-events:none}.hint{min-height:1.4em;margin:8px 0 0;color:#527585;font-size:clamp(.84rem,1.4vw,1rem);font-weight:900}.actions{display:flex;justify-content:center;gap:18px;margin-top:13px}.button{min-width:min(330px,40vw);min-height:68px;padding:12px 24px;border:0;border-radius:999px;background:var(--teal);color:#fff;font:inherit;font-size:clamp(1.05rem,1.8vw,1.45rem);font-weight:900;cursor:pointer;box-shadow:0 7px 0 var(--teal-dark)}.button:disabled{cursor:wait;opacity:.65}.button.clear{background:#fffffff0;color:var(--teal-dark);border:4px solid var(--guide-border);box-shadow:0 5px 0 #b7d6dc}.done{display:grid;place-items:center;min-height:70%;padding:28px;color:#26784e}.done p{font-weight:900}@media(max-width:800px){.page{padding:12px}.back{width:230px;min-height:58px;font-size:1rem}.card{border-radius:30px;padding:20px 14px 14px}.sheet{width:100%}.button{min-width:220px;min-height:58px}}@media(max-width:520px){.card h1{font-size:1.75rem}.canvas-wrap{height:clamp(52px,10vh,70px)}.button{width:100%;min-width:0}.actions{gap:10px}}
     .card:has(.done){display:grid;place-items:center;padding:clamp(24px,5vh,60px);background:linear-gradient(145deg,#fffdfbe8,#e9fbf7dd)}.done{width:min(100%,520px);min-height:0;padding:clamp(30px,5vw,54px) clamp(22px,5vw,48px);border:3px solid #bfe6d8;border-radius:34px;background:#ffffffeb;box-shadow:0 18px 40px #1b74642b;color:#237a55}.done::before{content:'✓';display:grid;place-items:center;width:78px;height:78px;margin:0 auto 20px;border-radius:50%;background:#dff5e9;color:#23825a;font-size:2.8rem;font-family:Arial,sans-serif;font-weight:900;box-shadow:0 6px 0 #b9dfca}.done h1{font-size:clamp(2.5rem,5vw,4.2rem);color:#237a55}.done p{margin:15px auto 28px;max-width:350px;color:#467565;font-size:clamp(1rem,1.7vw,1.2rem);line-height:1.5}.done .button{min-width:min(100%,330px)}
-    .model{font-family:Fredoka,Nunito,"Segoe UI",sans-serif}
+    .model{font-family:Georgia,"Times New Roman",serif;font-weight:700}
   </style>
   <style>
     #app.card:not(:has(.done)){display:flex;flex-direction:column;justify-content:center;align-items:center}
@@ -28,11 +28,11 @@
   <main class="page"><a class="back" data-leave-label="← Bumalik sa Aking Aralin" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a><section id="app" class="card"></section></main>
   {{ handwriting_activity_data|json_script:"handwriting-data" }}{% include 'pabasa_app/session3_lesson_start_bootstrap.html' %}
   <script>
-    window.__prescribedNarrationAudio = {
-      'magsanay magsulat ng letrang i isulat nang isang beses ang letrang i sa bawat hanay': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2C/magsanay_magsulat_ng_letrang_ay_isulat_nang_tatlong_beses_ang_letrang_ay (2).mp3' %}",
-      'subukan ulit isulat nang malinaw ang letrang ay': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2C/subukan_ulit_isulat_nang_malinaw_ang_letrang_ay.mp3' %}",
-      'magaling': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4B/OTHERS/magaling.mp3' %}",
-      'sumulat ulit': "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4/sumulat_ulit (2).mp3' %}"
+    window.__lesson7Gawain2cLocalAudio = {
+      instruction: "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2C/letrang_ii_instruction.mp3' %}",
+      uppercase: "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2C/letrang_ii_uppercase.mp3' %}",
+      lowercase: "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2C/letrang_ii_lowercase.mp3' %}",
+      retry: "{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 2C/subukan_ulit_isulat_nang_malinaw_ang_letrang_ay.mp3' %}"
     };
   </script>
   <script src="{% static 'pabasa_app/js/prescribed_narration_resolver.js' %}?v=20260924-8"></script>
@@ -42,16 +42,32 @@
     const app = document.getElementById('app');
     const instructionText = 'Magsanay magsulat ng letrang I. Isulat nang isang beses ang letrang I sa bawat Hanay.';
     const narrationText = 'Magsanay magsulat ng letrang I. Isulat nang isang beses ang letrang I sa bawat Hanay.';
-    const normalHint = 'Isulat ang Ii sa bawat hanay.';
+    const normalHint = 'Isulat ang letrang I sa unang hanay at i sa ikalawang hanay.';
     const retryMessage = 'Subukan ulit! Isulat nang malinaw ang letrang Ii.';
     const csrf = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || '';
-    let index = Math.max(0, Math.min(3, Number(data.progress?.current_index) || 0));
+    let index = Math.max(0, Math.min(2, Number(data.progress?.current_index) || 0));
     let busy = false;
     let lastTracePersist = Promise.resolve();
-    const rows = [[], [], []];
+    const rows = [[], []];
     const normalizeNarration = value => String(value || '').trim().replace(/[?!.,]+/g, '').replace(/\s+/g, ' ').toLocaleLowerCase();
     const controls = () => [app.querySelector('#clear'), app.querySelector('#next')].filter(Boolean);
     const setControlsDisabled = disabled => controls().forEach(button => { button.disabled = disabled; });
+    const playLocalAudio = url => new Promise(resolve => {
+      if (!url) { resolve(); return; }
+      const audio = new Audio(url);
+      window.__lesson7Gawain2cAudio?.pause();
+      window.__lesson7Gawain2cAudio = audio;
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        if (window.__lesson7Gawain2cAudio === audio) window.__lesson7Gawain2cAudio = null;
+        resolve();
+      };
+      audio.addEventListener('ended', finish, {once: true});
+      audio.addEventListener('error', finish, {once: true});
+      audio.play().catch(finish);
+    });
     const speak = text => {
       if (!window.__lessonStartReady) return Promise.resolve();
       const mappedAudio = window.__prescribedNarrationAudio?.[normalizeNarration(text)] || Object.entries(window.__prescribedNarrationAudio || {}).find(([phrase]) => normalizeNarration(phrase) === normalizeNarration(text))?.[1];
@@ -75,7 +91,7 @@
     };
     const setHint = (text = normalHint) => {const hint = app.querySelector('.hint'); if (hint) hint.textContent = text};
     const narrate = async text => {busy = true; setControlsDisabled(true); try {await speak(text)} finally {busy = false; setControlsDisabled(false)}};
-    const retry = async () => {setHint(retryMessage); await narrate(retryMessage.replace('letrang Ii', 'letrang ay'))};
+    const retry = async () => {setHint(retryMessage); busy = true; setControlsDisabled(true); try {await playLocalAudio(window.__lesson7Gawain2cLocalAudio.retry)} finally {busy = false; setControlsDisabled(false)}};
     const point = (event, canvas) => {const rect = canvas.getBoundingClientRect(); return {x:(event.clientX - rect.left) / rect.width, y:(event.clientY - rect.top) / rect.height}};
 
     function bindCanvas(canvas, row) {
@@ -100,31 +116,33 @@
         const response = await lastTracePersist;
         const result = await response.json().catch(() => null);
         if (!response.ok || !result?.success) {await retry(); return}
-        if (index < 2) {
+        if (index < 1) {
           index += 1;
+          app.inert = true;
           render();
           busy = true;
           setControlsDisabled(true);
           try {
-            await speak('Magaling!');
-            await speak('Sumulat ulit!');
+            await playLocalAudio(window.__lesson7Gawain2cLocalAudio.lowercase);
           } finally {
             busy = false;
             setControlsDisabled(false);
+            app.inert = false;
           }
           return;
         }
         const completion = await fetch(data.completion_url, {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});
         if (!completion.ok || !(await completion.json().catch(() => null))?.success) {await retry(); return}
-        index = 3; render(); speak('Magaling!');
+        index = 2; render(); speak('Magaling!');
       } catch (error) {await retry()}
-      finally {busy = false; if (index < 3) {app.querySelector('#next').disabled = false; app.querySelector('#clear').disabled = false}}
+      finally {busy = false; if (index < 2) {app.querySelector('#next').disabled = false; app.querySelector('#clear').disabled = false}}
     }
 
     function render() {
-      if (index >= 3) {app.innerHTML = '<div class="done"><h1>Tapos na ang gawain! 🎉</h1><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><button class="button" id="return" type="button" onclick="location.href=\'{% url 'assessment' %}\'">BALIK SA AKING ARALIN</button></div>'; app.inert=false; app.querySelector('#return').onclick = () => location.href = "{% url 'assessment' %}"; return}
-      const sheet = '<div class="canvas-wrap"><span class="model">Ⅰi</span><canvas data-row="' + index + '" aria-label="Hanay ' + (index + 1) + '"></canvas></div>';
-      app.innerHTML = '<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 2</p><h1>Letrang Ii</h1><div class="progress" data-state="' + Math.min(index + 1, 3) + '/3"><i style="width:' + (index / 3 * 100) + '%"></i></div><div class="sheet">' + sheet + '</div><div class="actions"><button class="button clear" id="clear">Burahin</button><button class="button" id="next">' + (index === 2 ? 'Tapusin' : 'Susunod') + '</button></div>';
+      if (index >= 2) {app.innerHTML = '<div class="done"><h1>Tapos na ang gawain! 🎉</h1><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><button class="button" id="return" type="button" onclick="location.href=\'{% url 'assessment' %}\'">BALIK SA AKING ARALIN</button></div>'; app.inert=false; app.querySelector('#return').onclick = () => location.href = "{% url 'assessment' %}"; return}
+      const letter = index === 0 ? 'I' : 'i';
+      const sheet = '<div class="canvas-wrap"><span class="model">' + letter + '</span><canvas data-row="' + index + '" aria-label="Hanay ' + (index + 1) + '"></canvas></div>';
+      app.innerHTML = '<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 2</p><h1>Letrang Ii</h1><div class="progress" data-state="' + Math.min(index + 1, 2) + '/2"><i style="width:' + (index / 2 * 100) + '%"></i></div><div class="sheet">' + sheet + '</div><div class="actions"><button class="button clear" id="clear">Burahin</button><button class="button" id="next">' + (index === 1 ? 'Tapusin' : 'Susunod') + '</button></div>';
       app.querySelectorAll('canvas').forEach(canvas => bindCanvas(canvas, Number(canvas.dataset.row)));
       app.querySelector('#clear').onclick = () => {rows[index] = []; const canvas = app.querySelector('canvas[data-row="' + index + '"]'); canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); setHint()};
       app.querySelector('#next').onclick = submitCurrent;
@@ -134,9 +152,31 @@
       render();
       app.inert = true;
       app.innerHTML = app.innerHTML;
-      window.addEventListener('lesson-start-ready', () => { app.inert = false; }, {once: true});
     });
-    __runWhenLessonStarted(() => { render(); narrate(narrationText); });
+    __runWhenLessonStarted(async () => {
+      if (!window.__lessonStartReady) return;
+      render(false);
+      if (index === 1) {
+        busy = true;
+        app.inert = true;
+        setControlsDisabled(true);
+        try { await playLocalAudio(window.__lesson7Gawain2cLocalAudio.lowercase); }
+        finally { busy = false; setControlsDisabled(false); app.inert = false; }
+        return;
+      }
+      if (index >= 2) return;
+      busy = true;
+      setControlsDisabled(true);
+      app.inert = true;
+      try {
+        await playLocalAudio(window.__lesson7Gawain2cLocalAudio.instruction);
+        await playLocalAudio(window.__lesson7Gawain2cLocalAudio.uppercase);
+      } finally {
+        busy = false;
+        setControlsDisabled(false);
+        app.inert = false;
+      }
+    });
   })();
   </script>
 {% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g2c' help_text='Isulat ang letrang Ii sa mga kahon.' %}</body>

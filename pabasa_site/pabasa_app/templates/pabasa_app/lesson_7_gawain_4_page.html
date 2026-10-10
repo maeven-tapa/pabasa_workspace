@@ -29,27 +29,28 @@
   (() => {
     const data=JSON.parse(document.getElementById('handwriting-data').textContent||'{}');
     const app=document.getElementById('app');
+    const localAudio={
+      instruction:"{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4/letrang_oo_instruction.mp3' %}",
+      uppercase:"{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4/letrang_oo_uppercase.mp3' %}",
+      lowercase:"{% static 'pabasa_app/prescribed/audio/SESSION 3/LESSON 7/GAWAIN 4/letrang-oo_lowercase.mp3' %}"
+    };
     const instructionText='Magsanay magsulat ng letrang O. Isulat nang isang beses ang letrang Oo sa bawat Hanay.';
-    const narrationText='Magsanay magsulat ng letrang o. Isulat nang tatlong beses ang letrang o.';
-    const normalHint='Isulat ang Oo sa bawat hanay.';
+    const normalHint='Isulat ang letrang O sa unang hanay at o sa ikalawang hanay.';
     const retryMessage='Subukan ulit! Isulat nang malinaw ang letrang Oo.';
     const retryNarration='Subukan ulit! Isulat nang malinaw ang letrang Oo.';
-    const transitionNarration='Sumulat ulit!';
     let lastPersist=Promise.resolve();
     const prerecordedNarration=data.narration_audio||{};
     const csrf=()=>document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1]||'';
-    let index=Math.max(0,Math.min(3,Number(data.progress?.current_index)||0));
+    let index=Math.max(0,Math.min(2,Number(data.progress?.current_index)||0));
     let busy=false;
     let narrationBusy=false;
-    let instructionPlayedFor=-1;
-    const rows=[[],[],[]];
+    const rows=[[],[]];
 
-    const speak=text=>new Promise(resolve=>{const source=prerecordedNarration[text];if(!source){resolve();return}const audio=new Audio(source);audio.onended=resolve;audio.onerror=resolve;audio.play().catch(resolve)});
+    const playLocalAudio=url=>new Promise(resolve=>{const audio=new Audio(url);let done=false;const finish=()=>{if(done)return;done=true;audio.onended=audio.onerror=null;resolve()};audio.onended=finish;audio.onerror=finish;audio.play().catch(finish)});
     const controls=()=>[app.querySelector('#clear'),app.querySelector('#next')].filter(Boolean);
     const setControlsDisabled=disabled=>controls().forEach(button=>{button.disabled=disabled});
     const setHint=text=>{const hint=app.querySelector('#hint');if(hint)hint.textContent=text};
-    const narrateInstruction=async()=>{if(index>=3||instructionPlayedFor===index)return;instructionPlayedFor=index;narrationBusy=true;setControlsDisabled(true);try{await speak(narrationText)}finally{narrationBusy=false;if(!busy)setControlsDisabled(false)}};
-    const retry=async()=>{setHint(retryMessage);busy=true;setControlsDisabled(true);await speak(retryNarration);busy=false;setControlsDisabled(false)};
+    const retry=async()=>{setHint(retryMessage);busy=true;setControlsDisabled(true);try{await playLocalAudio(data.narration_audio?.[retryNarration]||'')}finally{busy=false;setControlsDisabled(false)}};
     const point=(event,canvas)=>{const rect=canvas.getBoundingClientRect();return{x:(event.clientX-rect.left)/rect.width,y:(event.clientY-rect.top)/rect.height}};
 
     const valid=canvas=>{
@@ -67,7 +68,11 @@
       [...new Set(edgeStarts)].forEach(cell=>{if(!ink[cell]&&!outsideSeen[cell])flood(cell,outsideSeen)});
       const seen=new Uint8Array(gridWidth*gridHeight),holes=[];
       for(let gy=1;gy<gridHeight-1;gy++)for(let gx=1;gx<gridWidth-1;gx++){const start=gy*gridWidth+gx;if(ink[start]||outsideSeen[start]||seen[start])continue;const cells=flood(start,seen);if(cells.length<8)continue;const holeXs=cells.map(cell=>cell%gridWidth),holeYs=cells.map(cell=>Math.floor(cell/gridWidth)),holeWidth=Math.max(...holeXs)-Math.min(...holeXs)+1,holeHeight=Math.max(...holeYs)-Math.min(...holeYs)+1;if(holeWidth>=2&&holeHeight>=2&&holeWidth/holeHeight>=.3&&holeWidth/holeHeight<=3)holes.push({area:cells.length,width:holeWidth,height:holeHeight})}
-      if(holes.length!==2)return false;
+      if(holes.length!==1)return false;
+      // O and o use different guide sizes. Keep the validation step-aware so
+      // a correctly formed lowercase o cannot pass the uppercase row (or vice versa).
+      const expectedSize=index===0?height>canvas.height*.55:height<=canvas.height*.55;
+      if(!expectedSize)return false;
       const inkDensity=points.length/(width*height);
       return inkDensity>.01&&inkDensity<.6&&holes.every(hole=>hole.area>=8);
     };
@@ -83,45 +88,45 @@
       try{
         lastPersist=fetch(data.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({current_index:index+1,completed_items:index+1,state:{activity_key:data.activity_key,completed_areas:index+1}})});const response=await lastPersist;
         if(!response.ok){await retry();return}
-        if(index<2){
+        if(index<1){
           index+=1;
+          app.inert=true;
           render(false);
           narrationBusy=true;
           setControlsDisabled(true);
           try{
-            await speak('Magaling!');
-            await speak(transitionNarration);
+            await playLocalAudio(localAudio.lowercase);
           }finally{
             narrationBusy=false;
+            app.inert=false;
           }
           return;
         }
         const completion=await fetch(data.completion_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:'{}'});
         const result=await completion.json().catch(()=>null);
         if(!completion.ok||!result?.success){await retry();return}
-        index=3;render();
+        index=2;render();
       }catch(error){await retry()}
-      finally{busy=false;if(index<3&&!narrationBusy)setControlsDisabled(false)}
+      finally{busy=false;if(index<2&&!narrationBusy)setControlsDisabled(false)}
     }
 
     function render(playInstruction=true){
-      if(index>=3){app.innerHTML='<div class="done"><h1>Tapos na ang gawain! 🎉</h1><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><a class="button" href="{% url "assessment" %}">BALIK SA AKING ARALIN</a></div>';app.inert=false;return}
-      const row='<div class="row"><span class="model"><b>O</b><i>o</i></span><canvas aria-label="Hanay '+(index+1)+'"></canvas></div>';
-      app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 4</p><h1>Letrang Oo</h1><p class="instruction handwriting-instruction">'+instructionText+'</p><p class="progress">Hanay '+(index+1)+' ng 3</p><div class="sheet">'+row+'</div><p class="hint" id="hint"></p><div class="actions"><button class="button clear" id="clear" type="button">Burahin</button><button class="button" id="next" type="button">'+(index===2?'Tapusin':'Susunod')+'</button></div>';
+      if(index>=2){app.innerHTML='<div class="done"><h1>Tapos na ang gawain! 🎉</h1><p>Mahusay! Nakumpleto mo na ang aktibidad.</p><a class="button" href="{% url "assessment" %}">BALIK SA AKING ARALIN</a></div>';app.inert=false;return}
+      const letter=index===0?'<b>O</b>':'<i>o</i>';
+      const row='<div class="row"><span class="model">'+letter+'</span><canvas aria-label="Hanay '+(index+1)+'"></canvas></div>';
+      app.innerHTML='<p class="eyebrow">SESSION 3 · LESSON 7 · GAWAIN 4</p><h1>Letrang Oo</h1><p class="instruction handwriting-instruction">'+instructionText+'</p><p class="progress">Hanay '+(index+1)+' ng 2</p><div class="sheet">'+row+'</div><p class="hint" id="hint"></p><div class="actions"><button class="button clear" id="clear" type="button">Burahin</button><button class="button" id="next" type="button">'+(index===1?'Tapusin':'Susunod')+'</button></div>';
       const canvas=app.querySelector('canvas');
       bindCanvas(canvas);
       app.querySelector('#clear').onclick=()=>{if(busy)return;rows[index]=[];canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);setHint()};
       app.querySelector('#next').onclick=submitCurrent;
-      if(window.__lessonStartReady&&playInstruction)narrateInstruction();
     }
     window.__session3SaveAdapters=window.__session3SaveAdapters||{};window.__session3SaveAdapters['prescribed-s3l7g4']=()=>lastPersist;
     document.addEventListener('DOMContentLoaded', () => {
       render();
       app.inert = true;
       app.innerHTML = app.innerHTML;
-      window.addEventListener('lesson-start-ready', () => { app.inert = false; }, {once: true});
     });
-    __runWhenLessonStarted(() => render());
+    __runWhenLessonStarted(async()=>{if(!window.__lessonStartReady)return;render(false);if(index===1){busy=true;narrationBusy=true;app.inert=true;setControlsDisabled(true);try{await playLocalAudio(localAudio.lowercase)}finally{busy=false;narrationBusy=false;setControlsDisabled(false);app.inert=false}return}if(index>=2)return;app.inert=true;busy=true;setControlsDisabled(true);try{await playLocalAudio(localAudio.instruction);await playLocalAudio(localAudio.uppercase)}finally{busy=false;setControlsDisabled(false);app.inert=false}});
   })();
   </script>
 {% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g4' help_text='Magsanay sumulat ng letrang Oo.' %}</body>
