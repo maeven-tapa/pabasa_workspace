@@ -23,7 +23,7 @@
   const sentenceRecognitionText = item => sentenceText(item).replace(/\bMatt\b/g, 'Mat');
   // Correct the name only in sentences that contain Matt; retain raw speech for debug.
   const sentenceTranscript = (item, transcript) => /\bMatt\b/.test(sentenceText(item))
-    ? transcript.replace(/\b(?:matt|mat|math|mad)\b/gi, 'Matt') : transcript;
+    ? transcript.replace(/\b(?:matt|mat|math)\b/gi, 'Matt') : transcript;
 
   function hydrate() {
     state.current_item = Number(state.current_item || 0);

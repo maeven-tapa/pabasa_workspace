@@ -14,6 +14,8 @@ html body .item{grid-template-columns:max-content minmax(100px,140px) max-conten
 html body .picture{width:min(100%,140px);max-height:clamp(110px,18vh,150px);justify-self:center}
 html body .sentence{font-size:clamp(1.45rem,2.8vw,2.35rem);line-height:1.35}
 html body .lead,html body .tail{text-align:left}
+html body .blank:not(.complete-word){border-bottom:0}
+html body .blank.complete-word{display:inline-flex;align-items:center;justify-content:center;text-align:center}
 html body .status{min-height:2.2em;margin:10px auto}
 html body .actions{gap:18px;margin-top:clamp(22px,3vh,32px)}
 html body .button{min-width:min(310px,42vw);min-height:72px;transition:transform .16s,filter .16s,box-shadow .16s}

@@ -90,6 +90,24 @@ class PrescribedLesson29OralBlankTests(TestCase):
         self.assertTrue(complete_result.json()['accepted'])
         self.assertEqual(complete_result.json()['progress']['completed_items'], 1)
 
+    def test_sentence_reading_rejects_mad_but_keeps_mat_and_math_for_matt(self):
+        for index in (0, 1, 3):
+            item = prescribed_activity('lesson-29-gawain-1')['items'][index]
+            sentence = f"{item['before']}{item['answer']}{item['after']}"
+            for name in ('mad', 'mat', 'math', 'Matt'):
+                with self.subTest(item=index, name=name):
+                    StudentActivityProgress.objects.filter(student=self.student).delete()
+                    StudentActivityProgress.objects.create(
+                        student=self.student, activity_key='lesson-29-gawain-1',
+                        current_index=index, completed_items=index, correct_items=index, total_items=5,
+                        state={'current_item': index, 'completed_items': index, 'phase': 'sentence_reading'},
+                    )
+                    result = self.post_action(
+                        action='sentence_reading', item_index=index, heard=sentence.replace('Matt', name),
+                    ).json()
+                    self.assertEqual(result['accepted'], name != 'mad')
+                    self.assertEqual(result['progress']['completed_items'], index + (name != 'mad'))
+
     def test_mill_accepts_the_common_meal_transcription(self):
         progress = StudentActivityProgress.objects.create(
             student=self.student,

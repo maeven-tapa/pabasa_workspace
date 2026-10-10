@@ -86,12 +86,19 @@ const items = [
     await runCase(0, 'answering', [
       {raw:'Matt is on the list.', heard:'Matt is on the list.', target:'list', mode:'word', reply:reply('answering', 0, false)},
       {raw:'list', heard:'list', target:'list', mode:'word', reply:reply('sentence_reading', 0, true)},
-      {raw:'Mad is on the list.', heard:'Matt is on the list.', target:'Mat is on the list.', mode:'sentence', reply:reply('answering', 1, true)},
+      {raw:'Mat is on the list.', heard:'Matt is on the list.', target:'Mat is on the list.', mode:'sentence', reply:reply('answering', 1, true)},
       {raw:'last', heard:'last', target:'last', mode:'word', reply:reply('sentence_reading', 1, true)},
     ]);
-    for (const name of ['Matt', 'mat', 'math', 'mad']) {
+    for (const name of ['Matt', 'mat', 'math']) {
       await runCase(1, 'sentence_reading', [{raw:`The last man is ${name}.`, heard:'The last man is Matt.',
         target:'The last man is Mat.', mode:'sentence', reply:reply('answering', 2, true)}]);
+    }
+    for (const index of [0, 1, 3]) {
+      const sentence = `${items[index].before}${items[index].answer}${items[index].after}`;
+      const raw = sentence.replace(/\bMatt\b/g, 'mad');
+      await runCase(index, 'sentence_reading', [{raw, heard:raw,
+        target:sentence.replace(/\bMatt\b/g, 'Mat'), mode:'sentence',
+        reply:reply('sentence_reading', index, false)}]);
     }
     await runCase(2, 'sentence_reading', [{raw:'The math is green.', heard:'The math is green.',
       target:'The stem is green.', mode:'sentence', reply:reply('sentence_reading', 2, false)}]);
