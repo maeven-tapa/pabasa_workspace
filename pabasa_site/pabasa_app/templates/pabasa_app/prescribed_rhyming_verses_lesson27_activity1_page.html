@@ -20,6 +20,15 @@
     @media(max-height:1100px) and (min-width:801px){.lesson27-stage{padding-top:18px;padding-bottom:16px}.lesson27-content{margin-top:18px}.lesson27-verses{gap:9px}.lesson27-verse{min-height:62px;padding:10px 16px}.lesson27-progress{margin-top:16px}}
     @media(max-width:800px){.page{width:min(100% - 24px,680px);padding-top:12px;padding-bottom:12px}.lesson27-stage{min-height:0;margin-top:20px;padding:24px 18px 18px;border-radius:30px}.lesson27-verses{grid-template-columns:1fr}.lesson27-button{min-width:min(270px,44vw)}.lesson27-complete{min-height:55vh}}
     @media(max-width:480px){.back{width:245px;min-height:58px;font-size:1rem}.lesson27-stage{padding:28px 12px 20px}.lesson27-start-modal{padding:30px 22px 26px}.lesson27-eyebrow{padding:9px 15px}.lesson27-actions{gap:12px}.lesson27-button{width:100%;min-width:0;min-height:62px}.lesson27-step{width:34px;height:34px;font-size:.9rem}.lesson27-verse{padding:12px;font-size:1.05rem}}
+
+    .lesson27-word.is-read{background:#e7f7ec;color:#2f9e44}
+    .lesson27-word.is-new-read{animation:lesson27WordReveal .58s ease both;background-image:linear-gradient(90deg,rgba(231,247,236,0) 0%,#e7f7ec 42%,#d7f4df 100%);background-size:220% 100%}
+    .lesson27-unread{background:#ddebff;color:#0f172a;border:2px solid #2563eb;border-radius:10px;padding:3px 2px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+    .lesson27-unread .lesson27-word{background:transparent;color:#0f172a}
+    @keyframes lesson27WordReveal{0%{background-position:100% 0;color:#0f172a;transform:translateY(0)}70%{background-position:0 0;color:#2f9e44;transform:translateY(-2px)}100%{background-position:0 0;color:#2f9e44;transform:translateY(0)}}
+    @media(prefers-reduced-motion:reduce){.lesson27-word.is-new-read{animation:none}}
+.prescribed-l27a1-modal[id$="-leave-modal"] button[id$="-leave-no"]{background-color:#e8f4f2;color:#24535a}
+.prescribed-l27a1-modal[id$="-leave-modal"] button[id$="-leave-yes"]{background-color:#2aa7a0;color:#fff}
   </style>
   <style>
     /* Match Lesson 28's compact prescribed card while preserving Lesson 27 behavior. */
@@ -60,7 +69,7 @@
   <div class="prescribed-l27a1-modal" id="prescribed-l27a1-leave-modal" role="dialog" aria-modal="true" aria-labelledby="prescribed-l27a1-leave-title" hidden><section class="prescribed-l27a1-modal-card"><h2 id="prescribed-l27a1-leave-title">Are you sure you want to leave?</h2><p>You can continue from where you left off.</p><p id="prescribed-l27a1-leave-error" role="alert" hidden>Your activity could not be saved. Please try again.</p><div class="prescribed-l27a1-pause-actions"><button class="primary" id="prescribed-l27a1-leave-no" type="button">Stay</button><button class="secondary" id="prescribed-l27a1-leave-yes" type="button">Leave</button></div></section></div>
   <div class="lesson27-start-backdrop" id="lesson27-start" role="dialog" aria-modal="true" aria-labelledby="lesson27-start-title"><div class="lesson27-start-modal"><p class="lesson27-start-label">SESSION 11 · LESSON 27 · ACTIVITY 1</p><h2 class="lesson27-start-title" id="lesson27-start-title">RHYMING VERSES</h2><p class="lesson27-start-description">Read each verse, then select the words that rhyme with “at.”</p><div class="lesson27-start-actions"><button class="lesson27-start-button" id="lesson27-start-button" type="button">START</button><button class="lesson27-later-button" id="lesson27-later-button" type="button">MAYBE LATER</button></div></div></div>
   {{ prescribed_activity_data|json_script:"prescribed-activity-data" }}
-  <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-5" defer></script><script src="{% static 'pabasa_app/js/prescribed_controls.js' %}?v=1" defer></script><script src="{% static 'pabasa_app/js/prescribed_rhyming_verses_lesson27_activity1.js' %}?v=20261009-loved-alias" defer></script><script src="{% static 'pabasa_app/js/prescribed_leave_confirmation.js' %}?v=1" defer></script>
+  <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-5" defer></script><script src="{% static 'pabasa_app/js/prescribed_controls.js' %}?v=1" defer></script><script src="{% static 'pabasa_app/js/prescribed_rhyming_verses_lesson27_activity1.js' %}?v=20261011-progress-save-recovery" defer></script><script src="{% static 'pabasa_app/js/prescribed_leave_confirmation.js' %}?v=1" defer></script>
   <script>(()=>{const modal=document.getElementById('lesson27-start'),stage=document.getElementById('lesson27-stage'),start=document.getElementById('lesson27-start-button');start.addEventListener('click',()=>{modal.hidden=true;stage.classList.remove('is-waiting')});start.focus()})();</script>
 </body>
 </html>

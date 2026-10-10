@@ -7,7 +7,9 @@
   const csrf = () => (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || '';
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
-  let state = {phase:'reading', item_index:0, verse_index:0, attempts:0, help_visible:false, selected:[], completed_items:0, ...(data.progress?.state || {})};
+  let state = {phase:'reading', item_index:0, verse_index:0, verse_syllable_index:0, verse_word_index:0, attempts:0, help_visible:false, selected:[], completed_items:0, ...(data.progress?.state || {})};
+  let pendingReadingSave = Promise.resolve();
+  let unsavedReadingProgress = null;
   let busy = false;
   let stream = null;
   let audio = null;
@@ -22,6 +24,8 @@
   const publishDebug = (patch = {}, line) => { Object.assign(debugState, patch); if (line) debugState.raw = [...debugState.raw, line].slice(-6); window.dispatchEvent(new CustomEvent('prescribed-l27a1-debug-state', {detail:{...debugState, raw:[...debugState.raw]}})); };
   window.PrescribedLesson27Debug = {getState:() => ({...debugState, raw:[...debugState.raw]}), reset:() => {Object.assign(debugState,{status:'Ready',transcript:'No transcript yet.',expected:'—',normalized:'—',result:'—',mic:`Inactive · ${isMuted?'Muted':'Unmuted'}`,recorder:'inactive',vad:'Not available',error:'—',raw:['Activity reset']});publishDebug();}};
   const RETRY_FEEDBACK = "Hmm, let's try that again.";
+  const CONTINUE_FEEDBACK = "Great! now let's read the rest of the verse.";
+  const VERSE_PAUSE_MS = 3000;
   const READ_CORRECT_FEEDBACK = "That's right, now let's read the next verse.";
   const RHYME_INSTRUCTION_FEEDBACK = "That's right, now choose the rhyming words.";
   const RHYME_CORRECT_FEEDBACK = "That's right, now let's read the next verse.";
@@ -37,6 +41,7 @@
     [localAudioKey('Rhyming Verses. Read each verse, then select the words that rhyme with at.')]: 'Rhyming Verses. Read each verse, then select the words that rhyme with at..mp3',
     [localAudioKey('Click all the words that rhyme with at.')]: 'Click all the words that rhyme with at..mp3',
     [localAudioKey(RETRY_FEEDBACK)]: 'Hmm, let’s try that again..mp3',
+    [localAudioKey(CONTINUE_FEEDBACK)]: "Great! now let's read the rest of the verse..mp3",
     [localAudioKey(RHYME_INSTRUCTION_FEEDBACK)]: 'That’s right, now choose the rhyming words..mp3',
     [localAudioKey(RHYME_CORRECT_FEEDBACK)]: 'That’s right, now let’s read the next verse..mp3',
     [localAudioKey(COMPLETION_FEEDBACK)]: 'Great job! You completed the Rhyming Verses..mp3',
@@ -89,13 +94,26 @@
   }
   window.__prescribedLeaveAdapters ||= {};
   window.__prescribedLeaveAdapters['prescribed-l27a1'] = {
-    saveCurrentProgress() {
+    async saveCurrentProgress() {
+      try { await pendingReadingSave; }
+      catch (error) { if (!unsavedReadingProgress) throw error; }
+      if (unsavedReadingProgress) await saveReadingProgress(unsavedReadingProgress);
       return save({action:'state_sync'});
     },
     cleanup() {
       window.PrescribedLesson27Activity?.cleanup();
     },
   };
+  function saveReadingProgress(payload, isCurrent = () => true) {
+    // Retain failed cursor saves for the next Leave attempt, rather than
+    // permanently awaiting a rejected promise or discarding read words.
+    unsavedReadingProgress = payload;
+    pendingReadingSave = save(payload, isCurrent).then(result => {
+      if (unsavedReadingProgress === payload) unsavedReadingProgress = null;
+      return result;
+    });
+    return pendingReadingSave;
+  }
   function progressDots() {
     const complete = state.phase === 'complete';
     return `<div class="lesson27-progress" aria-label="Poem progress">${data.items.map((_, index) => `<span class="lesson27-step ${complete || index < state.item_index ? 'done' : ''} ${!complete && index === state.item_index ? 'active' : ''}" ${!complete && index === state.item_index ? 'aria-current="step"' : ''}>${index + 1}</span>`).join('')}</div>`;
@@ -105,14 +123,24 @@
   }
   function renderLineWords(line, lineIndex) {
     let cursor = 0;
+    let unreadStarted = false;
     const renderedWords = line.words.map(word => {
       const start = line.text.toLowerCase().indexOf(word.text.toLowerCase(), cursor);
-      if (start < cursor) return `<button type="button" class="lesson27-word ${state.selected.includes(word.id) ? 'selected' : ''}" data-id="${esc(word.id)}" ${state.phase !== 'rhymes' ? 'disabled' : ''}>${esc(word.text)}</button> `;
+      // Rhyme buttons split apostrophes (he / ll), while the speech cursor
+      // counts "he'll" as one word. Keep both pieces on the same reading index.
+      const wordIndex = (line.text.slice(0, Math.max(0, start)).match(/\S+\s+/g) || []).length;
+      const readingClass = state.phase === 'reading' && (lineIndex < state.verse_index || (lineIndex === state.verse_index && wordIndex < (state.verse_word_index || 0))) ? 'is-read' : '';
+      const nextWord = state.phase === 'reading' && lineIndex === state.verse_index && wordIndex === (state.verse_word_index || 0);
+      const unread = state.phase === 'reading' && lineIndex === state.verse_index && wordIndex >= (state.verse_word_index || 0);
+      const openUnread = unread && !unreadStarted ? '<span class="lesson27-unread">' : '';
+      if (unread) unreadStarted = true;
+      const wordButton = `<button type="button" class="lesson27-word ${readingClass} ${unread ? 'is-unread' : ''} ${state.selected.includes(word.id) ? 'selected' : ''}" data-id="${esc(word.id)}" data-line-index="${lineIndex}" data-word-index="${wordIndex}" ${nextWord ? 'aria-current="true"' : ''} ${state.phase !== 'rhymes' ? 'disabled' : ''}>${esc(word.text)}</button>`;
+      if (start < cursor) return `${openUnread}${wordButton} `;
       const separator = line.text.slice(cursor, start);
       cursor = start + word.text.length;
-      return `${esc(separator)}<button type="button" class="lesson27-word ${state.selected.includes(word.id) ? 'selected' : ''}" data-id="${esc(word.id)}" ${state.phase !== 'rhymes' ? 'disabled' : ''}>${esc(word.text)}</button>`;
+      return `${esc(separator)}${openUnread}${wordButton}`;
     }).join('');
-    return renderedWords + esc(line.text.slice(cursor));
+    return renderedWords + esc(line.text.slice(cursor)) + (unreadStarted ? '</span>' : '');
   }
   function render(message = '', type = '') {
     if (state.phase === 'complete') {
@@ -170,6 +198,75 @@
       if (audioUrl) { URL.revokeObjectURL(audioUrl); audioUrl = null; }
     }
   }
+  // Mirror CRLA's word-range/cursor display without replacing the active Read
+  // button while its recorder is running. Only fully read words turn green.
+  function highlightReading(result) {
+    const cursor = Math.max(state.verse_syllable_index || 0, Number(result.current_syllable_index) || 0);
+    const previousWords = state.verse_word_index || 0;
+    const ranges = result.word_syllable_ranges || [];
+    const count = ranges.filter(range => Number(range[1]) <= cursor).length;
+    state.verse_syllable_index = cursor;
+    state.verse_word_index = Math.max(previousWords, count);
+    const verse = app.querySelectorAll('.lesson27-verse')[state.verse_index];
+    const previousUnread = verse?.querySelector('.lesson27-unread');
+    if (previousUnread) previousUnread.replaceWith(...previousUnread.childNodes);
+    app.querySelectorAll(`.lesson27-word[data-line-index="${state.verse_index}"]`).forEach(word => {
+      const index = Number(word.dataset.wordIndex);
+      word.classList.toggle('is-read', index < state.verse_word_index);
+      word.classList.toggle('is-new-read', index >= previousWords && index < state.verse_word_index);
+      word.classList.toggle('is-unread', index >= state.verse_word_index);
+      if (index === state.verse_word_index) word.setAttribute('aria-current', 'true');
+      else word.removeAttribute('aria-current');
+    });
+    const firstUnread = verse?.querySelector('.is-unread');
+    if (firstUnread) {
+      const range = document.createRange();
+      range.setStartBefore(firstUnread);
+      range.setEndAfter(verse.lastChild);
+      const unread = document.createElement('span');
+      unread.className = 'lesson27-unread';
+      range.surroundContents(unread);
+    }
+  }
+  async function readVerseContinuously(target, button, attempt) {
+    const fields = {target_text:target, language:'English', mode:'sentence', prescribed_activity_key:'lesson-27-gawain-1', current_syllable_index:state.verse_syllable_index || 0};
+    const isCurrent = () => attempt === generation && !isPaused;
+    const transcripts = [];
+    let finalResult, failure;
+    // Keep a natural utterance together through short pauses. After three
+    // seconds of silence, retain the cursor and prompt for any unread words.
+    const reader = window.Basahin.create({
+      visualButton:button, url:data.transcribe_url, continuous:true, silenceMs:VERSE_PAUSE_MS,
+      getFields:() => fields,
+      onError:error => { failure = error; },
+      async onResult(result) {
+        if (!isCurrent()) return true;
+        if (!String(result.transcript || '').trim()) throw new Error('No speech detected. Press Read to try again.');
+        const previousCursor = fields.current_syllable_index;
+        transcripts.push(result.raw_transcript ?? result.transcript);
+        highlightReading(result);
+        fields.current_syllable_index = state.verse_syllable_index;
+        publishDebug({status:'Listening',transcript:transcripts.join(' '),result:result.complete ? 'Match' : 'Continue reading'}, `Read ${state.verse_word_index} words of this verse`);
+        if (fields.current_syllable_index > previousCursor || unsavedReadingProgress) {
+          await saveReadingProgress({action:'verse_progress',item_index:state.item_index,verse_index:state.verse_index,current_syllable_index:fields.current_syllable_index}, isCurrent);
+        }
+        if (!isCurrent()) return true;
+        const continuePrompt = !result.complete && !result.reading_mismatch && fields.current_syllable_index > previousCursor;
+        finalResult = {...result, raw_transcript:transcripts.join(' '), continue_prompt:continuePrompt};
+        return true;
+      },
+    });
+    try {
+      await reader.start();
+      if (failure) {
+        if (failure.name === 'NoSpeechError') failure.message = 'No speech detected. Press Read to try again.';
+        if (failure.name === 'TimeoutError') failure.message = 'Speech processing timed out. Press Read to try again.';
+        throw failure;
+      }
+      if (!isCurrent() || !finalResult) throw new DOMException('Reading cancelled.', 'AbortError');
+      return finalResult;
+    } finally { reader.destroy(); }
+  }
   async function recordVerse(target) {
     if (busy || isPaused) return;
     if (isMuted) { render('Please unmute your microphone before reading.', 'bad'); publishDebug({status:'Muted',error:'Microphone is muted.'},'Reading blocked while muted'); return; }
@@ -181,9 +278,16 @@
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { busy = false; return; }
     button.textContent = 'Listening…';
     try {
-      const result = await window.Basahin.read({target_text:target, language:'English', mode:'sentence', prescribed_activity_key:'lesson-27-gawain-1'}, {button:button, url:data.transcribe_url}); if (attempt !== generation || isPaused) return;
+      const result = await readVerseContinuously(target, button, attempt); if (attempt !== generation || isPaused) return;
       const heardText = result.raw_transcript || result.transcript;
       const spoken = normalize(heardText);
+      if (result.continue_prompt) {
+        busy = false;
+        render();
+        publishDebug({status:'Continue reading',transcript:String(heardText),normalized:spoken,result:'Read the rest of the verse',error:'—'},CONTINUE_FEEDBACK);
+        await playAudio(CONTINUE_FEEDBACK);
+        return;
+      }
       const correct = result.complete === true;
       publishDebug({status:'Processing',transcript:String(heardText || 'No transcript returned.'),normalized:spoken,result:correct?'Match':'Not Match'},`Transcription received: ${heardText || '(empty)'}`);
       if (attempt !== generation || isPaused) return;
