@@ -7635,13 +7635,31 @@
 
         function getLocalCrlaWordAudioUrl(text) {
             if (!isCrla || mode !== "word") return "";
-            const word = String(text || "").trim().toLocaleLowerCase("fil-PH");
+            const isCrlaRhymes = currentAssessmentBranch === "rhymes";
+            const activeText = isCrlaRhymes
+                ? getActiveCrlaRhymeWord(text)
+                : String(text || "").trim();
+            const word = activeText.toLocaleLowerCase("fil-PH");
             const localWords = new Set([
                 "binti", "pito", "tubig", "pagod", "kanta",
                 "regalo", "butiki", "halaman", "malapot", "gagamba",
+                "hito", "bisig", "hagod", "pinta", "suklay", "saklay",
+                "buhay", "bahay", "ngiti", "panalo", "salapi", "marimba",
             ]);
             if (!localWords.has(word)) return "";
-            return `/static/pabasa_app/crla/words/${encodeURIComponent(word[0].toLocaleUpperCase("fil-PH") + word.slice(1))}.mp3`;
+            const folder = isCrlaRhymes ? "rhymes" : "words";
+            return `/static/pabasa_app/crla/${folder}/${encodeURIComponent(word[0].toLocaleUpperCase("fil-PH") + word.slice(1))}.mp3`;
+        }
+
+        function getActiveCrlaRhymeWord(displayText) {
+            if (currentAssessmentBranch !== "rhymes") return String(displayText || "").trim();
+            const activeElement = readingWord?.querySelector(".is-current");
+            if (activeElement?.textContent?.trim()) return activeElement.textContent.trim();
+            const unreadWord = readingWord?.querySelector(".syllable:not(.is-read), .phrase-reading-word:not(.is-read)");
+            if (unreadWord?.textContent?.trim()) return unreadWord.textContent.trim();
+            const firstWord = readingWord?.querySelector(".syllable, .phrase-reading-word");
+            if (firstWord?.textContent?.trim()) return firstWord.textContent.trim();
+            return String(displayText || "").split(/\s*[—-]\s*/)[0].trim();
         }
 
         function stopReadAloud() {
