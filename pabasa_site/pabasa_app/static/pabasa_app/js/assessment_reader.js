@@ -7567,7 +7567,8 @@
             // passages, and template activities retain their existing API TTS.
             const localCrlaWordUrl = getLocalCrlaWordAudioUrl(text);
             const localCrlaSentenceUrl = getLocalCrlaSentenceAudioUrl(text);
-            const localCrlaUrl = localCrlaWordUrl || localCrlaSentenceUrl;
+            const localCrlaStoryUrl = getLocalCrlaStoryAudioUrl();
+            const localCrlaUrl = localCrlaWordUrl || localCrlaSentenceUrl || localCrlaStoryUrl;
             if (localCrlaUrl) {
                 try {
                     readAloudAudio = new Audio(localCrlaUrl);
@@ -7664,6 +7665,16 @@
             };
             const file = files[sentence];
             return file ? `/static/pabasa_app/crla/sentence/${file}` : "";
+        }
+
+        function getLocalCrlaStoryAudioUrl() {
+            if (!isCrla || mode !== "paragraph" || currentStoryState !== "story_reading") return "";
+            const title = String(currentSelectedStory?.title || "").trim().toLocaleLowerCase("fil-PH");
+            if (title !== "ang pagong at ang kuneho") return "";
+            const segmentIndex = Math.max(0, Number(currentPageIndex) || 0) + 1;
+            if (segmentIndex > 8) return "";
+            const segment = String(segmentIndex).padStart(2, "0");
+            return `/static/pabasa_app/crla/ang%20pagong%20at%20ang%20kuneho/ang_pagong_at_ang_kuneho_segment_${segment}.mp3`;
         }
 
         function getActiveCrlaRhymeWord(displayText) {
