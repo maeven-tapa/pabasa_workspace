@@ -13,7 +13,8 @@ from .prescribed_activity_catalog import PRESCRIBED_ACTIVITIES, active_prescribe
 from .prescribed_workbook import (
     ACTIVITIES, L22_G2_C_WORDS, L22_G3_C_WORD_PATHS, L22_G5_F_WORD_PATHS, apply_event, get_activity,
     initial_l22_g2_state, initial_l22_g3_state, initial_l22_g5_state,
-    initial_state, l22_g2_pronunciation_match, normalize_l22_g2_speech,
+    initial_state, l22_g2_pronunciation_match, initial_l23_g1_state,
+    l23_g1_pronunciation_match, normalize_l22_g2_speech,
     normalize_l22_c_state, search_paths, initial_s9_a2_state,
     L23_G3_J_WORDS, L23_G4_SYLLABLE_ANSWERS, L23_G7_Q_WORDS, initial_l23_g3_state,
     initial_l23_g4_state, initial_l23_g7_state, l23_g3_pronunciation_match,
@@ -555,6 +556,83 @@ class WorkbookStateTests(SimpleTestCase):
         apply_event(a, legacy, {'action': 'draft', 'draft': {'builder': ['item-5', 'item-19']}})
         self.assertEqual(legacy['draft']['builder'], ['item-5'])
 
+    def test_lesson23_gawain1_complete_12_cell_scoped_acceptance_matrix(self):
+        key = 'aral-l23-g1-n-syllable-builder'
+        cells = (
+            ('Ni', ('ni', 'knee', 'Knee.'), 'knot'),
+            ('La', ('la',), 'law'),
+            ('ña', ('ña', 'na'), 'nya'),
+            ('Cas', ('cas', 'kas', 'kass'), 'cash'),
+            ('Bi', ('bi', 'bee', 'be', 'b', 'B', 'B.'), 'bead'),
+            ('da', ('da',), 'the'),
+            ('El', ('el', 'ell', 'l', 'L', 'L.'), 'ale'),
+            ('ño', ('ño', 'no', 'nyo'), 'noon'),
+            ('ñan', ('ñan', 'nan', 'nyan'), 'none'),
+            ('Cen', ('cen', 'sen'), 'scene'),
+            ('ta', ('ta',), 'tea'),
+            ('ñe', ('ñe', 'ne', 'nye'), 'nay'),
+        )
+        self.assertEqual(
+            tuple(item['text'] for item in get_activity(key)['items']),
+            ('Ni', 'La', 'ña', 'Cas', 'Bi', 'da', 'El', 'ño', 'ñan', 'Cen', 'ta', 'ñe'),
+        )
+        self.assertEqual(len(cells), 12)
+        self.assertEqual(len({expected.casefold() for expected, *_ in cells}), 12)
+        for expected, accepted, rejected in cells:
+            for transcript in accepted:
+                self.assertTrue(l23_g1_pronunciation_match(expected, transcript, key), (expected, transcript))
+                self.assertFalse(
+                    l23_g1_pronunciation_match(expected, transcript, 'aral-l23-g2-j-word-reading'),
+                    (expected, transcript),
+                )
+                self.assertFalse(
+                    l23_g1_pronunciation_match(expected, f'{transcript} {transcript}', key),
+                    (expected, transcript),
+                )
+                for other, *_ in cells:
+                    if other.casefold() != expected.casefold():
+                        self.assertFalse(l23_g1_pronunciation_match(other, transcript, key), (expected, other))
+            self.assertFalse(l23_g1_pronunciation_match(expected, rejected, key), (expected, rejected))
+        self.assertFalse(l23_g1_pronunciation_match('Ni', 'ñi', key))
+
+    def test_lesson23_gawain1_new_aliases_advance_once_without_attempts(self):
+        key = 'aral-l23-g1-n-syllable-builder'
+        activity = get_activity(key)
+        aliases = {'Ni': ('Knee.',), 'Bi': ('B', 'b', 'B.'), 'El': ('L', 'l', 'L.')}
+        for expected, transcripts in aliases.items():
+            target_index = next(index for index, item in enumerate(activity['items']) if item['text'] == expected)
+            for transcript in transcripts:
+                state = initial_l23_g1_state()
+                apply_event(activity, state, {'action': 'reading_started'})
+                for item in activity['items'][:target_index]:
+                    apply_event(activity, state, {'action': 'reading_syllable_attempt', 'transcript': item['text']}, True)
+                verified = l23_g1_pronunciation_match(expected, transcript, key)
+                apply_event(activity, state, {'action': 'reading_syllable_attempt', 'transcript': transcript}, verified)
+                self.assertEqual(state['index'], target_index + 1, (expected, transcript))
+                self.assertEqual(state['last_feedback'], 'Tama!', (expected, transcript))
+                self.assertEqual(state['reading_attempts'], 0, (expected, transcript))
+
+    def test_lesson23_gawain1_retry_help_and_building_transition_are_preserved(self):
+        activity = get_activity('aral-l23-g1-n-syllable-builder')
+        state = initial_l23_g1_state()
+        apply_event(activity, state, {'action': 'reading_started'})
+        for _ in range(3):
+            apply_event(activity, state, {'action': 'reading_syllable_attempt', 'transcript': 'wrong'}, False)
+        self.assertEqual(state['index'], 0)
+        self.assertEqual(state['reading_phase'], 'help')
+        apply_event(activity, state, {'action': 'read_aloud'})
+        apply_event(activity, state, {'action': 'retry_reading'})
+        for index, item in enumerate(activity['items'], start=1):
+            apply_event(activity, state, {'action': 'reading_syllable_attempt', 'transcript': item['text']}, True)
+            self.assertEqual(state['index'], index)
+            self.assertEqual(state['reading_attempts'], 0)
+            self.assertEqual(state['last_feedback'], 'Tama!')
+        self.assertTrue(state['read_aloud_completed'])
+        apply_event(activity, state, {'action': 'build_word', 'parts': ['item-1', 'item-8']})
+        self.assertEqual(state['found_words'], ['Niño'])
+        apply_event(activity, state, {'action': 'finish'})
+        self.assertTrue(state['completed'])
+
 
 class PrescribedWorkbookFlowTests(TestCase):
     def setUp(self):
@@ -915,6 +993,47 @@ class PrescribedWorkbookFlowTests(TestCase):
                 self.assertEqual(state['reading_attempts'], 0)
 
         self.assertTrue(state['read_aloud_completed'])
+
+    def test_lesson23_gawain1_aliases_advance_through_the_normal_correct_result_path(self):
+        key = 'aral-l23-g1-n-syllable-builder'
+        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
+        state = initial_l23_g1_state()
+        response = self.client.post(
+            progress_url,
+            json.dumps({'action': 'reading_started', 'revision': state['revision']}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        state = response.json()['state']
+
+        observed_targets = []
+
+        def approved_alias_response(request):
+            expected = request.POST['target_text']
+            observed_targets.append(expected)
+            transcript = {'Ni': 'Knee.', 'Bi': 'B.', 'El': 'L.'}.get(expected, f'{expected}.')
+            return JsonResponse({
+                'success': True, 'transcript': transcript,
+                'raw_transcript': transcript, 'complete': False,
+            })
+
+        with patch('pabasa_app.views.reading_transcribe_api', side_effect=approved_alias_response):
+            for index, _item in enumerate(get_activity(key)['items'], start=1):
+                response = self.client.post(progress_url, {
+                    'action': 'reading_syllable_attempt', 'revision': state['revision'],
+                    'audio': SimpleUploadedFile('reading.webm', b'audio', content_type='audio/webm'),
+                })
+                self.assertEqual(response.status_code, 200, response.content)
+                state = response.json()['state']
+                self.assertEqual(state['index'], index)
+                self.assertEqual(state['last_feedback'], 'Tama!')
+                self.assertEqual(state['reading_attempts'], 0)
+
+        self.assertTrue(state['read_aloud_completed'])
+        self.assertEqual(
+            observed_targets,
+            ['Ni', 'La', 'ña', 'Cas', 'Bi', 'da', 'El', 'ño', 'ñan', 'Cen', 'ta', 'ñe'],
+        )
 
     @patch('pabasa_app.views.synthesize_read_aloud_audio', return_value='encoded-audio')
     def test_lesson_22_read_aloud_uses_prescribed_filipino_voice(self, synthesize):
