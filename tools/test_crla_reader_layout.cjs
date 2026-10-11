@@ -24,7 +24,8 @@ assert.equal(rendered.status, 0, rendered.stderr);
 // Load the complete reader separately after setting the server recovery payload.
 const templates = Object.fromEntries(Object.entries(JSON.parse(rendered.stdout)).map(([mode, html]) =>
   [mode, html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '')
-    .replace(/<link\b[^>]*>/g, '')]));
+    .replace(/<link\b[^>]*>/g, '')
+    .replace('</head>', '<link rel="stylesheet" href="/static/pabasa_app/vendor/bootstrap-icons/bootstrap-icons.css"></head>')]));
 const official = {
   id: 1, assessment_kind: 'crla', official_title: 'CRLA Pre-Test', official_code: 'CRLA-BOSY',
   language: 'Filipino', words: Array(10).fill('Pito'),
@@ -33,6 +34,8 @@ const official = {
   passages: [{title: 'Ang Pito', content: 'May pito si Ana. Narinig ni Ben ang pito.'}],
 };
 const origin = 'http://localhost:9876';
+const previewDir = process.env.CRLA_PREVIEW_DIR;
+if (previewDir) fs.mkdirSync(previewDir, {recursive: true});
 const modes = {words: 'word', rhymes: 'word', sentences: 'sentence', story_reading: 'para'};
 function readerUrl(mode, branch) {
   return `${origin}/dashboard/assessment/reading_ui/${mode}/?official_assessment_id=1` +
@@ -58,8 +61,11 @@ async function snapshot(page) {
   const browser = await chromium.launch({channel: 'chrome', headless: true});
   let checked = 0;
   try {
-    for (const viewport of [{width: 1366, height: 768}, {width: 390, height: 844}]) {
-      for (const debug of [false, true]) {
+    const selectedWidths = process.env.CRLA_VIEWPORT_WIDTHS?.split(',').map(Number);
+    for (const viewport of [{width: 1366, height: 768}, {width: 1024, height: 768},
+      {width: 768, height: 1024}, {width: 390, height: 844}, {width: 320, height: 740}]
+      .filter(viewport => !selectedWidths || selectedWidths.includes(viewport.width))) {
+      for (const debug of [1366, 390].includes(viewport.width) ? [false, true] : [false]) {
         for (const [branch, mode] of Object.entries(modes)) {
           const context = await browser.newContext({viewport});
           const page = await context.newPage();
@@ -87,9 +93,18 @@ async function snapshot(page) {
             window.PABASA_USER_ROLE = 'student';
             localStorage.setItem('pabasaShowSpeechDebugPanel', String(debug));
           }, {official, state, debug});
-          await page.route('**/*', async route => {
+          await context.route('**/*', async route => {
             const url = new URL(route.request().url());
             if (url.origin !== origin) return route.abort();
+            if (url.pathname.startsWith('/static/pabasa_app/')) {
+              const staticRoot = path.join(root, 'pabasa_app/static/pabasa_app');
+              const asset = path.resolve(staticRoot, url.pathname.slice('/static/pabasa_app/'.length));
+              if (asset.startsWith(staticRoot + path.sep) && fs.existsSync(asset) && fs.statSync(asset).isFile()) {
+                const types = {'.css': 'text/css', '.woff2': 'font/woff2', '.woff': 'font/woff',
+                  '.ttf': 'font/ttf', '.png': 'image/png', '.webp': 'image/webp'};
+                return route.fulfill({body: fs.readFileSync(asset), contentType: types[path.extname(asset)] || 'application/octet-stream'});
+              }
+            }
             if (url.pathname === '/api/reading/transcribe/') {
               if (testingSpeechRetry) {
                 retriedAudio.push(route.request().postDataBuffer().toString());
@@ -139,11 +154,75 @@ async function snapshot(page) {
           await page.reload();
           await page.waitForFunction(() => !document.getElementById('readingWord').textContent.includes('Loading'));
           assert.deepEqual(await snapshot(page), before, `${branch}, ${viewport.width}px, debug=${debug}: refresh`);
+          const section = {words: 'Word', rhymes: 'Rhymes', sentences: 'Sentence', story_reading: 'Story'}[branch];
+          const headerSection = branch === 'rhymes' ? 'Rhyme' : section;
+          assert.equal(await page.locator('.reader-top .eyebrow').textContent(), `${headerSection} Reading Assessment`,
+            `${branch}: heading follows the recovered section`);
+          assert.equal(await page.locator('#readingHelperText').textContent(), `Read the ${section}`,
+            `${branch}: reading instruction follows the recovered section`);
+          const layout = await page.evaluate(() => {
+            const card = document.querySelector('.reader-card').getBoundingClientRect();
+            const word = document.getElementById('readingWord');
+            const textBounds = word.getBoundingClientRect();
+            return {
+              headerDecoration: getComputedStyle(document.querySelector('.reader-top'), '::after').content,
+              progressBackground: getComputedStyle(document.getElementById('progressFill')).backgroundImage,
+              outline: getComputedStyle(document.querySelector('.reader-card')).outlineStyle,
+              textAlign: getComputedStyle(word).textAlign,
+              textCenterOffset: Math.abs((textBounds.left + textBounds.right - card.left - card.right) / 2),
+              buttons: [...document.querySelectorAll('.reader-footer button')]
+                .filter(button => button.getClientRects().length)
+                .map(button => {
+                  const bounds = button.getBoundingClientRect();
+                  return {id: button.id, left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom,
+                    card: {left: card.left, right: card.right, top: card.top, bottom: card.bottom},
+                    scrollWidth: button.scrollWidth, clientWidth: button.clientWidth,
+                    fitsCard: bounds.left >= card.left && bounds.right <= card.right
+                    && bounds.top >= card.top && bounds.bottom <= card.bottom,
+                    fitsContent: button.scrollWidth <= button.clientWidth + 1};
+                }),
+            };
+          });
+          assert.ok(['none', 'normal'].includes(layout.headerDecoration), 'No decorative stripe on the header');
+          for (const color of ['36, 94, 201', '246, 201, 76', '216, 91, 96']) {
+            assert.ok(layout.progressBackground.includes(color), 'Progress fill includes blue, yellow, and red');
+          }
+          if (branch === 'story_reading') {
+            assert.equal(layout.outline, 'none', 'Story card has no dashed outline');
+            assert.equal(layout.textAlign, 'center', 'Story lines are centered');
+            assert.ok(layout.textCenterOffset <= 1, 'Story text shares the card center');
+          }
+          for (const button of layout.buttons) {
+            assert.ok(button.fitsCard && button.fitsContent,
+              `${branch}: ${button.id} fits its card and label at ${viewport.width}px: ${JSON.stringify(button)}`);
+          }
+          for (const selector of ['#pauseBtn', '#nextBtn']) {
+            if (!await page.locator(selector).isVisible()) continue;
+            const bounds = await page.locator(selector).boundingBox();
+            assert.ok(bounds && bounds.x >= 0 && bounds.x + bounds.width <= viewport.width,
+              `${branch}: ${selector} fits within the ${viewport.width}px screen`);
+          }
           const expectedHints = ['sentences', 'story_reading'].includes(branch) ? 1 : 0;
           assert.equal(await page.locator('#readingWord .is-next-word').count(), expectedHints,
             `${branch}: next-word blue highlight`);
           assert.equal(await page.locator('#readingWord .is-current').count(), expectedHints,
             `${branch}: current-word blue highlight`);
+          if (previewDir && branch === 'story_reading' && !debug) {
+            // Preview the normal Story URL separately from the deliberately
+            // mismatched recovery URL exercised above.
+            const previewPage = await context.newPage();
+            previewPage.on('domcontentloaded', () => previewPage.addScriptTag({content: testSource}).catch(error => errors.push(error.message)));
+            await previewPage.goto(`${origin}/dashboard/assessment/reading_ui/para/?official_assessment_id=1&crla_stage=story_reading`);
+            await previewPage.waitForFunction(() => !document.getElementById('readingWord').textContent.includes('Loading'));
+            await previewPage.evaluate(() => document.fonts.ready);
+            const pauseBounds = await previewPage.locator('#pauseBtn').boundingBox();
+            assert.ok(pauseBounds && pauseBounds.x + pauseBounds.width <= viewport.width,
+              'Preview pause control stays inside the screen');
+            await previewPage.screenshot({path: path.join(previewDir, `crla-story-${viewport.width}.png`), fullPage: true, animations: 'disabled'});
+            await previewPage.evaluate(() => document.body.classList.add('dark-theme'));
+            await previewPage.screenshot({path: path.join(previewDir, `crla-story-dark-${viewport.width}.png`), fullPage: true, animations: 'disabled'});
+            await previewPage.close();
+          }
           if (!expectedHints) {
             // Exercise redraws after a partial speech callback as well as the
             // initial screen: Word and Rhyme tasks must never add a blue cue.

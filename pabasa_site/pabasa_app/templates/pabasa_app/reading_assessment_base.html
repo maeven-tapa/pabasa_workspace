@@ -3685,10 +3685,23 @@
 {% include "pabasa_app/includes/student_theme_stylesheet.html" %}
 <style>
     body.is-crla-reader[data-student-theme] {
+        --accent: #245ec9;
+        --accent-deep: #14386c;
+        --accent-soft: #e7efff;
+        --sun: #f6c94c;
+        --clay: #d85b60;
+        --warm: #fff2bd;
+        --paper: #ffffff;
+        --panel: #ffffff;
+        --ink: #183153;
+        --muted: #526984;
+        --line: rgba(36, 94, 201, .12);
+        --shadow: 0 20px 55px rgba(29, 67, 127, .12);
         background:
-            radial-gradient(ellipse at 0% 0%, rgba(0, 71, 171, .2), transparent 55%),
-            radial-gradient(ellipse at 100% 12%, rgba(198, 40, 40, .14), transparent 50%),
-            #f8fbff !important;
+            radial-gradient(ellipse at 0% 0%, rgba(104, 169, 255, .28), transparent 48%),
+            radial-gradient(ellipse at 100% 8%, rgba(246, 201, 76, .2), transparent 32%),
+            radial-gradient(ellipse at 96% 100%, rgba(216, 91, 96, .12), transparent 35%),
+            #f5f9ff !important;
     }
     body.dark-theme.is-crla-reader[data-student-theme] {
         background:
@@ -3698,8 +3711,164 @@
     }
     body.is-crla-reader[data-student-theme]::before {
         background-image:
-            linear-gradient(rgba(0, 71, 171, .04) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0, 71, 171, .04) 1px, transparent 1px);
+            radial-gradient(circle at 3px 3px, rgba(36, 94, 201, .2) 1.5px, transparent 1.8px);
+        background-size: 24px 24px;
+        mask-image: linear-gradient(90deg, #000, transparent 19%, transparent 81%, #000);
+    }
+    body.is-crla-reader[data-student-theme]::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background:
+            linear-gradient(135deg, transparent 46%, rgba(36, 94, 201, .16) 46% 48%, transparent 48%) left 2% bottom 4% / 180px 120px no-repeat,
+            linear-gradient(135deg, transparent 54%, rgba(246, 201, 76, .45) 54% 57%, transparent 57%) left 2% bottom 4% / 180px 120px no-repeat,
+            linear-gradient(135deg, transparent 46%, rgba(216, 91, 96, .2) 46% 48%, transparent 48%) right 2% bottom 7% / 160px 110px no-repeat;
+    }
+    body.is-crla-reader[data-student-theme] :is(.reader-top, .reader-card, .completion-card, .pause-menu) {
+        background: #fff !important;
+        border-color: #dce7f8 !important;
+        border-radius: 24px !important;
+        box-shadow: var(--shadow) !important;
+    }
+    body.is-crla-reader .reader-top {
+        overflow: hidden;
+    }
+    body.is-crla-reader .reader-card::after {
+        display: none;
+    }
+    body.is-crla-reader[data-student-theme] .counter {
+        background: #fff3c4 !important;
+        border-color: transparent !important;
+        color: #634b10 !important;
+        letter-spacing: .01em;
+    }
+    body.is-crla-reader .counter::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        margin-right: .5rem;
+        border-radius: 50%;
+        background: #245ec9;
+        flex: 0 0 auto;
+    }
+    body.is-crla-reader[data-student-theme] :is(.progress-track, #crlaQuestionPanel .story-question-progress-track) {
+        height: 10px;
+        background: #eaf0fa !important;
+        border: 0 !important;
+    }
+    body.is-crla-reader[data-student-theme] :is(.progress-fill, #crlaQuestionPanel .story-question-progress-fill) {
+        position: relative;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #245ec9 0% 72%, #f6c94c 72% 92%, #d85b60 92%) !important;
+    }
+    body.is-crla-reader .reader-shell.is-story-reading > .reader-stage > .reader-card {
+        outline: none;
+    }
+    body.is-crla-reader .reader-shell.is-story-reading .word-stage {
+        align-content: center;
+    }
+    body.is-crla-reader .reader-shell.is-story-reading .reading-word {
+        text-align: center;
+    }
+    body.is-crla-reader .story-reading-timer-track {
+        stroke: rgba(36, 94, 201, .12);
+    }
+    body.is-crla-reader .story-reading-timer-progress {
+        stroke: #245ec9;
+    }
+    body.dark-theme.is-crla-reader[data-student-theme] {
+        --accent: #75aeff;
+        --accent-deep: #c6dcff;
+        --accent-soft: #203d68;
+        --ink: #edf4ff;
+        --muted: #b5c7e0;
+        --shadow: 0 20px 55px rgba(0, 0, 0, .22);
+    }
+    body.dark-theme.is-crla-reader[data-student-theme] :is(.reader-top, .reader-card, .completion-card, .pause-menu) {
+        background: #152b49 !important;
+        border-color: #314b71 !important;
+    }
+    body.dark-theme.is-crla-reader[data-student-theme] .counter {
+        background: #453b21 !important;
+        color: #ffe5a0 !important;
+    }
+    body.dark-theme.is-crla-reader[data-student-theme] :is(.reading-title, .reading-word) {
+        color: #edf4ff !important;
+    }
+    body.dark-theme.is-crla-reader .reader-shell.is-story-reading .reading-word {
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+    body.dark-theme.is-crla-reader[data-student-theme] :is(.progress-track, #crlaQuestionPanel .story-question-progress-track) {
+        background: #2a4265 !important;
+    }
+    body.dark-theme.is-crla-reader .story-reading-timer-progress {
+        stroke: #75aeff;
+    }
+    body.dark-theme.is-crla-reader .story-reading-timer-track {
+        stroke: rgba(117, 174, 255, .18);
+    }
+    @media (max-width: 680px) {
+        body.is-crla-reader[data-student-theme]::before { opacity: .55; }
+        body.is-crla-reader[data-student-theme]::after { opacity: .5; }
+        body.is-crla-reader .progress-head {
+            flex-wrap: wrap;
+            gap: .65rem;
+        }
+        body.is-crla-reader .header-actions {
+            margin-left: auto;
+        }
+    }
+    @media (max-width: 1024px) {
+        body.is-crla-reader .reader-footer.is-official-crla-nav {
+            grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+            grid-template-areas: "controls next";
+            align-items: stretch;
+            gap: .65rem;
+            width: min(760px, 100%);
+            min-width: 0;
+            margin-inline: auto;
+        }
+        body.is-crla-reader .reader-footer.is-official-crla-nav .recording-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+            gap: .6rem;
+            justify-self: stretch;
+            width: 100%;
+            min-width: 0;
+            padding: 0;
+        }
+        body.is-crla-reader .reader-footer.is-official-crla-nav:has(> .nav-next.d-none) {
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-areas: "controls";
+        }
+        body.is-crla-reader .reader-footer.is-official-crla-nav .recording-controls :is(#btnStartReading, #btnStopReading, #btnReadAloud) {
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+            min-height: 52px;
+            padding: .65rem .6rem !important;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            line-height: 1.3;
+        }
+        body.is-crla-reader .reader-footer.is-official-crla-nav .nav-next {
+            width: 100%;
+            min-width: 0;
+            justify-self: stretch;
+        }
+    }
+    @media (max-width: 600px) {
+        body.is-crla-reader .reader-footer.is-official-crla-nav {
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-areas: "controls" "next";
+        }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        body.is-crla-reader :is(.progress-fill, #crlaQuestionPanel .story-question-progress-fill) {
+            transition: none;
+        }
     }
     body.is-crla-reader :is(.forest-world, .treasure-world, .space-world, .library-world, .zoo-world, .ocean-world) {
         display: none !important;

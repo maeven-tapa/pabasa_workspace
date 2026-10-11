@@ -3698,7 +3698,7 @@
             const wrong = Boolean(readingWord?.querySelector(".is-wrong"));
             const correct = Boolean(readingWord?.querySelector(".is-read"));
             const retry = wrong && !processing && !itemLocked[currentIndex];
-            let status = "Read the Word";
+            let status = `Read the ${getCurrentSectionLabel()}`;
             let animated = false;
             if (processing) { status = "Processing..."; animated = true; }
             else if (activelyListening) { status = "Listening..."; animated = true; }
@@ -5719,7 +5719,9 @@
 
         function getCurrentHeaderLabel(type = mode) {
             const sectionLabel = getCurrentSectionLabel(type);
+            if (sectionLabel === "Rhymes") return "Rhyme Reading Assessment";
             if (sectionLabel === "Sentence") return "Sentence Reading Assessment";
+            if (sectionLabel === "Story") return "Story Reading Assessment";
             if (sectionLabel === "Story/Paragraph") return "Story/Paragraph Reading Assessment";
             if (sectionLabel === "Vowel") return "Vowel Reading Assessment";
             return "Word Reading Assessment";
