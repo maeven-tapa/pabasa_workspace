@@ -3649,6 +3649,7 @@
         }
     </style>
     <link rel="stylesheet" href="{% static 'pabasa_app/dashboard_branding.css' %}?v=20261011-sidebar-slide">
+    <link rel="stylesheet" href="{% static 'pabasa_app/signature_sidebar.css' %}?v=20261012-1">
 </head>
 <body class="dashboard-body dashboard-preloading{% if nav_role == 'teacher' %} teacher-dashboard-body{% endif %}" data-student-theme="{% if nav_role == 'student' %}{{ student_theme_slug|default:'sky' }}{% endif %}">
     <script>
@@ -3706,12 +3707,12 @@
         })();
     </script>
     <div class="d-flex dashboard-app-shell">
-        <aside class="dashboard-sidebar d-none d-lg-block">
+        <aside class="signature-surface dashboard-sidebar d-none d-lg-block">
             {% include "pabasa_app/partials/_sidebar.html" with notification_badge_id="desktopNotifBadge" %}
         </aside>
 
         <div class="dashboard-main flex-grow-1">
-            <div class="offcanvas offcanvas-start d-lg-none" tabindex="-1" id="dashboardSidebar" aria-label="Sidebar navigation">
+            <div class="offcanvas offcanvas-start d-lg-none" tabindex="-1" id="dashboardSidebar" data-signature-surface aria-label="Sidebar navigation">
                 <div class="offcanvas-body p-0">
                     {% include "pabasa_app/partials/_sidebar.html" with notification_badge_id="mobileNotifBadge" %}
                 </div>
@@ -4942,5 +4943,6 @@
         });
         window.setInterval(updateInAppNotifications, 10000);
     </script>
+    <script src="{% static 'pabasa_app/js/signature_sidebar.js' %}?v=20261012-1"></script>
 </body>
 </html>

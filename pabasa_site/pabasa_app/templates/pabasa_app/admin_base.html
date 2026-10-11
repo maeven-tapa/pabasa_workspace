@@ -3496,6 +3496,7 @@
         }
     </style>
     <link rel="stylesheet" href="{% static 'pabasa_app/dashboard_branding.css' %}?v=20261011-sidebar-slide">
+    <link rel="stylesheet" href="{% static 'pabasa_app/signature_sidebar.css' %}?v=20261012-1">
 </head>
 <body class="admin-preloading">
     <script>
@@ -3523,106 +3524,13 @@
         <div class="admin-page-loader__spinner"></div>
     </div>
     <div class="admin-app-shell">
-    <aside class="admin-sidebar">
-        <div class="d-flex flex-column h-100">
-            <div class="admin-sidebar-top">
-                    <div class="admin-logo-row">
-                        <a class="sidebar-logo-link admin-homepage-logo" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
-                            {% include "pabasa_app/partials/_pabasa_image_logo.html" with collapsible=True %}
-                        </a>
-
-                </div>
-
-            </div>
-
-            <div class="admin-sidebar-scroll">
-                <nav>
-                    <div class="admin-nav-label">Main</div>
-                    <a class="admin-nav-link {% if request.resolver_match.url_name == 'dashboard_admin' %}active{% endif %}" href="{% url 'dashboard_admin' %}" data-admin-tooltip title="Dashboard"><i class="bi bi-grid"></i><span class="admin-nav-text">Dashboard</span></a>
-                    <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_users' %}active{% endif %}" href="{% url 'admin_users' %}" data-admin-tooltip title="Users"><i class="bi bi-people"></i><span class="admin-nav-text">Users</span></a>
-                    <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_school' or request.resolver_match.url_name == 'admin_school_detail' %}active{% endif %}" href="{% url 'admin_school' %}" data-admin-tooltip title="School"><i class="bi bi-building"></i><span class="admin-nav-text">School</span></a>
-                    <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_courses' %}active{% endif %}" href="{% url 'admin_courses' %}" data-admin-tooltip title="Courses &amp; Materials"><i class="bi bi-folder2-open"></i><span class="admin-nav-text">Courses &amp; Materials</span></a>
-                    <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_school_calendar' %}active{% endif %}" href="{% url 'admin_school_calendar' %}" data-admin-tooltip title="School Calendar"><i class="bi bi-calendar3"></i><span class="admin-nav-text">School Calendar</span></a>
-                    <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_official_reading_assessments' %}active{% endif %}" href="{% url 'admin_official_reading_assessments' %}" data-admin-tooltip title="Official Reading Assessments"><i class="bi bi-journal-text"></i><span class="admin-nav-text">Official Reading Assessments</span></a>
-                    <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_practice_assessment' %}active{% endif %}" href="{% url 'admin_practice_assessment' %}" data-admin-tooltip title="Practice"><i class="bi bi-journal-check"></i><span class="admin-nav-text">Practice</span></a>
-                    <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_activity_log' %}active{% endif %}" href="{% url 'admin_activity_log' %}" data-admin-tooltip title="Activity Log"><i class="bi bi-clipboard-data"></i><span class="admin-nav-text">Activity Log</span></a>
-                    <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_settings' %}active{% endif %}" href="{% url 'admin_settings' %}" data-admin-tooltip title="Settings"><i class="bi bi-gear"></i><span class="admin-nav-text">Settings</span></a>
-                </nav>
-            </div>
-
-            <div class="admin-sidebar-lower-profile">
-                <div class="admin-profile-card">
-                    <div class="admin-notification-slot" data-admin-notification-slot="desktop"></div>
-                    <div class="admin-profile-avatar" aria-hidden="true">{{ first_name|default:"A"|slice:":1"|upper }}{{ last_name|default:"D"|slice:":1"|upper }}</div>
-                    <div class="admin-profile-name">{{ first_name|default:"PABASA" }} {{ last_name|default:"Admin" }}</div>
-                    <div class="admin-profile-role">Admin</div>
-                </div>
-            </div>
-
-            <div class="admin-sidebar-collapse-row d-none d-lg-flex">
-                <button class="btn btn-sm sidebar-collapse-btn" type="button" data-admin-collapse-btn aria-label="Collapse sidebar" title="Collapse sidebar">
-                    <i class="bi bi-chevron-left"></i>
-                    <span class="admin-nav-text admin-collapse-label">Collapse</span>
-                </button>
-            </div>
-
-            <div class="admin-sidebar-footer">
-                <button class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2" type="button" data-bs-toggle="modal" data-bs-target="#adminLogoutModal" data-admin-tooltip title="Logout" aria-label="Logout" style="border-radius: 14px; font-weight: 700; min-height: 46px;">
-                    <i class="bi bi-box-arrow-right"></i>
-                    <span class="admin-logout-text">Logout</span>
-                </button>
-            </div>
-        </div>
+    <aside class="signature-surface admin-sidebar">
+        {% include "pabasa_app/partials/_admin_sidebar.html" %}
     </aside>
-
-    <!-- Mobile/Tablet offcanvas sidebar (same content as desktop sidebar, shown on small screens) -->
     <div class="offcanvas offcanvas-start d-lg-none" tabindex="-1" id="adminSidebarCanvas" aria-label="Admin navigation">
         <div class="offcanvas-body p-0">
-            <aside class="admin-sidebar p-3" aria-hidden="false" style="position:static; width:100%; box-shadow:none;">
-                <div class="d-flex flex-column h-100">
-                    <div class="admin-sidebar-top">
-                        <div class="admin-logo-row">
-                            <a class="sidebar-logo-link admin-homepage-logo" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
-                                {% include "pabasa_app/partials/_pabasa_image_logo.html" %}
-                            </a>
-                            <button class="admin-mobile-sidebar-close-btn" type="button" data-bs-dismiss="offcanvas" aria-label="Close sidebar">
-                                <i class="bi bi-x-lg" aria-hidden="true"></i>
-                            </button>
-                        </div>
-
-                    </div>
-
-                    <div class="admin-sidebar-scroll">
-                        <nav>
-                            <div class="admin-nav-label">Main</div>
-                            <a class="admin-nav-link {% if request.resolver_match.url_name == 'dashboard_admin' %}active{% endif %}" href="{% url 'dashboard_admin' %}" data-admin-tooltip title="Dashboard"><i class="bi bi-grid"></i><span class="admin-nav-text">Dashboard</span></a>
-                            <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_users' %}active{% endif %}" href="{% url 'admin_users' %}" data-admin-tooltip title="Users"><i class="bi bi-people"></i><span class="admin-nav-text">Users</span></a>
-                            <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_school' or request.resolver_match.url_name == 'admin_school_detail' %}active{% endif %}" href="{% url 'admin_school' %}" data-admin-tooltip title="School"><i class="bi bi-building"></i><span class="admin-nav-text">School</span></a>
-                            <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_courses' %}active{% endif %}" href="{% url 'admin_courses' %}" data-admin-tooltip title="Courses &amp; Materials"><i class="bi bi-folder2-open"></i><span class="admin-nav-text">Courses &amp; Materials</span></a>
-                            <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_school_calendar' %}active{% endif %}" href="{% url 'admin_school_calendar' %}" data-admin-tooltip title="School Calendar"><i class="bi bi-calendar3"></i><span class="admin-nav-text">School Calendar</span></a>
-                            <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_official_reading_assessments' %}active{% endif %}" href="{% url 'admin_official_reading_assessments' %}" data-admin-tooltip title="Official Reading Assessments"><i class="bi bi-journal-text"></i><span class="admin-nav-text">Official Reading Assessments</span></a>
-                            <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_practice_assessment' %}active{% endif %}" href="{% url 'admin_practice_assessment' %}" data-admin-tooltip title="Practice"><i class="bi bi-journal-check"></i><span class="admin-nav-text">Practice</span></a>
-                            <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_activity_log' %}active{% endif %}" href="{% url 'admin_activity_log' %}" data-admin-tooltip title="Activity Log"><i class="bi bi-clipboard-data"></i><span class="admin-nav-text">Activity Log</span></a>
-                            <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_settings' %}active{% endif %}" href="{% url 'admin_settings' %}" data-admin-tooltip title="Settings"><i class="bi bi-gear"></i><span class="admin-nav-text">Settings</span></a>
-                        </nav>
-                    </div>
-
-                    <div class="admin-sidebar-lower-profile">
-                        <div class="admin-profile-card">
-                            <div class="admin-notification-slot" data-admin-notification-slot="mobile"></div>
-                            <div class="admin-profile-avatar" aria-hidden="true">{{ first_name|default:"A"|slice:":1"|upper }}{{ last_name|default:"D"|slice:":1"|upper }}</div>
-                            <div class="admin-profile-name">{{ first_name|default:"PABASA" }} {{ last_name|default:"Admin" }}</div>
-                            <div class="admin-profile-role">Admin</div>
-                        </div>
-                    </div>
-
-                    <div class="admin-sidebar-footer p-3">
-                        <button class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2" type="button" data-bs-toggle="modal" data-bs-target="#adminLogoutModal" data-admin-tooltip title="Logout" aria-label="Logout" style="border-radius: 14px; font-weight: 700; min-height: 46px;">
-                            <i class="bi bi-box-arrow-right"></i>
-                            <span class="admin-logout-text">Logout</span>
-                        </button>
-                    </div>
-                </div>
+            <aside class="signature-surface admin-sidebar" style="position:static; width:100%; box-shadow:none;">
+                {% include "pabasa_app/partials/_admin_sidebar.html" with sidebar_mobile=True %}
             </aside>
         </div>
     </div>
@@ -3822,6 +3730,7 @@
 
             function setCollapsed(collapsed) {
                 document.body.classList.toggle('admin-sidebar-collapsed', collapsed);
+                collapseBtn.setAttribute('aria-expanded', String(!collapsed));
                 collapseBtn.setAttribute('title', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
                 collapseBtn.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
                 collapseBtn.innerHTML = collapsed
@@ -4296,5 +4205,6 @@
         });
         window.setInterval(updateInAppNotifications, 30000);
     </script>
+    <script src="{% static 'pabasa_app/js/signature_sidebar.js' %}?v=20261012-1"></script>
 </body>
 </html>

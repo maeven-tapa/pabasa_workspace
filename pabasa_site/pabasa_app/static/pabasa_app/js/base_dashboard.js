@@ -723,6 +723,7 @@ var getStudentClassData = window.getStudentClassData = function() {
 
     function setCollapsed(collapsed) {
         document.body.classList.toggle("sidebar-collapsed", collapsed);
+        collapseBtn.setAttribute("aria-expanded", String(!collapsed));
         collapseBtn.setAttribute("title", collapsed ? "Expand sidebar" : "Collapse sidebar");
         collapseBtn.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
         collapseBtn.innerHTML = collapsed

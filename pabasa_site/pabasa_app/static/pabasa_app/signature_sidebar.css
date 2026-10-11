@@ -1,0 +1,242 @@
+/* Signature Blue shared by student, teacher, and admin.
+   The explicit scope overrides legacy role/theme rules without affecting page content. */
+html body :is(.signature-surface, #dashboardSidebar) {
+    background: linear-gradient(160deg, #155d8c, #10466e 54%, #0b3552) !important;
+    color: #eff9ff !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    border-right: 1px solid #ffffff12;
+}
+#dashboardSidebar, #adminSidebarCanvas { --bs-offcanvas-width: min(320px, calc(100vw - 36px)); }
+#dashboardSidebar .offcanvas-body, #adminSidebarCanvas .offcanvas-body { overflow: hidden; height: 100%; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar {
+    --signature-icon-column: 56px; container-name: signature-sidebar; container-type: size;
+    display: flex !important; flex-direction: column !important;
+    box-sizing: border-box; height: var(--signature-viewport-height,100dvh) !important; min-height: 0 !important;
+    width: 100% !important; padding: max(28px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom)) !important;
+    gap: 0 !important; overflow: hidden !important; color: #eff9ff;
+}
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar *, html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar *::before, html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar *::after { box-sizing: border-box; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-brand {
+    position: relative !important; display: flex !important; justify-content: center !important;
+    align-items: flex-start !important; height: 118px !important; min-height: 118px !important;
+    flex: 0 0 118px !important; margin: 0 !important; padding: 0 !important; width: 100% !important;
+}
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-brand::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: 22px; height: 1px; background: #ffffff38; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .sidebar-logo-link { display: flex !important; align-items: center !important; justify-content: center !important; width: 100% !important; min-height: 72px !important; height: 72px !important; padding: 0 !important; margin: 0 !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .dashboard-navbar-logo { display: block !important; width: 215px !important; max-width: 100% !important; height: 72px !important; flex: none !important; object-fit: contain; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .dashboard-navbar-mascot { display: none !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar :is(.mobile-sidebar-close-btn,.admin-mobile-sidebar-close-btn) { position: absolute !important; top: -15px !important; right: -9px !important; width: 44px !important; height: 44px !important; display: inline-flex; align-items: center; justify-content: center; color: #e2f5ff !important; background: transparent !important; border: 0; border-radius: 10px; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-frame { display: grid; grid-template-rows: 0 minmax(0,1fr) 0; flex: 1 1 0; min-height: 0; overflow: hidden; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-frame.has-overflow { grid-template-rows: 44px minmax(0,1fr) 44px; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-scroll { position: relative; display: block !important; flex: initial !important; min-height: 0 !important; max-height: none !important; height: auto !important; width: 100% !important; margin: 0 !important; padding: 2px 0 !important; border: 0 !important; overflow-y: auto !important; overflow-x: hidden !important; scrollbar-width: none; overscroll-behavior: contain; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-scroll :is(nav,.sidebar-account-section) { display: grid !important; grid-template-columns: minmax(0,1fr); gap: 8px !important; border: 0 !important; padding: 0 !important; margin: 0 !important; width: 100% !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-item {
+    position: relative !important; display: grid !important; grid-template-columns: var(--signature-icon-column) minmax(0,1fr);
+    align-items: center !important; justify-content: normal !important; gap: 0 !important;
+    width: 100% !important; min-width: 0 !important; min-height: 52px !important; height: auto !important;
+    padding: 8px 12px 8px 0 !important; margin: 0 !important; border: 0 !important; border-radius: 12px !important;
+    background: transparent !important; color: #eff9ff !important; box-shadow: none !important;
+    text-align: left !important; font-size: 14px !important; font-weight: 600 !important; line-height: 1.35;
+    text-decoration: none; white-space: normal !important; transform: none !important;
+}
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-item > i:first-child {
+    display: grid !important; place-items: center; justify-self: center; width: 32px !important; height: 32px !important;
+    margin: 0 !important; border-radius: 9px; color: #ffda48 !important; background: #ffffff09;
+    font-size: 19px !important; line-height: 1;
+}
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-item > :is(.sidebar-text,.admin-nav-text) { display: inline !important; overflow: visible !important; opacity: 1 !important; max-width: none !important; font: inherit; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-item:is(:hover,:focus-visible) { background: #ffffff13 !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-item:is(.is-active,.active) { background: #ffda48 !important; color: #143b56 !important; box-shadow: 0 5px 16px #04233820 !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-item:is(.is-active,.active) > i:first-child { background: #ffffff40; color: #143b56 !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-item::before, html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-item::after { display: none !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-item.is-locked { opacity: .65; grid-template-columns: var(--signature-icon-column) minmax(0,1fr) 16px; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-tools-label { position: relative; display: block !important; height: 12px; line-height: 12px; margin: 28px 0 4px !important; padding: 0 14px !important; color: #b6d4e7 !important; font-size: 10px !important; font-weight: 700; letter-spacing: 1.8px; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-scroll-button { display: grid; grid-template-columns: var(--signature-icon-column) minmax(0,1fr); align-items: center; gap: 0; width: 100%; height: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 9px; background: #b9ebff15; color: #b9ebff; font-size: 11px; font-weight: 600; text-align: left; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-scroll-button i { justify-self: center; font-size: 17px; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-scroll-button:hover:not(:disabled) { background: #b9ebff2a; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-scroll-button:disabled { opacity: .3; cursor: default; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-frame:not(.has-overflow) .signature-scroll-button { visibility: hidden; pointer-events: none; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile-row { position: static !important; display: block !important; flex: 0 0 auto !important; width: 100% !important; padding: 20px 0 12px !important; margin: 0 !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile {
+    position: relative !important; isolation: isolate; display: grid !important;
+    grid-template-columns: minmax(0,1fr); grid-template-rows: 56px auto auto 44px; justify-items: center; align-content: center; align-items: center;
+    gap: 6px !important; width: 100% !important; min-height: 216px !important; height: auto !important;
+    padding: 20px 16px !important; margin: 0 !important; border: 1px solid #ffffff26 !important;
+    border-radius: 16px !important; background: #ffffff12 !important; color: #fff !important;
+    text-align: center !important; overflow: hidden !important; box-shadow: inset 0 1px 0 #ffffff0d !important;
+}
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile::before { content: ''; position: absolute; inset: 0; z-index: -2; background-image: var(--section-portrait,none); background-size: cover; background-position: center 32%; opacity: .38; pointer-events: none; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg,#123b6026,#102e4866); pointer-events: none; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-avatar, html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .sidebar-collapsed-profile {
+    display: grid !important; place-items: center !important; flex: none !important;
+    width: 56px !important; height: 56px !important; min-height: 0 !important; margin: 0 !important;
+    padding: 0 !important; border: 2px solid #ffffffb8 !important; border-radius: 50% !important;
+    background: #143c66ad !important; color: #fff !important; font-size: 17px !important; font-weight: 700;
+    box-shadow: 0 4px 12px #051e3933; text-decoration: none;
+}
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-avatar span, html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .sidebar-collapsed-profile span { font-size: 30px !important; line-height: 1; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-name { display: block !important; width: 100%; padding: 0 !important; margin: 4px 0 0 !important; color: #fff !important; font-size: 14px !important; font-weight: 700 !important; line-height: 1.3; overflow-wrap: anywhere; white-space: normal !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-section { display: block !important; width: 100%; padding: 0 !important; margin: 0 !important; color: #d7e9f4 !important; font-size: 11px !important; font-weight: 400 !important; line-height: 1.3; overflow-wrap: anywhere; white-space: normal !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile-link {
+    display: inline-flex !important; align-items: center; justify-content: center; gap: 7px;
+    width: auto !important; min-height: 44px !important; margin: 6px 0 0 !important; padding: 10px 17px !important;
+    border: 0 !important; border-radius: 999px !important; background: #ffda48 !important; color: #143b56 !important;
+    font-size: 12px !important; font-weight: 700 !important; text-decoration: none;
+}
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile-link:hover { background: #ffe476 !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar :is(.signature-section-icon,.sidebar-profile-theme-link,.admin-notification-slot,.signature-profile > .notif-nav-btn) { position: absolute !important; top: 12px !important; width: 44px !important; height: 44px !important; min-width: 44px !important; min-height: 44px !important; display: inline-flex !important; align-items: center; justify-content: center; margin: 0 !important; border-radius: 10px; background: transparent !important; color: #e2f5ff !important; z-index: 2; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar :is(.signature-section-icon,.sidebar-profile-theme-link) { left: 8px !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar :is(.admin-notification-slot,.signature-profile > .notif-nav-btn) { right: 8px !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .notif-nav-btn { display: inline-flex !important; align-items: center; justify-content: center; width: 44px !important; height: 44px !important; color: #e2f5ff !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar :is(.notif-nav-btn,.sidebar-profile-theme-link,.signature-section-icon) i { color: inherit !important; font-size: 20px !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-mini-profile { display: none !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-toggle-row {
+    position: static !important; inset: auto !important; transform: none !important;
+    flex: 0 0 auto; width: 100% !important; min-height: 44px !important; max-width: none !important;
+    padding: 0 !important; margin: 0 !important; overflow: hidden !important;
+}
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-toggle-row .sidebar-collapse-btn, html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-footer > button {
+    position: static !important; display: grid !important; grid-template-columns: var(--signature-icon-column) minmax(0,1fr);
+    align-items: center !important; justify-content: normal !important; flex: none !important; gap: 0 !important;
+    width: 100% !important; min-width: 0 !important; max-width: none !important; height: 44px !important; min-height: 44px !important; max-height: none !important;
+    padding: 0 !important; margin: 0 !important; border: 0 !important; border-radius: 10px !important;
+    text-align: left; font-size: 12px; font-weight: 700; aspect-ratio: auto; transform: none !important;
+}
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-toggle-row .sidebar-collapse-btn { background: #9bdff9 !important; color: #103e60 !important; box-shadow: 0 3px 9px #04233818 !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-toggle-row .sidebar-collapse-btn:hover { background: #c7edfc !important; color: #103e60 !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-toggle-row :is(.sidebar-collapse-label,.admin-collapse-label) { display: inline !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar :is(.sidebar-collapse-btn,.signature-footer > button) > i { justify-self: center; margin: 0 !important; font-size: 18px !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-footer { position: static !important; inset: auto !important; display: block !important; flex: 0 0 auto !important; height: auto !important; width: 100% !important; padding: 12px 0 0 !important; margin: 0 !important; border: 0 !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-footer > button { background: transparent !important; color: #ffbdc1 !important; box-shadow: none !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-footer > button:hover { background: #ffffff13 !important; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar :is(a,button,[tabindex]):focus-visible { outline: 3px solid #8bd9f7 !important; outline-offset: -3px; }
+@media (min-width: 992px) {
+    .dashboard-app-shell { --signature-viewport-height: var(--dashboard-normalized-viewport-height,100dvh); }
+    .admin-app-shell { --signature-viewport-height: var(--admin-normalized-viewport-height,100dvh); }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar :is(.mobile-sidebar-close-btn,.admin-mobile-sidebar-close-btn) { display: none !important; }
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-brand .sidebar-logo-link { justify-content: flex-start !important; }
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-brand .dashboard-navbar-logo { display: none !important; }
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-brand .dashboard-navbar-mascot { display: block !important; width: 56px !important; height: 72px !important; flex: none !important; object-fit: contain; }
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar :is(.signature-nav-item > .sidebar-text,.signature-nav-item > .admin-nav-text,.signature-scroll-label,.sidebar-collapse-label,.admin-collapse-label,.signature-footer .sidebar-text,.admin-logout-text) { display: none !important; }
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-item { grid-template-columns: var(--signature-icon-column); padding-right: 0 !important; }
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-tools-label { visibility: hidden; }
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-tools-label::before { content: ''; visibility: visible; position: absolute; left: 14px; right: 14px; top: 5px; height: 1px; background: #ffffff38; }
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile-row { display: none !important; }
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-mini-profile { display: flex !important; position: static !important; flex: 0 0 68px; min-height: 68px !important; align-items: center; justify-content: center; width: 100%; padding: 0 0 12px !important; margin: 0 !important; }
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .sidebar-collapsed-profile { width: 48px !important; height: 48px !important; }
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-mini-profile .sidebar-collapsed-theme-link { display: none !important; }
+    /* Admin retains its account/notification controls in a compact card. */
+    html body.admin-sidebar-collapsed :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .admin-sidebar-lower-profile.signature-profile-row { display: block !important; padding: 0 0 12px !important; }
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile { display: flex !important; justify-content: center; min-height: 56px !important; height: 56px !important; padding: 4px !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile :is(.signature-name,.signature-section,.signature-profile-link,.signature-section-icon) { display: none !important; }
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile::before, html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile::after { display: none; }
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-avatar { width: 48px !important; height: 48px !important; }
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .admin-notification-slot { display: none !important; }
+}
+@media (max-height: 800px) {
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar { padding-top: max(20px,env(safe-area-inset-top)) !important; padding-bottom: max(16px,env(safe-area-inset-bottom)) !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-brand { height: 104px !important; min-height: 104px !important; flex-basis: 104px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-brand::after { bottom: 16px; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-frame { grid-template-rows: 44px minmax(0,1fr) 44px; --signature-reserved-arrows: 88; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile-row { padding-top: 12px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile { min-height: 148px !important; grid-template-rows: 40px auto auto 36px; gap: 4px !important; padding: 12px 14px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-avatar { width: 40px !important; height: 40px !important; font-size: 13px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-avatar span { font-size: 26px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-name { font-size: 12px !important; margin-top: 2px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-section { font-size: 10px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile-link { min-height: 36px !important; margin-top: 3px !important; padding: 8px 14px !important; font-size: 11px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar :is(.signature-section-icon,.sidebar-profile-theme-link,.admin-notification-slot,.signature-profile > .notif-nav-btn) { top: 5px !important; }
+}
+@media (max-width: 991.98px) {
+    #adminSidebarCanvas .signature-surface { display: block !important; height: 100% !important; min-height: 0 !important; margin: 0 !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-toggle-row { display: none !important; }
+}
+@media (min-width: 992px) and (max-height: 520px) {
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-brand { height: 80px !important; min-height: 80px !important; flex-basis: 80px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-brand::after { bottom: 6px; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile { min-height: 68px !important; grid-template-columns: 48px minmax(0,1fr); grid-template-rows: auto auto; gap: 2px 8px !important; padding: 8px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-avatar { grid-column: 1; grid-row: 1 / 3; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile :is(.signature-profile-link,.signature-section-icon) { display: none !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile .signature-name, html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile .signature-section { grid-column: 2; text-align: left; padding-right: 38px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile > .notif-nav-btn, html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .admin-notification-slot { top: 10px !important; right: 0 !important; }
+}
+@media (max-width: 991.98px) and (max-height: 640px) {
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile { min-height: 68px !important; grid-template-columns: 48px minmax(0,1fr); grid-template-rows: 48px; padding: 8px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile :is(.signature-name,.signature-section,.signature-section-icon,.sidebar-profile-theme-link) { display: none !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile .signature-profile-link { margin: 0 !important; padding: 6px 10px !important; font-size: 10px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile > .notif-nav-btn, html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .admin-notification-slot { top: 12px !important; right: 0 !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile-link { justify-self: start; max-width: calc(100% - 38px); }
+}
+@media (max-width: 991.98px) and (max-height: 440px) {
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar { padding-top: 12px !important; padding-bottom: 12px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-brand { height: 80px !important; min-height: 80px !important; flex-basis: 80px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-brand::after { bottom: 6px; }
+}
+/* These rules follow compact-height variants to preserve the collapsed avatar slot. */
+@media (min-width: 992px) {
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile { min-height: 56px !important; height: 56px !important; }
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-avatar { width: 48px !important; height: 48px !important; }
+}
+@media (prefers-reduced-motion: reduce) { .signature-sidebar * { scroll-behavior: auto !important; transition: none !important; } }
+
+/* The Signature Blue gradient replaces the older sidebar decoration. */
+html body :is(.signature-surface,#dashboardSidebar)::before,
+html body :is(.signature-surface,#dashboardSidebar)::after { display: none !important; }
+@media (max-height: 440px) {
+    html body :is(#dashboardSidebar,#adminSidebarCanvas,.dashboard-sidebar,.admin-sidebar) .signature-sidebar .signature-brand { height: 64px !important; min-height: 64px !important; flex-basis: 64px !important; }
+    html body :is(#dashboardSidebar,#adminSidebarCanvas,.dashboard-sidebar,.admin-sidebar) .signature-sidebar .signature-brand::after { bottom: 2px; }
+    html body :is(#dashboardSidebar,#adminSidebarCanvas,.dashboard-sidebar,.admin-sidebar) .signature-sidebar .signature-brand :is(.sidebar-logo-link,.dashboard-navbar-logo,.dashboard-navbar-mascot) { height: 56px !important; min-height: 56px !important; }
+    html body :is(#dashboardSidebar,#adminSidebarCanvas,.dashboard-sidebar,.admin-sidebar) .signature-sidebar .signature-profile-row { padding-top: 8px !important; padding-bottom: 8px !important; }
+}
+
+/* Use the available shell height at Windows display scaling too. */
+@container signature-sidebar (max-height: 800px){
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar { padding-top: max(20px,env(safe-area-inset-top)) !important; padding-bottom: max(16px,env(safe-area-inset-bottom)) !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-brand { height: 104px !important; min-height: 104px !important; flex-basis: 104px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-brand::after { bottom: 16px; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-frame { grid-template-rows: 44px minmax(0,1fr) 44px; --signature-reserved-arrows: 88; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile-row { padding-top: 12px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile { min-height: 148px !important; grid-template-rows: 40px auto auto 36px; gap: 4px !important; padding: 12px 14px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-avatar { width: 40px !important; height: 40px !important; font-size: 13px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-avatar span { font-size: 26px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-name { font-size: 12px !important; margin-top: 2px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-section { font-size: 10px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile-link { min-height: 36px !important; margin-top: 3px !important; padding: 8px 14px !important; font-size: 11px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar :is(.signature-section-icon,.sidebar-profile-theme-link,.admin-notification-slot,.signature-profile > .notif-nav-btn) { top: 5px !important; }
+}
+@media (min-width: 992px) { @container signature-sidebar (max-height: 520px){
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-brand { height: 80px !important; min-height: 80px !important; flex-basis: 80px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-brand::after { bottom: 6px; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile { min-height: 68px !important; grid-template-columns: 48px minmax(0,1fr); grid-template-rows: auto auto; gap: 2px 8px !important; padding: 8px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-avatar { grid-column: 1; grid-row: 1 / 3; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile :is(.signature-profile-link,.signature-section-icon) { display: none !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile .signature-name, html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile .signature-section { grid-column: 2; text-align: left; padding-right: 38px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile > .notif-nav-btn, html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .admin-notification-slot { top: 10px !important; right: 0 !important; }
+}}
+@media (max-width: 991.98px) { @container signature-sidebar (max-height: 640px){
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile { min-height: 68px !important; grid-template-columns: 48px minmax(0,1fr); grid-template-rows: 48px; padding: 8px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile :is(.signature-name,.signature-section,.signature-section-icon,.sidebar-profile-theme-link) { display: none !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile .signature-profile-link { margin: 0 !important; padding: 6px 10px !important; font-size: 10px !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile > .notif-nav-btn, html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .admin-notification-slot { top: 12px !important; right: 0 !important; }
+    html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile-link { justify-self: start; max-width: calc(100% - 38px); }
+}}
+@container signature-sidebar (max-height: 440px){
+    html body :is(#dashboardSidebar,#adminSidebarCanvas,.dashboard-sidebar,.admin-sidebar) .signature-sidebar .signature-brand { height: 64px !important; min-height: 64px !important; flex-basis: 64px !important; }
+    html body :is(#dashboardSidebar,#adminSidebarCanvas,.dashboard-sidebar,.admin-sidebar) .signature-sidebar .signature-brand::after { bottom: 2px; }
+    html body :is(#dashboardSidebar,#adminSidebarCanvas,.dashboard-sidebar,.admin-sidebar) .signature-sidebar .signature-brand :is(.sidebar-logo-link,.dashboard-navbar-logo,.dashboard-navbar-mascot) { height: 56px !important; min-height: 56px !important; }
+    html body :is(#dashboardSidebar,#adminSidebarCanvas,.dashboard-sidebar,.admin-sidebar) .signature-sidebar .signature-profile-row { padding-top: 8px !important; padding-bottom: 8px !important; }
+}
+@media (min-width: 992px) {
+html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-profile { min-height:56px !important; height:56px !important; }
+html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-avatar { width:48px !important; height:48px !important; }
+}
+
+/* Admin has a longer menu: keep its arrow slots through collapse as well. */
+html body :is(#adminSidebarCanvas,.admin-sidebar) .signature-sidebar .signature-nav-frame { grid-template-rows: 44px minmax(0,1fr) 44px; --signature-reserved-arrows: 88; }
+
+html body :is(#dashboardSidebar,#adminSidebarCanvas,.dashboard-sidebar,.admin-sidebar) .signature-sidebar .signature-footer :is(.sidebar-text,.admin-logout-text) { display: inline !important; }
+@media (min-width: 992px) {
+    html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar,#adminSidebarCanvas,.dashboard-sidebar,.admin-sidebar) .signature-sidebar .signature-footer :is(.sidebar-text,.admin-logout-text) { display: none !important; }
+}

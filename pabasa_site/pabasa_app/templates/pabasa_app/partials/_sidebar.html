@@ -1,6 +1,6 @@
 {% load static %}
-<div class="sidebar-inner d-flex flex-column p-3 p-xl-4{% if nav_role == 'student' %} student-sidebar{% elif nav_role == 'teacher' %} teacher-sidebar{% endif %}">
-    <div class="sidebar-top-section flex-shrink-0 mb-4">
+<div class="signature-sidebar sidebar-inner d-flex flex-column p-3 p-xl-4{% if nav_role == 'student' %} student-sidebar{% elif nav_role == 'teacher' %} teacher-sidebar{% endif %}">
+    <div class="signature-brand sidebar-top-section flex-shrink-0">
         <a class="sidebar-logo-link" href="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" aria-label="Go to dashboard">
             {% include "pabasa_app/partials/_pabasa_image_logo.html" with collapsible=True %}
         </a>
@@ -9,40 +9,43 @@
         </button>
     </div>
 
-    <div class="sidebar-upper-navigation">
-    <nav class="sidebar-nav-section nav nav-pills flex-column gap-1 mb-2 sidebar-main-section">
-        <div class="sidebar-section-label">Main</div>
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" data-nav-tooltip data-active-path="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" title="Dashboard"><i class="bi bi-grid"></i><span class="sidebar-text">Dashboard</span></a>
-        {% if nav_role == 'student' %}
-        {% if teacher_access_mode %}
-        <span class="nav-link dash-link d-flex align-items-center gap-2 is-locked" aria-disabled="true" aria-label="Practice Mode is unavailable while viewing a student account" title="Unavailable during teacher access"><i class="bi bi-mic"></i><span class="sidebar-text">Practice Mode</span><i class="bi bi-lock-fill ms-auto" aria-hidden="true"></i></span>
-        {% else %}
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'practice' %}" data-nav-tooltip data-student-class-required title="Join a class to unlock Practice Mode" data-unlocked-title="Start your reading practice"><i class="bi bi-mic"></i><span class="sidebar-text">Practice Mode</span></a>
-        {% endif %}
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'assessment' %}" data-nav-tooltip data-student-class-required title="Join a class to unlock Reading Assessment" data-unlocked-title="Take your reading assessment"><i class="bi bi-journal-check"></i><span class="sidebar-text">Reading Assessment</span></a>
-        {% else %}
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'courses' %}" data-nav-tooltip title="Course"><i class="bi bi-folder2-open"></i><span class="sidebar-text">Course</span></a>
-        <a id="sidebarClassLink" class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'class_management' %}" data-nav-tooltip data-active-path="{% url 'class_management' %}" title="Section"><i class="bi bi-door-open"></i><span class="sidebar-text">Section</span></a>
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'students' %}" data-nav-tooltip title="ARAL Program"><i class="bi bi-people"></i><span class="sidebar-text">ARAL Program</span></a>
-        {% endif %}
-    </nav>
+    <div class="signature-nav-frame" data-sidebar-nav-frame>
+        {% include "pabasa_app/partials/_sidebar_scroll_button.html" with direction="up" %}
+        <div class="signature-nav-scroll sidebar-upper-navigation" data-sidebar-nav-scroll tabindex="0" role="region" aria-label="Menu">
+        <nav class="sidebar-nav-section nav nav-pills flex-column gap-1 mb-2 sidebar-main-section">
+            <a class="signature-nav-item nav-link dash-link d-flex align-items-center gap-2" href="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" data-nav-tooltip data-active-path="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" title="Dashboard"><i class="bi bi-grid"></i><span class="sidebar-text">Dashboard</span></a>
+            {% if nav_role == 'student' %}
+            {% if teacher_access_mode %}
+            <span class="signature-nav-item nav-link dash-link d-flex align-items-center gap-2 is-locked" aria-disabled="true" aria-label="Practice Mode is unavailable while viewing a student account" title="Unavailable during teacher access"><i class="bi bi-mic"></i><span class="sidebar-text">Practice Mode</span><i class="bi bi-lock-fill ms-auto" aria-hidden="true"></i></span>
+            {% else %}
+            <a class="signature-nav-item nav-link dash-link d-flex align-items-center gap-2" href="{% url 'practice' %}" data-nav-tooltip data-student-class-required title="Join a class to unlock Practice Mode" data-unlocked-title="Start your reading practice"><i class="bi bi-mic"></i><span class="sidebar-text">Practice Mode</span></a>
+            {% endif %}
+            <a class="signature-nav-item nav-link dash-link d-flex align-items-center gap-2" href="{% url 'assessment' %}" data-nav-tooltip data-student-class-required title="Join a class to unlock Reading Assessment" data-unlocked-title="Take your reading assessment"><i class="bi bi-journal-check"></i><span class="sidebar-text">Reading Assessment</span></a>
+            {% else %}
+            <a class="signature-nav-item nav-link dash-link d-flex align-items-center gap-2" href="{% url 'courses' %}" data-nav-tooltip title="Course"><i class="bi bi-folder2-open"></i><span class="sidebar-text">Course</span></a>
+            <a id="sidebarClassLink" class="signature-nav-item nav-link dash-link d-flex align-items-center gap-2" href="{% url 'class_management' %}" data-nav-tooltip data-active-path="{% url 'class_management' %}" title="Section"><i class="bi bi-door-open"></i><span class="sidebar-text">Section</span></a>
+            <a class="signature-nav-item nav-link dash-link d-flex align-items-center gap-2" href="{% url 'students' %}" data-nav-tooltip title="ARAL Program"><i class="bi bi-people"></i><span class="sidebar-text">ARAL Program</span></a>
+            {% endif %}
+        </nav>
 
-    {% if nav_role != 'student' %}
-    <div class="d-grid gap-0 sidebar-account-section">
-        <div class="sidebar-section-label">Tools</div>
-        <button class="nav-link dash-link d-flex align-items-center gap-2 border-0 bg-transparent text-start" type="button" data-help-toggle data-nav-tooltip title="Help" aria-expanded="false" aria-controls="helpPanel" aria-label="Open help panel">
-            <i class="bi bi-question-circle"></i><span class="sidebar-text">Help</span>
-        </button>
-    </div>
-    {% else %}
-    {% endif %}
+        {% if nav_role != 'student' %}
+        <div class="d-grid gap-0 sidebar-account-section">
+            <div class="signature-tools-label sidebar-section-label">Tools</div>
+            <button class="signature-nav-item nav-link dash-link d-flex align-items-center gap-2 border-0 bg-transparent text-start" type="button" data-help-toggle data-nav-tooltip title="Help" aria-expanded="false" aria-controls="helpPanel" aria-label="Open help panel">
+                <i class="bi bi-question-circle"></i><span class="sidebar-text">Help</span>
+            </button>
+        </div>
+        {% endif %}
+        </div>
+
+        {% include "pabasa_app/partials/_sidebar_scroll_button.html" with direction="down" %}
     </div>
 
     {% if nav_role == 'teacher' or nav_role == 'student' %}
-    <div class="sidebar-lower-profile">
+    <div class="signature-profile-row sidebar-lower-profile">
         {% include "pabasa_app/partials/_sidebar_profile_card.html" %}
     </div>
-    <div class="sidebar-collapsed-profile-row">
+    <div class="signature-mini-profile sidebar-collapsed-profile-row">
         {% if nav_role == 'student' %}
         <a class="sidebar-collapsed-theme-link" href="{% url 'theme_shop' %}" data-nav-tooltip title="Theme Shop" aria-label="Theme Shop">
             <i class="bi bi-palette" aria-hidden="true"></i>
@@ -58,14 +61,14 @@
     </div>
     {% endif %}
 
-    <div class="sidebar-collapse-row d-none d-lg-flex">
+    <div class="signature-toggle-row sidebar-collapse-row d-none d-lg-flex">
         <button class="btn btn-sm btn-light sidebar-collapse-btn" type="button" data-sidebar-collapse-btn aria-label="Collapse sidebar" title="Collapse sidebar">
             <i class="bi bi-chevron-left"></i>
             <span class="sidebar-text sidebar-collapse-label">Collapse</span>
         </button>
     </div>
 
-    <div class="sidebar-footer flex-shrink-0 pt-2 border-top">
+    <div class="signature-footer sidebar-footer flex-shrink-0">
         <button class="btn btn-outline-danger w-100" type="button" data-bs-toggle="modal" data-bs-target="#logoutConfirmModal" data-nav-tooltip title="Logout">
             <i class="bi bi-box-arrow-right me-1"></i><span class="sidebar-text">Logout</span>
         </button>
