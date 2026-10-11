@@ -79,6 +79,11 @@ class WorkbookStateTests(SimpleTestCase):
                          '.l24g2-complete', '.l24g3-repeat-dialog-backdrop'):
             self.assertIn(selector, popup)
 
+        repeat = (js_root / 'prescribed_l24_g3_repeat.js').read_text(encoding='utf-8')
+        self.assertIn("if (finished) window.Session8CompletionPopup?.show", repeat)
+        self.assertNotIn('l24g3-repeat-dialog-backdrop', repeat)
+        self.assertNotIn('Magpatuloy sa Susunod na Gawain', repeat)
+
     def test_session8_reading_target_labels_are_removed_from_active_renderers(self):
         js_root = Path(__file__).parent / 'static/pabasa_app/js'
         workbook = (js_root / 'prescribed_workbook.js').read_text(encoding='utf-8')

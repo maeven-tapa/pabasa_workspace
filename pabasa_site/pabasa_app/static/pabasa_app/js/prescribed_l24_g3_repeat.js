@@ -109,22 +109,10 @@
     const currentState = oral(index);
     const controlsLocked = busy;
     const back = esc(data.back_url || '/dashboard/assessment/');
-    const next = esc(data.next_url || back);
     const phase = currentState.phase;
     const listenRequired = phase === 'model';
     const recovery = phase === 'listen';
     const recoveryReady = recovery && Number(currentState.listens || 0) >= 3;
-    const dialogMarkup = dialog === 'completion' ? `<div class="l24g3-repeat-dialog-backdrop" role="presentation">
-      <section class="l24g3-repeat-dialog" role="dialog" aria-modal="true" aria-labelledby="l24g3-completion-title">
-        <div class="l24g3-repeat-dialog-icon" aria-hidden="true">✓</div>
-        <h2 id="l24g3-completion-title">${COMPLETION_MESSAGE}</h2>
-        <p>Handa ka na ba sa susunod na gawain?</p>
-        <div class="l24g3-repeat-dialog-actions">
-          <a class="l24g3-repeat-primary" href="${next}">Magpatuloy sa Susunod na Gawain</a>
-          <a class="l24g3-repeat-secondary" href="${back}">Bumalik sa Aking Aralin</a>
-        </div>
-      </section>
-    </div>` : '';
     root.innerHTML = `<div class="l24g3-repeat-shell">
       <a class="l24g3-repeat-back" href="${back}">← <span>Aking Aralin</span></a>
       <section class="l24g3-repeat-card">
@@ -150,7 +138,12 @@
             <p class="l24g3-repeat-feedback ${kind}" role="status">${esc(state.last_feedback || '')}</p>
           </section>
         </div>`}
-      </section>${dialogMarkup}</div>`;
+      </section></div>`;
+    if (finished) window.Session8CompletionPopup?.show({
+      title: 'Magaling!',
+      message: 'Natapos mo ang Gawain 3.',
+      backUrl: data.back_url || '/dashboard/assessment/',
+    });
     document.getElementById('instruction')?.addEventListener('click', playInstruction);
     if (!finished) {
       document.getElementById('listen')?.addEventListener('click', listen);
