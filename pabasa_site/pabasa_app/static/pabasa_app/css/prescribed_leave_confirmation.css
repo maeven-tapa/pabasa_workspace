@@ -1,0 +1,49 @@
+/* Leave confirmation styling for Lessons 29–31. */
+:is(.session13-controls-modal,.l30-controls-modal,.s15-modal)[id$="-leave-modal"] > :is(.session13-controls-card,.l30-controls-card,.s15-card){
+  box-sizing:border-box;
+  width:min(500px,calc(100vw - 40px));
+  padding:46px 30px 30px;
+  border-radius:26px;
+  background:#fffffff5;
+  color:#183e63;
+  text-align:left;
+}
+:is(.session13-controls-modal,.l30-controls-modal,.s15-modal)[id$="-leave-modal"] :is(.session13-controls-head,.l30-controls-head,.s15-head){
+  margin:0 0 18px;
+}
+:is(.session13-controls-modal,.l30-controls-modal,.s15-modal)[id$="-leave-modal"] h2{
+  margin:0;
+  font-size:1.55rem;
+  line-height:1.2;
+}
+:is(.session13-controls-modal,.l30-controls-modal,.s15-modal)[id$="-leave-modal"] p{
+  margin:0;
+  color:#183e63;
+  font-size:1rem;
+  line-height:1.4;
+}
+:is(.session13-controls-modal,.l30-controls-modal,.s15-modal)[id$="-leave-modal"] :is(.session13-controls-actions,.l30-controls-actions,.s15-actions){
+  display:grid;
+  gap:10px;
+  margin-top:20px;
+}
+:is(.session13-controls-modal,.l30-controls-modal,.s15-modal)[id$="-leave-modal"] button[id$="-leave-no"],
+:is(.session13-controls-modal,.l30-controls-modal,.s15-modal)[id$="-leave-modal"] button[id$="-leave-yes"]{
+  width:100%;
+  min-height:46px;
+  padding:10px 16px;
+  border:0;
+  border-radius:14px;
+  box-shadow:none;
+  font:inherit;
+  font-weight:800;
+  cursor:pointer;
+}
+:is(.session13-controls-modal,.l30-controls-modal,.s15-modal)[id$="-leave-modal"] button[id$="-leave-no"]{
+  background:#e8f4f2;
+  color:#24535a;
+}
+:is(.session13-controls-modal,.l30-controls-modal,.s15-modal)[id$="-leave-modal"] button[id$="-leave-yes"]{
+  background:#2aa7a0;
+  color:#fff;
+}

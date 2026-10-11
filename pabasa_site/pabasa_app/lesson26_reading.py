@@ -1,10 +1,12 @@
-"""Sentence continuation for Lesson 26 Activity 2, independent of CRLA."""
+"""Prescribed English sentence continuation, independent of CRLA."""
 
 from .reading_stt import ReadingMatcher
 
 
-def analyze_sentence_continuation(target_text, current_syllable_index, transcript, language_code):
-    matcher = ReadingMatcher(target_text, current_syllable_index, language_code)
+def analyze_sentence_continuation(target_text, current_syllable_index, transcript, language_code,
+                                  pronunciation_aliases=None):
+    matcher = ReadingMatcher(target_text, current_syllable_index, language_code,
+                             pronunciation_aliases=pronunciation_aliases)
     spoken = matcher.normalize_spoken_words(transcript)
     previous_word = matcher.current_word_index
     previous_cursor = matcher.current_syllable_index

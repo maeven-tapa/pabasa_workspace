@@ -69,11 +69,20 @@ function walk(node, visit) {
         },
         BasahinButton: {setState: noop},
       },
-      app: {querySelector: () => button}, a: {querySelector: () => button},
+      app: {querySelector: () => button, querySelectorAll: () => []}, a: {querySelector: () => button, querySelectorAll: () => []},
       busy: false, isPaused: false, isActivityPaused: false, prescribedMicMuted: false,
       isMuted: false, muted: false, paused: false, currentIndex: 0,
       generation: 0, speechGeneration: 0, selectedMicDeviceId: '', stream: null,
       pendingRetryAudio: '',
+      sentenceReader: {async read(target, index, button, isCurrent) {
+        calls++;
+        assert.ok(['prescribed_oral_sentence_blank_lesson29_activity1.js','prescribed_story_time_lesson30_activity2.js','prescribed_drag_blank_lesson31_activity2.js','prescribed_fix_sentence_lesson31_activity3.js'].includes(file));
+        assert.equal(target, item.sentence);
+        assert.equal(index, 0);
+        assert.ok(button);
+        assert.equal(isCurrent(), true);
+        cancel();
+      }},
       readVerseContinuously: async (target, button) => {
         calls++;
         assert.equal(file, 'prescribed_rhyming_verses_lesson27_activity1.js');

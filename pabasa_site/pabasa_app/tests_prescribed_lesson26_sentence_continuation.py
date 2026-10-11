@@ -83,7 +83,7 @@ class Lesson26SentenceRecognitionTests(SimpleTestCase):
         result = self.recognize(text, 'The cat ate a hat', official_crla_assessment='1', crla_sentence_word_scoring='1')
         self.assertNotIn('reading_mismatch', result)
         self.assertIn('word_results', result)
-        result = self.recognize(text, 'The cat', prescribed_activity_key='lesson-31-gawain-2')
+        result = self.recognize(text, 'The cat', prescribed_activity_key='lesson-30-gawain-1')
         self.assertNotIn('reading_mismatch', result)
 
     def test_word_reading_and_provider_failures_keep_existing_behavior(self):

@@ -81,6 +81,7 @@ from .reading_material_utils import format_assigned_week_display, format_assigne
 from .knowlez_stt import KnowlezSpeechError, transcribe_knowlez_audio, uses_knowlez_stt
 from .lesson27_reading import analyze_verse_reading
 from .lesson26_reading import analyze_sentence_continuation
+from .prescribed_sentence_reading import ACTIVITY_KEYS as SENTENCE_CONTINUATION_KEYS, continue_sentence
 from .reading_stt import (
     CRLA_TTS_VOICES,
     stt_word_metadata,
@@ -117,6 +118,23 @@ LESSON31_ACTIVITY3_RECOGNITION_ALIASES = {
     'i': {'eye', 'aye', 'hi'},
     'sip': {'zip', 'ship', 'sipped', 'shipped'},
 }
+
+
+def _sentence_continuation_aliases(key):
+    # Retain allowances for this activity's vocabulary without importing
+    # unrelated lesson mappings (for example Lesson 27's loved/love).
+    vocabulary = {
+        'lesson-29-gawain-1': {'mill'}, 'lesson-30-gawain-2': {'mat'},
+        'lesson-31-gawain-2': {'mat'}, 'lesson-31-gawain-3': {'mat', 'bat'},
+    }.get(key, set())
+    aliases = {word: set(PRESCRIBED_ENGLISH_RECOGNITION_ALIASES[word]) for word in vocabulary}
+    if key == 'lesson-29-gawain-1':
+        aliases['matt'] = {'mat', 'math'}
+    elif key == 'lesson-31-gawain-2':
+        aliases.update(sip={'zip', 'ship', 'sipped', 'shipped'}, sit={'seat'})
+    elif key == 'lesson-31-gawain-3':
+        aliases.update(LESSON31_ACTIVITY3_RECOGNITION_ALIASES)
+    return aliases
 
 
 def _prescribed_spoken_word_matches(target, heard_words, aliases=None):
@@ -18723,6 +18741,29 @@ def prescribed_activity_progress(request, activity_key):
                 'total_items': total, 'activity_completed': finished, 'state': saved}})
         except (TypeError, ValueError, KeyError, json.JSONDecodeError) as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+    if activity_key in SENTENCE_CONTINUATION_KEYS:
+        try:
+            continuation_data = json.loads(request.body or '{}')
+            if isinstance(continuation_data, dict) and continuation_data.get('action') == 'sentence_continuation':
+                existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
+                old = existing.state if existing and isinstance(existing.state, dict) else {}
+                saved, reading, prompt = continue_sentence(
+                    activity, activity_key, old, continuation_data, _sentence_continuation_aliases(activity_key),
+                )
+                completed = int(saved.get('completed_items', 0))
+                total = len(activity['lines'] if activity_key == 'lesson-30-gawain-2' else activity['items'])
+                progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
+                    'current_index': completed, 'completed_items': completed, 'correct_items': completed,
+                    'total_items': total, 'activity_completed': saved['phase'] == 'complete', 'state': saved,
+                })
+                return JsonResponse({'success': True, 'accepted': reading['complete'],
+                                     'reading': reading, 'continue_prompt': prompt, 'progress': {
+                                         'current_index': completed, 'completed_items': completed,
+                                         'total_items': total, 'activity_completed': progress.activity_completed,
+                                         'state': saved,
+                                     }})
+        except (TypeError, ValueError, KeyError, json.JSONDecodeError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     if activity['interaction'] == 'oral_jumbled_sentence':
         try:
             data = json.loads(request.body or '{}')
@@ -18819,6 +18860,21 @@ def prescribed_activity_progress(request, activity_key):
             existing = query.first()
             old = existing.state if existing and isinstance(existing.state, dict) else {}
             total = len(activity['items'])
+            action = data.get('action')
+            playback_receipt = old.get('sentence_played_request')
+            request_id = data.get('request_id') if action == 'sentence_played' else None
+            if request_id is not None:
+                if not isinstance(request_id, str) or not request_id.strip() or len(request_id) > 128:
+                    raise ValueError('Invalid playback request.')
+                request_index = int(data.get('item_index', -1))
+                if isinstance(playback_receipt, dict) and playback_receipt.get('id') == request_id:
+                    if playback_receipt.get('item_index') != request_index:
+                        raise ValueError('Invalid playback request.')
+                    # A lost acknowledgement may be retried after placing the
+                    # word or advancing. Return current progress without undoing it.
+                    return JsonResponse({'success': True, 'accepted': True, 'progress': {
+                        'current_index': existing.current_index, 'completed_items': existing.completed_items,
+                        'total_items': total, 'activity_completed': existing.activity_completed, 'state': old}})
             index = max(0, min(total, int(old.get('current_item', 0))))
             if index >= total:
                 raise ValueError('This activity is already complete.')
@@ -18843,8 +18899,11 @@ def prescribed_activity_progress(request, activity_key):
                     if choice_index >= len(activity['word_choices']): phase = 'sentence_listen'
                 else: choice_attempts += 1
             elif action == 'sentence_played':
+                if request_id is not None and request_index != index:
+                    raise ValueError('Listen to the current sentence first.')
                 if phase != 'sentence_listen': raise ValueError('Listen to the sentence first.')
                 accepted, phase = True, 'dragging'
+                playback_receipt = {'id': request_id, 'item_index': index} if request_id is not None else None
             elif action == 'place_word':
                 if phase != 'dragging': raise ValueError('Listen to the sentence before choosing a word.')
                 word = str(data.get('word', '')).strip().lower()
@@ -18872,6 +18931,8 @@ def prescribed_activity_progress(request, activity_key):
                      'placed_word': placed_word, 'completed_items': index,
                      'phase': 'complete' if finished else phase,
                      'state_version': int(old.get('state_version') or 0) + 1}
+            if playback_receipt:
+                saved['sentence_played_request'] = playback_receipt
             progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={
                 'current_index': index, 'completed_items': index, 'correct_items': index,
                 'total_items': total, 'activity_completed': finished, 'state': saved})
@@ -25124,11 +25185,13 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
             analysis = analyze_verse_reading(
                 target_text, current_syllable_index, analysis_transcript, language_code,
             )
-        elif (request.POST.get('prescribed_activity_key') == 'lesson-26-gawain-2'
+        elif (request.POST.get('prescribed_activity_key') in SENTENCE_CONTINUATION_KEYS | {'lesson-26-gawain-2'}
               and language_code.lower().startswith('en') and mode == 'sentence'
               and not official_crla_assessment):
             analysis = analyze_sentence_continuation(
                 target_text, current_syllable_index, analysis_transcript, language_code,
+                _sentence_continuation_aliases(request.POST.get('prescribed_activity_key'))
+                if request.POST.get('prescribed_activity_key') in SENTENCE_CONTINUATION_KEYS else None,
             )
         elif mode == "sentence" and request.POST.get('crla_sentence_word_scoring') == '1':
             try:

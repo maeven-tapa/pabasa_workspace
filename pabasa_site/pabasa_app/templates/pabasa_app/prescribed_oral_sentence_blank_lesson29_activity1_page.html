@@ -21,7 +21,7 @@
     .backdrop{position:fixed;inset:0;z-index:10;display:grid;place-items:center;background:#e7f7f7c9;backdrop-filter:blur(3px)}.backdrop[hidden]{display:none}.modal{width:min(500px,calc(100vw - 36px));padding:36px 34px;border-radius:30px;background:#fffffff3;text-align:center;box-shadow:0 22px 60px #173f6325}.modal p{color:var(--muted);font-weight:800}.modal h2{font-size:clamp(1.8rem,4vw,2.6rem);margin:14px 0}.start-label{color:#277f82!important;letter-spacing:.08em}.start-actions{display:grid;gap:14px}.start-actions button{min-height:64px;border:0;border-radius:999px;font:inherit;font-size:1.15rem;font-weight:900;cursor:pointer}.start{background:var(--teal);color:#fff;box-shadow:0 5px 0 var(--dark)}.later{border:3px solid var(--line)!important;background:#fff;color:var(--dark);box-shadow:0 4px 0 #b7d6dc}
     @media(max-width:680px){.page{width:min(100% - 24px,680px)}.stage{min-height:0;margin-top:28px;padding:34px 18px}.item{grid-template-columns:1fr}.picture{max-height:210px}.button{width:100%;min-width:0}.back{width:245px}}
   </style>
-</head>
+<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_sentence_reading.css' %}?v=1"></head>
 <body>
   <main class="page" data-prescribed-leave-prefix="prescribed-s13l29g1">
     <a class="back" id="lesson29a1-back" data-prescribed-leave-back href="{% url 'assessment' %}">← <span>Back to My Lessons</span></a>
@@ -40,6 +40,6 @@
   <script src="{% static 'pabasa_app/js/prescribed_controls.js' %}?v=session13" defer></script>
   <script src="{% static 'pabasa_app/js/session13_prescribed_controls.js' %}?v=1" defer></script>
   <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-5" defer></script>
-  <script src="{% static 'pabasa_app/js/prescribed_oral_sentence_blank_lesson29_activity1.js' %}?v=20261010-matt-aliases-2-english-stream-1" defer></script>
+  <script src="{% static 'pabasa_app/js/prescribed_sentence_reading.js' %}?v=20261011-reading-save-resume" defer></script><script src="{% static 'pabasa_app/js/prescribed_oral_sentence_blank_lesson29_activity1.js' %}?v=20261011-reading-save-resume" defer></script>
 </body>
 </html>

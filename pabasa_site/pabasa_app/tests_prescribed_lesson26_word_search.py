@@ -93,7 +93,7 @@ class PrescribedLesson26WordSearchTests(TestCase):
             reverse('reading_read_aloud_api'),
         )
         script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js/prescribed_word_search.js').read_text(encoding='utf-8')
-        self.assertIn("window.Basahin.read({target_text:targetWord, language:'English', mode:'reading'}", script)
+        self.assertIn("window.Basahin.read({target_text:targetWord, language:'English', mode:'reading', prescribed_activity_key:'lesson-26-gawain-1'}", script)
         self.assertIn('result.raw_transcript || result.transcript', script)
         self.assertNotIn('result.complete &&', script)
         self.assertIn('save({candidate_match: {word_index: currentIndex, start, end}})', script)
@@ -400,7 +400,9 @@ class PrescribedLesson26WordSearchTests(TestCase):
         for script_name, prefix in scripts.items():
             script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js', script_name).read_text(encoding='utf-8')
             self.assertIn(f"window.__prescribedLeaveAdapters['{prefix}']", script)
-            if prefix != 'prescribed-s13l29g3':
+            if prefix == 'prescribed-s13l29g1':
+                self.assertIn('await sentenceReader.flush()', script)
+            elif prefix != 'prescribed-s13l29g3':
                 self.assertIn('Promise.resolve()', script)
 
         trace_script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js', 'prescribed_trace_say_lesson29_activity3.js').read_text(encoding='utf-8')
@@ -468,13 +470,14 @@ class PrescribedLesson26WordSearchTests(TestCase):
         self.assertEqual(data['story_title'], 'Ben and the Little Pet')
         self.assertEqual(len(data['lines']), 6)
         script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js/prescribed_story_time_lesson30_activity2.js').read_text(encoding='utf-8')
-        self.assertIn("action:'line_read'", script)
+        self.assertIn("PrescribedSentenceReading.create({key:'lesson-30-gawain-2'", script)
+        self.assertIn('sentenceReader.read(line,index,button,current)', script)
         self.assertIn('{reset:true}', script)
         self.assertIn("language:'English'", script)
-        self.assertIn("pendingRetryAudio='Try again.'", script)
-        self.assertIn("class=\"${matched?'matched':'missed'}\"", script)
+        self.assertIn("feedbackText='Try again.'", script)
+        self.assertIn('PrescribedSentenceReading.markup(line', script)
+        self.assertIn('sentenceReader.playPrompt()', script)
         self.assertIn("word==='mat'&&heardWords[index]==='math'", script)
-        self.assertIn("prescribed_activity_key:'lesson-30-gawain-2'", script)
         self.assertNotIn('<h1 class="title">Story Time!</h1>', script)
         self.assertIn('Listen to each line, then read the same line aloud.', script)
         self.assertTrue(_prescribed_sentence_matches('The pet is on a mat.', 'The pet is on a math.'))
@@ -604,11 +607,11 @@ class PrescribedLesson26WordSearchTests(TestCase):
             settings.BASE_DIR,
             'pabasa_app/static/pabasa_app/css/lesson31_activity1_refinement.css',
         ).read_text(encoding='utf-8')
-        self.assertIn('grid-template-columns:minmax(340px,360px) minmax(400px,1fr);align-items:center;width:min(100%,900px);margin-inline:auto;', refinement)
+        self.assertIn('grid-template-columns:340px minmax(0,1fr);align-items:center;width:min(100%,780px);margin-inline:auto;', refinement)
         self.assertIn('html body .title{display:none!important}', refinement)
         self.assertIn('font-size:clamp(1.45rem,2.3vw,2rem)', refinement)
         self.assertIn('.picture{grid-column:1;grid-row:3;width:min(340px,100%);height:clamp(180px,30vh,280px);', refinement)
-        self.assertIn('.choices{grid-column:2;grid-row:3;display:flex;justify-content:flex-start;gap:clamp(48px,6vw,84px);', refinement)
+        self.assertIn('.choices{grid-column:2;grid-row:3;display:flex;justify-content:center;gap:12px;', refinement)
         self.assertIn('.eyebrow{justify-self:center}', refinement)
         premature = self.client.post(
             self.lesson31_activity1_progress_url,

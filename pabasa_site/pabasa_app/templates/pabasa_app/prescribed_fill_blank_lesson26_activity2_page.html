@@ -53,7 +53,7 @@
 <style>.prescribed-l26a2-pause-actions{display:grid;gap:10px;margin-top:20px}.prescribed-l26a2-pause-actions button{min-height:46px;border:0;border-radius:14px;padding:10px 16px;font:inherit;font-weight:800;cursor:pointer}.prescribed-l26a2-pause-actions .primary{color:#fff;background:#2aa7a0}.prescribed-l26a2-pause-actions .secondary{color:#24535a;background:#e8f4f2}</style>
 <style>
 .lesson26-reading-word{display:inline-block;line-height:1.35;border-radius:6px;padding:2px 4px;color:var(--ink)}
-.blank.correct:has(.lesson26-reading-word){background:#f0f6f5;color:var(--ink);border-color:var(--ink)}
+.sentence.is-reading .blank.correct{display:inline;margin:0;padding:0;min-width:0;min-height:0;border:0;border-radius:0;background:transparent;color:inherit;font-size:inherit;font-weight:inherit;line-height:inherit;vertical-align:baseline;cursor:default;box-shadow:none}
 .lesson26-reading-word.is-read{background:#e7f7ec;color:#2f9e44}
 .lesson26-reading-word.is-new-read{animation:lesson26WordReveal .58s ease both;background-image:linear-gradient(90deg,rgba(231,247,236,0) 0%,#e7f7ec 42%,#d7f4df 100%);background-size:220% 100%}
 .lesson26-unread{background:#ddebff;color:#0f172a;border:2px solid #2563eb;border-radius:10px;padding:3px 2px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
@@ -76,7 +76,7 @@
   <div class="prescribed-l26a2-modal" id="prescribed-l26a2-leave-modal" role="dialog" aria-modal="true" aria-labelledby="prescribed-l26a2-leave-title" hidden><section class="prescribed-l26a2-modal-card"><div class="prescribed-l26a2-modal-head"><h2 id="prescribed-l26a2-leave-title">Are you sure you want to leave?</h2></div><p>You can continue from where you left off.</p><p id="prescribed-l26a2-leave-error" role="alert" hidden>Your activity could not be saved. Please try again.</p><div class="prescribed-l26a2-pause-actions"><button class="primary" id="prescribed-l26a2-leave-no" type="button">Stay</button><button class="secondary" id="prescribed-l26a2-leave-yes" type="button">Leave</button></div></section></div>
   {{ prescribed_activity_data|json_script:"prescribed-activity-data" }}
   <script src="{% static 'pabasa_app/js/prescribed_lesson26_31_ui.js' %}?v=lesson26-31-ui-5" defer></script>
-  <script src="{% static 'pabasa_app/js/prescribed_fill_blank_lesson26_activity2.js' %}?v=20261011-progress-audio-recovery" defer></script>
+  <script src="{% static 'pabasa_app/js/prescribed_fill_blank_lesson26_activity2.js' %}?v=20261011-inline-placed-words-v2" defer></script>
   <script src="{% static 'pabasa_app/js/prescribed_controls.js' %}?v=1" defer></script>
   <script src="{% static 'pabasa_app/js/prescribed_lesson26_activity2_tools.js' %}?v=2" defer></script>
   <script src="{% static 'pabasa_app/js/prescribed_leave_confirmation.js' %}?v=1" defer></script>

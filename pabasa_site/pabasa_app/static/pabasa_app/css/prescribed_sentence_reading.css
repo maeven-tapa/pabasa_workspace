@@ -1,0 +1,7 @@
+#app .prescribed-reading-sentence{font-size:clamp(1.5rem,3vw,2.5rem);font-weight:900;line-height:1.65;text-align:center;margin:20px auto}
+#app .prescribed-reading-word{display:inline-block;padding:2px 4px;border:0;border-radius:6px;line-height:1.35;text-decoration:none}
+#app .prescribed-reading-word.is-read{background:#e7f7ec;color:#2f9e44}
+#app .prescribed-reading-unread{background:#ddebff;color:#0f172a;border:2px solid #2563eb;border-radius:10px;padding:3px 2px;box-decoration-break:clone;-webkit-box-decoration-break:clone;text-decoration:none}
+#app .prescribed-reading-unread .prescribed-reading-word{background:transparent;color:#0f172a}
+
+#app .picture.reading-picture{display:block;width:140px;height:140px;object-fit:contain;margin:0 auto}
