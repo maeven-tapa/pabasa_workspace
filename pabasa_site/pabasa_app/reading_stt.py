@@ -250,6 +250,7 @@ L22_G1_SCOPED_SYLLABLE_ALIASES = {
     'tus': {'tus', 'tuss'},
     'bi': {'bi', 'bee', 'be', 'b'},
     'net': {'net', 'nett'},
+    'te': {'te', 't'},
     'les': {'les', 'less'},
 }
 

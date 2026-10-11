@@ -294,7 +294,7 @@ class WorkbookStateTests(SimpleTestCase):
             ('bi', 'cabinet', 'hard', ('bi', 'bee', 'be', 'b'), 'bead'),
             ('ca', 'cabinet', 'hard', ('ca', 'ka', 'cabinet'), 'kay'),
             ('net', 'cabinet', 'hard', ('net', 'nett'), 'knit'),
-            ('te', 'Celeste', 'soft', ('te',), 'tea'),
+            ('te', 'Celeste', 'soft', ('te', 't'), 'tea'),
             ('Ce', 'Celeste', 'soft', ('ce', 'se', 'celeste'), 'see'),
             ('les', 'Celeste', 'soft', ('les', 'less'), 'lease'),
         )
@@ -318,6 +318,7 @@ class WorkbookStateTests(SimpleTestCase):
             'tus': ('cactus', 'hard', ('tuss', 'Tuss.', 'TUSS'), 'toast'),
             'bi': ('cabinet', 'hard', ('bee', 'be', 'B', 'b', 'B.'), 'bead'),
             'net': ('cabinet', 'hard', ('nett',), 'knit'),
+            'te': ('Celeste', 'soft', ('t', 'T', 'T.', 'té'), 'de'),
             'les': ('Celeste', 'soft', ('less',), 'lease'),
         }
         for expected, (word, sound, accepted, rejected) in aliases.items():
@@ -337,6 +338,16 @@ class WorkbookStateTests(SimpleTestCase):
             ('net', 'cabinet', 'hard'), ('te', 'Celeste', 'soft'), ('les', 'Celeste', 'soft'),
         ):
             self.assertFalse(l22_c_pronunciation_match(expected, word, 'B.', sound, key))
+        for expected, word, sound in (
+            ('cac', 'cactus', 'hard'), ('ce', 'Cebu', 'soft'), ('ca', 'Cagayan', 'hard'),
+            ('bu', 'Cebu', 'soft'), ('com', 'computer', 'hard'), ('pu', 'computer', 'hard'),
+            ('ga', 'Cagayan', 'hard'), ('tus', 'cactus', 'hard'), ('ter', 'computer', 'hard'),
+            ('yan', 'Cagayan', 'hard'), ('car', 'Cardo', 'hard'), ('do', 'Cardo', 'hard'),
+            ('bi', 'cabinet', 'hard'), ('net', 'cabinet', 'hard'), ('les', 'Celeste', 'soft'),
+        ):
+            self.assertFalse(l22_c_pronunciation_match(expected, word, 'T.', sound, key))
+        self.assertFalse(l22_c_pronunciation_match('te', 'Celeste', 'tea', 'soft', key))
+        self.assertFalse(l22_c_pronunciation_match('te', 'Celeste', 'tee', 'soft', key))
 
     def test_lesson22_cock_alias_does_not_leak_to_other_pantig(self):
         self.assertFalse(l22_c_pronunciation_match('ce', 'Cebu', 'cock', 'soft'))
@@ -881,7 +892,7 @@ class PrescribedWorkbookFlowTests(TestCase):
         )
         self.assertEqual(response.status_code, 200, response.content)
         state = response.json()['state']
-        approved_transcripts = {'pu': 'Poo.', 'tus': 'Tuss.', 'bi': 'B.', 'net': 'Nett.', 'les': 'less'}
+        approved_transcripts = {'pu': 'Poo.', 'tus': 'Tuss.', 'bi': 'B.', 'net': 'Nett.', 'te': 'T.', 'les': 'less'}
 
         def approved_alias_response(request):
             expected = request.POST['l22_c_syllable']
