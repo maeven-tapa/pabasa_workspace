@@ -1,5 +1,7 @@
 import json
 from pathlib import Path
+import shutil
+import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -19,7 +21,7 @@ APP_ROOT = Path(__file__).resolve().parent
 
 
 class Session8LocalRecordingContractTests(unittest.TestCase):
-    """Local MediaRecorder flows submit clips and must not require Basahin."""
+    """Session 8 recording flows retain their activity-specific submission rules."""
 
     RECORDING_SCRIPTS = (
         'static/pabasa_app/js/prescribed_l22_g2_reading.js',
@@ -28,13 +30,71 @@ class Session8LocalRecordingContractTests(unittest.TestCase):
         'static/pabasa_app/js/prescribed_l24_g3_repeat.js',
     )
 
-    def test_local_recorders_submit_audio_without_shared_basahin_dependency(self):
+    def run_node(self, source):
+        node = shutil.which('node')
+        if not node:
+            self.skipTest('Node.js is required for the microphone-state harness.')
+        result = subprocess.run([node], input=source, capture_output=True, text=True,
+                                timeout=20, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_local_recorders_preserve_their_activity_specific_clip_submission(self):
         for relative_path in self.RECORDING_SCRIPTS:
             with self.subTest(script=relative_path):
                 source = (APP_ROOT / relative_path).read_text(encoding='utf-8')
                 self.assertIn('getUserMedia', source)
                 self.assertIn("append('audio'", source)
-                self.assertNotIn('window.Basahin.attachStreamResult', source)
+
+    def test_confirmed_state_defects_delegate_capture_to_the_shared_button_lifecycle(self):
+        targets = (
+            'static/pabasa_app/js/prescribed_l22_g2_reading.js',
+            'static/pabasa_app/js/prescribed_l23_g2_reading.js',
+        )
+        for relative_path in targets:
+            with self.subTest(script=relative_path):
+                source = (APP_ROOT / relative_path).read_text(encoding='utf-8')
+                self.assertIn('window.Basahin.openMicrophone', source)
+                self.assertIn("window.Basahin.capture({button:document.getElementById('read'),stream})", source)
+                self.assertIn('window.Basahin.attachStreamResult', source)
+
+    def test_shared_button_executes_listening_processing_and_ready_dom_states(self):
+        source = (APP_ROOT / 'static/pabasa_app/js/basahin_button.js').read_text(encoding='utf-8')
+        self.run_node(r'''
+const vm = require('node:vm'), assert = require('node:assert/strict');
+class Node {
+  constructor() { this.attrs = {}; this.children = []; this.textContent = ''; this._dataset = {}; this.history = [];
+    this.dataset = new Proxy(this._dataset, {set: (target, key, value) => {
+      target[key] = String(value); if (key === 'basahinState') this.history.push(String(value)); return true;
+    }}); }
+  matches(selector) { return selector === 'button[data-basahin-button]' && this.hasAttribute('data-basahin-button'); }
+  closest(selector) { return this.matches(selector) ? this : null; }
+  setAttribute(name, value = '') { this.attrs[name] = String(value); }
+  getAttribute(name) { return this.attrs[name] ?? null; }
+  hasAttribute(name) { return Object.hasOwn(this.attrs, name); }
+  querySelector(selector) { const key = selector.slice(1, -1); return this.children.find(child => child.hasAttribute(key)) || null; }
+  querySelectorAll() { return []; }
+  replaceChildren(...children) { this.children = children; children.forEach(child => { child.parentElement = this; }); }
+}
+const document = {readyState: 'complete', body: new Node(), listeners: {},
+  addEventListener(name, callback) { this.listeners[name] = callback; },
+  querySelectorAll() { return []; },
+  createElement() { return new Node(); }};
+const window = {location: {pathname: '/dashboard/assessment/'}};
+const context = {window, document, MutationObserver: class { observe() {} }, requestAnimationFrame(callback) { callback(); }};
+vm.runInNewContext(SOURCE, context);
+const button = new Node();
+window.BasahinButton.bindActivity(button, async () => {
+  window.BasahinButton.setState(button, 'listening');
+  window.BasahinButton.setState(button, 'processing');
+  window.BasahinButton.setState(button, 'idle');
+});
+document.listeners.click({target: button});
+Promise.resolve().then(() => {
+  assert.deepEqual(button.history, ['idle', 'listening', 'processing', 'idle']);
+  assert.equal(button.dataset.basahinState, 'idle');
+  assert.equal(button.querySelector('[data-basahin-label]').textContent, 'Basahin');
+}).catch(error => { console.error(error); process.exitCode = 1; });
+'''.replace('SOURCE', json.dumps(source)))
 
     def test_only_legacy_session8_reading_controls_use_shared_basahin_presentation(self):
         targets = {
