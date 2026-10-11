@@ -2772,6 +2772,100 @@
         .class-card-activity-state { font-size: 0.7rem; padding: 0.42rem 0.6rem; }
     }
 
+    /* Expanded student calendar only: the dashboard thumbnail and staff views
+       keep their existing presentation and scheduling behavior. */
+    html.student-calendar-open, body.dashboard-body.student-calendar-open { overflow: hidden !important; overscroll-behavior: none; }
+    body.student-calendar-open .dashboard-main { overflow: hidden !important; }
+    #studentCalendarModal.student-playful-calendar {
+        --calendar-ink: #183e63;
+        --calendar-teal: #167b79;
+        color: var(--calendar-ink);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        overflow: hidden;
+    }
+    #studentCalendarModal .modal-dialog { width: min(1180px, calc(100% - 32px)); max-width: 1180px; margin: 16px auto; min-height: calc(100% - 32px); }
+    #studentCalendarModal .modal-content { max-height: calc(100dvh - 32px); border: 3px solid #fff; border-radius: 28px; box-shadow: 0 24px 70px #183e6333; background: #f7fcff; }
+    #studentCalendarModal .modal-header { flex-shrink: 0; padding: 18px 24px; border: 0; background: linear-gradient(115deg, #e1f5f2, #ecf4ff 65%, #fff2d5); }
+    #studentCalendarModal .student-calendar-expanded-head { flex-wrap: nowrap; gap: 12px; }
+    #studentCalendarModal .student-calendar-expanded-meta { gap: 4px; }
+    #studentCalendarModal .student-calendar-kicker { font-size: .75rem; font-weight: 900; color: var(--calendar-teal); }
+    #studentCalendarModalLabel { font-family: "Coiny", "Nunito", sans-serif; color: var(--calendar-ink); font-size: clamp(1.4rem, 2.2vw, 2rem); line-height: 1.2; }
+    #studentCalendarModal .student-calendar-close-btn { width: 44px; height: 44px; flex-shrink: 0; background: #fff; color: var(--calendar-ink); box-shadow: 0 3px 9px #183e6314; }
+    #studentCalendarModal .modal-body { min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 16px 22px 20px; background: #f7fcff; scrollbar-gutter: stable; }
+    #studentCalendarModal .student-calendar-navigation { display: grid; grid-template-columns: 46px minmax(0, 1fr) 46px auto; align-items: center; gap: 10px; margin-bottom: 16px; }
+    #studentCalendarExpandedMonth { text-align: center; font-size: clamp(1.3rem, 2.2vw, 1.8rem); font-weight: 900; color: var(--calendar-ink); }
+    #studentCalendarModal .student-calendar-arrow, #studentCalendarModal .student-calendar-today { min-height: 46px; border: 2px solid #c8e9e5; border-radius: 15px; background: #fff; color: var(--calendar-teal); font-weight: 900; font-size: 1.1rem; cursor: pointer; }
+    #studentCalendarModal .student-calendar-today { padding: 8px 18px; background: #e3f5ef; }
+    #studentCalendarModal .student-calendar-adventure { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 20px; align-items: start; }
+    #studentCalendarModal .student-calendar-month-panel { min-width: 0; }
+    #studentCalendarModal [data-student-calendar-expanded] { display: block; }
+    #studentCalendarModal .student-calendar-weekdays, #studentCalendarModal .student-calendar-date-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+    #studentCalendarModal .student-calendar-weekdays { margin-bottom: 6px; }
+    #studentCalendarModal .student-calendar-weekdays span { padding: 7px 0; border-radius: 10px; background: #e9f3fb; color: #365d7a; font-size: .8rem; font-weight: 900; text-align: center; }
+    #studentCalendarModal .student-calendar-date { display: flex; flex-direction: column; align-items: center; gap: 3px; height: 82px; min-width: 0; padding: 5px 3px; border: 2px solid #e1ebf2; border-radius: 16px; background: #fff; color: var(--calendar-ink); cursor: pointer; box-shadow: 0 2px 5px #183e6306; }
+    #studentCalendarModal .student-calendar-date.is-adjacent { background: #f1f5f8; color: #62778a; }
+    #studentCalendarModal .student-calendar-date-number { display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; font-size: 1.2rem; font-weight: 900; line-height: 1; }
+    #studentCalendarModal .student-calendar-date.is-today .student-calendar-date-number { background: #167b79; color: #fff; outline: 2px solid #aee3d9; outline-offset: 2px; }
+    #studentCalendarModal .student-calendar-date.is-selected { background: #edf9f5; border-color: #229b92; box-shadow: 0 0 0 2px #aee3d959; }
+    #studentCalendarModal [data-calendar-kind="assessment"] { --event-bg: #e8eaff; --event-ink: #414688; }
+    #studentCalendarModal [data-calendar-kind="aral"] { --event-bg: #e0f4ec; --event-ink: #1d6652; }
+    #studentCalendarModal [data-calendar-kind="holiday"] { --event-bg: #fff0d0; --event-ink: #825500; }
+    #studentCalendarModal [data-calendar-kind="opening"] { --event-bg: #fff8c7; --event-ink: #706019; }
+    #studentCalendarModal [data-calendar-kind="closing"] { --event-bg: #ffe7ea; --event-ink: #92424e; }
+    #studentCalendarModal [data-calendar-kind="other"] { --event-bg: #e9f1f9; --event-ink: #365d7a; }
+    #studentCalendarModal .student-calendar-day-event { display: flex; align-items: center; justify-content: center; gap: 3px; flex-shrink: 0; width: 100%; min-width: 0; padding: 3px 2px; border-radius: 9px; background: var(--event-bg); color: var(--event-ink); font-size: .68rem; font-weight: 900; line-height: 1.1; }
+    #studentCalendarModal .student-calendar-day-event-label { min-width: 0; white-space: nowrap; }
+    #studentCalendarModal .student-calendar-more { font-size: .7rem; font-weight: 900; color: #365d7a; line-height: 1.1; }
+    #studentCalendarModal .student-calendar-selection-hint { display: flex; align-items: center; gap: 6px; color: #496c81; font-size: .8rem; margin: 12px 0 8px; }
+    #studentCalendarModal .student-calendar-mini-legend { display: flex; flex-wrap: wrap; gap: 5px; }
+    #studentCalendarModal .student-calendar-mini-legend span { padding: 4px 7px; border-radius: 9px; background: var(--event-bg); color: var(--event-ink); font-size: .72rem; font-weight: 800; }
+    #studentCalendarModal .student-calendar-day-details { min-width: 0; padding: 18px; border: 2px solid #dcebf6; border-radius: 22px; background: #fff; box-shadow: 0 6px 16px #183e6308; }
+    #studentCalendarModal .student-calendar-detail-badge { display: inline-grid; place-items: center; width: 42px; height: 42px; margin-bottom: 8px; background: #fff2cd; border-radius: 14px; font-size: 1.4rem; }
+    #studentCalendarDetailsHeading { font-size: 1.15rem; line-height: 1.3; font-weight: 900; color: var(--calendar-ink); margin-bottom: 8px; }
+    #studentCalendarSelectedDate { margin-bottom: 14px; color: var(--calendar-teal); font-size: .9rem; font-weight: 900; }
+    #studentCalendarModal .student-calendar-detail-card { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 9px; padding: 12px 10px; border-radius: 14px; background: var(--event-bg); color: var(--event-ink); overflow-wrap: anywhere; }
+    #studentCalendarModal .student-calendar-detail-card:last-child { margin-bottom: 0; }
+    #studentCalendarModal .student-calendar-detail-icon { font-size: 1.2rem; flex-shrink: 0; }
+    #studentCalendarModal .student-calendar-detail-card strong { display: block; font-size: .95rem; font-weight: 900; line-height: 1.35; }
+    #studentCalendarModal .student-calendar-detail-card p { font-size: .85rem; line-height: 1.4; margin: 5px 0 0; }
+    #studentCalendarModal .student-calendar-no-events { margin: 0; padding: 16px 10px; border-radius: 14px; background: #f3f8fc; color: #496c81; font-size: .95rem; line-height: 1.5; text-align: center; }
+    #studentCalendarModal button { transition: background-color 200ms, border-color 200ms, box-shadow 200ms, transform 200ms; }
+    #studentCalendarModal button:focus-visible { outline: 3px solid #e0a323; outline-offset: 3px; }
+    #studentCalendarModal button:active { transform: translateY(1px); }
+    @media (hover: hover) {
+        #studentCalendarModal .student-calendar-date:hover { border-color: #62beb4; box-shadow: 0 4px 9px #167b791a; transform: translateY(-2px); }
+        #studentCalendarModal .student-calendar-arrow:hover, #studentCalendarModal .student-calendar-today:hover, #studentCalendarModal .student-calendar-close-btn:hover { background: #d4eee7; }
+    }
+    @media (max-height: 800px) and (min-width: 768px) {
+        #studentCalendarModal .modal-header { padding-top: 12px; padding-bottom: 12px; }
+        #studentCalendarModal .student-calendar-date { height: 76px; padding: 3px; gap: 2px; }
+        #studentCalendarModal .student-calendar-navigation { margin-bottom: 10px; }
+    }
+    @media (max-width: 991.98px) {
+        #studentCalendarModal .student-calendar-adventure { grid-template-columns: minmax(0, 1fr) 240px; gap: 12px; }
+        #studentCalendarModal .student-calendar-day-event-label { display: none; }
+    }
+    @media (max-width: 767.98px) {
+        #studentCalendarModal .modal-dialog { width: calc(100% - 16px); margin: 8px auto; min-height: calc(100% - 16px); }
+        #studentCalendarModal .modal-content { max-height: calc(100dvh - 16px); border-radius: 22px; }
+        #studentCalendarModal .modal-header { padding: 14px; }
+        #studentCalendarModal .modal-body { padding: 12px; scrollbar-gutter: auto; }
+        #studentCalendarModal .student-calendar-adventure { grid-template-columns: minmax(0, 1fr); }
+        #studentCalendarModal .student-calendar-navigation { grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 5px; margin-bottom: 10px; }
+        #studentCalendarModal .student-calendar-today { grid-column: 1 / -1; justify-self: center; min-height: 36px; padding: 4px 18px; font-size: .9rem; }
+        #studentCalendarModal .student-calendar-kicker { font-size: .65rem; }
+        #studentCalendarModal .student-calendar-weekdays, #studentCalendarModal .student-calendar-date-grid { gap: 4px; }
+        #studentCalendarModal .student-calendar-weekdays span { padding: 5px 0; font-size: .65rem; }
+        #studentCalendarModal .student-calendar-date { height: 76px; border-radius: 12px; padding: 4px 2px; gap: 2px; }
+        #studentCalendarModal .student-calendar-date-number { width: 28px; height: 28px; font-size: 1.05rem; }
+        #studentCalendarModal .student-calendar-day-event { font-size: .85rem; padding: 2px; }
+        #studentCalendarModal .student-calendar-day-details { padding: 14px; }
+        #studentCalendarModal .student-calendar-detail-badge { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        #studentCalendarModal button { transition: none; }
+        #studentCalendarModal button:hover, #studentCalendarModal button:active { transform: none; }
+    }
 </style>
 {% endblock %}
 
@@ -3108,34 +3202,43 @@
 
 <div class="modal fade student-calendar-modal student-calendar-expanded" id="studentCalendarModal" tabindex="-1" aria-labelledby="studentCalendarModalLabel" aria-hidden="true">
 {% endcomment %}
-<div class="modal fade student-calendar-modal" id="studentCalendarModal" tabindex="-1" aria-labelledby="studentCalendarModalLabel" aria-hidden="true">
+<div class="modal fade student-calendar-modal student-playful-calendar" id="studentCalendarModal" tabindex="-1" aria-labelledby="studentCalendarModalLabel" aria-hidden="true" lang="fil">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
             <div class="modal-header">
                 <div class="student-calendar-expanded-head">
                     <div class="student-calendar-expanded-meta">
-                        <span class="dash-pill"><i class="bi bi-calendar3"></i> School Calendar</span>
-                        <h4 class="mb-0" id="studentCalendarModalLabel">School Calendar</h4>
+                        <span class="student-calendar-kicker">PABASA · Bawat araw, may bagong saya!</span>
+                        <h2 class="mb-0" id="studentCalendarModalLabel"><span aria-hidden="true">🗓️</span> Aking Kalendaryo</h2>
                     </div>
-                    <button type="button" class="student-calendar-close-btn" data-bs-dismiss="modal" aria-label="Close"><i class="bi bi-x-lg"></i></button>
+                    <button type="button" class="student-calendar-close-btn" data-bs-dismiss="modal" aria-label="Isara ang kalendaryo"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
                 </div>
             </div>
             <div class="modal-body">
-                <div class="student-calendar-modal-shell">
-                    <div class="student-calendar-expanded-grid">
-                        <div class="student-expanded-toolbar mb-3"><div class="student-expanded-nav"><button type="button" class="btn btn-sm btn-outline-primary" data-calendar-nav="prev">Previous</button><button type="button" class="btn btn-sm btn-outline-primary" data-calendar-nav="today">Today</button><button type="button" class="btn btn-sm btn-outline-primary" data-calendar-nav="next">Next</button></div><strong id="studentCalendarExpandedMonth"></strong></div>
-                        <div class="student-calendar-expanded-calendar" data-student-calendar-expanded aria-label="Expanded current month calendar" aria-readonly="true"></div>
-                    </div>
-                    <div class="student-calendar-footer">
-                        <div class="student-calendar-legend" aria-label="Calendar legend">
-                            {% for event_type, label in student_calendar_legend %}
-                                <span class="student-calendar-legend-item">
-                                    <span class="student-calendar-swatch" data-event-type="{{ event_type }}"></span>
-                                    <span>{{ label }}</span>
-                                </span>
-                            {% endfor %}
+                <div class="student-calendar-navigation">
+                    <button type="button" class="student-calendar-arrow" data-calendar-nav="prev" aria-label="Nakaraang buwan"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+                    <strong id="studentCalendarExpandedMonth" aria-live="polite"></strong>
+                    <button type="button" class="student-calendar-arrow" data-calendar-nav="next" aria-label="Susunod na buwan"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+                    <button type="button" class="student-calendar-today" data-calendar-nav="today">Ngayon</button>
+                </div>
+                <div class="student-calendar-adventure">
+                    <section class="student-calendar-month-panel" aria-label="Pumili ng araw">
+                        <div class="student-calendar-expanded-calendar" data-student-calendar-expanded></div>
+                        <p class="student-calendar-selection-hint"><i class="bi bi-hand-index-thumb" aria-hidden="true"></i> Pindutin ang araw para makita ang mga gawain.</p>
+                        <div class="student-calendar-mini-legend" aria-label="Mga uri ng gawain">
+                            <span data-calendar-kind="assessment">📖 Pagsusulit</span>
+                            <span data-calendar-kind="aral">📚 ARAL</span>
+                            <span data-calendar-kind="holiday">🎉 Holiday</span>
+                            <span data-calendar-kind="opening">🌟 Opening Block</span>
+                            <span data-calendar-kind="closing">🔒 Closing Block</span>
                         </div>
-                    </div>
+                    </section>
+                    <section class="student-calendar-day-details" aria-labelledby="studentCalendarDetailsHeading" aria-live="polite" aria-atomic="true">
+                        <span class="student-calendar-detail-badge" aria-hidden="true">✨</span>
+                        <h3 id="studentCalendarDetailsHeading">Mga Gawain sa Araw na Ito</h3>
+                        <p id="studentCalendarSelectedDate"></p>
+                        <div data-student-calendar-details></div>
+                    </section>
                 </div>
             </div>
         </div>
@@ -3321,6 +3424,11 @@
         window.showSuccessToast = window.showSuccessToast || function(msg){ if (typeof showToast === 'function') return showToast(msg, 'success'); try{ alert(msg); }catch(e){} };
         window.showErrorToast = window.showErrorToast || function(msg){ if (typeof showToast === 'function') return showToast(msg, 'error'); try{ alert(msg); }catch(e){} };
 
+        // Keep this one modal outside the dashboard's display-scaling shell so
+        // viewport sizing and Bootstrap's backdrop use the same coordinates.
+        if (studentCalendarModalElement && studentCalendarModalElement.parentElement !== document.body) {
+            document.body.appendChild(studentCalendarModalElement);
+        }
         const studentCalendarModal = studentCalendarModalElement && window.bootstrap
             ? bootstrap.Modal.getOrCreateInstance(studentCalendarModalElement)
             : null;
@@ -3419,40 +3527,58 @@
             grid.innerHTML = html;
         };
 
+        // Presentation metadata only: event types, dates and eligibility remain
+        // the server's values. Expand ranges with the original weekday rule.
+        const expandedEventStyle = (event) => {
+            const type = event.event_type;
+            if (['pre_assessment', 'midline_assessment', 'post_assessment', 'examination'].includes(type)) return {kind: 'assessment', icon: '📖', label: 'Pagsusulit', priority: 0};
+            if (type === 'holiday') return {kind: 'holiday', icon: '🎉', label: 'Holiday', priority: 1};
+            if (['school_closing', 'end_of_classes'].includes(type)) return {kind: 'closing', icon: '🔒', label: 'Pagtatapos', priority: 2};
+            if (['school_opening', 'start_of_classes'].includes(type)) return {kind: 'opening', icon: '🌟', label: 'Simula', priority: 3};
+            if (['aral_1', 'aral_2', 'aral_schedule'].includes(type)) return {kind: 'aral', icon: '📚', label: 'ARAL', priority: 4};
+            return {kind: 'other', icon: '🗓️', label: 'Gawain', priority: 5};
+        };
+        const expandedEventsForDay = (day) => studentCalendarEvents.filter((event) => {
+            const start = parseIsoDate(event.start_date || event.start);
+            const end = parseIsoDate(event.end_date || event.end || event.start);
+            return start && end && day >= start && day <= end
+                && (!weekdayOnlyEventTypes.has(event.event_type) || (day.getDay() !== 0 && day.getDay() !== 6));
+        }).sort((a, b) => expandedEventStyle(a).priority - expandedEventStyle(b).priority);
+        let selectedCalendarDate = new Date(calendarToday.getFullYear(), calendarToday.getMonth(), calendarToday.getDate());
+        const renderSelectedCalendarDay = () => {
+            const details = studentCalendarModalElement.querySelector('[data-student-calendar-details]');
+            document.getElementById('studentCalendarSelectedDate').textContent = new Intl.DateTimeFormat('fil-PH', {weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'}).format(selectedCalendarDate);
+            const events = expandedEventsForDay(selectedCalendarDate);
+            details.innerHTML = events.length ? events.map(event => {
+                const style = expandedEventStyle(event);
+                return '<article class="student-calendar-detail-card" data-calendar-kind="'+style.kind+'"><span class="student-calendar-detail-icon" aria-hidden="true">'+style.icon+'</span><div><strong>'+escapeHtml(event.title || style.label)+'</strong>'
+                    +(event.description ? '<p>'+escapeHtml(event.description)+'</p>' : '')+'</div></article>';
+            }).join('') : '<p class="student-calendar-no-events"><span aria-hidden="true">🌈</span><br>Walang nakatakdang gawain sa araw na ito!</p>';
+        };
         const renderExpandedCalendar = (date) => {
             if (!studentCalendarExpanded) return;
-            document.getElementById('studentCalendarExpandedMonth').textContent = formatMonthLabel(date);
+            document.getElementById('studentCalendarExpandedMonth').textContent = new Intl.DateTimeFormat('fil-PH', {month: 'long', year: 'numeric'}).format(date);
+            if (selectedCalendarDate.getFullYear() !== date.getFullYear() || selectedCalendarDate.getMonth() !== date.getMonth()) {
+                const isCurrentMonth = date.getFullYear() === calendarToday.getFullYear() && date.getMonth() === calendarToday.getMonth();
+                selectedCalendarDate = new Date(date.getFullYear(), date.getMonth(), isCurrentMonth ? calendarToday.getDate() : 1);
+            }
             const first = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
             const days = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-            let html = '<div class="student-gantt-weekday">'+['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(day => '<div>'+day+'</div>').join('')+'</div>';
-            for (let week = 0; week < Math.ceil((first + days) / 7); week += 1) {
-                const weekStart = new Date(date.getFullYear(), date.getMonth(), 1 - first + week * 7);
-                const weekEnd = new Date(date.getFullYear(), date.getMonth(), 7 - first + week * 7);
-                const segments = studentCalendarEvents.flatMap(event => {
-                    const start = parseIsoDate(event.start_date || event.start);
-                    const end = parseIsoDate(event.end_date || event.end || event.start);
-                    if (!start || !end) return [];
-                    const a = start > weekStart ? start : weekStart;
-                    const b = end < weekEnd ? end : weekEnd;
-                    if (a > b) return [];
-                    const ranges = [];
-                    for (let day = new Date(a); day <= b; day.setDate(day.getDate() + 1)) {
-                        if (weekdayOnlyEventTypes.has(event.event_type) && (day.getDay() === 0 || day.getDay() === 6)) continue;
-                        ranges.push({event, column: day.getDay() + 1, span: 1, endColumn: day.getDay() + 1});
-                    }
-                    return ranges;
-                }).sort((a,b) => a.column - b.column || a.endColumn - b.endColumn);
-                const lanes = [];
-                segments.forEach(segment => { let lane = lanes.findIndex(items => items.every(existing => segment.endColumn < existing.column || existing.endColumn < segment.column)); if (lane < 0) { lane = lanes.length; lanes.push([]); } lanes[lane].push(segment); segment.lane = lane + 1; });
-                html += '<div class="student-gantt-week"><div class="student-gantt-days">';
-                for (let column = 0; column < 7; column += 1) { const day = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + column); html += '<div class="student-gantt-day '+(day.getMonth() !== date.getMonth() ? 'adjacent' : '')+'"><div class="student-gantt-day-number">'+day.getDate()+'</div></div>'; }
-                html += '</div><div class="student-gantt-lanes" style="grid-template-rows:repeat('+Math.max(lanes.length, 1)+',1.35rem)">';
-                segments.forEach(segment => { const color = segment.event.scope === 'school' ? '#d97706' : (eventColors[segment.event.event_type]?.swatch || '#6b7280'); html += '<div class="student-gantt-bar" title="'+String(segment.event.title || '').replace(/"/g, '&quot;')+'" style="grid-column:'+segment.column+'/span '+segment.span+';grid-row:'+segment.lane+';background:'+color+'">'+escapeHtml(segment.event.title || '')+'</div>'; });
-                html += '</div></div>';
+            const weekdays = [['Ling', 'Linggo'], ['Lun', 'Lunes'], ['Mar', 'Martes'], ['Miy', 'Miyerkules'], ['Huw', 'Huwebes'], ['Biy', 'Biyernes'], ['Sab', 'Sabado']];
+            let html = '<div class="student-calendar-weekdays">'+weekdays.map(([short, full]) => '<span aria-label="'+full+'">'+short+'</span>').join('')+'</div><div class="student-calendar-date-grid">';
+            for (let i = 0; i < Math.ceil((first + days) / 7) * 7; i += 1) {
+                const day = new Date(date.getFullYear(), date.getMonth(), i - first + 1), iso = localIsoDate(day);
+                const events = expandedEventsForDay(day), primary = events[0], style = primary && expandedEventStyle(primary);
+                const today = iso === localIsoDate(calendarToday), selected = iso === localIsoDate(selectedCalendarDate);
+                const dateLabel = new Intl.DateTimeFormat('fil-PH', {month: 'long', day: 'numeric', year: 'numeric'}).format(day);
+                const accessibleLabel = dateLabel+(today ? ', ngayon' : '')+', '+(events.length ? events.length+' nakatakdang gawain: '+events.map(event => event.title || expandedEventStyle(event).label).join('; ') : 'walang nakatakdang gawain');
+                html += '<button type="button" class="student-calendar-date '+(day.getMonth() !== date.getMonth() ? 'is-adjacent ' : '')+(today ? 'is-today ' : '')+(selected ? 'is-selected' : '')+'" data-calendar-date="'+iso+'" tabindex="'+(selected ? '0' : '-1')+'" aria-pressed="'+selected+'"'+(today ? ' aria-current="date"' : '')+' aria-label="'+escapeHtml(accessibleLabel).replace(/"/g, '&quot;')+'"><span class="student-calendar-date-number">'+day.getDate()+'</span>';
+                if (primary) html += '<span class="student-calendar-day-event" data-calendar-kind="'+style.kind+'" aria-hidden="true"><span>'+style.icon+'</span><span class="student-calendar-day-event-label">'+style.label+'</span></span>';
+                if (events.length > 1) html += '<span class="student-calendar-more" aria-hidden="true">+'+(events.length - 1)+' pa</span>';
+                html += '</button>';
             }
-            studentCalendarExpanded.innerHTML = html;
-            const weeks = studentCalendarExpanded.querySelectorAll('.student-gantt-week');
-            if (weeks.length && studentCalendarExpanded.clientHeight) { const height = Math.max(0, (studentCalendarExpanded.clientHeight - studentCalendarExpanded.querySelector('.student-gantt-weekday').offsetHeight) / weeks.length); weeks.forEach(week => { week.style.height = height + 'px'; }); }
+            studentCalendarExpanded.innerHTML = html+'</div>';
+            renderSelectedCalendarDay();
         };
 
         const shiftExpandedMonth = (delta) => {
@@ -3463,22 +3589,51 @@
 
         const resetExpandedMonth = () => {
             const now = calendarToday;
+            selectedCalendarDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             currentMonthDate.setFullYear(now.getFullYear(), now.getMonth(), 1);
             renderExpandedCalendar(currentMonthDate);
             renderStudentCompactCalendar();
         };
 
         studentCalendarModalElement?.addEventListener('show.bs.modal', () => {
+            document.body.classList.add('student-calendar-open');
+            document.documentElement.classList.add('student-calendar-open');
             renderExpandedCalendar(currentMonthDate);
+        });
+        studentCalendarModalElement?.addEventListener('hidden.bs.modal', () => {
+            document.body.classList.remove('student-calendar-open');
+            document.documentElement.classList.remove('student-calendar-open');
         });
 
         studentCalendarModalElement?.addEventListener('click', (event) => {
+            const dayButton = event.target.closest('[data-calendar-date]');
+            if (dayButton) {
+                selectedCalendarDate = parseIsoDate(dayButton.dataset.calendarDate);
+                currentMonthDate.setFullYear(selectedCalendarDate.getFullYear(), selectedCalendarDate.getMonth(), 1);
+                renderExpandedCalendar(currentMonthDate);
+                renderStudentCompactCalendar();
+                studentCalendarExpanded.querySelector('[data-calendar-date="'+localIsoDate(selectedCalendarDate)+'"]')?.focus({preventScroll: true});
+                return;
+            }
             const button = event.target.closest('[data-calendar-nav]');
             if (!button) return;
             const action = button.getAttribute('data-calendar-nav');
             if (action === 'prev') shiftExpandedMonth(-1);
             if (action === 'next') shiftExpandedMonth(1);
             if (action === 'today') resetExpandedMonth();
+        });
+        studentCalendarExpanded?.addEventListener('keydown', (event) => {
+            if (!event.target.matches('[data-calendar-date]')) return;
+            const offset = {ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7}[event.key];
+            if (!offset) return;
+            event.preventDefault();
+            const day = parseIsoDate(event.target.dataset.calendarDate);
+            day.setDate(day.getDate() + offset);
+            selectedCalendarDate = day;
+            currentMonthDate.setFullYear(day.getFullYear(), day.getMonth(), 1);
+            renderExpandedCalendar(currentMonthDate);
+            renderStudentCompactCalendar();
+            studentCalendarExpanded.querySelector('[data-calendar-date="'+localIsoDate(day)+'"]')?.focus();
         });
 
         expandCalendarBtn?.addEventListener('click', () => {
