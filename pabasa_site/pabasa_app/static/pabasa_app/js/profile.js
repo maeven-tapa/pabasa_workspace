@@ -353,6 +353,24 @@ function initProfilePage() {
         const btnEl = document.getElementById("profileConfirmBtn");
         
         if (modalEl && titleEl && messageEl && btnEl) {
+            // Confirmation dialogs can be opened from the profile Settings modal.
+            // Keep the dialog at the document root and promote only its own
+            // backdrop so Bootstrap's nested modal state remains intact.
+            if (modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
+            if (!modalEl.dataset.nestedLayerReady) {
+                modalEl.addEventListener("shown.bs.modal", function () {
+                    document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
+                        backdrop.classList.remove("profile-confirm-backdrop");
+                    });
+                    document.querySelector(".modal-backdrop:last-of-type")?.classList.add("profile-confirm-backdrop");
+                });
+                modalEl.addEventListener("hidden.bs.modal", function () {
+                    document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
+                        backdrop.classList.remove("profile-confirm-backdrop");
+                    });
+                });
+                modalEl.dataset.nestedLayerReady = "true";
+            }
             titleEl.textContent = title;
             messageEl.textContent = message;
             btnEl.textContent = confirmText;
@@ -1077,30 +1095,6 @@ function initProfilePage() {
                     submitBtn.disabled = false;
                 }
             });
-        });
-    }
-
-    const downloadDataBtn = document.getElementById("downloadDataBtn");
-    if (downloadDataBtn) {
-        downloadDataBtn.addEventListener("click", function () {
-            const data = {
-                name: profileFullName,
-                username: profileUsername,
-                email: profileEmail,
-                pabasa_id: profilePabasaId,
-                role: profileRoleDisplay,
-                preferences: loadProfileSettings(),
-                exported_at: new Date().toISOString()
-            };
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = "pabasa-profile-data.json";
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            URL.revokeObjectURL(url);
         });
     }
 

@@ -1427,6 +1427,9 @@
     body.modal-open > .modal-backdrop { z-index:4000 !important; }
     body.modal-open > .modal { z-index:4100 !important; }
     body.modal-open > .modal .modal-dialog { z-index:4110 !important; position:relative; }
+    body.modal-open > #profileConfirmModal { z-index:4200 !important; }
+    body.modal-open > #profileConfirmModal .modal-dialog { z-index:4210 !important; }
+    body.modal-open > .modal-backdrop.profile-confirm-backdrop { z-index:4150 !important; }
     html.modal-open,
     html:has(body.modal-open) {
         height: 100% !important;
@@ -1947,10 +1950,45 @@
     }
 
     body.dashboard-body:not(:has(.player-profile)) #editAccountDetailsBtn {
+        align-items: center;
+        background: transparent;
+        border: 1.5px solid var(--dash-primary);
+        color: var(--dash-primary);
+        display: inline-flex;
+        gap: .5rem;
+        justify-content: center;
         border-radius: 14px;
         font-weight: 800;
         margin-top: .35rem;
         min-height: 48px;
+        transition: background-color .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+    body.dashboard-body:not(:has(.player-profile)) #editAccountDetailsBtn:hover,
+    body.dashboard-body:not(:has(.player-profile)) #editAccountDetailsBtn:focus-visible {
+        background: color-mix(in srgb, var(--dash-primary) 8%, transparent);
+        box-shadow: 0 5px 14px color-mix(in srgb, var(--dash-primary) 16%, transparent);
+        color: var(--dash-primary-deep);
+        transform: translateY(-1px);
+    }
+    body.dashboard-body:has(.player-profile) #openStudentEditBtn {
+        align-items: center;
+        background: transparent;
+        border: 1.5px solid var(--dash-primary);
+        border-radius: 14px;
+        color: var(--dash-primary);
+        display: inline-flex;
+        font-weight: 800;
+        gap: .5rem;
+        justify-content: center;
+        min-height: 48px;
+        transition: background-color .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+    body.dashboard-body:has(.player-profile) #openStudentEditBtn:hover,
+    body.dashboard-body:has(.player-profile) #openStudentEditBtn:focus-visible {
+        background: color-mix(in srgb, var(--dash-primary) 8%, transparent);
+        box-shadow: 0 5px 14px color-mix(in srgb, var(--dash-primary) 16%, transparent);
+        color: var(--dash-primary-deep);
+        transform: translateY(-1px);
     }
 
     body.dashboard-body:not(:has(.player-profile)) .profile-card-spacing {
@@ -2291,7 +2329,7 @@
                         </form>
                         {% if nav_role == 'teacher' %}</div><div class="modal-footer d-flex flex-wrap gap-2"><div class="d-flex flex-wrap justify-content-end gap-2 d-none" id="accountDetailsActions"><button class="btn btn-primary" type="submit" form="accountDetailsForm">Save Changes</button><button class="btn btn-outline-secondary" type="reset" form="accountDetailsForm">Reset</button></div></div></div></div></div>{% endif %}
                         {% if nav_role == 'student' or nav_role == 'teacher' %}<div class="modal fade" id="teacherEmailVerificationModal" tabindex="-1" aria-labelledby="teacherEmailVerificationTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="teacherEmailVerificationTitle">Verify New Email</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p class="small text-muted">Enter the 6-digit code sent to <strong id="teacherPendingEmail"></strong>.</p><input class="form-control text-center" id="teacherEmailVerificationCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"><div class="small text-danger mt-2" id="teacherEmailVerificationError" role="alert" hidden></div><div class="small text-muted mt-2" id="teacherEmailVerificationStatus" aria-live="polite"></div></div><div class="modal-footer"><button type="button" class="btn btn-link" id="teacherEmailResendButton">Resend Code</button><button type="button" class="btn btn-primary" id="teacherEmailVerifyButton">Verify Email</button></div></div></div></div>{% endif %}
-                        <button class="btn btn-outline-primary w-100" id="editAccountDetailsBtn" type="button">Edit Profile</button>
+                        <button class="btn btn-outline-primary w-100" id="editAccountDetailsBtn" type="button"><i class="bi bi-pencil-square" aria-hidden="true"></i><span>Edit Profile</span></button>
                     </div>
                 </div>
             </aside>
@@ -2513,7 +2551,6 @@
                 <div id="settingsAccount" class="accordion-collapse collapse" data-bs-parent="#profileSettingsAccordion"><div class="accordion-body">
                     <p class="small text-muted mb-3">Manage account data and account-level actions here.</p>
                     <div class="d-flex gap-2 flex-wrap">
-                        <button class="btn btn-outline-primary btn-sm" type="button" id="downloadDataBtn">Download Data</button>
                         {% if nav_role == 'teacher' %}<button class="btn btn-outline-danger btn-sm" type="button" id="deactivateAccountBtn">Deactivate Account</button>{% endif %}
                         {% if nav_role == 'student' or nav_role == 'teacher' %}<button class="btn btn-danger btn-sm" type="button" id="deleteAccountBtn">Delete Account</button>{% endif %}
                     </div>
