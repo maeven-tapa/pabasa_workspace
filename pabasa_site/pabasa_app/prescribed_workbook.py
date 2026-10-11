@@ -1030,6 +1030,10 @@ def normalize_l23_g4_state(state):
 
 def _apply_l23_g3_reading(state, event, verified_reading):
     normalize_l23_g3_state(state)
+    if event.get('action') == 'restart':
+        state.clear()
+        state.update(initial_l23_g3_state())
+        return state
     if state['completed']:
         return state
     action = event.get('action')
@@ -1063,6 +1067,10 @@ def _apply_l23_g3_reading(state, event, verified_reading):
 
 def _apply_l23_g7_reading(state, event, verified_reading):
     normalize_l23_g7_state(state)
+    if event.get('action') == 'restart':
+        state.clear()
+        state.update(initial_l23_g7_state())
+        return state
     if state['completed']:
         return state
     action = event.get('action')
@@ -1096,6 +1104,10 @@ def _apply_l23_g7_reading(state, event, verified_reading):
 
 def _apply_l23_g4_syllabication(state, event):
     normalize_l23_g4_state(state)
+    if event.get('action') == 'restart':
+        state.clear()
+        state.update(initial_l23_g4_state())
+        return state
     if state['completed']:
         return state
     action = event.get('action')
@@ -2024,6 +2036,10 @@ def normalize_l24_g4_state(state):
 
 def _apply_l24_g4_reading(state, event, verified_reading):
     normalize_l24_g4_state(state)
+    if event.get('action') == 'restart':
+        state.clear()
+        state.update(initial_l24_g4_state())
+        return state
     if state['completed']:
         return state
     action = event.get('action')

@@ -636,9 +636,6 @@ class WorkbookStateTests(SimpleTestCase):
 
 class PrescribedWorkbookFlowTests(TestCase):
     def setUp(self):
-        active_student_session = patch('pabasa_app.middleware.student_session_is_active', return_value=True)
-        active_student_session.start()
-        self.addCleanup(active_student_session.stop)
         school = School.objects.create(name='Workbook Flow School', code='WFS')
         self.student = User.objects.create(
             custom_id='WF-STUDENT', role='student', first_name='Test', last_name='Student',
@@ -678,6 +675,51 @@ class PrescribedWorkbookFlowTests(TestCase):
             entry = PRESCRIBED_ACTIVITIES[activity['activity_key']]
             self.assertEqual(entry['session_number'], activity['session'])
             self.assertEqual(entry['lesson_number'], activity['lesson'] or '')
+
+    def test_session8_pause_restart_contract_resets_each_activity_pattern(self):
+        """The shared Pause menu must use each activity's revision-aware restart path."""
+        controls = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_session8_11_controls.js').read_text(encoding='utf-8')
+        self.assertIn("JSON.stringify({action:'restart',revision:Number(state.revision || 0)})", controls)
+        self.assertIn('if (!response.ok || !result.success)', controls)
+        keys = tuple(key for key, activity in ACTIVITIES.items() if activity['session'] == 8)
+        self.assertEqual(len(keys), 22)
+        untouched_key = 'aral-s9-a1-family-drawing'
+        StudentActivityProgress.objects.create(
+            student=self.student, activity_key=untouched_key,
+            school_calendar=None, term=None, current_index=3, completed_items=3,
+            correct_items=3, total_items=5, activity_completed=False,
+            state={'revision': 7, 'found_words': {'Fina': {'color': '#fff'}}},
+        )
+
+        with patch('pabasa_app.views._student_can_open_prescribed_activity', return_value=True):
+            for key in keys:
+                with self.subTest(activity_key=key):
+                    url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
+                    first = self.client.post(
+                        url, json.dumps({'action': 'restart', 'revision': 0}),
+                        content_type='application/json',
+                    )
+                    self.assertEqual(first.status_code, 200, first.content)
+                    first_state = first.json()['state']
+                    self.assertFalse(first.json()['progress']['activity_completed'])
+                    self.assertEqual(first.json()['progress']['completed_items'], 0)
+
+                    stale = self.client.post(
+                        url, json.dumps({'action': 'restart', 'revision': 0}),
+                        content_type='application/json',
+                    )
+                    self.assertEqual(stale.status_code, 409, stale.content)
+
+                    second = self.client.post(
+                        url, json.dumps({'action': 'restart', 'revision': first_state['revision']}),
+                        content_type='application/json',
+                    )
+                    self.assertEqual(second.status_code, 200, second.content)
+                    self.assertEqual(second.json()['progress']['completed_items'], 0)
+
+        untouched = StudentActivityProgress.objects.get(student=self.student, activity_key=untouched_key)
+        self.assertEqual(untouched.current_index, 3)
+        self.assertEqual(untouched.state['revision'], 7)
 
     def test_active_catalog_has_exact_workbook_sessions_8_to_11(self):
         active = active_prescribed_activities()
