@@ -1554,6 +1554,57 @@
         .settings-accordion .accordion-body { padding:.85rem; }
     }
 
+    /* Verification dialog follows the same compact PABASA modal system. */
+    #teacherEmailVerificationModal .modal-dialog { width:min(calc(100% - 1.5rem), 440px); max-width:440px; }
+    #teacherEmailVerificationModal .modal-content {
+        background:var(--dash-panel);
+        border:1px solid var(--dash-border);
+        border-radius:18px;
+        box-shadow:var(--dash-shadow);
+        overflow:hidden;
+    }
+    #teacherEmailVerificationModal .modal-header {
+        align-items:center;
+        background:linear-gradient(180deg, color-mix(in srgb, var(--dash-primary-soft) 72%, var(--dash-panel)), var(--dash-panel));
+        border-bottom:1px solid var(--dash-border);
+        padding:1rem 1.15rem .8rem;
+    }
+    #teacherEmailVerificationModal .modal-title { color:var(--dash-text); font-size:1.1rem; font-weight:900; margin:0; }
+    #teacherEmailVerificationModal .btn-close { opacity:.7; padding:.6rem; }
+    #teacherEmailVerificationModal .modal-body { padding:1rem 1.15rem 1.1rem; }
+    #teacherEmailVerificationModal .modal-body p { color:var(--dash-muted) !important; line-height:1.45; margin-bottom:.85rem; }
+    #teacherEmailVerificationModal .modal-body strong { color:var(--dash-text); overflow-wrap:anywhere; }
+    #teacherEmailVerificationModal #teacherEmailVerificationCode {
+        background:var(--dash-panel);
+        border:1px solid var(--dash-border);
+        border-radius:10px;
+        color:var(--dash-text);
+        font-size:1.05rem;
+        letter-spacing:.12em;
+        min-height:44px;
+    }
+    #teacherEmailVerificationModal #teacherEmailVerificationCode:focus {
+        border-color:var(--dash-primary);
+        box-shadow:0 0 0 3px color-mix(in srgb, var(--dash-primary) 18%, transparent);
+        outline:0;
+    }
+    #teacherEmailVerificationModal .modal-footer {
+        align-items:center;
+        border-top:1px solid var(--dash-border);
+        gap:.6rem;
+        justify-content:flex-end;
+        padding:.8rem 1.15rem 1rem;
+    }
+    #teacherEmailVerificationModal .modal-footer .btn { border-radius:10px; font-weight:800; min-height:40px; }
+    #teacherEmailVerificationModal .modal-footer .btn-link { color:var(--dash-primary); text-decoration:none; }
+    #teacherEmailVerificationModal .modal-footer .btn-link:hover { color:var(--dash-primary-deep); text-decoration:underline; }
+    #teacherEmailVerificationModal .modal-footer .btn-primary { background:var(--dash-primary); border-color:var(--dash-primary); box-shadow:0 4px 10px color-mix(in srgb, var(--dash-primary) 20%, transparent); }
+    @media(max-width:600px) {
+        #teacherEmailVerificationModal .modal-dialog { width:calc(100% - 1rem); margin:.5rem auto; }
+        #teacherEmailVerificationModal .modal-footer { padding:.75rem 1rem .9rem; }
+        #teacherEmailVerificationModal .modal-footer .btn { flex:1 1 0; }
+    }
+
     .student-edit-modal { z-index:2000; }
     .student-edit-modal .modal-dialog { max-width:760px; }
     .student-edit-modal .modal-content { background:var(--dash-panel); border:1px solid var(--dash-border); border-radius:24px; box-shadow:0 24px 70px rgba(0,0,0,.42); max-height:calc(100vh - 2rem); overflow:hidden; }
