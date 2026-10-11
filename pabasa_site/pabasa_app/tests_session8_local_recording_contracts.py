@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.template.loader import render_to_string
 from django.test import RequestFactory, SimpleTestCase
 
 from . import views
@@ -53,6 +54,32 @@ class Session8LocalRecordingContractTests(unittest.TestCase):
         workbook = (APP_ROOT / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
         self.assertIn('window.Basahin?.bindActivity', workbook)
         self.assertIn("window.BasahinButton?.LABEL||'Basahin'", workbook)
+
+    def test_specialized_microphone_pages_load_shared_basahin_before_their_renderer(self):
+        """The specialized pages must make the renderer's real decoration hook available."""
+        targets = {
+            'prescribed_l22_g2_reading.js': ('aral-l22-g2-c-word-reading', 'aral-l22-g6-f-word-reading'),
+            'prescribed_l22_g4_f_builder.js': ('aral-l22-g4-f-syllable-builder',),
+            'prescribed_l23_g2_reading.js': ('aral-l23-g2-n-word-reading',),
+            'prescribed_l24_g2_reading.js': ('aral-l24-g2-v-word-reading',),
+            'prescribed_l24_g3_repeat.js': ('aral-l24-g3-x-repeat',),
+        }
+        self.assertEqual(sum(map(len, targets.values())), 6)
+        controls = (APP_ROOT / 'templates/pabasa_app/session8_11_prescribed_controls.html').read_text(encoding='utf-8')
+        self.assertIn("{% include 'pabasa_app/basahin_script.html' %}", controls)
+        for renderer_name, activity_keys in targets.items():
+            with self.subTest(renderer=renderer_name):
+                renderer = (APP_ROOT / 'static/pabasa_app/js' / renderer_name).read_text(encoding='utf-8')
+                self.assertIn('window.BasahinButton?.decorate', renderer)
+                for activity_key in activity_keys:
+                    self.assertIn(activity_key, controls)
+
+    def test_shared_basahin_ready_state_has_the_reference_icon_and_label_contract(self):
+        source = (APP_ROOT / 'static/pabasa_app/js/basahin_button.js').read_text(encoding='utf-8')
+        self.assertIn("const LABEL = 'Basahin'", source)
+        self.assertIn("icon.setAttribute('data-basahin-icon', '')", source)
+        self.assertIn("label.setAttribute('data-basahin-label', '')", source)
+        self.assertIn("if (button.dataset.basahinState !== state) button.dataset.basahinState = state", source)
 
 
 class Session8ClipSubmissionBehaviorTests(SimpleTestCase):
@@ -120,6 +147,32 @@ class Session8ClipSubmissionBehaviorTests(SimpleTestCase):
                     self.assertNotIn('prescribed_stream_token', request.POST)
                     self.assertEqual(result['progress']['current_index'], 1 if is_correct else 0)
                     self.assertEqual(result['state']['revision'], 1)
+
+
+class Session8MicrophoneTemplateTests(SimpleTestCase):
+    """Render the specialized pages to guard the real shared-button load order."""
+
+    PAGES = (
+        ('aral-l22-g2-c-word-reading', 'prescribed_l22_g2_reading_page.html', 'prescribed_l22_g2_reading.js'),
+        ('aral-l22-g6-f-word-reading', 'prescribed_l22_g2_reading_page.html', 'prescribed_l22_g2_reading.js'),
+        ('aral-l22-g4-f-syllable-builder', 'prescribed_l22_g4_f_builder_page.html', 'prescribed_l22_g4_f_builder.js'),
+        ('aral-l23-g2-n-word-reading', 'prescribed_l23_g2_reading_page.html', 'prescribed_l23_g2_reading.js'),
+        ('aral-l24-g2-v-word-reading', 'prescribed_l24_g2_reading_page.html', 'prescribed_l24_g2_reading.js'),
+        ('aral-l24-g3-x-repeat', 'prescribed_l24_g3_repeat_page.html', 'prescribed_l24_g3_repeat.js'),
+    )
+
+    def test_specialized_pages_render_shared_button_before_activity_renderer(self):
+        for activity_key, template_name, renderer_name in self.PAGES:
+            with self.subTest(activity=activity_key):
+                rendered = render_to_string(
+                    f'pabasa_app/{template_name}',
+                    {'workbook_payload': {'activity': get_activity(activity_key), 'state': {}, 'preview': True}},
+                )
+                self.assertIn('basahin_button.js', rendered)
+                self.assertIn(renderer_name, rendered)
+                self.assertEqual(rendered.count('basahin_button.js'), 1)
+                self.assertEqual(rendered.count(renderer_name), 1)
+                self.assertLess(rendered.index('basahin_button.js'), rendered.index(renderer_name))
 
 
 if __name__ == '__main__':
