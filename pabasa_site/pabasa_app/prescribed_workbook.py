@@ -444,7 +444,7 @@ add('aral-l22-g6-f-word-reading', 41, 22, '6', 'Mga salitang may letrang Ff',
 
 
 add('aral-l23-g1-n-syllable-builder', 41, 23, '1', 'Big Box: Ñ', BOX, 'builder',
-    [['Ni', 'La', 'ña'], ['Cas', 'Bi', 'da'], ['El', 'ño', 'ñan'], ['Cen', 'ta', 'ñe']],
+    [['Ni', 'La', 'ña'], ['Cas', 'Bi', 'da'], ['El', 'ño', 'ñan'], ['Cen', 'ta', 'ñe']], hide_header_instruction=True,
     bigbox_cells=[
         [['item-1'], ['item-2'], ['item-3']],
         [['item-4'], ['item-5'], ['item-6']],
@@ -472,7 +472,7 @@ add('aral-l23-g5-j-word-search', 43, 23, '5', 'Hanapin ang mga salita: J',
     ], mark_style='circle')
 add('aral-l23-g6-q-syllable-builder', 43, 23, '6', 'Big Box: Q',
     'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salitang.', 'builder',
-    [['Que','En','Qui','tos'], ['no','A','Quin','An'], ['ta','ja','na','to'], ['ri','zon','que','ti']],
+    [['Que','En','Qui','tos'], ['no','A','Quin','An'], ['ta','ja','na','to'], ['ri','zon','que','ti']], hide_header_instruction=True,
     visible_activity_label='GAWAIN 6', review_required=True, specialized_builder=True,
     progress_total=16, bigbox_cells=[
         [['item-1'], ['item-2'], ['item-3'], ['item-4']],
@@ -482,11 +482,11 @@ add('aral-l23-g6-q-syllable-builder', 43, 23, '6', 'Big Box: Q',
     ], canonical_answer_source='Not found in available project/workbook sources.')
 add('aral-l23-g7-q-word-reading', 44, 23, '7', 'Mga salitang may letrang Qq',
     'Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Qq.', 'reading',
-    [['Quisumbing','Quennie','Enriquez','Quintana','Quintos']], visible_activity_label='GAWAIN 7')
+    [['Quisumbing','Quennie','Enriquez','Quintana','Quintos']], visible_activity_label='GAWAIN 7', hide_header_instruction=True)
 
 add('aral-l24-g1-v-syllable-builder', 44, 24, '1', 'Big Box: V',
     'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita.', 'builder',
-    [['lin','sa','van'], ['va','E','la'], ['I','Vi','Vio'], ['le','val','A']],
+    [['lin','sa','van'], ['va','E','la'], ['I','Vi','Vio'], ['le','val','A']], hide_header_instruction=True,
     item_ids=['r1c1','r1c2','r1c3','r2c1','r2c2','r2c3','r3c1','r3c2','r3c3','r4c1','r4c2','r4c3'],
     bigbox_cells=[
         [['r1c1'], ['r1c2'], ['r1c3']],
@@ -506,12 +506,12 @@ add('aral-l24-g3-x-repeat', 45, 24, '3', 'Pakinggan at ulitin: X',
     section_key='l24-bahagi1', section_label='Bahagi 1', section_order=1, display_gawain_number='3')
 add('aral-l24-g4-x-pictures', 45, 24, '4', 'Kilalanin at Basahin',
     'Kilalanin ang bawat larawan at subuking basahin ito kasabay ng guro.', 'reading',
-    [['x-ray','fax machine','fox']],
+    [['x-ray','fax machine','fox']], hide_header_instruction=True,
     images={f'item-{i+1}':f'/static/pabasa_app/images/aral_workbook/{name}.png' for i,name in enumerate(['x-ray','fax-machine','fox'])},
     section_key='l24-bahagi2', section_label='Bahagi 2', section_order=2, display_gawain_number='2')
 add('aral-l24-g3-x-word-reading', 45, 24, '3', 'Mga salitang may letrang Xx',
     'Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Xx.', 'reading',
-    [['Alex','Xylophone'], ['Alexis','Saxophone'], ['Alexander',''], ['Dixon',''], ['mixer',''], ['Felix','']],
+    [['Alex','Xylophone'], ['Alexis','Saxophone'], ['Alexander',''], ['Dixon',''], ['mixer',''], ['Felix','']], hide_header_instruction=True,
     column_headers=['/X/= ks','/X/=s'], section_key='l24-bahagi2', section_label='Bahagi 2', section_order=2, display_gawain_number='3')
 add('aral-l24-g4-x-syllable-builder', 46, 24, '4', 'Big Box: X', BOX, 'builder',
     [['A','Fe','xe'], ['xy','phone','sax'], ['rox','lex','o'], ['lix','lo','phone']], review_required=True,
@@ -527,7 +527,7 @@ add('aral-l24-g6-z-word-search', 47, 24, '6', 'Hanapin ang mga salita: Z',
     'Panuto: Hanapin at bilugan sa loob ng Big Box ang sumusunod na mga salita.', 'search',
     [['zipper'], ['zoo'], ['zebra'], ['zigzag'], ['Perez'], ['Rizal'], ['Zamora'], ['Zam'], ['Zoren'], ['Zeny']],
     grid=['ZAMORATYZ','AAKLTYZSI','MNZIPPERG','BZOOP EBIZ'.replace(' ',''),'AER TERRJA'.replace(' ',''),'LNEYRTAHG','EYNKEDBKL','SMRIZALUK'], mark_style='circle',
-    section_key='l24-bahagi2', section_label='Bahagi 2', section_order=2, display_gawain_number='6')
+    section_key='l24-bahagi2', section_label='Bahagi 2', section_order=2, display_gawain_number='6', hide_header_instruction=True)
 add('aral-l24-g7-z-word-reading', 47, 24, '7', 'Mga salitang may letrang Zz',
     'Basahin ang mga salita sa ibaba na may hiram na letrang Zz.', 'reading',
     [['zigzag','Gomez','Zoren'], ['Zandra','Zarate','Legazpi'], ['Zamora','Zaragosa','Zabala'],

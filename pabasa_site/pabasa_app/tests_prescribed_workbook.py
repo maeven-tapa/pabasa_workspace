@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import JsonResponse
+from django.template.loader import render_to_string
 from django.test import SimpleTestCase
 from django.test import TestCase
 from django.urls import reverse
@@ -24,6 +25,42 @@ from .reading_stt import l22_c_pronunciation_match
 
 
 class WorkbookStateTests(SimpleTestCase):
+    def test_session8_duplicate_header_instructions_are_activity_scoped_and_audio_backed(self):
+        hidden = {
+            'aral-l23-g1-n-syllable-builder': 'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita mula rito.',
+            'aral-l23-g6-q-syllable-builder': 'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salitang.',
+            'aral-l23-g7-q-word-reading': 'Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Qq.',
+            'aral-l24-g1-v-syllable-builder': 'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita.',
+            'aral-l24-g4-x-pictures': 'Kilalanin ang bawat larawan at subuking basahin ito kasabay ng guro.',
+            'aral-l24-g3-x-word-reading': 'Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Xx.',
+            'aral-l24-g6-z-word-search': 'Panuto: Hanapin at bilugan sa loob ng Big Box ang sumusunod na mga salita.',
+        }
+        flagged = {key for key, activity in ACTIVITIES.items() if activity.get('hide_header_instruction')}
+        self.assertEqual(flagged, set(hidden))
+
+        for key, instruction in hidden.items():
+            with self.subTest(activity_key=key):
+                activity = get_activity(key)
+                self.assertEqual(activity['instruction'], instruction)
+                html = render_to_string('pabasa_app/prescribed_workbook_page.html', {
+                    'workbook_payload': {'activity': activity},
+                })
+                self.assertIn(f'<h1>{activity["title"]}</h1>', html)
+                self.assertNotIn(f'<p class="wb-instruction">{instruction}</p>', html)
+
+        for key in ('aral-l22-g3-c-word-search', 'aral-l22-g5-f-word-search'):
+            activity = get_activity(key)
+            html = render_to_string('pabasa_app/prescribed_workbook_page.html', {
+                'workbook_payload': {'activity': activity},
+            })
+            self.assertIn(f'<p class="wb-instruction">{activity["instruction"]}</p>', html)
+
+        script = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
+        self.assertIn('const instructionText = a.instruction;', script)
+        self.assertIn('playPrescribedAudio(instructionText,true)', script)
+        self.assertIn('playPrescribedAudio(a.instruction)', script)
+        self.assertIn('id="wb-instruction-replay"', script)
+
     def test_session9_activity2_keeps_workbook_instruction_and_requires_drawing_and_courteous_word(self):
         activity = get_activity('aral-s9-a2-helping-drawing')
         self.assertEqual(activity['interaction_type'], 'drawing')
