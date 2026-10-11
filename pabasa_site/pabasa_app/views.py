@@ -25027,6 +25027,18 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
             and ReadingMatcher.normalize_spoken_words(transcript) == ['check']
         ):
             matching_transcript = 'tsek'
+        # Chirp 3 may spell the Filipino pronunciation of "riles" this way.
+        # Keep the provider transcript unchanged for the speech debug panel.
+        if (
+            request.POST.get('prescribed_activity_key') == 'lesson-17-18-gawain-5'
+            and language_code.lower() == 'fil-ph'
+            and mode == 'reading'
+            and ReadingMatcher.normalize_word(target_text) == 'riles'
+            and ReadingMatcher.normalize_words(transcript) in (
+                ['rieles'], ['reless'], ['reles'], ['reeles'],
+            )
+        ):
+            matching_transcript = 'riles'
         # Chirp 3 sometimes returns these complete-token sequences for ``elesi``.
         # Keep this narrowly scoped to the two Session 3 activities and only the
         # exact expected target; the raw transcript remains unchanged for debug.
