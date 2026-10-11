@@ -246,7 +246,7 @@ L22_G1_BU_STT_ALIASES = {'bu', 'boo'}
 # Gawain 1 reading gate. They must not affect another activity or pantig.
 L22_G1_SCOPED_SYLLABLE_ALIASES = {
     'bu': L22_G1_BU_STT_ALIASES,
-    'pu': {'pu', 'pooh'},
+    'pu': {'pu', 'pooh', 'poo'},
     'bi': {'bi', 'bee', 'be'},
     'net': {'net', 'nett'},
     'les': {'les', 'less'},

@@ -284,7 +284,7 @@ class WorkbookStateTests(SimpleTestCase):
             ('ca', 'Cagayan', 'hard', ('ca', 'ka', 'cagayan'), 'kay'),
             ('bu', 'Cebu', 'soft', ('bu', 'boo'), 'bow'),
             ('com', 'computer', 'hard', ('com', 'kom', 'computer'), 'come'),
-            ('pu', 'computer', 'hard', ('pu', 'pooh'), 'pew'),
+            ('pu', 'computer', 'hard', ('pu', 'pooh', 'poo'), 'pew'),
             ('ga', 'Cagayan', 'hard', ('ga',), 'go'),
             ('tus', 'cactus', 'hard', ('tus',), 'toast'),
             ('ter', 'computer', 'hard', ('ter',), 'tear'),
@@ -314,19 +314,20 @@ class WorkbookStateTests(SimpleTestCase):
     def test_lesson22_gawain1_new_aliases_are_activity_scoped_and_reject_phrases(self):
         key = 'aral-l22-g1-c-syllable-builder'
         aliases = {
-            'pu': ('computer', 'hard', 'pooh', 'pew'),
-            'bi': ('cabinet', 'hard', 'bee', 'bead'),
-            'net': ('cabinet', 'hard', 'nett', 'knit'),
-            'les': ('Celeste', 'soft', 'less', 'lease'),
+            'pu': ('computer', 'hard', ('pooh', 'poo'), 'pew'),
+            'bi': ('cabinet', 'hard', ('bee', 'be'), 'bead'),
+            'net': ('cabinet', 'hard', ('nett',), 'knit'),
+            'les': ('Celeste', 'soft', ('less',), 'lease'),
         }
-        for expected, (word, sound, alias, rejected) in aliases.items():
-            self.assertTrue(l22_c_pronunciation_match(expected, word, alias, sound, key))
-            self.assertFalse(l22_c_pronunciation_match(expected, word, alias, sound, 'aral-l22-g2-c-word-reading'))
+        for expected, (word, sound, accepted, rejected) in aliases.items():
+            for alias in accepted:
+                self.assertTrue(l22_c_pronunciation_match(expected, word, alias, sound, key))
+                self.assertFalse(l22_c_pronunciation_match(expected, word, alias, sound, 'aral-l22-g2-c-word-reading'))
+                self.assertFalse(l22_c_pronunciation_match(expected, word, f'{alias} {alias}', sound, key))
+                for other, (other_word, other_sound, _, _) in aliases.items():
+                    if other != expected:
+                        self.assertFalse(l22_c_pronunciation_match(other, other_word, alias, other_sound, key))
             self.assertFalse(l22_c_pronunciation_match(expected, word, rejected, sound, key))
-            self.assertFalse(l22_c_pronunciation_match(expected, word, f'{alias} {alias}', sound, key))
-            for other, (other_word, other_sound, _, _) in aliases.items():
-                if other != expected:
-                    self.assertFalse(l22_c_pronunciation_match(other, other_word, alias, other_sound, key))
 
     def test_lesson22_cock_alias_does_not_leak_to_other_pantig(self):
         self.assertFalse(l22_c_pronunciation_match('ce', 'Cebu', 'cock', 'soft'))
@@ -871,7 +872,7 @@ class PrescribedWorkbookFlowTests(TestCase):
         )
         self.assertEqual(response.status_code, 200, response.content)
         state = response.json()['state']
-        approved_transcripts = {'pu': 'Pooh.', 'bi': 'BEE', 'net': 'Nett.', 'les': 'less'}
+        approved_transcripts = {'pu': 'Poo.', 'bi': 'BEE', 'net': 'Nett.', 'les': 'less'}
 
         def approved_alias_response(request):
             expected = request.POST['l22_c_syllable']
