@@ -242,6 +242,16 @@ L22_C_SYLLABLE_ALIASES = {
 # while its displayed target is exactly ``bu``.
 L22_G1_BU_STT_ALIASES = {'bu', 'boo'}
 
+# Approved whole-token pronunciation equivalents for the indexed Lesson 22
+# Gawain 1 reading gate. They must not affect another activity or pantig.
+L22_G1_SCOPED_SYLLABLE_ALIASES = {
+    'bu': L22_G1_BU_STT_ALIASES,
+    'pu': {'pu', 'pooh'},
+    'bi': {'bi', 'bee', 'be'},
+    'net': {'net', 'nett'},
+    'les': {'les', 'less'},
+}
+
 # The English context is deliberately used as an STT hint for the C sound.
 # Google can therefore return the complete hinted word for the first pantig;
 # allow only the context word paired with that exact pantig.
@@ -272,8 +282,8 @@ def l22_c_pronunciation_match(expected_syllable, target_word, transcript, c_soun
         return False
 
     accepted = set(L22_C_SYLLABLE_ALIASES.get(expected, {expected}))
-    if activity_key == 'aral-l22-g1-c-syllable-builder' and expected == 'bu':
-        accepted = set(L22_G1_BU_STT_ALIASES)
+    if activity_key == 'aral-l22-g1-c-syllable-builder' and expected in L22_G1_SCOPED_SYLLABLE_ALIASES:
+        accepted = set(L22_G1_SCOPED_SYLLABLE_ALIASES[expected])
     if expected.startswith('c'):
         sound = str(c_sound or '').strip().lower()
         if sound == 'hard':

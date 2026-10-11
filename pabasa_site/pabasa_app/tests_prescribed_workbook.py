@@ -276,6 +276,58 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertEqual(state['reading_attempts'], 0)
         self.assertEqual(state['last_feedback'], 'Tama!')
 
+    def test_lesson22_gawain1_complete_18_cell_strict_acceptance_matrix(self):
+        key = 'aral-l22-g1-c-syllable-builder'
+        cells = (
+            ('cac', 'cactus', 'hard', ('cac', 'kak', 'cock', 'cactus'), 'cake'),
+            ('ce', 'Cebu', 'soft', ('ce', 'se', 'cebu'), 'see'),
+            ('ca', 'Cagayan', 'hard', ('ca', 'ka', 'cagayan'), 'kay'),
+            ('bu', 'Cebu', 'soft', ('bu', 'boo'), 'bow'),
+            ('com', 'computer', 'hard', ('com', 'kom', 'computer'), 'come'),
+            ('pu', 'computer', 'hard', ('pu', 'pooh'), 'pew'),
+            ('ga', 'Cagayan', 'hard', ('ga',), 'go'),
+            ('tus', 'cactus', 'hard', ('tus',), 'toast'),
+            ('ter', 'computer', 'hard', ('ter',), 'tear'),
+            ('yan', 'Cagayan', 'hard', ('yan',), 'yarn'),
+            ('Car', 'Cardo', 'hard', ('car', 'kar', 'cardo'), 'care'),
+            ('do', 'Cardo', 'hard', ('do',), 'dough'),
+            ('bi', 'cabinet', 'hard', ('bi', 'bee', 'be'), 'bead'),
+            ('ca', 'cabinet', 'hard', ('ca', 'ka', 'cabinet'), 'kay'),
+            ('net', 'cabinet', 'hard', ('net', 'nett'), 'knit'),
+            ('te', 'Celeste', 'soft', ('te',), 'tea'),
+            ('Ce', 'Celeste', 'soft', ('ce', 'se', 'celeste'), 'see'),
+            ('les', 'Celeste', 'soft', ('les', 'less'), 'lease'),
+        )
+        self.assertEqual(
+            tuple(item['text'] for item in get_activity(key)['items']),
+            ('cac', 'ce', 'ca', 'bu', 'com', 'pu', 'ga', 'tus', 'ter', 'yan', 'Car', 'do', 'bi', 'ca', 'net', 'te', 'Ce', 'les'),
+        )
+        self.assertEqual(len({expected.casefold() for expected, *_ in cells}), 16)
+        for expected, word, sound, accepted, rejected in cells:
+            for transcript in accepted:
+                self.assertTrue(l22_c_pronunciation_match(expected, word, transcript, sound, key), (expected, transcript))
+            self.assertFalse(l22_c_pronunciation_match(expected, word, rejected, sound, key), (expected, rejected))
+            for other, other_word, other_sound, *_ in cells:
+                if other.casefold() != expected.casefold():
+                    self.assertFalse(l22_c_pronunciation_match(other, other_word, expected, other_sound, key), (expected, other))
+
+    def test_lesson22_gawain1_new_aliases_are_activity_scoped_and_reject_phrases(self):
+        key = 'aral-l22-g1-c-syllable-builder'
+        aliases = {
+            'pu': ('computer', 'hard', 'pooh', 'pew'),
+            'bi': ('cabinet', 'hard', 'bee', 'bead'),
+            'net': ('cabinet', 'hard', 'nett', 'knit'),
+            'les': ('Celeste', 'soft', 'less', 'lease'),
+        }
+        for expected, (word, sound, alias, rejected) in aliases.items():
+            self.assertTrue(l22_c_pronunciation_match(expected, word, alias, sound, key))
+            self.assertFalse(l22_c_pronunciation_match(expected, word, alias, sound, 'aral-l22-g2-c-word-reading'))
+            self.assertFalse(l22_c_pronunciation_match(expected, word, rejected, sound, key))
+            self.assertFalse(l22_c_pronunciation_match(expected, word, f'{alias} {alias}', sound, key))
+            for other, (other_word, other_sound, _, _) in aliases.items():
+                if other != expected:
+                    self.assertFalse(l22_c_pronunciation_match(other, other_word, alias, other_sound, key))
+
     def test_lesson22_cock_alias_does_not_leak_to_other_pantig(self):
         self.assertFalse(l22_c_pronunciation_match('ce', 'Cebu', 'cock', 'soft'))
         self.assertFalse(l22_c_pronunciation_match('tus', 'cactus', 'cock', 'hard'))
@@ -807,6 +859,41 @@ class PrescribedWorkbookFlowTests(TestCase):
 
         self.assertEqual(state['index'], 4)
         self.assertEqual(state['last_transcript'], 'bu')
+
+    def test_lesson22_gawain1_new_aliases_advance_through_the_normal_correct_result_path(self):
+        key = 'aral-l22-g1-c-syllable-builder'
+        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': key})
+        state = initial_state()
+        response = self.client.post(
+            progress_url,
+            json.dumps({'action': 'reading_started', 'revision': state['revision']}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        state = response.json()['state']
+        approved_transcripts = {'pu': 'Pooh.', 'bi': 'BEE', 'net': 'Nett.', 'les': 'less'}
+
+        def approved_alias_response(request):
+            expected = request.POST['l22_c_syllable']
+            transcript = approved_transcripts.get(expected.casefold(), expected)
+            return JsonResponse({
+                'success': True, 'transcript': transcript,
+                'raw_transcript': transcript, 'complete': False,
+            })
+
+        with patch('pabasa_app.views.reading_transcribe_api', side_effect=approved_alias_response):
+            for index, _item in enumerate(get_activity(key)['items'], start=1):
+                response = self.client.post(progress_url, {
+                    'action': 'reading_syllable_attempt', 'revision': state['revision'],
+                    'audio': SimpleUploadedFile('reading.webm', b'audio', content_type='audio/webm'),
+                })
+                self.assertEqual(response.status_code, 200, response.content)
+                state = response.json()['state']
+                self.assertEqual(state['index'], index)
+                self.assertEqual(state['last_feedback'], 'Tama!')
+                self.assertEqual(state['reading_attempts'], 0)
+
+        self.assertTrue(state['read_aloud_completed'])
 
     @patch('pabasa_app.views.synthesize_read_aloud_audio', return_value='encoded-audio')
     def test_lesson_22_read_aloud_uses_prescribed_filipino_voice(self, synthesize):
