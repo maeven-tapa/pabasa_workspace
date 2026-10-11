@@ -151,10 +151,6 @@
   ]);
   const openingAudio = {
     'session-6-lesson-16-gawain-4': ['/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_4/01_activity_intro.mp3'],
-    'lesson-17-18-gawain-6': [
-      '/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_6/panuto_basahin_tts.mp3',
-      '/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_6/babasahin_pusa_tts.mp3',
-    ],
     'lesson-17-18-gawain-7': ['/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_7/basahin_muna_ang_mga_ngalan_tts.mp3'],
     'lesson-17-18-gawain-8': ['/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_8/basahin_bilugan_naiiba_sa_pangkat_tts.mp3'],
     'lesson-17-18-gawain-9': ['/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_9/unang_larawan_pana_tts.mp3'],
@@ -188,19 +184,6 @@
     if (!source) return;
     const lease = audioBus.begin();
     await lease.play(`/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_16/GAWAIN_4/${source}`);
-  };
-  const playGawain6ContinuationAudio = async () => {
-    if (!hasSavedProgress || key !== 'lesson-17-18-gawain-6'
-      || !['oral', 'oral_reading'].includes(String(state.phase || '').toLowerCase())
-      || state.oral_mode === 'aloud') return;
-    const index = Array.isArray(progress.answers)
-      ? progress.answers.length
-      : Number(state.current_index ?? progress.current_index ?? 0);
-    const words = ['pusa', 'pako', 'paruparo', 'rosas', 'kariton'];
-    const word = words[index];
-    if (!word) return;
-    const lease = audioBus.begin();
-    await lease.play(`/static/pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_6/babasahin_${word}_tts.mp3`);
   };
   const lesson = String(data.lesson_number ?? '').toUpperCase();
   const gawain = String(data.gawain_number ?? '').toUpperCase();
@@ -244,6 +227,14 @@
     if (startButton.disabled) return;
     startButton.disabled = true;
     laterButton.disabled = true;
+    if (key === 'lesson-17-18-gawain-6') {
+      close();
+      const audio = window.PrescribedSession6Gawain6Player;
+      // The activity has its own intro screen. Announce that screen here; its
+      // Simulan button announces the item selected from the saved progress.
+      void audio?.intro();
+      return;
+    }
     // Keep the activity modal open until every opening clip has finished. This
     // prevents the activity renderer from starting its first prompt alongside
     // the modal's intro MP3.
