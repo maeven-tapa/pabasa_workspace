@@ -1103,6 +1103,25 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
         # at the full story tail can otherwise shift a short wrong word to the
         # final target and mark every intervening unread word as an omission.
         i = min(range(rows), key=lambda end: (dp[end][j], -end))
+        if crla_story_reading and len(recognized_words) >= 2:
+            # A short chunk after a larger skip can cost fewer substitutions
+            # at the current cursor than omissions at its actual position.
+            # Resync only on a unique, consecutive pair of spoken words, and
+            # only when every earlier spoken word fits in order without a
+            # substitution. A single common word must not jump the cursor.
+            anchors = [end for end in range(2, rows)
+                       if _crla_story_words_are_equivalent(expected_words[end - 2], recognized_words[-2])
+                       and _crla_story_words_are_equivalent(expected_words[end - 1], recognized_words[-1])]
+            if len(anchors) == 1 and anchors[0] > i:
+                endpoint = anchors[0]
+                spoken_index = 0
+                for expected_word in expected_words[:endpoint - 2]:
+                    if spoken_index >= len(recognized_words) - 2:
+                        break
+                    if _crla_story_words_are_equivalent(expected_word, recognized_words[spoken_index]):
+                        spoken_index += 1
+                if spoken_index == len(recognized_words) - 2:
+                    i = endpoint
     while i > 0 or j > 0:
         matched_fragment = False
         for width in (3, 2):

@@ -139,6 +139,25 @@ async function snapshot(page) {
           await page.reload();
           await page.waitForFunction(() => !document.getElementById('readingWord').textContent.includes('Loading'));
           assert.deepEqual(await snapshot(page), before, `${branch}, ${viewport.width}px, debug=${debug}: refresh`);
+          const expectedHints = ['sentences', 'story_reading'].includes(branch) ? 1 : 0;
+          assert.equal(await page.locator('#readingWord .is-next-word').count(), expectedHints,
+            `${branch}: next-word blue highlight`);
+          assert.equal(await page.locator('#readingWord .is-current').count(), expectedHints,
+            `${branch}: current-word blue highlight`);
+          if (!expectedHints) {
+            // Exercise redraws after a partial speech callback as well as the
+            // initial screen: Word and Rhyme tasks must never add a blue cue.
+            await page.evaluate(() => {
+              const context = window.__readerTest.currentSpeechContext();
+              window.__readerTest.handleSpeechResult({transcript: 'pi', words: ['Pito'], syllables: ['pi', 'to'],
+                word_syllable_ranges: [[0, 2]], current_word_index: 0, current_syllable_index: 1,
+                correct_word_count: 0, matched: 1, complete: false}, context);
+            });
+            assert.equal(await page.locator('#readingWord .is-next-word, #readingWord .is-current, #readingWord .is-unread-word').count(), 0,
+              `${branch}: no blue hint after recognition`);
+            await page.reload();
+            await page.waitForFunction(() => !document.getElementById('readingWord').textContent.includes('Loading'));
+          }
           if (['sentences', 'story_reading'].includes(branch) && viewport.width === 1366 && !debug) {
             testingSpeechRetry = true;
             await page.evaluate(() => {

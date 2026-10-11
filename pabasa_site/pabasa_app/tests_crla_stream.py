@@ -101,6 +101,8 @@ class CrlaStreamingTests(SimpleTestCase):
             ('word', 'tatay', 'ta tay', {'crla_rhymes': '1'}),
             ('sentence', 'Si Bibo ay bata.', 'Si Bibo', {'crla_sentence_word_scoring': '1'}),
             ('paragraph', 'Si Bibo ay bata.', 'Si Bibo ay bata.', {'crla_story_reading': '1'}),
+            ('paragraph', 'Si Bibo ay masaya sa bahay.', 'Si masaya sa bahay.', {'crla_story_reading': '1'}),
+            ('paragraph', 'Si Bibo ay masaya sa bahay.', 'sa bahay.', {'crla_story_reading': '1'}),
             ('paragraph', "May iba't-ibang tao.", 'May ibat-ibang tao.', {'crla_story_reading': '1'}),
             ('paragraph', "May iba't-ibang tao.", 'May ibat ibang tao.', {'crla_story_reading': '1'}),
             ('word', 'agiw', 'agyo', {}),
@@ -129,6 +131,13 @@ class CrlaStreamingTests(SimpleTestCase):
                 })).content)
                 provider.assert_not_called()
                 self.assertEqual(result, expected)
+                if target == 'Si Bibo ay masaya sa bahay.':
+                    skipped = [1, 2] if transcript.startswith('Si ') else [0, 1, 2, 3]
+                    self.assertEqual(result['word_alignment']['miscues'], len(skipped))
+                    self.assertEqual([item['expected_index'] for item in result['word_results']
+                                      if item['type'] == 'omission'], skipped)
+                    self.assertEqual(result['stt_provider'], 'google')
+                    self.assertEqual(result['language_code'], 'fil-PH')
                 if "iba't-ibang" in target:
                     self.assertEqual(result['word_alignment']['correct_words'], 3)
                     self.assertEqual(result['word_alignment']['miscues'], 0)
