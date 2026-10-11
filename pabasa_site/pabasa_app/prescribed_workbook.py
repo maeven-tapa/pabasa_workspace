@@ -142,11 +142,12 @@ L22_G4_ACCEPTED_SPEECH = {
 # that is both present in the validated Lesson 23 word list and constructible
 # from the requested box is Niño.
 L23_G1_WORDS = ('Niño',)
+L23_G1_ACTIVITY_KEY = 'aral-l23-g1-n-syllable-builder'
 L23_G1_ACCEPTED_SPEECH = {
-    'ni': {'ni'}, 'la': {'la'}, 'ña': {'ña', 'na'},
-    'cas': {'cas', 'kas', 'kass'}, 'bi': {'bi', 'bee'}, 'da': {'da'},
-    'el': {'el', 'ell'}, 'ño': {'no', 'nyo'}, 'ñan': {'nan', 'nyan'},
-    'cen': {'cen', 'sen'}, 'ta': {'ta'}, 'ñe': {'ne', 'nye'},
+    'ni': {'ni', 'knee'}, 'la': {'la'}, 'ña': {'ña', 'na'},
+    'cas': {'cas', 'kas', 'kass'}, 'bi': {'bi', 'bee', 'be', 'b'}, 'da': {'da'},
+    'el': {'el', 'ell', 'l'}, 'ño': {'ño', 'no', 'nyo'}, 'ñan': {'ñan', 'nan', 'nyan'},
+    'cen': {'cen', 'sen'}, 'ta': {'ta'}, 'ñe': {'ñe', 'ne', 'nye'},
 }
 
 L23_G2_TARGETS = (
@@ -1175,13 +1176,18 @@ def normalize_l23_g1_state(state):
     return state
 
 
-def l23_g1_pronunciation_match(expected, transcript):
+def l23_g1_pronunciation_match(expected, transcript, activity_key=''):
     canonical = unicodedata.normalize('NFKC', str(expected or '')).casefold()
     heard = unicodedata.normalize('NFKC', str(transcript or '')).casefold()
     canonical = re.sub(r'[^a-zñ\s]', ' ', canonical).strip()
     heard_words = [re.sub(r'[^a-zñ]', '', word) for word in heard.split()]
-    accepted = L23_G1_ACCEPTED_SPEECH.get(canonical, {canonical})
-    return bool(heard_words and any(word in accepted for word in heard_words))
+    if (
+        activity_key != L23_G1_ACTIVITY_KEY
+        or canonical not in L23_G1_ACCEPTED_SPEECH
+        or len(heard_words) != 1
+    ):
+        return False
+    return heard_words[0] in L23_G1_ACCEPTED_SPEECH[canonical]
 
 
 def normalize_l24_g1_speech(value):

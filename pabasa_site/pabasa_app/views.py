@@ -20385,6 +20385,7 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
                 result['complete'] = l23_g1_pronunciation_match(
                     workbook['items'][item_index]['text'],
                     result.get('raw_transcript') or result.get('transcript') or '',
+                    activity_key,
                 )
             elif activity_key == 'aral-l24-g1-v-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
                 event = dict(event)
