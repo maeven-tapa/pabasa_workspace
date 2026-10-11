@@ -93,6 +93,14 @@ class PrescribedLesson22Gawain4Tests(TestCase):
         self.assertIn("if(busy||speechBusy||uiPhase==='listening'||uiPhase==='processing')return", script)
         self.assertIn('stopStream()', script)
 
+    def test_attempt_counter_exposes_three_indicator_circles(self):
+        script = (Path(__file__).resolve().parent / 'static/pabasa_app/js/prescribed_l22_g4_f_builder.js').read_text(encoding='utf-8')
+        css = (Path(__file__).resolve().parent / 'static/pabasa_app/css/prescribed_l22_g4_f_builder.css').read_text(encoding='utf-8')
+        self.assertIn('class="attempts"', script)
+        self.assertIn('class="wb-attempt-circles"', script)
+        self.assertIn('.wb-attempt-circles i{display:block;width:10px;height:10px', css)
+        self.assertIn('gap:4px', css)
+
     def test_startup_modal_and_replay_share_the_canonical_instruction_path(self):
         script = (Path(__file__).resolve().parent / 'static/pabasa_app/js/prescribed_l22_g4_f_builder.js').read_text(encoding='utf-8')
         template = (Path(__file__).resolve().parent / 'templates/pabasa_app/prescribed_l22_g4_f_builder_page.html').read_text(encoding='utf-8')
