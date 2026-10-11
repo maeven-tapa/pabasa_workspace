@@ -286,7 +286,7 @@ class WorkbookStateTests(SimpleTestCase):
             ('com', 'computer', 'hard', ('com', 'kom', 'computer'), 'come'),
             ('pu', 'computer', 'hard', ('pu', 'pooh', 'poo'), 'pew'),
             ('ga', 'Cagayan', 'hard', ('ga',), 'go'),
-            ('tus', 'cactus', 'hard', ('tus',), 'toast'),
+            ('tus', 'cactus', 'hard', ('tus', 'tuss'), 'toast'),
             ('ter', 'computer', 'hard', ('ter',), 'tear'),
             ('yan', 'Cagayan', 'hard', ('yan',), 'yarn'),
             ('Car', 'Cardo', 'hard', ('car', 'kar', 'cardo'), 'care'),
@@ -315,6 +315,7 @@ class WorkbookStateTests(SimpleTestCase):
         key = 'aral-l22-g1-c-syllable-builder'
         aliases = {
             'pu': ('computer', 'hard', ('pooh', 'poo'), 'pew'),
+            'tus': ('cactus', 'hard', ('tuss', 'Tuss.', 'TUSS'), 'toast'),
             'bi': ('cabinet', 'hard', ('bee', 'be'), 'bead'),
             'net': ('cabinet', 'hard', ('nett',), 'knit'),
             'les': ('Celeste', 'soft', ('less',), 'lease'),
@@ -872,7 +873,7 @@ class PrescribedWorkbookFlowTests(TestCase):
         )
         self.assertEqual(response.status_code, 200, response.content)
         state = response.json()['state']
-        approved_transcripts = {'pu': 'Poo.', 'bi': 'BEE', 'net': 'Nett.', 'les': 'less'}
+        approved_transcripts = {'pu': 'Poo.', 'tus': 'Tuss.', 'bi': 'BEE', 'net': 'Nett.', 'les': 'less'}
 
         def approved_alias_response(request):
             expected = request.POST['l22_c_syllable']

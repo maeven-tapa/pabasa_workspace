@@ -247,6 +247,7 @@ L22_G1_BU_STT_ALIASES = {'bu', 'boo'}
 L22_G1_SCOPED_SYLLABLE_ALIASES = {
     'bu': L22_G1_BU_STT_ALIASES,
     'pu': {'pu', 'pooh', 'poo'},
+    'tus': {'tus', 'tuss'},
     'bi': {'bi', 'bee', 'be'},
     'net': {'net', 'nett'},
     'les': {'les', 'less'},
