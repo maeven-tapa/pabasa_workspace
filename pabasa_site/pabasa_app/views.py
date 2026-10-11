@@ -29097,6 +29097,18 @@ def live_assessment_session_state(request, session_id):
     except Exception:
         available_profiles = []
 
+    reading_levels = {}
+    if session.status == 'ended':
+        finalized_students = User.objects.filter(
+            id__in=session.student_ids or [],
+            role='student',
+            is_archived=False,
+        )
+        for student in finalized_students:
+            result = _official_crla_completed_result_for_material(student, session.material)
+            classification = str(getattr(result, 'crla_classification', '') or '').strip() if result else ''
+            reading_levels[str(student.id)] = classification or None
+
     return JsonResponse({
         'success': True,
         'session': {
@@ -29113,6 +29125,7 @@ def live_assessment_session_state(request, session_id):
             'reader_url': reader_url,
             'official_crla': True,
             'student_states': session.student_states or {},
+            'reading_levels': reading_levels,
             'viewer_student_state': student_state if user_role == 'student' else {},
             'activity_log': session.activity_log or [],
             'available_students': available_profiles,

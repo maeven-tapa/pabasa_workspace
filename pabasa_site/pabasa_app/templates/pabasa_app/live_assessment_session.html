@@ -29,6 +29,8 @@
         }
 
         .live-monitor-card {
+            container-type: inline-size;
+            container-name: live-monitor;
             border: 1px solid rgba(31, 111, 139, 0.08);
             background: var(--panel, #ffffff);
             border-radius: clamp(16px, 4vw, 24px);
@@ -115,19 +117,74 @@
         }
         .live-monitor-card .student-cell {
             min-width: 0;
-            width: 38%;
+            width: 34%;
         }
         .live-monitor-card .student-monitor-table {
             table-layout: fixed;
             width: 100%;
         }
-        .live-monitor-card .student-monitor-table th:nth-child(2) { width: 17%; }
-        .live-monitor-card .student-monitor-table th:nth-child(3) { width: 23%; }
-        .live-monitor-card .student-monitor-table th:nth-child(4) { width: 10%; }
-        .live-monitor-card .student-monitor-table th:nth-child(5) { width: 12%; }
+        .live-monitor-card .student-monitor-table th,
+        .live-monitor-card .student-monitor-table td {
+            overflow: hidden;
+        }
+        .live-monitor-card .student-monitor-table th:first-child,
+        .live-monitor-card .student-monitor-table td:first-child {
+            width: 38%;
+            text-align: left;
+        }
+        .live-monitor-card .student-monitor-table th:nth-child(2),
+        .live-monitor-card .student-monitor-table td:nth-child(2) {
+            width: 16%;
+            text-align: center;
+        }
+        .live-monitor-card .student-monitor-table th:nth-child(3),
+        .live-monitor-card .student-monitor-table td:nth-child(3) {
+            width: 22%;
+            text-align: left;
+        }
+        .live-monitor-card .student-monitor-table th:nth-child(4),
+        .live-monitor-card .student-monitor-table td:nth-child(4) {
+            width: 10%;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .live-monitor-card .student-monitor-table th:nth-child(5),
+        .live-monitor-card .student-monitor-table td:nth-child(5) {
+            width: 18%;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .live-monitor-card .reading-level-calculating {
+            display: inline-flex;
+            align-items: baseline;
+            white-space: nowrap;
+        }
+        .live-monitor-card .reading-level-dots {
+            display: inline-flex;
+            width: 1.15em;
+            justify-content: flex-start;
+        }
+        .live-monitor-card .reading-level-dot {
+            animation: reading-level-dot 1.2s infinite ease-in-out;
+            opacity: 0.2;
+        }
+        .live-monitor-card .reading-level-dot:nth-child(2) { animation-delay: 0.2s; }
+        .live-monitor-card .reading-level-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes reading-level-dot {
+            0%, 60%, 100% { opacity: 0.2; }
+            30% { opacity: 1; }
+        }
+        .live-monitor-card .student-monitor-table td:first-child > .d-flex {
+            min-width: 0;
+        }
+        .live-monitor-card .student-monitor-table td:first-child > .d-flex > div:last-child {
+            min-width: 0;
+            overflow: hidden;
+        }
         .live-monitor-card .student-monitor-table td:first-child .fw-semibold {
-            overflow: visible;
+            overflow: hidden;
             white-space: normal;
+            overflow-wrap: anywhere;
         }
         .live-monitor-card .student-avatar {
             width: clamp(2rem, 4.8vw, 2.375rem);
@@ -213,18 +270,11 @@
             width: 100%;
             table-layout: fixed;
         }
-        .teacher-control .student-monitor-table th,
-        .teacher-control .student-monitor-table td {
-            min-width: 90px;
-        }
-        .teacher-control .student-monitor-table th:first-child,
-        .teacher-control .student-monitor-table td:first-child { min-width: 220px; }
         .teacher-control .student-monitor-table thead th {
             white-space: nowrap;
             word-break: normal;
             overflow-wrap: normal;
             writing-mode: horizontal-tb;
-            text-align: center;
         }
         .teacher-control .btn { font-weight: 800; border-radius: 10px; }
         .teacher-control .btn.btn-lg { padding: 0.7rem 0.95rem; font-size: clamp(0.92rem, 2.2vw, 1rem); }
@@ -908,7 +958,7 @@
             .teacher-control .table-monitor tbody td:nth-child(2)::before { content: "Status"; }
             .teacher-control .table-monitor tbody td:nth-child(3)::before { content: "Progress"; }
             .teacher-control .table-monitor tbody td:nth-child(4)::before { content: "Time"; }
-            .teacher-control .table-monitor tbody td:nth-child(5)::before { content: "Score"; }
+            .teacher-control .table-monitor tbody td:nth-child(5)::before { content: "Reading Level"; }
             .teacher-control .table-monitor tbody td::before {
                 color: var(--muted, #6b7280);
                 font-size: 0.7rem;
@@ -936,6 +986,91 @@
                 text-align: right;
             }
             .teacher-control .profile-surface-menu { max-height: min(280px, 42vh); }
+        }
+
+        @container live-monitor (max-width: 680px) {
+            .live-monitor-card .table-responsive {
+                overflow-x: hidden;
+            }
+            .live-monitor-card .student-monitor-table,
+            .live-monitor-card .student-monitor-table tbody {
+                display: block;
+                width: 100%;
+            }
+            .live-monitor-card .student-monitor-table thead {
+                display: none;
+            }
+            .live-monitor-card .student-monitor-table tbody tr {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                column-gap: 1rem;
+                row-gap: 0;
+                width: 100%;
+                height: auto;
+                min-height: 0;
+                padding: 0.35rem 0.75rem;
+                overflow: visible;
+            }
+            .live-monitor-card .student-monitor-table tbody td {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                justify-content: center;
+                gap: 0.28rem;
+                width: auto;
+                min-width: 0;
+                overflow: visible;
+                padding: 0.55rem 0;
+                text-align: left;
+            }
+            .live-monitor-card .student-monitor-table tbody td:first-child {
+                grid-column: 1 / -1;
+                display: block;
+                width: 100%;
+                padding: 0.6rem 0 0.7rem;
+            }
+            .live-monitor-card .student-monitor-table tbody td:first-child > .d-flex > div:last-child,
+            .live-monitor-card .student-monitor-table tbody td:first-child .fw-semibold {
+                overflow: visible;
+                overflow-wrap: anywhere;
+            }
+            .live-monitor-card .student-monitor-table tbody td::before {
+                display: block;
+                flex: 0 0 auto;
+                overflow-wrap: normal;
+                white-space: nowrap;
+            }
+            .live-monitor-card .student-monitor-table tbody td:nth-child(2) {
+                text-align: left;
+            }
+            .live-monitor-card .student-monitor-table tbody td:nth-child(2)::before { content: "Status"; }
+            .live-monitor-card .student-monitor-table tbody td:nth-child(3)::before { content: "Progress"; }
+            .live-monitor-card .student-monitor-table tbody td:nth-child(4)::before { content: "Time"; }
+            .live-monitor-card .student-monitor-table tbody td:nth-child(5)::before { content: "Reading Level"; }
+            .live-monitor-card .student-monitor-table tbody td:nth-child(4),
+            .live-monitor-card .student-monitor-table tbody td:nth-child(5) {
+                white-space: normal;
+            }
+            .live-monitor-card .student-monitor-table .progress-sm {
+                min-width: 0;
+            }
+            .live-monitor-card .student-monitor-table .status-pill {
+                align-self: flex-start;
+            }
+            .live-monitor-card .reading-level-calculating {
+                white-space: normal;
+                max-width: 100%;
+            }
+            .live-monitor-card .reading-level-dots {
+                flex: 0 0 1.15em;
+            }
+            .live-monitor-card .student-monitor-table tbody tr.text-muted td[colspan] {
+                grid-column: 1 / -1;
+                display: block;
+                width: 100%;
+                padding: 1rem 0.4rem !important;
+                text-align: center;
+            }
         }
 
         @media (max-width: 420px) {
@@ -1006,13 +1141,20 @@
                 </div>
                 <div class="table-responsive">
                     <table class="table table-borderless table-monitor student-monitor-table mb-0 align-middle">
+                        <colgroup>
+                            <col class="student-monitor-col-student">
+                            <col class="student-monitor-col-status">
+                            <col class="student-monitor-col-progress">
+                            <col class="student-monitor-col-time">
+                            <col class="student-monitor-col-reading-level">
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th class="student-cell">Student</th>
                                 <th>Status</th>
                                 <th>Progress</th>
                                 <th>Time</th>
-                                <th>Score</th>
+                                <th>Reading Level</th>
                             </tr>
                         </thead>
                         <tbody id="studentsTableBody">
@@ -1036,7 +1178,7 @@
                                         <div class="small text-muted" data-progress-text="{{ student.id }}">--</div>
                                     </td>
                                     <td class="small text-muted" data-elapsed-col="{{ student.id }}">--</td>
-                                    <td class="small text-muted fw-semibold" data-score-col="{{ student.id }}">--</td>
+                                    <td class="small text-muted fw-semibold" data-reading-level-col="{{ student.id }}"></td>
                                 </tr>
                                 {% endfor %}
                             {% else %}
@@ -2062,7 +2204,11 @@
                     // End Session is authoritative: only its successful
                     // backend response may clear the local recovery draft.
                     await window.PabasaCrlaRecovery?.deleteDraft(crlaRecoveryContext).catch(() => {});
-                    window.location.href = '{% url "students" %}';
+                    // The action response confirms finalization; reload the
+                    // state payload so the monitor receives persisted levels.
+                    const finalizedState = await fetchState();
+                    if (finalizedState) updateFromState(finalizedState);
+                    setEndSessionLoading(false);
                 }
             } catch (error) {
                 setEndSessionLoading(false);
@@ -2201,7 +2347,7 @@
                 <div class="small text-muted" data-progress-text="${studentId}">--</div>
             </td>
             <td class="small text-muted" data-elapsed-col="${studentId}">--</td>
-            <td class="small text-muted fw-semibold" data-score-col="${studentId}">--</td>
+            <td class="small text-muted fw-semibold" data-reading-level-col="${studentId}"></td>
         `;
         tbody.appendChild(tr);
         return tr;
@@ -2245,6 +2391,32 @@
 
         const states = (session && session.student_states) ? session.student_states : {};
         const isOfficialCrlaSession = session?.official_crla === true;
+        const sessionEnded = String(session?.status || '').toLowerCase() === 'ended';
+        const readingLevels = sessionEnded && session?.reading_levels ? session.reading_levels : {};
+        const setReadingLevel = (cell, value, calculating) => {
+            if (!cell) return;
+            cell.replaceChildren();
+            if (calculating) {
+                const label = document.createElement('span');
+                label.className = 'reading-level-calculating';
+                label.textContent = 'Calculating';
+                const dots = document.createElement('span');
+                dots.className = 'reading-level-dots';
+                dots.setAttribute('aria-hidden', 'true');
+                for (let index = 0; index < 3; index += 1) {
+                    const dot = document.createElement('span');
+                    dot.className = 'reading-level-dot';
+                    dot.textContent = '.';
+                    dots.appendChild(dot);
+                }
+                label.appendChild(dots);
+                cell.appendChild(label);
+                cell.setAttribute('aria-label', 'Calculating Reading Level');
+                return;
+            }
+            cell.textContent = value || 'Not Available';
+            cell.setAttribute('aria-label', value || 'Reading Level not available');
+        };
         const crlaStageLabels = {
             words: 'Words',
             rhymes: 'Rhymes',
@@ -2261,7 +2433,8 @@
             const progressBar = row.querySelector(`[data-progress-bar="${sid}"]`);
             const progressText = row.querySelector(`[data-progress-text="${sid}"]`);
             const elapsedCol = row.querySelector(`[data-elapsed-col="${sid}"]`);
-            const scoreCol = row.querySelector(`[data-score-col="${sid}"]`);
+            const readingLevelCol = row.querySelector(`[data-reading-level-col="${sid}"]`);
+            setReadingLevel(readingLevelCol, readingLevels[String(sid)], !sessionEnded);
 
             const statusValue = (st.status || 'waiting').toLowerCase().replace(/\s+/g, '_');
             const statusLabels = {
@@ -2319,7 +2492,6 @@
                 }
                 if (progressText) progressText.textContent = '--';
                 if (elapsedCol) elapsedCol.textContent = '--';
-                if (scoreCol) scoreCol.textContent = '--';
                 return;
             }
 
@@ -2330,7 +2502,6 @@
                 }
                 if (progressText) progressText.textContent = '--';
                 if (elapsedCol) elapsedCol.textContent = '--';
-                if (scoreCol) scoreCol.textContent = st.final_score != null ? st.final_score : '--';
             } else if (statusLower === 'ready') {
                 if (progressBar) {
                     progressBar.style.width = `0%`;
@@ -2338,7 +2509,6 @@
                 }
                 if (progressText) progressText.textContent = '0%';
                 if (elapsedCol) elapsedCol.textContent = '--';
-                if (scoreCol) scoreCol.textContent = st.final_score != null ? st.final_score : '--';
             } else if (statusLower === 'reading') {
                 const crlaStageLabel = st.crla_stage_label || crlaStageLabels[st.crla_stage] || '';
                 const crlaProgressText = crlaStageLabel && itemsTotal > 0
@@ -2350,7 +2520,6 @@
                 }
                 if (progressText) progressText.textContent = isOfficialCrlaSession ? crlaProgressText : progressTextValue;
                 if (elapsedCol) elapsedCol.textContent = st.elapsed_seconds ? formatElapsed(st.elapsed_seconds) : '--';
-                if (scoreCol) scoreCol.textContent = st.final_score != null ? st.final_score : 'Calculating...';
             } else {
                 const finalPercent = st.items_total ? Math.round((Number(st.items_completed) || st.items_total) / (Number(st.items_total) || 1) * 100) : 100;
                 if (progressBar) {
@@ -2363,7 +2532,6 @@
                         : (st.items_total ? `${finalPercent}% • ${st.items_completed || 0} / ${st.items_total}` : `${finalPercent}%`);
                 }
                 if (elapsedCol) elapsedCol.textContent = st.elapsed_seconds ? formatElapsed(st.elapsed_seconds) : '--';
-                if (scoreCol) scoreCol.textContent = st.final_score != null ? st.final_score : 'Calculating...';
             }
         });
     }
