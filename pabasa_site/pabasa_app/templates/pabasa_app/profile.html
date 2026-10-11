@@ -1547,6 +1547,42 @@
     .settings-accordion .btn { border-radius:10px; font-weight:800; }
     .settings-accordion .btn-primary { background:var(--dash-primary); border-color:var(--dash-primary); box-shadow:0 4px 10px color-mix(in srgb, var(--dash-primary) 20%, transparent); }
     .settings-accordion .form-label { color:var(--dash-text); font-size:.8rem; font-weight:800; }
+    .player-settings-modal .settings-form-shell {
+        background:color-mix(in srgb, var(--dash-primary-soft) 34%, var(--dash-panel));
+        border:1px solid var(--dash-border);
+        border-radius:16px;
+        padding:1rem;
+    }
+    .player-settings-modal .settings-form-shell .form-label {
+        color:var(--dash-text);
+        font-size:.8rem;
+        font-weight:800;
+        margin-bottom:.4rem;
+    }
+    .player-settings-modal .settings-form-shell .form-control,
+    #changePasswordModal .form-control {
+        background:var(--dash-panel);
+        border:1px solid var(--dash-border);
+        border-radius:10px;
+        color:var(--dash-text);
+        min-height:44px;
+    }
+    .player-settings-modal .settings-form-shell .form-control:focus,
+    #changePasswordModal .form-control:focus {
+        border-color:var(--dash-primary);
+        box-shadow:0 0 0 3px color-mix(in srgb, var(--dash-primary) 18%, transparent);
+        outline:0;
+    }
+    .player-settings-modal .settings-form-shell .btn,
+    #changePasswordModal .modal-footer .btn { border-radius:10px; font-weight:800; min-height:40px; }
+    .player-settings-modal .settings-form-shell .btn-primary,
+    #changePasswordModal .modal-footer .btn-primary { background:var(--dash-primary); border-color:var(--dash-primary); box-shadow:0 4px 10px color-mix(in srgb, var(--dash-primary) 20%, transparent); }
+    #changePasswordModal .modal-content { background:var(--dash-panel); border:1px solid var(--dash-border); border-radius:18px; box-shadow:var(--dash-shadow); overflow:hidden; }
+    #changePasswordModal .modal-header { background:linear-gradient(180deg, color-mix(in srgb, var(--dash-primary-soft) 72%, var(--dash-panel)), var(--dash-panel)); border-bottom:1px solid var(--dash-border); padding:1rem 1.15rem .8rem; }
+    #changePasswordModal .modal-title { color:var(--dash-text); font-size:1.1rem; font-weight:900; }
+    #changePasswordModal .modal-body { padding:1rem 1.15rem 1.1rem; }
+    #changePasswordModal .modal-footer { border-top:1px solid var(--dash-border) !important; padding:.8rem 1.15rem 1rem; }
+    #changePasswordModal .form-label { color:var(--dash-text); font-size:.8rem; font-weight:800; }
     @media(max-width:600px) {
         .player-settings-modal .modal-dialog { width:calc(100% - 1rem); margin:.5rem auto; }
         .player-settings-modal .modal-header { padding:.85rem 1rem .7rem; }
