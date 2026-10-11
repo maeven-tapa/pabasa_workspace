@@ -17,3 +17,7 @@
 .wb-l24-g2-page .l24g2-eyebrow{margin-bottom:13px;padding-block:8px;font-weight:900;line-height:1.1}
 .wb-l24-g2-page .l24g2-header h1{font-size:clamp(1.85rem,3.1vw,3rem)}
 .wb-l24-g2-page .l24g2-instruction{margin-top:8px;font-size:clamp(.96rem,1.5vw,1.2rem);font-weight:800;line-height:1.28}
+/* Shared Session 8 three-attempt indicator styling. */
+.wb-attempt-circles{display:inline-flex;gap:4px;vertical-align:middle}
+.wb-attempt-circles i{display:block;width:10px;height:10px;border:2px solid #e4b52f;border-radius:50%;background:#fff}
+.wb-attempt-circles i.is-filled{background:#f4c744}

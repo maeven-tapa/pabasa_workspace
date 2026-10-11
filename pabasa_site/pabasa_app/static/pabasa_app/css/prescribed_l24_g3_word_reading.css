@@ -60,6 +60,11 @@
 @media(max-width:850px){.wb-l24-g3-word-page .l24g3-shell{width:calc(100% - 20px);padding-top:18px}.wb-l24-g3-word-page .l24g3-card{padding:74px 14px 18px;border-radius:30px}.wb-l24-g3-word-page .l24g3-layout{grid-template-columns:1fr}.wb-l24-g3-word-page .l24g3-word-panel{min-height:0}.wb-l24-g3-word-page .l24g3-reading-panel{min-height:390px}}
 @media(max-width:520px){.wb-l24-g3-word-page .l24g3-back{left:12px;top:28px;min-height:48px;padding:9px 16px;font-size:1rem}.wb-l24-g3-word-page .l24g3-card{padding:66px 9px 14px}.wb-l24-g3-word-page .l24g3-eyebrow{padding-inline:12px;font-size:.72rem}.wb-l24-g3-word-page .l24g3-word-column{padding:0 9px}.wb-l24-g3-word-page .l24g3-word{min-height:44px;padding:6px 8px;font-size:1rem}.wb-l24-g3-word-page .l24g3-word-panel{padding-block:14px}.wb-l24-g3-word-page .l24g3-reading-panel{padding:20px 14px}.wb-l24-g3-word-page .l24g3-progress{font-size:.9rem}.wb-l24-g3-word-page .l24g3-progress i{width:34vw}}
 
+/* The shared prescribed renderer uses this activity-scoped word grid. Keep long Xx words intact. */
+.wb-l24-g3-word-page .wb-j-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:14px;max-width:980px}
+.wb-l24-g3-word-page .wb-j-word{min-width:0;overflow-wrap:normal;word-break:normal;white-space:nowrap !important;font-size:clamp(1.25rem,2.4vw,2rem)}
+@media(max-width:700px){.wb-l24-g3-word-page .wb-j-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:10px}.wb-l24-g3-word-page .wb-j-word{font-size:clamp(1.05rem,4.6vw,1.45rem);padding-inline:6px}}
+
 /* Desktop viewport fit and badge contrast for this activity only. */
 .wb-l24-g3-word-page{height:100svh;min-height:0;padding:0;overflow:hidden}
 .wb-l24-g3-word-page .wb-shell{height:100%;min-height:0}
@@ -96,3 +101,12 @@
 @media(min-width:1200px) and (max-width:1439px){.wb-l24-g3-word-page .l24g3-progress i{width:clamp(260px,24vw,320px)}}
 @media(min-width:1024px) and (max-width:1199px){.wb-l24-g3-word-page .l24g3-progress i{width:clamp(220px,24vw,280px)}}
 @media(max-width:1023px){.wb-l24-g3-word-page .l24g3-progress i{width:min(320px,calc(100vw - 32px))}}
+
+/* Keep the generic word-reading cards wide enough for the longest Xx words. */
+.wb-l24-g3-word-page .wb-j-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px}
+.wb-l24-g3-word-page .wb-j-word{min-width:0;white-space:nowrap!important;overflow-wrap:normal;word-break:normal}
+@media(max-width:700px){.wb-l24-g3-word-page .wb-j-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px}}
+/* Shared Session 8 three-attempt indicator styling. */
+.wb-attempt-circles{display:inline-flex;gap:4px;vertical-align:middle}
+.wb-attempt-circles i{display:block;width:10px;height:10px;border:2px solid #e4b52f;border-radius:50%;background:#fff}
+.wb-attempt-circles i.is-filled{background:#f4c744}

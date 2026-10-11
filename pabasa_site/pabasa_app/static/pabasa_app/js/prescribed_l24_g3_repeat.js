@@ -133,7 +133,7 @@
               <button class="l24g3-repeat-speak" id="speak" type="button" ${controlsLocked || listenRequired || recovery ? 'disabled' : ''}>🎙 Ulitin</button>
               ${recovery ? `<button class="l24g3-repeat-secondary" id="retry" type="button" ${!recoveryReady || controlsLocked ? 'disabled' : ''}>Subukan Muli</button>` : ''}
             </div>
-            <p class="l24g3-repeat-attempts">Pagsubok: ${Number(currentState.attempts || 0)} / 3</p>
+            <p class="l24g3-repeat-attempts">Pagsubok: ${Number(currentState.attempts || 0)} / 3 <span class="wb-attempt-circles" aria-hidden="true">${[0,1,2].map(i=>`<i class="${i<Number(currentState.attempts || 0)?"is-filled":""}"></i>`).join("")}</span></p>
             <div class="l24g3-repeat-heard"><span>NARINIG KO</span><strong>${esc(state.last_transcript || '—')}</strong></div>
             <p class="l24g3-repeat-feedback ${kind}" role="status">${esc(state.last_feedback || '')}</p>
           </section>

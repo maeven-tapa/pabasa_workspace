@@ -966,6 +966,7 @@ def initial_l23_g3_state():
 def initial_l23_g7_state():
     return {
         'index': 0, 'completed_words': [], 'reading_attempts': 0,
+        'reading_phase': 'read', 'pronunciation_help_played': False,
         'last_feedback': '', 'last_transcript': '', 'completed': False,
         'revision': 0, 'draft': {},
     }
@@ -978,6 +979,8 @@ def normalize_l23_g3_state(state):
     state['index'] = max(0, min(total, int(state.get('index') or len(state['completed_words']))))
     state['index'] = max(state['index'], len(state['completed_words']))
     state['reading_attempts'] = max(0, int(state.get('reading_attempts') or 0))
+    state['reading_phase'] = state.get('reading_phase') if state.get('reading_phase') in {'read', 'help', 'complete'} else 'read'
+    state['pronunciation_help_played'] = bool(state.get('pronunciation_help_played'))
     state.setdefault('last_feedback', '')
     state.setdefault('last_transcript', '')
     state.setdefault('draft', {})
@@ -1005,6 +1008,7 @@ def normalize_l23_g7_state(state):
         state['index'] = total
         state['completed_words'] = list(range(total))
         state['completed'] = True
+        state['reading_phase'] = 'complete'
     else:
         state['completed'] = False
     state['revision'] = max(0, int(state.get('revision') or 0))
@@ -1083,10 +1087,23 @@ def _apply_l23_g7_reading(state, event, verified_reading):
     if action == 'reading':
         action = 'reading_attempt'
     if action == 'reading_started':
-        state['last_feedback'] = 'Handa ka na.'
+        state.update(reading_phase='read', last_feedback='Handa ka na.')
+        return state
+    if action == 'read_aloud':
+        if state['reading_phase'] != 'help':
+            raise ValueError('Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.')
+        state['pronunciation_help_played'] = True
+        state['last_feedback'] = ''
+        return state
+    if action == 'retry_reading':
+        if state['reading_phase'] != 'help' or not state['pronunciation_help_played']:
+            raise ValueError('Pakinggan muna ang tamang pagbigkas.')
+        state.update(reading_phase='read', reading_attempts=0, pronunciation_help_played=False, last_feedback='', last_transcript='')
         return state
     if action != 'reading_attempt':
         raise ValueError('Unknown action.')
+    if state['reading_phase'] != 'read':
+        raise ValueError('Pakinggan ang tamang pagbigkas o pindutin ang Subukan Muli.')
     index = state['index']
     if event.get('item_index') is not None and int(event.get('item_index')) != index:
         raise ValueError('Ito ay hindi na ang kasalukuyang salita.')
@@ -1101,10 +1118,14 @@ def _apply_l23_g7_reading(state, event, verified_reading):
         state['index'] = min(len(L23_G7_Q_WORDS), index + 1)
         state['reading_attempts'] = 0
         state['completed'] = len(state['completed_words']) == len(L23_G7_Q_WORDS)
+        state['reading_phase'] = 'complete' if state['completed'] else 'read'
         state['last_feedback'] = 'Mahusay!'
     else:
-        state['reading_attempts'] = min(99, state['reading_attempts'] + 1)
+        state['reading_attempts'] = min(3, state['reading_attempts'] + 1)
         state['last_feedback'] = 'Subukan Muli.'
+        if state['reading_attempts'] >= 3:
+            state['reading_phase'] = 'help'
+            state['pronunciation_help_played'] = False
     return state
 
 

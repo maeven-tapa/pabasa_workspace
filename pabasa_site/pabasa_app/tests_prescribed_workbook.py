@@ -373,6 +373,24 @@ class WorkbookStateTests(SimpleTestCase):
         apply_event(activity, state, {'action': 'reading_attempt', 'item_index': 4, 'transcript': 'Quintos'}, True)
         self.assertEqual(state, before)
 
+    def test_lesson23_gawain7_uses_three_attempt_help_unlock_and_retry_reset(self):
+        activity = get_activity('aral-l23-g7-q-word-reading')
+        state = initial_l23_g7_state()
+        self.assertEqual(state['reading_attempts'], 0)
+        self.assertEqual(state['reading_phase'], 'read')
+        for attempt in (1, 2, 3):
+            apply_event(activity, state, {'action': 'reading_attempt', 'item_index': 0, 'transcript': 'wrong'}, False)
+            self.assertEqual(state['reading_attempts'], attempt)
+        self.assertEqual(state['reading_phase'], 'help')
+        with self.assertRaisesMessage(ValueError, 'Pakinggan ang tamang pagbigkas'):
+            apply_event(activity, state, {'action': 'reading_attempt', 'item_index': 0, 'transcript': 'wrong'}, False)
+        apply_event(activity, state, {'action': 'read_aloud'}, None)
+        self.assertTrue(state['pronunciation_help_played'])
+        apply_event(activity, state, {'action': 'retry_reading'}, None)
+        self.assertEqual(state['reading_attempts'], 0)
+        self.assertEqual(state['reading_phase'], 'read')
+        self.assertFalse(state['pronunciation_help_played'])
+
     def test_lesson23_gawain7_proper_name_matching_is_scoped_and_case_safe(self):
         for word in L23_G7_Q_WORDS:
             with self.subTest(word=word):

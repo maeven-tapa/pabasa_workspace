@@ -18,8 +18,8 @@
   width: min(1180px, 100%);
   min-height: 100dvh;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
-  align-content: center;
+  grid-template-rows: auto auto auto auto;
+  align-content: start;
   gap: clamp(8px, 1.4vh, 16px);
   padding: clamp(12px, 2.5vh, 26px) clamp(14px, 3.5vw, 42px);
 }
@@ -79,7 +79,7 @@
   color: var(--l23-g7-teal-dark);
   font-size: clamp(1rem, 1.6vw, 1.18rem);
 }
-.wb-page.wb-l23-g7-reading #wb-content { align-self: center; min-width: 0; }
+.wb-page.wb-l23-g7-reading #wb-content { align-self: stretch; min-width: 0; }
 .wb-page.wb-l23-g7-reading .wb-instruction-banner {
   align-items: center;
   margin: 0 0 clamp(10px, 1.7vh, 16px);
@@ -132,7 +132,13 @@
 .wb-page.wb-l23-g7-reading .wb-j-word.is-current { border-color: var(--l23-g7-gold); background: #fff6d9; box-shadow: inset 0 0 0 3px #ffe39a, 0 7px 0 #e6b84f, 0 12px 20px rgba(24,62,99,.12); transform: translateY(-2px); }
 .wb-page.wb-l23-g7-reading .wb-j-word.is-done { border-color: #87c9a7; background: #dff4ee; box-shadow: 0 6px 0 #9fd0b5, 0 10px 18px rgba(24,62,99,.08); color: #276c50; }
 .wb-page.wb-l23-g7-reading .wb-j-feedback { min-height: 34px; margin: clamp(16px, 2vh, 24px) 0 0; color: #26784e; font-size: clamp(1.12rem, 1.8vw, 1.35rem); }
-.wb-page.wb-l23-g7-reading #wb-action { display: flex; justify-content: center; flex-wrap: wrap; gap: 16px; padding: 0 0 4px; }
+.wb-page.wb-l23-g7-reading .wb-g7-attempts { display:flex; align-items:center; justify-content:center; gap:8px; margin:2px 0 8px; color:#a45d00; font-size:.95rem; font-weight:900; line-height:1; }
+.wb-page.wb-l23-g7-reading .wb-j-attempts { display:flex; align-items:center; justify-content:center; gap:8px; margin:2px 0 8px; color:#a45d00; font-size:.95rem; font-weight:900; line-height:1; }
+.wb-page.wb-l23-g7-reading .wb-j-reading .wb-j-attempts { margin:16px 0 12px; }
+.wb-page.wb-l23-g7-reading .wb-attempt-circles { display:inline-flex; gap:4px; }
+.wb-page.wb-l23-g7-reading .wb-attempt-circles i { display:block; width:10px; height:10px; border:2px solid #e4b52f; border-radius:50%; background:#fff; }
+.wb-page.wb-l23-g7-reading .wb-attempt-circles i.is-filled { background:#f4c744; }
+.wb-page.wb-l23-g7-reading #wb-action { display: flex; justify-content: center; flex-wrap: wrap; gap: 16px; margin-top:12px; padding: 0 0 4px; }
 .wb-page.wb-l23-g7-reading #wb-action button { min-width: min(350px, 42vw); min-height: 68px; padding: 14px 26px; border: 0; background: #fff; box-shadow: 0 6px 0 #b7d6dc, 0 10px 20px rgba(24,62,99,.14); color: var(--l23-g7-teal-dark); font-size: clamp(1.08rem, 1.9vw, 1.35rem); }
 .wb-page.wb-l23-g7-reading #wb-action .wb-primary { background: var(--l23-g7-teal); box-shadow: 0 7px 0 var(--l23-g7-teal-dark), 0 12px 22px rgba(24,123,122,.24); color: #fff; }
 .wb-page.wb-l23-g7-reading #wb-action button:hover:not(:disabled), .wb-page.wb-l23-g7-reading .wb-instruction-banner button:hover:not(:disabled) { transform: translateY(-2px); }
@@ -146,10 +152,12 @@
 }
 @media (max-width: 700px) {
   .wb-page.wb-l23-g7-reading { background-attachment: scroll; }
-  .wb-page.wb-l23-g7-reading .wb-shell { display: block; padding: 14px 12px 28px; }
-  .wb-page.wb-l23-g7-reading .wb-shell > header { padding: 20px 15px 18px; }
-  .wb-page.wb-l23-g7-reading .wb-shell #wb-back { min-height: 46px; padding: 9px 17px; }
-  .wb-page.wb-l23-g7-reading #wb-progress { margin: 10px auto 14px; }
+  .wb-page.wb-l23-g7-reading .wb-shell { display: block; padding: 10px 12px 24px; }
+  .wb-page.wb-l23-g7-reading .wb-shell > header { padding: 12px 12px 11px; }
+  .wb-page.wb-l23-g7-reading .wb-shell #wb-back { min-height: 40px; padding: 7px 14px; }
+  .wb-page.wb-l23-g7-reading .wb-shell header > p:first-of-type { margin: 7px 0 3px; font-size: .72rem; }
+  .wb-page.wb-l23-g7-reading .wb-shell h1 { font-size: clamp(1.55rem, 6.4vw, 2.35rem); }
+  .wb-page.wb-l23-g7-reading #wb-progress { margin: 8px auto 12px; }
   .wb-page.wb-l23-g7-reading .wb-instruction-banner { align-items: stretch; flex-direction: column; }
   .wb-page.wb-l23-g7-reading .wb-instruction-banner button { width: 100%; }
   .wb-page.wb-l23-g7-reading .wb-focus.wb-j-reading { padding: 20px 13px 18px; }
@@ -163,6 +171,7 @@
 /* Gawain 7 keeps the progress readout on the same center axis as the shell. */
 .wb-page.wb-l23-g7-reading #wb-progress-row { display:grid; justify-items:center; gap:16px; width:min(320px,100%); margin:0 auto; }
 .wb-page.wb-l23-g7-reading #wb-progress-row #wb-progress { width:100%; margin:0; }
+.wb-page.wb-l23-g7-reading #wb-progress-row #wb-progress { min-width:0; padding:0; border:0; background:transparent; box-shadow:none; line-height:1.15; }
 .wb-page.wb-l23-g7-reading #wb-progress-track { width:100%; height:10px; overflow:hidden; border-radius:999px; background:#b9dfe3; box-shadow:inset 0 1px 3px rgba(24,62,99,.2); }
 .wb-page.wb-l23-g7-reading #wb-progress-fill { display:block; width:0; height:100%; border-radius:inherit; background:var(--l23-g7-teal); transition:width .2s ease; }
 .wb-page.wb-l23-g7-reading .wb-j-grid { max-width:900px; grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); }

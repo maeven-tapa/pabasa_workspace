@@ -31,3 +31,7 @@ body{overflow:auto}
 .layout > .panel .feedback{min-height:28px;font-size:clamp(.95rem,1.3vw,1.15rem)}
 .layout > .panel .button.danger{min-height:34px;margin:4px 0 0}
 .l23g2-page .instruction,.l23g2-page #instruction,.l23g2-page .label,.l23g2-page .heard{display:none!important}.l23g2-page .feedback{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+/* Shared Session 8 three-attempt indicator styling. */
+.wb-attempt-circles{display:inline-flex;gap:4px;vertical-align:middle}
+.wb-attempt-circles i{display:block;width:10px;height:10px;border:2px solid #e4b52f;border-radius:50%;background:#fff}
+.wb-attempt-circles i.is-filled{background:#f4c744}
