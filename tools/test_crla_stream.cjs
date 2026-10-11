@@ -130,6 +130,7 @@ async function readerTest() {
         crlaStreamStarting: false, stoppingSpeechRecognition: false, isRecording: true, isMuted: false,
         crlaLiveSpeech: null, crlaLiveContext: null, crlaStreamingUnavailable: false, crlaSpeechFailure: false,
         isOfficialAssessmentLaunch: true, isCrla: true, mode: 'word', officialAssessmentId: '12',
+        customMaterialData: null, isTemplateActivity: false,
         currentIndex: 0, itemResultVersion: 1, isAdvancingItem: false, currentSyllableIndex: 0,
         items: ['bata', 'bato'], getCurrentDisplayText: () => context.items[context.currentIndex],
         liveSessionEnded: false, liveSessionEndRedirecting: false,

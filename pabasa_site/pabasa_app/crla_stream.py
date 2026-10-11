@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 TICKET_SALT = 'crla-stream-start-v1'
 FINAL_SALT = 'crla-stream-final-v1'
 PRESCRIBED_RESULT_SALT = 'prescribed-stream-result-v1'
+MATERIAL_RESULT_SALT = 'material-stream-result-v1'
 STREAM_PATH = '/ws/reading/crla/'
 MAX_FRAME_BYTES = 12800
 
@@ -49,6 +50,138 @@ def decode_ticket(token, salt, session, max_age):
     if not constant_time_compare(payload['session'], session_binding(session)):
         raise PermissionError('Speech session expired. Start recording again.')
     return payload
+
+
+def authorize_material(request, material_id, purpose):
+    """Use the same publication, enrollment, and preview boundaries as the readers."""
+    from . import views
+    user = views._current_user(request)
+    if (not user or user.is_archived or user.account_status == 'archived'
+            or user.role not in {'student', 'teacher', 'admin'}
+            or user.role != request.session.get('user_role')):
+        raise PermissionError('Sign in again to use speech recognition.')
+    if purpose == 'practice':
+        if views._teacher_access_practice_block(request, json_response=True):
+            raise PermissionError('Practice is unavailable in teacher access mode.')
+        material = views._systemwide_practice_queryset().filter(
+            pk=material_id, is_active=True, status='published').first()
+        if material and user.role == 'student':
+            content = material.content_json or {}
+            if not views._practice_difficulty_is_accessible(
+                    content.get('mode', 'free'), material.difficulty_level, user):
+                raise PermissionError('This practice level is not available yet.')
+    elif purpose == 'supplementary':
+        material = views.Material.objects.filter(pk=material_id, is_active=True, status='published').first()
+        if material and (views._is_official_crla_material(material)
+                         or not (material.source_type == 'template' or views._is_template_activity_material(material)
+                                 or views._is_supplementary_material(material))):
+            material = None
+        if material and user.role == 'teacher' and not views._teacher_can_access_material(user, material):
+            raise PermissionError('This material is not available for your account.')
+        if material and user.role == 'student':
+            if views._is_supplementary_material(material):
+                if views._current_supplementary_lifecycle_guard(request, material, json_response=True):
+                    raise PermissionError('This Supplementary activity is not available in the current term.')
+            elif not views.Enrollment.objects.filter(student=user, is_active=True).filter(
+                    views.Q(section_id=material.section_id) | views.Q(section__assigned_materials=material)).exists():
+                raise PermissionError('This material is not assigned to your class.')
+    else:
+        raise ValueError('Invalid reading purpose.')
+    if not material or views._enforce_student_access_for_request(request, material=material, json_response=True):
+        raise PermissionError('This material is not available for your account.')
+    return material
+
+
+def require_material_provider(request, language, mode):
+    from . import views
+    from .reading_stt import language_code_for
+    selected = views._requested_chirp_model(request)
+    model = selected or getattr(settings, 'GOOGLE_STT_MODEL', 'chirp_3').strip()
+    if language_code_for(language, mode) == 'fil-PH' and not selected:
+        model = 'chirp_3'
+    if views.uses_knowlez_stt(request) or model != 'chirp_3':
+        raise ValueError('This provider uses clip recognition.')
+
+
+@csrf_protect
+@require_POST
+def material_stream_ticket(request):
+    from . import views
+    if not getattr(settings, 'CRLA_STREAMING_ENABLED', True):
+        return JsonResponse({'success': False, 'error': 'Streaming is disabled.'}, status=503)
+    try:
+        data = json.loads(request.body)
+        _, material_id = views._parse_prefixed_id(data['material_id'])
+        material = authorize_material(request, material_id, data['purpose'])
+        mode, target = data['mode'], str(data['target_text']).strip()
+        if mode not in {'word', 'sentence', 'paragraph', 'phrase'} or not target or len(target) > 20000:
+            raise ValueError('Invalid reading context.')
+        language = material.language or (material.content_json or {}).get('language', '')
+        try:
+            require_material_provider(request, language, mode)
+        except ValueError as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=409)
+        payload = {'session': session_binding(request.session), 'purpose': data['purpose'],
+                   'material_id': str(material.pk), 'complete_utterance': data.get('complete_utterance') is True,
+                   'fields': {'material_id': str(material.pk), 'mode': mode,
+                              'target_text': target, 'language': language}}
+        return JsonResponse({'success': True, 'ticket': signing.dumps(payload, salt=TICKET_SALT, compress=True),
+                             'path': STREAM_PATH})
+    except PermissionError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=403)
+    except (ValueError, TypeError, KeyError):
+        return JsonResponse({'success': False, 'error': 'Invalid reading context.'}, status=400)
+
+
+def material_stream_transcript(request, material_id, target, mode, language_code):
+    """Verify a flushed utterance before the original activity evaluates it."""
+    from . import views
+    from .reading_stt import language_code_for
+    token = request.POST.get('material_stream_token')
+    if not token:
+        return None
+    try:
+        result = decode_ticket(token, MATERIAL_RESULT_SALT, request.session, 300)
+        fields = result['fields']
+        _, expected_id = views._parse_prefixed_id(material_id)
+        if (result.get('purpose') not in {'practice', 'supplementary'}
+                or not result.get('complete_utterance')
+                or str(expected_id) != result['material_id']
+                or fields['target_text'] != target or fields['mode'] != mode
+                or language_code_for(fields['language'], mode) != language_code
+                or request.POST.get('official_crla_assessment') == '1'
+                or request.POST.get('official_assessment_id') or request.POST.get('prescribed_activity_key')
+                or not isinstance(result['transcript'], str) or not result['transcript'].strip()):
+            raise ValueError('Speech context changed.')
+        authorize_material(request, expected_id, result['purpose'])
+        require_material_provider(request, fields['language'], mode)
+        return result['transcript']
+    except (signing.BadSignature, PermissionError, ValueError, TypeError, KeyError) as exc:
+        raise PermissionError('Speech session is unavailable. Start recording again.') from exc
+
+
+@csrf_protect
+@require_POST
+def material_stream_evaluate(request):
+    from .views import _reading_transcribe_response
+    try:
+        data = json.loads(request.body)
+        final = decode_ticket(data['final_token'], FINAL_SALT, request.session, 300)
+        if final.get('purpose') not in {'supplementary', 'practice'} or final.get('complete_utterance'):
+            raise PermissionError('Invalid speech purpose.')
+        authorize_material(request, int(final['material_id']), final['purpose'])
+        fields = dict(final['fields'])
+        require_material_provider(request, fields['language'], fields['mode'])
+        fields['current_syllable_index'] = str(max(0, int(data.get('current_syllable_index', 0))))
+        fields['syllable_context'] = str(data.get('syllable_context', ''))[:80]
+        request.FILES
+        request.POST = QueryDict('', mutable=True)
+        request.POST.update(fields)
+        return _reading_transcribe_response(request, stream_transcript=final['transcript'])
+    except (signing.BadSignature, PermissionError):
+        return JsonResponse({'success': False, 'error': 'Speech session is unavailable. Start recording again.'}, status=403)
+    except (ValueError, TypeError, KeyError):
+        return JsonResponse({'success': False, 'error': 'Invalid speech result.'}, status=400)
 
 
 def authorize_prescribed(request, activity_key):
@@ -228,6 +361,8 @@ def validate_socket_ticket(token, session):
     request.session = session
     if payload.get('purpose') == 'prescribed':
         authorize_prescribed(request, payload['activity_key'])
+    elif payload.get('purpose') in {'supplementary', 'practice'}:
+        authorize_material(request, int(payload['material_id']), payload['purpose'])
     else:
         authorize(request, int(payload['fields']['official_assessment_id']))
     return payload
@@ -329,7 +464,7 @@ async def crla_websocket(scope, receive, send):
                     if not transcript:
                         continue
                     if result.is_final:
-                        if payload.get('purpose') == 'prescribed':
+                        if payload.get('purpose') == 'prescribed' or payload.get('complete_utterance'):
                             transcript_size += len(transcript)
                             if transcript_size > 20000:
                                 raise ValueError('Speech result exceeded the limit.')
@@ -346,11 +481,12 @@ async def crla_websocket(scope, receive, send):
                         await emit({'type': 'interim', 'transcript': transcript})
             if not disconnected:
                 finished = {'type': 'finished'}
-                if payload.get('purpose') == 'prescribed':
+                if payload.get('purpose') == 'prescribed' or payload.get('complete_utterance'):
                     finished['has_speech'] = bool(utterance)
                     finished['result_token'] = signing.dumps(
                         {**payload, 'transcript': ' '.join(utterance)},
-                        salt=PRESCRIBED_RESULT_SALT, compress=True)
+                        salt=PRESCRIBED_RESULT_SALT if payload.get('purpose') == 'prescribed' else MATERIAL_RESULT_SALT,
+                        compress=True)
                 await emit(finished)
 
         reader = asyncio.create_task(read_audio())

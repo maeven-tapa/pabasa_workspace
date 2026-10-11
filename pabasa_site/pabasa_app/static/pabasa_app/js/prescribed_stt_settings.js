@@ -43,6 +43,8 @@
     const url = new URL(input?.url || input, window.location.href);
     const method = String(options?.method || input?.method || 'GET').toUpperCase();
     const transcription = url.pathname === '/api/reading/prescribed-stream/start/'
+      || url.pathname === '/api/reading/material-stream/start/'
+      || url.pathname === '/api/reading/material-stream/evaluate/'
       || url.pathname === '/api/reading/transcribe/'
       || url.pathname === '/api/reading/lesson-1-gawain-1/transcribe/';
     const workbookRecording = /^\/api\/dashboard\/assessment\/activity\/prescribed\/[^/]+\/progress\/$/.test(url.pathname)

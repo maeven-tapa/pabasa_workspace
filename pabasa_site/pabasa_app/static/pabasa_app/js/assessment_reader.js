@@ -3778,8 +3778,14 @@
         }
 
         function canStreamCrla() {
-            return isOfficialAssessmentLaunch && isCrla && !crlaStreamingUnavailable
-                && ["word", "sentence", "paragraph"].includes(mode)
+            const selection = window.PrescribedSttSettings?.selection || 'google';
+            const supplementary = customMaterialData && (isTemplateActivity || customMaterialData.source_type === 'template'
+                || ['reading_practice', 'story_reading', 'story_questions', 'five_w_story_questions', 'retell_story', 'story_response']
+                    .includes(customMaterialData.content_json?.activity_type));
+            return ((isOfficialAssessmentLaunch && isCrla) || supplementary)
+                && ((isOfficialAssessmentLaunch && isCrla) || ['google', 'chirp_3'].includes(selection))
+                && !crlaStreamingUnavailable
+                && ["word", "sentence", "paragraph", "phrase"].includes(mode)
                 && window.CrlaSpeechStream && window.AudioWorkletNode && window.WebSocket;
         }
 
@@ -3798,7 +3804,10 @@
             crlaLiveContext = itemContext;
             const stream = new window.CrlaSpeechStream({
                 csrf: getCsrfToken,
-                fields: {material_id: officialAssessmentId, target_text: itemContext.itemText,
+                startUrl: isCrla ? '/api/reading/crla-stream/start/' : '/api/reading/material-stream/start/',
+                headers: isCrla ? {} : window.MaterialSpeechCapture?.headers(),
+                fields: {material_id: officialAssessmentId || materialId, target_text: itemContext.itemText,
+                    ...(!isCrla ? {purpose: 'supplementary'} : {}),
                     mode, language: currentMaterialLanguage || "", rhymes: currentAssessmentBranch === "rhymes"},
                 onInterim: transcript => {
                     if (crlaLiveSpeech !== stream || !sameCrlaStreamItem(itemContext)) return;
@@ -3817,9 +3826,10 @@
                     const controller = new AbortController();
                     const timeout = setTimeout(() => controller.abort(), 15000);
                     try {
-                        const response = await fetch("/api/reading/crla-stream/evaluate/", {
+                        const response = await fetch(isCrla ? '/api/reading/crla-stream/evaluate/' : '/api/reading/material-stream/evaluate/', {
                             method: "POST", credentials: "same-origin", signal: controller.signal,
-                            headers: {"Content-Type": "application/json", "X-CSRFToken": getCsrfToken()},
+                            headers: {"Content-Type": "application/json", "X-CSRFToken": getCsrfToken(),
+                                ...(!isCrla ? window.MaterialSpeechCapture?.headers() : {})},
                             body: JSON.stringify({final_token: message.final_token,
                                 current_syllable_index: context.syllableIndex,
                                 sentence_word_results: mode === "sentence" ? sentenceWordResults[currentIndex] || [] : [],
@@ -3862,6 +3872,12 @@
             } catch (error) {
                 stream.stop();
                 if (crlaLiveSpeech !== stream || stoppingSpeechRecognition || !isRecording) return;
+                if ([400, 401, 403].includes(error.status)) {
+                    crlaSpeechFailure = true;
+                    stopSpeechRecognition();
+                    setSpeechStatus('Speech is unavailable.', error.message);
+                    return;
+                }
                 // Check buffered startup audio using the original clip path
                 // before resuming fallback capture; never discard the first word.
                 crlaLiveSpeech = null;

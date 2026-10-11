@@ -23,7 +23,7 @@
             try {
                 response = await fetch(this.options.startUrl || '/api/reading/crla-stream/start/', {
                     method: 'POST', credentials: 'same-origin', signal: controller.signal,
-                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.options.csrf()},
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.options.csrf(), ...this.options.headers},
                     body: JSON.stringify(this.options.fields),
                 });
             } finally {

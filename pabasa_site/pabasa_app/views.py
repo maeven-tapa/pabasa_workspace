@@ -21557,13 +21557,21 @@ def aral_template_activity_complete(request, activity_slug):
         model = getattr(settings, 'GOOGLE_STT_MODEL', 'chirp_3').strip()
         credentials_file = str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or '')
         try:
-            transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
-                audio.read(), api_key, language_code=language_code,
-                phrase_hints=list(dict.fromkeys(target_phrase_hints(passage, language_code))),
-                model=model, project_id=project_id, location=location,
-                mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
-                credentials_file=credentials_file,
-            )
+            from .crla_stream import material_stream_transcript
+            try:
+                streamed = material_stream_transcript(request, material.pk, passage, 'paragraph', language_code)
+            except PermissionError as exc:
+                return JsonResponse({'success': False, 'error': str(exc)}, status=403)
+            if streamed is not None:
+                transcript, model_used, fallback_reason = streamed, 'chirp_3', ''
+            else:
+                transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
+                    audio.read(), api_key, language_code=language_code,
+                    phrase_hints=list(dict.fromkeys(target_phrase_hints(passage, language_code))),
+                    model=model, project_id=project_id, location=location,
+                    mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
+                    credentials_file=credentials_file,
+                )
         except Exception:
             logger.exception('Dedicated fluency transcription failed')
             return JsonResponse({
@@ -24619,13 +24627,21 @@ def word_decoding_transcribe_api(request):
         return JsonResponse({'success': False, 'error': 'Google Speech is not configured.'}, status=503)
 
     try:
-        transcript, model_used, _ = transcribe_audio_bytes_with_model(
-            audio.read(), api_key, language_code=language_code,
-            phrase_hints=target_phrase_hints(target_word, language_code),
-            model=model, project_id=project_id, location=location,
-            mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
-            credentials_file=credentials_file,
-        )
+        from .crla_stream import material_stream_transcript
+        try:
+            streamed = material_stream_transcript(request, material.pk, target_word, 'word', language_code)
+        except PermissionError as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=403)
+        if streamed is not None:
+            transcript, model_used = streamed, 'chirp_3'
+        else:
+            transcript, model_used, _ = transcribe_audio_bytes_with_model(
+                audio.read(), api_key, language_code=language_code,
+                phrase_hints=target_phrase_hints(target_word, language_code),
+                model=model, project_id=project_id, location=location,
+                mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
+                credentials_file=credentials_file,
+            )
         return JsonResponse({
             'success': True,
             'transcript': str(transcript or '').strip(),
@@ -24828,6 +24844,10 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
         return JsonResponse({'success': False, 'error': 'Audio is required.'}, status=400)
     if not target_text:
         return JsonResponse({'success': False, 'error': 'Reading text is required.'}, status=400)
+    if request.POST.get('material_stream_token') and (
+            request.POST.get('prescribed_activity_key') or request.POST.get('official_assessment_id')
+            or request.POST.get('official_crla_assessment') == '1'):
+        return JsonResponse({'success': False, 'error': 'Speech activity changed.'}, status=403)
 
     g3_reading_context = None
     if request.POST.get('prescribed_activity_key') == 'lesson-16-gawain-3':
@@ -24884,7 +24904,13 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
     if local_api_key_fallback:
         stt_model = 'latest_short'
         location = _chirp_location(stt_model)
-    from .crla_stream import prescribed_stream_transcript
+    from .crla_stream import prescribed_stream_transcript, material_stream_transcript
+    if stream_transcript is None and request.POST.get('material_stream_token'):
+        try:
+            stream_transcript = material_stream_transcript(
+                request, request.POST.get('material_id'), target_text, mode, language_code)
+        except PermissionError as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=403)
     if stream_transcript is None:
         try:
             stream_transcript = prescribed_stream_transcript(request, language_code)

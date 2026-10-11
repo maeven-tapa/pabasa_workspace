@@ -99,6 +99,9 @@
     const isColorMode = selectedGameMode === "color";
     const isHuntMode = selectedGameMode === "hunt";
     let speechRecorder = null;
+    let speechLiveCapture = null;
+    let speechCaptureVersion = 0;
+    let speechCaptureStarting = false;
     let speechStream = null;
     let speechChunks = [];
     let speechStopTimer = null;
@@ -232,7 +235,7 @@
             huntRecognitionRestartTimer = null;
             const activeIndex = isFreeMode ? scrollCurrentIndex : currentIndex;
             if (!huntListeningDesired || shell.classList.contains("is-complete") || huntAdvanceInProgress || index !== activeIndex || (isHuntMode && huntResults[index])) return;
-            if (speechRequestActive || speechRecorder) {
+            if (speechRequestActive || speechRecorder || speechCaptureStarting) {
                 scheduleContinuousRecognition(index, 200);
                 return;
             }
@@ -242,6 +245,7 @@
     }
 
     function stopContinuousRecognitionByUser() {
+        speechCaptureVersion++;
         huntListeningDesired = false;
         if (huntRecognitionRestartTimer) window.clearTimeout(huntRecognitionRestartTimer);
         huntRecognitionRestartTimer = null;
@@ -346,6 +350,8 @@
     }
 
     function releaseSpeechStream() {
+        speechLiveCapture?.stop();
+        speechLiveCapture = null;
         if (speechStopTimer) window.clearTimeout(speechStopTimer);
         speechStopTimer = null;
         if (speechMeterFrame) window.cancelAnimationFrame(speechMeterFrame);
@@ -358,6 +364,13 @@
         speechStream = null;
         speechRecorder = null;
     }
+
+    window.addEventListener('pagehide', () => {
+        speechCaptureVersion++;
+        huntListeningDesired = false;
+        if (huntRecognitionRestartTimer) window.clearTimeout(huntRecognitionRestartTimer);
+        releaseSpeechStream();
+    });
 
     function startPracticeAudioMeter(stream) {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -527,8 +540,7 @@
         }, 850);
     }
 
-    async function submitPracticeSpeech(blob, targetText, button) {
-        const speechItemIndex = isFreeMode ? scrollCurrentIndex : currentIndex;
+    async function submitPracticeSpeech(blob, targetText, button, speechItemIndex = (isFreeMode ? scrollCurrentIndex : currentIndex), version = speechCaptureVersion) {
         let retryHuntRecognition = false;
         speechRequestActive = true;
         if (button) {
@@ -541,6 +553,8 @@
         formData.append("target_text", targetText);
         formData.append("current_syllable_index", "0");
         formData.append("mode", mode);
+        formData.append('material_id', String(getActiveMaterialMeta()?.raw_id || getActiveMaterialMeta()?.id || materialId || ''));
+        window.MaterialSpeechCapture?.attach(formData, blob);
         const materialMeta = getActiveMaterialMeta?.() || {};
         formData.append("language", materialMeta.language || materialMeta.language_context || document.documentElement.lang || "");
 
@@ -552,6 +566,7 @@
                     "Accept": "application/json",
                     "X-Requested-With": "XMLHttpRequest",
                     "X-CSRFToken": practiceCsrfToken(),
+                    ...window.MaterialSpeechCapture?.headers(),
                 },
                 body: formData,
             });
@@ -569,6 +584,8 @@
                     : "The speech service returned an invalid response.");
             }
             if (!response.ok || !data.success) throw new Error(data.error || "Speech recognition failed.");
+            if (version !== speechCaptureVersion || speechItemIndex !== (isFreeMode ? scrollCurrentIndex : currentIndex)
+                    || targetText !== currentSpeechTarget() || shell.classList.contains('is-complete')) return;
 
             if (isFreeMode) console.info("FREE_MODE_STT_DIAGNOSTIC final_json", {
                 language_code: data.language_code,
@@ -641,16 +658,24 @@
 
     async function startPracticeSpeechRecording(button) {
         const targetText = currentSpeechTarget();
-        if (!targetText || speechRequestActive) return;
+        if (!targetText || speechRequestActive || speechRecorder || speechCaptureStarting) return;
+        const version = ++speechCaptureVersion;
+        const speechItemIndex = isFreeMode ? scrollCurrentIndex : currentIndex;
         if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
             speechFeedback("Speech recording is not supported in this browser.", false);
             return;
         }
 
         try {
-            speechStream = await navigator.mediaDevices.getUserMedia({
+            speechCaptureStarting = true;
+            const grantedStream = await navigator.mediaDevices.getUserMedia({
                 audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
             });
+            if (version !== speechCaptureVersion || speechItemIndex !== (isFreeMode ? scrollCurrentIndex : currentIndex)) {
+                grantedStream.getTracks().forEach(track => track.stop());
+                return;
+            }
+            speechStream = grantedStream;
             const mimeType = supportedPracticeAudioType();
             speechChunks = [];
             speechActiveButton = button;
@@ -665,10 +690,20 @@
             }
 
             speechRecorder = new MediaRecorder(speechStream, mimeType ? { mimeType } : undefined);
+            const material = getActiveMaterialMeta() || {};
+            speechLiveCapture = window.MaterialSpeechCapture?.begin(speechStream, {
+                purpose: 'practice', material_id: material.raw_id || material.id || materialId,
+                target_text: targetText, mode,
+            }, transcript => {
+                if (version !== speechCaptureVersion || speechItemIndex !== (isFreeMode ? scrollCurrentIndex : currentIndex)) return;
+                setHuntSpeechPanel('Listening live with Google Speech…', `Interim: ${transcript}`, true);
+                speechFeedback(`Hearing: ${transcript}`, true);
+            });
+            const liveCapture = speechLiveCapture;
             speechRecorder.addEventListener("dataavailable", event => {
                 if (event.data?.size) speechChunks.push(event.data);
             });
-            speechRecorder.addEventListener("stop", () => {
+            speechRecorder.addEventListener("stop", async () => {
                 const blob = new Blob(speechChunks, { type: speechRecorder?.mimeType || mimeType || "audio/webm" });
                 speechChunks = [];
                 if (huntDiscardCurrentAudio) {
@@ -686,7 +721,23 @@
                     if (huntListeningDesired) scheduleContinuousRecognition(isFreeMode ? scrollCurrentIndex : currentIndex, 350);
                     return;
                 }
-                submitPracticeSpeech(blob, targetText, button);
+                speechRequestActive = true;
+                try {
+                    if (liveCapture) await liveCapture.finish(blob);
+                    if (version !== speechCaptureVersion || speechItemIndex !== (isFreeMode ? scrollCurrentIndex : currentIndex)
+                            || targetText !== currentSpeechTarget() || shell.classList.contains('is-complete')) {
+                        releaseSpeechStream(); restoreSpeechButton(); updateReadingToggleButton();
+                        speechRequestActive = false;
+                        if (huntListeningDesired) scheduleContinuousRecognition(isFreeMode ? scrollCurrentIndex : currentIndex, 180);
+                        return;
+                    }
+                    await submitPracticeSpeech(blob, targetText, button, speechItemIndex, version);
+                } catch (error) {
+                    huntListeningDesired = false;
+                    speechFeedback(error.message || 'Live speech interrupted. Start the microphone again.', false);
+                    speechRequestActive = false;
+                    releaseSpeechStream(); restoreSpeechButton(); updateReadingToggleButton();
+                }
             }, { once: true });
             speechRecorder.start();
             startPracticeAudioMeter(speechStream);
@@ -700,7 +751,7 @@
             releaseSpeechStream();
             updateReadingToggleButton();
             if (huntListeningDesired) scheduleContinuousRecognition(isFreeMode ? scrollCurrentIndex : currentIndex, 700);
-        }
+        } finally { speechCaptureStarting = false; }
     }
 
     document.addEventListener("click", event => {
@@ -2476,6 +2527,8 @@
     }
 
     function restartPractice() {
+        speechCaptureVersion++;
+        releaseSpeechStream();
         document.body.classList.remove("practice-results-open");
         shell.classList.remove("is-complete");
         currentIndex = 0;

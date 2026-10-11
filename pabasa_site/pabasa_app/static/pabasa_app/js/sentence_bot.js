@@ -46,11 +46,16 @@
         let retryRequiresFreshSentence = false;
         window.fetch = async (input, init = {}) => {
             const requestUrl = typeof input === "string" ? input : String(input?.url || "");
-            if (requestUrl.endsWith("/api/reading/transcribe/")) {
+            if (requestUrl.endsWith("/api/reading/transcribe/") || requestUrl.endsWith('/api/reading/material-stream/evaluate/')) {
                 const requestBody = init.body;
                 if (retryRequiresFreshSentence && requestBody instanceof FormData) {
                     requestBody.set("current_syllable_index", "0");
                     requestBody.delete("syllable_context");
+                } else if (retryRequiresFreshSentence && typeof requestBody === 'string') {
+                    const fields = JSON.parse(requestBody);
+                    fields.current_syllable_index = 0;
+                    delete fields.syllable_context;
+                    init = {...init, body: JSON.stringify(fields)};
                 }
                 const response = await originalFetch(input, init);
                 let sentenceBotResponse = response;

@@ -202,7 +202,7 @@
                 <div class="phrase-word-stage" aria-live="polite" aria-atomic="true">
                     <h1 id="readingWord">Loading messages...</h1>
                 </div>
-                <div class="phrase-reading-status"><span class="phrase-listening-dot"></span><span id="readingHelperText">Open a message when you are ready.</span></div>
+                <div class="phrase-reading-status"><span class="phrase-listening-dot"></span><span id="readingHelperText">Open a message when you are ready.</span><span id="crlaLiveTranscript" aria-live="polite" hidden></span></div>
                 <div class="phrase-reading-controls">
                     <button id="btnStartReading" class="phrase-control phrase-control-primary d-none" type="button">
                         <span class="phrase-mic-visual" aria-hidden="true"><i class="bi bi-mic-fill"></i><span class="phrase-audio-wave"><i></i><i></i><i></i></span></span>
@@ -233,7 +233,7 @@
     </main>
     {% csrf_token %}
     <script src="{% static 'pabasa_app/js/reading_level_utils.js' %}?v={% now 'U' %}"></script>
-    {% include "pabasa_app/speech_debug_script.html" %}<script src="{% static 'pabasa_app/js/basahin_button.js' %}?v=phrase-shared-recorder-1"></script><script src="{% static 'pabasa_app/js/basahin.js' %}?v=phrase-shared-recorder-1"></script><script src="{% static 'pabasa_app/js/assessment_reader.js' %}?v={% now 'U' %}"></script>
+    {% include "pabasa_app/speech_debug_script.html" %}<script>window.__PABASA_CRLA_PCM_WORKLET__ = "{% static 'pabasa_app/js/crla_pcm_worklet.js' %}";</script><script src="{% static 'pabasa_app/js/crla_speech_stream.js' %}"></script><script src="{% static 'pabasa_app/js/material_speech_capture.js' %}?v=1"></script><script src="{% static 'pabasa_app/js/basahin_button.js' %}?v=phrase-shared-recorder-1"></script><script src="{% static 'pabasa_app/js/basahin.js' %}?v=phrase-shared-recorder-1"></script><script src="{% static 'pabasa_app/js/assessment_reader.js' %}?v={% now 'U' %}"></script>
     <script src="{% static 'pabasa_app/js/phrase_reading.js' %}?v={% now 'U' %}"></script>
 </body>
 </html>
