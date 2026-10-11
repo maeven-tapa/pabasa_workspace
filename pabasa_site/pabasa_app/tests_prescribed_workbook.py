@@ -46,7 +46,6 @@ class WorkbookStateTests(SimpleTestCase):
 
         rendered_sources = {
             'aral-l22-g1-c-syllable-builder': 'prescribed_workbook.js',
-            'aral-l22-g2-c-word-reading': 'prescribed_workbook.js',
             'aral-l22-g6-f-word-reading': 'prescribed_workbook.js',
             'aral-l23-g1-n-syllable-builder': 'prescribed_workbook.js',
             'aral-l23-g2-n-word-reading': 'prescribed_workbook.js',
@@ -107,6 +106,32 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertIn('playPrescribedAudio(instructionText,true)', script)
         self.assertIn('playPrescribedAudio(a.instruction)', script)
         self.assertIn('id="wb-instruction-replay"', script)
+
+    def test_lesson22_extended_cleanup_preserves_audio_feedback_contracts(self):
+        g1 = get_activity('aral-l22-g1-c-syllable-builder')
+        g2_template = (Path(__file__).parent / 'templates/pabasa_app/prescribed_l22_g2_reading_page.html').read_text(encoding='utf-8')
+
+        root = Path(__file__).parent
+        workbook = (root / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
+        builder_css = (root / 'static/pabasa_app/css/prescribed_l22_c_builder.css').read_text(encoding='utf-8')
+        g2_reading = (root / 'static/pabasa_app/js/prescribed_l22_g2_reading.js').read_text(encoding='utf-8')
+        self.assertEqual(g1['instruction'], 'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita mula rito.')
+        self.assertIn("const L22_G1_MAPPED_TEXT = new Set([l22StartupTtsText", workbook)
+        self.assertIn("if(l22G1){if(state.completed)await playPrescribedAudio", workbook)
+        self.assertIn("else if(L22_G1_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true)", workbook)
+        self.assertIn('.wb-l22-g1-page .wb-phase-status,.wb-l22-g1-page .wb-builder-feedback', builder_css)
+        self.assertIn('prescribed_l22_g2_reading.js', g2_template)
+        self.assertIn("${isL22G2?'':`<p class=\"instruction\">${esc(canonicalInstruction)}</p>`}", g2_reading)
+        self.assertIn("${isL22G2?'':`<button class=\"instruction-audio", g2_reading)
+        self.assertIn("${isL22G2?'':`<p class=\"sound-label\">Tunog / Salitang Babasahin</p>`}", g2_reading)
+        self.assertIn("${isL22G2?'':`<div class=\"heard\">", g2_reading)
+        self.assertIn("${isL22G2?'':`<p class=\"feedback", g2_reading)
+        self.assertIn('const instruction=document.getElementById(\'instruction\');if(instruction)instruction.onclick=playInstruction', g2_reading)
+        self.assertIn('if(j.state?.completed){await playCompletion();if(isL22G6)await playFeedback(feedback)}else await playFeedback(feedback)', g2_reading)
+        self.assertIn("await playFeedback('Handa ka na?')", g2_reading)
+        self.assertIn("window.addEventListener('pagehide',()=>{stream?.getTracks().forEach(t=>t.stop());cancelSpeech()})", g2_reading)
+        self.assertIn('wb-reading-target', workbook)
+        self.assertIn('id="wb-l22-reading-action"', workbook)
 
     def test_session8_only_hides_rendered_duplicate_restart_controls(self):
         targets = {
@@ -343,9 +368,9 @@ class WorkbookStateTests(SimpleTestCase):
         source = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_l22_g2_reading.js').read_text(encoding='utf-8')
         self.assertEqual(source.count("const INSTRUCTION_TEXT='" + instruction + "';"), 1)
         self.assertIn("isL22G2=a.activity_key==='aral-l22-g2-c-word-reading'", source)
-        self.assertIn('localAudio=isL22G2?(data.local_audio||{}):{}', source)
-        self.assertIn('if(url)return playAudioUrl(url,true,text)', source)
-        self.assertIn('async function playFeedback(text){if(!isL22G2)return false;', source)
+        self.assertIn('localAudio=(isL22G2||isL22G6)?(data.local_audio||{}):{}', source)
+        self.assertIn('if(url)return playAudioUrl(url,!isL22G6,text)', source)
+        self.assertIn('async function playFeedback(text){if(!isL22G2&&!isL22G6)return false;', source)
         self.assertIn('async function playCompletion(){if(!isL22G2)return;', source)
         self.assertIn("for(const text of ['Magaling!','Natapos mo ang Gawain 2.'])", source)
         self.assertEqual(source.count('function playInstruction()'), 1)
@@ -810,7 +835,8 @@ class PrescribedWorkbookFlowTests(TestCase):
     def test_session8_pause_restart_contract_resets_each_activity_pattern(self):
         """The shared Pause menu must use each activity's revision-aware restart path."""
         controls = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_session8_11_controls.js').read_text(encoding='utf-8')
-        self.assertIn("JSON.stringify({action:'restart',revision:Number(state.revision || 0)})", controls)
+        self.assertIn("const restartBody = usesResetPayload ? {reset:true,total_items:Number(payload.total_items || payload.progress?.total_items || 0)} : {action:'restart',revision:Number(state.revision || 0)}", controls)
+        self.assertIn('body:JSON.stringify(restartBody)', controls)
         self.assertIn('if (!response.ok || !result.success)', controls)
         keys = tuple(key for key, activity in ACTIVITIES.items() if activity['session'] == 8)
         self.assertEqual(len(keys), 22)
@@ -993,6 +1019,8 @@ class PrescribedWorkbookFlowTests(TestCase):
             {'preview': '1'},
         )
         self.assertEqual(response.status_code, 200)
+        self.assertIn('pabasa_app/prescribed_l22_g2_reading_page.html', [template.name for template in response.templates])
+        self.assertContains(response, 'prescribed_l22_g2_reading.js')
         payload = response.context['workbook_payload']
         self.assertEqual(
             payload['next_url'],
