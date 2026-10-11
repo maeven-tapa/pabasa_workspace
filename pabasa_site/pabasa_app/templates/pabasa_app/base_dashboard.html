@@ -1289,6 +1289,14 @@
             overflow-y: auto;
         }
 
+        .custom-device-menu.is-portal {
+            position: absolute;
+            z-index: 2050;
+            display: grid;
+            gap: 0.25rem;
+            max-height: 320px;
+        }
+
         .custom-device-dropdown.is-open .custom-device-menu {
             display: grid;
             gap: 0.25rem;
@@ -3938,6 +3946,7 @@
 
             function setDropdownOpen(state, isOpen) {
                 if (!state || (isOpen && state.trigger.disabled)) return;
+                if (isOpen && state.portalMenu) state.portalMenu();
                 state.wrapper.classList.toggle('is-open', Boolean(isOpen));
                 state.trigger.setAttribute('aria-expanded', Boolean(isOpen));
                 if (isOpen) {
@@ -3947,6 +3956,11 @@
                     openDropdowns.add(state);
                 } else {
                     openDropdowns.delete(state);
+                    if (state.restoreMenu) state.restoreMenu();
+                }
+                if (isOpen && state.positionMenu) {
+                    state.positionMenu();
+                    window.requestAnimationFrame(() => state.positionMenu?.());
                 }
             }
 
@@ -4058,6 +4072,78 @@
                 select.classList.add('custom-device-select');
 
                 const state = { wrapper, trigger, value, menu, select, options: [], observer: null };
+                const shouldPortalMenu = Boolean(select.closest('.modal') && !select.dataset.dashboardInlineCustomSelect);
+                let menuPlaceholder = null;
+                state.portalMenu = shouldPortalMenu ? function() {
+                    if (menu.parentElement === document.body) {
+                        state.positionMenu?.();
+                        return;
+                    }
+                    menuPlaceholder = document.createComment('dashboard-dropdown-menu');
+                    menu.parentNode.insertBefore(menuPlaceholder, menu);
+                    document.body.appendChild(menu);
+                    menu.classList.add('is-portal');
+                    state.positionMenu?.();
+                } : null;
+                state.restoreMenu = shouldPortalMenu ? function() {
+                    if (menuPlaceholder?.parentNode) {
+                        menuPlaceholder.parentNode.insertBefore(menu, menuPlaceholder);
+                        menuPlaceholder.remove();
+                    }
+                    menu.classList.remove('is-portal');
+                    menu.style.removeProperty('left');
+                    menu.style.removeProperty('top');
+                    menu.style.removeProperty('bottom');
+                    menu.style.removeProperty('width');
+                    menu.style.removeProperty('max-height');
+                    menuPlaceholder = null;
+                } : null;
+                state.positionMenu = function() {
+                    if (!shouldPortalMenu) {
+                        const rect = trigger.getBoundingClientRect();
+                        const modalBody = trigger.closest('.modal-body');
+                        const bodyRect = modalBody?.getBoundingClientRect();
+                        const viewportHeight = window.visualViewport?.height || window.innerHeight;
+                        const lowerBoundary = Math.min(viewportHeight - 10, bodyRect?.bottom ?? viewportHeight - 10);
+                        const upperBoundary = Math.max(10, bodyRect?.top ?? 10);
+                        const menuHeight = Math.min(menu.scrollHeight || 320, 320);
+                        const availableBelow = lowerBoundary - rect.bottom;
+                        const availableAbove = rect.top - upperBoundary;
+                        const openAbove = availableBelow < menuHeight && availableAbove > availableBelow;
+                        const availableSpace = Math.max(0, openAbove ? availableAbove : availableBelow);
+                        menu.style.maxHeight = `${Math.min(320, availableSpace)}px`;
+                        wrapper.classList.toggle('opens-up', openAbove);
+                        if (openAbove) {
+                            menu.style.top = 'auto';
+                            menu.style.bottom = 'calc(100% + .55rem)';
+                        } else {
+                            menu.style.bottom = 'auto';
+                            menu.style.top = 'calc(100% + .55rem)';
+                        }
+                        return;
+                    }
+                    if (menu.parentElement !== document.body) return;
+                    const rect = trigger.getBoundingClientRect();
+                    const viewportPadding = 10;
+                    const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
+                    const availableAbove = rect.top - viewportPadding;
+                    const menuHeight = Math.min(menu.scrollHeight || 320, 320);
+                    const fitsBelow = availableBelow >= menuHeight;
+                    const fitsAbove = availableAbove >= menuHeight;
+                    const openAbove = !fitsBelow && (fitsAbove || availableAbove > availableBelow);
+                    const availableSpace = Math.max(0, openAbove ? availableAbove : availableBelow);
+                    const maxHeight = Math.min(320, availableSpace);
+                    const pageLeft = rect.left + window.scrollX;
+                    const pageTop = rect.top + window.scrollY;
+                    menu.style.left = `${pageLeft}px`;
+                    menu.style.width = `${rect.width}px`;
+                    menu.style.maxHeight = `${maxHeight}px`;
+                    if (openAbove) {
+                        menu.style.top = `${Math.max(window.scrollY + viewportPadding, pageTop - menu.offsetHeight)}px`;
+                    } else {
+                        menu.style.top = `${rect.bottom + window.scrollY}px`;
+                    }
+                };
                 enhancedSelects.set(select, state);
                 rebuildOptions(state);
 
@@ -4139,9 +4225,16 @@
 
             document.addEventListener('click', function(event) {
                 openDropdowns.forEach(function(state) {
-                    if (!state.wrapper.contains(event.target)) setDropdownOpen(state, false);
+                    if (!state.wrapper.contains(event.target) && !state.menu.contains(event.target)) setDropdownOpen(state, false);
                 });
             });
+
+            window.addEventListener('resize', function() {
+                openDropdowns.forEach(function(state) { state.positionMenu?.(); });
+            });
+            window.addEventListener('scroll', function() {
+                openDropdowns.forEach(function(state) { state.positionMenu?.(); });
+            }, true);
 
             window.pabasaInitDashboardCustomSelects = initDashboardCustomSelects;
             initDashboardCustomSelects(document);

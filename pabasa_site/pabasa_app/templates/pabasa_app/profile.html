@@ -610,13 +610,218 @@
         opacity: 0;
     }
 
-    #teacherEditModal .modal-dialog { max-width: 680px; }
-    #teacherEditModal .modal-content { border: 0; border-radius: 24px; overflow: hidden; }
-    #teacherEditModal .modal-body { max-height: min(70vh, 680px); overflow-y: auto; padding: 1.35rem; }
+    #teacherEditModal .modal-dialog { width: min(100% - 1.5rem, 680px); max-width: 680px; }
+    #teacherEditModal .modal-content {
+        border: 1px solid rgba(31, 111, 139, 0.1);
+        border-radius: 24px;
+        overflow: hidden;
+        background: var(--dash-surface, #fff);
+        box-shadow: 0 20px 55px rgba(20, 72, 94, 0.2);
+    }
+    #teacherEditModal .modal-header {
+        align-items: center;
+        gap: 1rem;
+        padding: 1.25rem 1.5rem 1rem;
+        border-bottom: 1px solid rgba(31, 111, 139, 0.1);
+        background: linear-gradient(180deg, rgba(237, 248, 253, 0.9), rgba(255, 255, 255, 0));
+    }
+    #teacherEditModal .modal-title {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        margin: 0;
+        color: var(--dash-text, #183e63);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.15rem;
+        font-weight: 900;
+    }
+    #teacherEditModal .modal-title i {
+        display: grid;
+        place-items: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 10px;
+        background: rgba(31, 111, 139, 0.1);
+        color: var(--dash-primary, #1f6f8b);
+        font-size: 1rem;
+    }
+    #teacherEditModal .btn-close {
+        margin: 0 0 0 auto;
+        padding: 0.65rem;
+        border-radius: 10px;
+        opacity: 0.7;
+    }
+    #teacherEditModal .btn-close:hover,
+    #teacherEditModal .btn-close:focus {
+        background-color: rgba(31, 111, 139, 0.1);
+        opacity: 1;
+    }
+    #teacherEditModal .modal-body {
+        max-height: min(70vh, 680px);
+        overflow-y: auto;
+        padding: 1.35rem 1.5rem 1.15rem;
+    }
+    #teacherEditModal .modal-content,
+    #teacherEditModal .modal-body,
+    #studentEditModal .modal-content,
+    #studentEditModal .modal-body {
+        overflow: visible;
+    }
+    #teacherEditModal .modal-body,
+    #studentEditModal .modal-body {
+        max-height: min(70vh, 680px);
+    }
+    #teacherEditModal .custom-device-dropdown.is-open,
+    #studentEditModal .custom-device-dropdown.is-open {
+        z-index: 120;
+    }
+    #teacherEditModal .custom-device-menu,
+    #studentEditModal .custom-device-menu {
+        max-height: min(320px, 45vh);
+        overscroll-behavior: contain;
+    }
+    #teacherEditModal .modal-footer {
+        justify-content: flex-end;
+        padding: 0.9rem 1.5rem 1.25rem;
+        border-top: 1px solid rgba(31, 111, 139, 0.1);
+        background: rgba(247, 252, 254, 0.72);
+    }
+    #teacherEditModal .modal-footer .btn {
+        min-height: 42px;
+        border-radius: 11px;
+        font-weight: 800;
+    }
+    #teacherEditModal .modal-footer .btn-primary {
+        border-color: var(--dash-primary, #1f6f8b);
+        background: var(--dash-primary, #1f6f8b);
+        box-shadow: 0 5px 12px rgba(31, 111, 139, 0.18);
+    }
+    #teacherEditModal .modal-footer .btn-primary:hover,
+    #teacherEditModal .modal-footer .btn-primary:focus {
+        border-color: #185b72;
+        background: #185b72;
+    }
+    #teacherEditModal .modal-footer .btn-outline-secondary {
+        border-color: rgba(31, 111, 139, 0.22);
+        color: var(--dash-text, #183e63);
+    }
+    #teacherEditModal .modal-footer .btn-outline-secondary:hover,
+    #teacherEditModal .modal-footer .btn-outline-secondary:focus {
+        border-color: rgba(31, 111, 139, 0.4);
+        background: rgba(31, 111, 139, 0.06);
+        color: var(--dash-text, #183e63);
+    }
     #teacherEditModal .profile-edit-grid { display: grid; }
+    #teacherEditModal .profile-edit-grid > div { min-width: 0; }
+    #teacherEditModal .profile-edit-grid .form-label { margin-bottom: 0.42rem; }
+    #teacherEditModal .profile-edit-grid .form-control,
+    #teacherEditModal .profile-edit-grid .form-select { box-shadow: 0 2px 8px rgba(20, 72, 94, 0.04); }
+    #teacherEditModal #suffix,
+    #studentEditModal #suffix {
+        min-height: 44px;
+        padding: 0.72rem 0.9rem;
+        border: 1px solid rgba(31, 111, 139, 0.18);
+        border-radius: 18px;
+        background-color: rgba(255, 255, 255, 0.98);
+        color: var(--dash-text, #183e63);
+        box-shadow: 0 10px 24px rgba(31, 111, 139, 0.08);
+        cursor: pointer;
+    }
+    #teacherEditModal #suffix:focus,
+    #studentEditModal #suffix:focus {
+        border-color: rgba(31, 111, 139, 0.34);
+        box-shadow: 0 0 0 3px rgba(31, 111, 139, 0.1), 0 14px 28px rgba(31, 111, 139, 0.12);
+        outline: none;
+    }
     @media (max-width: 600px) {
-        #teacherEditModal .modal-dialog { margin: .75rem; }
-        #teacherEditModal .modal-body { max-height: calc(100vh - 150px); }
+        #teacherEditModal .modal-dialog { width: calc(100% - 1rem); margin: .5rem auto; }
+        #teacherEditModal .modal-header { padding: 1rem 1.1rem .85rem; }
+        #teacherEditModal .modal-body { max-height: calc(100vh - 155px); padding: 1.1rem; }
+        #teacherEditModal .modal-footer { padding: .8rem 1.1rem 1rem; }
+        #teacherEditModal .modal-footer .btn { flex: 1 1 0; }
+    }
+
+    #studentEditModal .modal-dialog { width: min(100% - 1.5rem, 760px); max-width: 760px; }
+    #studentEditModal .modal-content {
+        border: 1px solid rgba(31, 111, 139, 0.1);
+        border-radius: 24px;
+        overflow: hidden;
+        background: var(--dash-surface, #fff);
+        box-shadow: 0 20px 55px rgba(20, 72, 94, 0.2);
+    }
+    #studentEditModal .modal-header {
+        align-items: center;
+        gap: 1rem;
+        padding: .8rem 1.5rem .65rem;
+        border-bottom: 1px solid rgba(31, 111, 139, 0.1);
+        background: linear-gradient(180deg, rgba(237, 248, 253, 0.9), rgba(255, 255, 255, 0));
+    }
+    #studentEditModal .modal-title {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        margin: 0;
+        color: var(--dash-text, #183e63);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.15rem;
+        font-weight: 900;
+    }
+    #studentEditModal .modal-title i {
+        display: grid;
+        place-items: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 10px;
+        background: rgba(31, 111, 139, 0.1);
+        color: var(--dash-primary, #1f6f8b);
+        font-size: 1rem;
+    }
+    #studentEditModal .btn-close {
+        margin: 0 0 0 auto;
+        padding: 0.65rem;
+        border-radius: 10px;
+        opacity: 0.7;
+    }
+    #studentEditModal .btn-close:hover,
+    #studentEditModal .btn-close:focus {
+        background-color: rgba(31, 111, 139, 0.1);
+        opacity: 1;
+    }
+    #studentEditModal .modal-body { max-height: min(70vh, 680px); padding: 0; overflow-y: auto; }
+    #studentEditModal .student-edit-panel {
+        padding: 0 .8rem .5rem !important;
+    }
+    #studentEditModal .profile-edit-grid > div { min-width: 0; }
+    #studentEditModal .profile-edit-grid .form-label { margin-bottom: 0.42rem; }
+    #studentEditModal .profile-edit-grid .form-control,
+    #studentEditModal .profile-edit-grid .form-select { box-shadow: 0 2px 8px rgba(20, 72, 94, 0.04); }
+    #studentEditModal #accountDetailsActions {
+        justify-content: flex-end;
+        margin: 1.15rem -1.5rem -1.15rem;
+        padding: 0.9rem 1.5rem 1.25rem;
+        border-top: 1px solid rgba(31, 111, 139, 0.1);
+        background: rgba(247, 252, 254, 0.72);
+    }
+    #studentEditModal #accountDetailsActions .btn {
+        min-height: 42px;
+        border-radius: 11px;
+        font-weight: 800;
+    }
+    #studentEditModal #accountDetailsActions .btn-primary {
+        border-color: var(--dash-primary, #1f6f8b);
+        background: var(--dash-primary, #1f6f8b);
+        box-shadow: 0 5px 12px rgba(31, 111, 139, 0.18);
+    }
+    #studentEditModal #accountDetailsActions .btn-outline-secondary {
+        border-color: rgba(31, 111, 139, 0.22);
+        color: var(--dash-text, #183e63);
+    }
+    @media (max-width: 600px) {
+        #studentEditModal .modal-dialog { width: calc(100% - 1rem); margin: .5rem auto; }
+        #studentEditModal .modal-header { padding: .65rem 1rem .55rem; }
+        #studentEditModal .student-edit-panel { padding: 0 .6rem .4rem !important; }
+        #studentEditModal #accountDetailsActions { margin: 1rem -.8rem -.6rem; padding: .8rem .8rem 1rem; }
+        #studentEditModal #accountDetailsActions .btn { flex: 1 1 0; }
     }
 
     body.dashboard-body:not(:has(.player-profile)) .profile-main-content h2.profile-section-title {
@@ -1222,7 +1427,18 @@
     body.modal-open > .modal-backdrop { z-index:4000 !important; }
     body.modal-open > .modal { z-index:4100 !important; }
     body.modal-open > .modal .modal-dialog { z-index:4110 !important; position:relative; }
-    body.modal-open { overflow:hidden !important; padding-right:var(--bs-scrollbar-width,0); }
+    html.modal-open,
+    html:has(body.modal-open) {
+        height: 100% !important;
+        overflow: hidden !important;
+    }
+    body.modal-open {
+        height: 100% !important;
+        overflow:hidden !important;
+        overscroll-behavior:none;
+        padding-right:var(--bs-scrollbar-width,0);
+    }
+    .custom-device-menu { overscroll-behavior:contain; }
     .player-settings-list { display:grid; gap:.55rem; }
     .player-setting-action { align-items:center; background:#f0f5e7; border:1px solid #d9e4ce; border-radius:15px; color:#285239; display:flex; font-weight:800; gap:.7rem; padding:.8rem .9rem; text-align:left; text-decoration:none; width:100%; }
     .player-setting-action:hover { background:#e5efd9; color:#19462d; }
@@ -1265,7 +1481,8 @@
     .student-edit-modal .modal-content { background:var(--dash-panel); border:1px solid var(--dash-border); border-radius:24px; box-shadow:0 24px 70px rgba(0,0,0,.42); max-height:calc(100vh - 2rem); overflow:hidden; }
     .student-edit-modal .modal-header { border-bottom:1px solid var(--dash-border); padding:.8rem 1rem; }
     .student-edit-modal .modal-body { overflow-y:auto; padding:0; }
-    .student-edit-modal .student-edit-panel { background:transparent !important; border:0 !important; box-shadow:none !important; margin:0 !important; padding:1rem !important; }
+    .student-edit-modal .student-edit-panel { background:transparent !important; border:0 !important; box-shadow:none !important; margin:0 !important; padding:.65rem 1rem !important; }
+    .student-edit-modal .student-edit-panel > .card-body { padding:0 !important; }
     .student-edit-modal.modal.fade .modal-dialog { transform:scale(.94); transition:transform .2s ease; }
     .student-edit-modal.modal.show .modal-dialog { transform:scale(1); }
 
@@ -1728,7 +1945,7 @@
             {% if nav_role == 'student' %}
             <div class="modal fade student-edit-modal" id="studentEditModal" tabindex="-1" aria-labelledby="studentEditModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
-                    <div class="modal-header"><h2 class="modal-title fs-5" id="studentEditModalLabel"><i class="bi bi-person-gear me-2"></i>Edit Student Profile</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                    <div class="modal-header"><h2 class="modal-title" id="studentEditModalLabel"><i class="bi bi-person-gear" aria-hidden="true"></i><span>Edit Student Profile</span></h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
                     <div class="modal-body">
             {% endif %}
             <aside class="profile-summary{% if nav_role == 'student' %} student-edit-panel{% endif %}">
@@ -1822,7 +2039,7 @@
                     <hr class="profile-form-divider my-3" style="border-color: rgba(27, 26, 23, 0.08);">
 
                     <div class="d-grid gap-3">
-                        {% if nav_role == 'teacher' %}<div class="modal fade" id="teacherEditModal" tabindex="-1" aria-labelledby="teacherEditModalLabel" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="teacherEditModalLabel"><i class="bi bi-person-gear me-2"></i>Edit Teacher Profile</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body">{% endif %}
+                        {% if nav_role == 'teacher' %}<div class="modal fade" id="teacherEditModal" tabindex="-1" aria-labelledby="teacherEditModalLabel" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h2 class="modal-title" id="teacherEditModalLabel"><i class="bi bi-person-gear" aria-hidden="true"></i><span>Edit Teacher Profile</span></h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body">{% endif %}
                         <form class="d-grid gap-3" action="#" method="post" id="accountDetailsForm">
                             {% csrf_token %}
                             <input type="hidden" name="save_account_details" value="true">
@@ -1871,7 +2088,7 @@
                                 {% if suffix %}
                                 <div>
                                     <label class="form-label" for="suffix">Suffix</label>
-                                    <select class="form-select" id="suffix" name="suffix" data-account-details-field disabled>
+                                    <select class="form-select" id="suffix" name="suffix" data-account-details-field data-dashboard-custom-select="true" data-dashboard-inline-custom-select="true" disabled>
                                         <option value="">None</option>
                                         <option value="Jr." {% if suffix == 'Jr.' %}selected{% endif %}>Jr.</option>
                                         <option value="Sr." {% if suffix == 'Sr.' %}selected{% endif %}>Sr.</option>
@@ -1884,7 +2101,7 @@
                                 {% else %}
                                 <div>
                                     <label class="form-label" for="suffix">Suffix <span class="text-muted fw-normal" style="text-transform:none;">(optional)</span></label>
-                                    <select class="form-select" id="suffix" name="suffix" data-account-details-field disabled>
+                                    <select class="form-select" id="suffix" name="suffix" data-account-details-field data-dashboard-custom-select="true" data-dashboard-inline-custom-select="true" disabled>
                                         <option value="" selected>None</option>
                                         <option value="Jr.">Jr.</option>
                                         <option value="Sr.">Sr.</option>
@@ -1900,12 +2117,14 @@
                                     <input class="form-control" id="email" name="email" type="email" value="{{ email }}" data-account-details-field disabled>
                                 </div>
                             </div>
+                            {% if nav_role != 'teacher' %}
                             <div class="d-flex flex-wrap gap-2 d-none" id="accountDetailsActions">
                                 <button class="btn btn-primary" type="submit">Save Changes</button>
                                 <button class="btn btn-outline-secondary" type="reset">Reset</button>
                             </div>
+                            {% endif %}
                         </form>
-                        {% if nav_role == 'teacher' %}</div></div></div></div>{% endif %}
+                        {% if nav_role == 'teacher' %}</div><div class="modal-footer d-flex flex-wrap gap-2"><div class="d-flex flex-wrap justify-content-end gap-2 d-none" id="accountDetailsActions"><button class="btn btn-primary" type="submit" form="accountDetailsForm">Save Changes</button><button class="btn btn-outline-secondary" type="reset" form="accountDetailsForm">Reset</button></div></div></div></div></div>{% endif %}
                         {% if nav_role == 'student' or nav_role == 'teacher' %}<div class="modal fade" id="teacherEmailVerificationModal" tabindex="-1" aria-labelledby="teacherEmailVerificationTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="teacherEmailVerificationTitle">Verify New Email</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p class="small text-muted">Enter the 6-digit code sent to <strong id="teacherPendingEmail"></strong>.</p><input class="form-control text-center" id="teacherEmailVerificationCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"><div class="small text-danger mt-2" id="teacherEmailVerificationError" role="alert" hidden></div><div class="small text-muted mt-2" id="teacherEmailVerificationStatus" aria-live="polite"></div></div><div class="modal-footer"><button type="button" class="btn btn-link" id="teacherEmailResendButton">Resend Code</button><button type="button" class="btn btn-primary" id="teacherEmailVerifyButton">Verify Email</button></div></div></div></div>{% endif %}
                         <button class="btn btn-outline-primary w-100" id="editAccountDetailsBtn" type="button">Edit Profile</button>
                     </div>
