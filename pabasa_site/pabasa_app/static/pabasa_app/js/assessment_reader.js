@@ -154,7 +154,7 @@
         if (isCrla) document.title = "PABASA | CRLA";
         if (isCrla) {
             const levelMark = shell.querySelector(".level-mark");
-            if (levelMark) {
+            if (levelMark && !levelMark.classList.contains("level-mark-deped")) {
                 const logo = document.createElement("img");
                 logo.src = "/static/pabasa_app/images/deped-logo-philippines-v1.png";
                 logo.alt = "Department of Education";
@@ -248,7 +248,7 @@
         updateAssessmentLanguageLabel((officialAssessmentData && officialAssessmentData.language) || liveLanguage);
 
         function isCurrentLiveAssessment() {
-            if (isReviewMode || isRetakeMode) return false;
+            if (isAdminPreview || isReviewMode || isRetakeMode) return false;
             const liveParam = urlParams.get('live');
             const liveSessionId = urlParams.get('live_session_id');
             const countdown = Number.parseInt(urlParams.get('countdown') || '10', 10);
@@ -368,7 +368,7 @@
         let storyReadingCountdownActive = false;
         const storyReadingDurationMs = 179000;
         let liveServerTimeOffsetMs = 0;
-        const liveSessionId = urlParams.get("live_session_id");
+        const liveSessionId = isAdminPreview ? null : urlParams.get("live_session_id");
         const liveSessionStateUrl = liveSessionId ? `/api/live-assessment/session/${liveSessionId}/` : null;
         let liveSessionPollTimer = null;
         let liveSessionPaused = false;
@@ -2595,6 +2595,7 @@
                 };
             }
             shell.classList.add("is-complete");
+            shell.classList.toggle("is-section-complete", !isFinalCompletion);
             const title = document.getElementById("completionTitle");
             const message = document.getElementById("completionMessage");
             const classificationText = endState.classification || "Assessment completed";
@@ -2638,14 +2639,10 @@
                     reason: 'renderPersistedEndState_final_stage',
                 });
             }
+            if (completionClassificationPanel) completionClassificationPanel.hidden = !isFinalCompletion;
             if (isFinalCompletion) {
                 if (completionClassificationValue) completionClassificationValue.textContent = classificationText;
                 if (!isAdminPreview) finishBtn?.remove();
-            } else {
-                // A section transition is not a result screen. Remove the
-                // classification panel entirely instead of leaving an empty
-                // placeholder in the Word Reading completion UI.
-                completionClassificationPanel?.remove();
             }
             if (title) title.textContent = transition?.title || "Assessment complete";
             if (message) message.textContent = transition?.message || "You completed the reading assessment.";
@@ -2659,6 +2656,7 @@
             }
             reviewBtn?.classList.toggle("d-none", !["early_completed_words", "completed"].includes(stage));
             setCompletionLoadingState(false);
+            syncCrlaProgress();
             traceLiveCrlaState('renderPersistedEndState.returned_true', { stage });
             return true;
         }
@@ -2724,9 +2722,17 @@
             }
             if (isOfficialAssessmentLaunch && officialAssessmentData) {
                 const hasExplicitStageRequest = ["words", "rhymes", "sentences", "story_selection"].includes(requestedCrlaStage);
-                // A completed CRLA attempt must remain completed after refresh, even
-                // when the browser still has the original story-selection URL.
-                if ((!hasExplicitStageRequest || persistedStage === "completed") && renderPersistedEndState(persistedEndState)) return;
+                const transitionDestination = {
+                    transition_to_rhymes: "rhymes",
+                    transition_to_sentence: "sentences",
+                    transition_to_story: "story_selection",
+                    early_completed_sentences: "story_selection",
+                }[persistedStage];
+                // Keep the section card on refresh until Continue opens its
+                // destination. A destination URL may start that next section.
+                const pendingTransition = transitionDestination && requestedCrlaStage !== transitionDestination;
+                if ((!hasExplicitStageRequest || pendingTransition || ["completed", "early_completed_words"].includes(persistedStage))
+                    && renderPersistedEndState(persistedEndState)) return;
                 const officialTitle = String(
                     officialAssessmentData.official_title
                     || officialAssessmentData.title
@@ -5810,16 +5816,16 @@
             if (!isCrla) return;
             let total = Math.max(1, items.length);
             let finished = currentIndex + (itemLocked[currentIndex] ? 1 : 0);
-            if (currentStoryState === "story_reading" && currentSelectedStory) {
+            if (currentAssessmentUiMode === "story" && currentStoryState === "story_reading" && currentSelectedStory) {
                 total = Math.max(1, readableWordCount(currentSelectedStory.content || ""));
                 finished = Object.values(storyWordResults).reduce((count, results) => (
                     count + Object.values(results).filter(Boolean).length
                 ), 0);
-            } else if (currentStoryState === "story_comprehension") {
+            } else if (currentAssessmentUiMode === "story" && currentStoryState === "story_comprehension") {
                 total = Math.max(1, currentStoryQuestions.length);
                 finished = currentStoryQuestionIndex
                     + (currentStoryResults[currentStoryQuestionIndex] != null ? 1 : 0);
-            } else if (["story_selection", "story_ready"].includes(currentStoryState)) {
+            } else if (currentAssessmentUiMode === "story" && ["story_selection", "story_ready"].includes(currentStoryState)) {
                 total = 1;
                 finished = 0;
             }
@@ -6154,7 +6160,13 @@
             });
             stopReadAloud();
             stopSpeechRecognition();
-            shell.classList.add("is-complete");
+            if (isCrla) {
+                clearSentenceItemTimer();
+                clearOfficialSentenceItemCountdown();
+            }
+            // CRLA renders its section/result card after the end state is
+            // prepared, so the generic results placeholder never flashes.
+            if (!isCrla || isReviewMode || !isFullCompletion || completionSubmitted) shell.classList.add("is-complete");
             closePauseMenu();
             if (completionCount) completionCount.textContent = correctWordsRead();
             const completionSnapshot = calculateScores();
@@ -6375,20 +6387,6 @@
                 story_selection: buildCrlaStageUrl("story_selection", branchState),
             };
             const nextStageUrl = nextStageUrlMap[branchState.next_stage] || "";
-            if (
-                !isMyMaterials
-                && persistedBranchState
-                && branchState.stage === "transition_to_story"
-                && branchState.next_stage === "story_selection"
-                && nextStageUrl
-            ) {
-                traceEndSession('showCompletion.directStoryTransition', {
-                    destination: nextStageUrl,
-                    next_stage: branchState.next_stage,
-                });
-                window.location.assign(nextStageUrl);
-                return;
-            }
             const summary = document.getElementById("completionSummary") || document.querySelector(".completion-summary");
             const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
             if (summary) {

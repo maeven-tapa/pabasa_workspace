@@ -38,8 +38,19 @@ class AdminCrlaPreviewTests(SimpleTestCase):
                 })
                 self.assertIn('<title>PABASA | CRLA</title>', html)
                 self.assertIn('Quit</button>', html)
+                self.assertIn('<body class="is-crla-reader is-admin-crla-preview"', html)
+                self.assertIn('class="level-mark level-mark-deped"', html)
+                self.assertNotIn('<div class="completion-mark">', html)
         regular = render_to_string('pabasa_app/reading_word_page.html')
         self.assertIn('<title>Word Reading Assessment</title>', regular)
+        self.assertIn('<div class="completion-mark">A</div>', regular)
+
+    def test_crla_does_not_render_legacy_forest_theme(self):
+        context = {'student_theme_slug': 'forest', 'crla_official_assessment_data': {'assessment_kind': 'crla'}}
+        html = render_to_string('pabasa_app/reading_sentence_page.html', context)
+        self.assertNotIn('<div class="forest-world"', html)
+        regular = render_to_string('pabasa_app/reading_sentence_page.html', {'student_theme_slug': 'forest'})
+        self.assertIn('<div class="forest-world"', regular)
 
     def test_resolver_rejects_missing_inactive_or_unpublished_records(self):
         for material in (None, SimpleNamespace(is_active=False, status='published'),

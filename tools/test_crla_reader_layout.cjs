@@ -24,7 +24,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pabasa_site.settings')
 django.setup()
 from django.template.loader import render_to_string
 print(json.dumps({mode: render_to_string('pabasa_app/reading_' + mode + '_page.html',
-    {'crla_official_assessment_id': 1}) for mode in ['word', 'sentence', 'para']}))
+    {'crla_official_assessment_id': 1, 'crla_official_assessment_data': {'assessment_kind': 'crla'}}) for mode in ['word', 'sentence', 'para']}))
 `], {cwd: root, encoding: 'utf8', env: {...process.env, PYTHONIOENCODING: 'utf-8'}});
 assert.equal(rendered.status, 0, rendered.stderr);
 // Load the complete reader separately after setting the server recovery payload.

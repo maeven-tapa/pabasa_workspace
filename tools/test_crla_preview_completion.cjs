@@ -20,6 +20,8 @@ for name, spoken in [('correct', text), ('ending_substitution', 'May pito si Ana
     alignment = align_story_transcript(text, spoken, 'fil-PH', crla_story_reading=True)
     data.update(word_results=alignment['word_results'], word_alignment=alignment, success=True)
     responses[name] = data
+for name, expected in [('word', 'Pito'), ('sentence', 'May pito si Ana.'), ('rhymes', 'pito dito')]:
+    responses[name] = dict(analyze_reading(expected, 0, expected, 'fil-PH'), success=True)
 html = render_to_string('pabasa_app/reading_para_page.html', {
     'crla_official_assessment_id': 1, 'crla_official_assessment_data': {'assessment_kind': 'crla'},
     'is_admin_preview': True,
@@ -32,7 +34,11 @@ const html = fixture.html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '').repl
 const source = fs.readFileSync(path.join(root, 'pabasa_site/pabasa_app/static/pabasa_app/js/assessment_reader.js'), 'utf8')
   .replace('        loadItems();', `        window.__readerTest = {handleSpeechResult, currentSpeechContext, strictStoryEvidence, completeCRLASpokenAttempt,
     startFixtureRecording() { isRecording = true; speechRecognitionUsed = true; startTime = Date.now() - 2000; },
-    getState() { return readStudentEndState(); }};
+    getState() { return readStudentEndState(); },
+    beginFixtureStory() {
+      const capture = startSpeechRecognition; startSpeechRecognition = () => {};
+      try { startReading({fromStoryReadingCountdown: true}); } finally { startSpeechRecognition = capture; }
+    }};
         loadItems();`);
 const origin = 'http://localhost:9876';
 const stateKey = 'pabasa_admin_crla_preview:flow-test';
@@ -42,7 +48,7 @@ if (previewDir) fs.mkdirSync(previewDir, {recursive: true});
 const baseStory = 'May pito si Ana. Narinig ni Ben ang pito.';
 const scenarios = ['correct', 'ending_substitution', 'multiple_segments', 'no_questions', 'restored_complete',
   'restored_segment', 'quit', 'score_failure', 'answered_score_failure', 'final_score_failure', 'long_story',
-  'story_selection', 'story_ready', 'section_complete'];
+  'story_selection', 'story_ready', 'section_complete', 'full_flow', 'rhyme_flow', 'preview_live_parameters'];
 async function fitsScreen(page, label) {
   await page.waitForFunction(() => !document.getElementById('readingWord').classList.contains('is-changing'));
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -84,6 +90,7 @@ async function fitsScreen(page, label) {
         if (viewport.width === 1366 && scenario === 'long_story') continue;
         const context = await browser.newContext({viewport});
         const page = await context.newPage();
+        page.setDefaultTimeout(15000);
         const errors = [], posts = [];
         let rejectScoring = ['score_failure', 'answered_score_failure'].includes(scenario);
         let rejectFinalScore = scenario === 'final_score_failure';
@@ -94,13 +101,15 @@ async function fitsScreen(page, label) {
           : multipleSegments ? baseStory + '\n\n' + baseStory : baseStory;
         const official = {id: 1, assessment_kind: 'crla', official_title: 'CRLA Pre-Test', official_code: 'CRLA-BOSY',
           language: 'Filipino', words: Array(10).fill('Pito'), sentences: Array(5).fill('May pito si Ana.'),
-          passages: [{title: 'Ang Pito', content}],
+          rhyme_pairs: Array(10).fill({word_a: 'pito', word_b: 'dito'}), passages: [{title: 'Ang Pito', content}],
           story_qas: scenario === 'no_questions' ? [] : [{story_title: 'Ang Pito', questions: [{question: 'Sino ang may pito?'}]}]};
         if (scenario === 'story_selection') official.passages = [{title: 'Isang Kakaibang Araw', content: baseStory.repeat(3)},
           {title: 'Ang Pagong at ang Kuneho', content: baseStory.repeat(3)}];
-        const state = {stage: scenario === 'section_complete' ? 'transition_to_sentence'
+        const flow = ['full_flow', 'rhyme_flow'].includes(scenario);
+        const initialStage = scenario === 'full_flow' ? 'words' : scenario === 'rhyme_flow' ? 'rhymes' : 'story_reading';
+        const state = {stage: flow ? initialStage : scenario === 'section_complete' ? 'transition_to_sentence'
           : ['story_selection', 'story_ready'].includes(scenario) ? scenario : 'story_reading',
-          branch: scenario === 'section_complete' ? 'words' : 'story', material_id: '1', story_number: 1,
+          branch: flow ? initialStage : scenario === 'section_complete' ? 'words' : 'story', material_id: '1', story_number: 1,
           selected_story: 'Ang Pito', story_segment_index: 0, part1_total_score: 28,
           task1_score: 10, task2_sentences_score: 8, story_reading_started_at: new Date().toISOString(),
           ...(['restored_complete', 'restored_segment'].includes(scenario) ? {story_word_results: {'0': Object.fromEntries(Array.from({length: 9}, (_, i) => [i, 'correct']))},
@@ -110,7 +119,7 @@ async function fitsScreen(page, label) {
           window.__PABASA_ADMIN_PREVIEW__ = true;
           window.__PABASA_ADMIN_PREVIEW_RETURN__ = '/dashboard/admin/official-reading-assessments/';
           window.PABASA_USER_ID = '99'; window.PABASA_USER_ROLE = 'admin';
-          if (location.pathname.includes('/assessment/reading_ui/')) sessionStorage.setItem(stateKey, JSON.stringify(state));
+          if (location.pathname.includes('/assessment/reading_ui/') && !sessionStorage.getItem(stateKey)) sessionStorage.setItem(stateKey, JSON.stringify(state));
           localStorage.setItem('student-work-sentinel', 'unchanged');
         }, {official, state, stateKey});
         await context.route('**/*', async route => {
@@ -139,15 +148,73 @@ async function fitsScreen(page, label) {
           if (url.pathname.startsWith('/api/')) posts.push({path: url.pathname});
           return route.fulfill({contentType: 'application/json', body: '{}'});
         });
-        page.on('domcontentloaded', () => page.addScriptTag({content: source}).catch(error => errors.push(error.message)));
-        await page.goto(origin + '/dashboard/assessment/reading_ui/para/?official_assessment_id=1&admin_preview=1&admin_preview_token=flow-test&crla_stage=story_reading');
+        page.on('domcontentloaded', async () => {
+          try {
+            await page.evaluate(() => {
+              window.__firstPaintTheme = {
+                crla: document.body.classList.contains('is-crla-reader'),
+                logo: Boolean(document.querySelector('.level-mark-deped img')),
+                legacyIcons: document.querySelectorAll('.completion-mark').length,
+                background: getComputedStyle(document.body).backgroundImage,
+                card: getComputedStyle(document.querySelector('.completion-card')).backgroundColor,
+              };
+            });
+            await page.addScriptTag({content: source});
+          } catch (error) { errors.push(error.message); }
+        });
+        await page.goto(origin + `/dashboard/assessment/reading_ui/${flow ? 'word' : 'para'}/?official_assessment_id=1&admin_preview=1&admin_preview_token=flow-test&crla_stage=${initialStage}`
+          + (scenario === 'preview_live_parameters' ? '&live=1&live_session_id=preview-test&countdown=0' : ''));
         await page.waitForFunction(() => window.__readerTest && (!document.getElementById('readingWord').textContent.includes('Loading')
           || document.querySelector('.reader-shell').classList.contains('is-complete')));
         assert.equal(await page.title(), 'PABASA | CRLA');
+        assert.deepEqual(await page.evaluate(() => ({...window.__firstPaintTheme,
+          background: window.__firstPaintTheme.background === getComputedStyle(document.body).backgroundImage,
+          card: window.__firstPaintTheme.card === getComputedStyle(document.querySelector('.completion-card')).backgroundColor})),
+          {crla: true, logo: true, legacyIcons: 0, background: true, card: true}, 'The CRLA theme is present before reader initialization');
+        if (flow) {
+          const branches = scenario === 'full_flow' ? ['words', 'sentences'] : ['rhymes'];
+          for (const branch of branches) {
+            console.log(`CHECK ${scenario}: ${branch} at ${viewport.width}px`);
+            await page.waitForFunction(() => window.__readerTest && !document.querySelector('.reader-shell').classList.contains('is-complete'));
+            const total = branch === 'sentences' ? 5 : 10;
+            assert.deepEqual(await page.locator('#progressFill').evaluate(el => ({
+              total: el.parentElement.getAttribute('aria-valuemax'), finished: el.style.getPropertyValue('--crla-finished'),
+              current: el.style.getPropertyValue('--crla-current-end')})),
+              {total: String(total), finished: '0%', current: `${100 / total}%`}, branch + ' starts with one yellow item and red remaining');
+            for (let index = 0; index < total; index++) {
+              await page.evaluate(data => {
+                window.__readerTest.startFixtureRecording(); window.__readerTest.handleSpeechResult(data);
+              }, fixture.responses[branch === 'words' ? 'word' : branch === 'sentences' ? 'sentence' : 'rhymes']);
+              if (index < total - 1) {
+                await page.waitForFunction(count => document.getElementById('counter').textContent.includes(`${count}/`), index + 2);
+                assert.equal(await page.locator('#progressFill').evaluate(el => el.parentElement.getAttribute('aria-valuenow')), String(index + 1), branch + ' finished items turn blue');
+              }
+            }
+            await page.waitForFunction(() => document.querySelector('.reader-shell').classList.contains('is-section-complete'));
+            assert.equal(await page.locator('#progressFill').evaluate(el => el.style.getPropertyValue('--crla-finished')), '100%', branch + ' completes in blue');
+            assert.ok(!await page.locator('.completion-kicker').isVisible(), 'Section kicker is hidden');
+            assert.ok(!await page.locator('#completionClassificationPanel').isVisible(), 'Section is not a final result');
+            assert.ok(!await page.locator('#sentenceItemCountdown').isVisible(), 'No reading countdown covers completion');
+            if (viewport.width <= 1024) await fitsScreen(page, branch + ' completion');
+            if (previewDir) await page.screenshot({path: path.join(previewDir, `crla-${branch}-complete-${viewport.width}.png`), animations: 'disabled'});
+            await page.waitForTimeout(1200);
+            assert.ok(await page.locator('#finishBtn').isVisible(), 'Completion waits for Continue');
+            await page.reload();
+            await page.waitForFunction(() => window.__readerTest && document.querySelector('.reader-shell').classList.contains('is-section-complete'));
+            assert.ok(!await page.locator('.completion-kicker').isVisible(), 'Refresh keeps the section card');
+            await page.locator('#finishBtn').click();
+            await page.waitForURL(url => url.searchParams.get('crla_stage') === (branch === 'words' ? 'sentences' : 'story_selection'));
+          }
+          await page.waitForFunction(() => window.__readerTest && !document.getElementById('storySelectionPanel').classList.contains('d-none'));
+          await page.locator('.story-selection-cta').first().click();
+          await page.waitForFunction(() => document.querySelector('.reader-shell').classList.contains('is-story-ready-state'));
+          await page.evaluate(() => window.__readerTest.beginFixtureStory());
+        }
         if (scenario === 'section_complete') {
           await page.waitForFunction(() => document.querySelector('.reader-shell').classList.contains('is-complete'));
           assert.ok((await page.locator('#finishBtn').textContent()).includes('Sentence'));
-          assert.ok(!await page.locator('.completion-mark').isVisible(), 'The generic completion icon is hidden');
+          assert.equal(await page.locator('.completion-mark').count(), 0, 'No legacy CRLA completion icon');
+          assert.ok(!await page.locator('.completion-kicker').isVisible(), 'Section kicker is hidden');
           await page.waitForFunction(() => document.querySelector('.completion-card .crla-brand-logo').naturalWidth > 0);
           if (viewport.width <= 1024) await fitsScreen(page, 'Word section completion');
           if (previewDir) await page.screenshot({path: path.join(previewDir, `crla-word-complete-${viewport.width}-${viewport.height}.png`), animations: 'disabled'});
@@ -245,6 +312,8 @@ async function fitsScreen(page, label) {
           }
           await page.waitForFunction(() => document.querySelector('.reader-shell').classList.contains('is-complete'));
           await page.waitForFunction(() => document.getElementById('completionClassificationValue').textContent.includes('High Emerging Reader'));
+          assert.ok(await page.locator('#completionClassificationPanel').isVisible(), 'Admin shows final assessment results');
+          assert.ok(await page.locator('.completion-kicker').isVisible(), 'Final results kicker is preserved');
           if (viewport.width <= 1024) await fitsScreen(page, 'Results at ' + viewport.width);
           const completed = posts.filter(post => post.payload?.stage === 'completed').at(-1)?.payload;
           assert.ok(completed, 'Admin final scoring requested');
@@ -254,9 +323,15 @@ async function fitsScreen(page, label) {
           if (scenario === 'restored_complete') assert.ok(completed.duration_seconds >= 2, 'Recorded reading duration survives completion recovery');
           assert.equal(await page.evaluate(() => localStorage.getItem('student-work-sentinel')), 'unchanged');
           if (previewDir && scenario === 'correct') await page.screenshot({path: path.join(previewDir, `crla-admin-results-${viewport.width}.png`), animations: 'disabled'});
+          if (flow) {
+            await page.reload();
+            await page.waitForFunction(() => window.__readerTest && document.querySelector('.reader-shell').classList.contains('is-complete'));
+            assert.ok(await page.locator('#completionClassificationPanel').isVisible(), 'Admin result survives refresh');
+            assert.ok(await page.locator('.completion-kicker').isVisible());
+          }
         }
         assert.ok(posts.every(post => ['/api/admin/crla-preview/score/', '/api/assessment/story-answer/check/'].includes(post.path)),
-          'Preview uses no student persistence endpoints');
+          'Preview uses no student persistence endpoints: ' + JSON.stringify(posts.map(post => post.path)));
         assert.deepEqual(errors, []);
         console.log(`PASS ${scenario}: ${viewport.width}px`);
         checked++;
