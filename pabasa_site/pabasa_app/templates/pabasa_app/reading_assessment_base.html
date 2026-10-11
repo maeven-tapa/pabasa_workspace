@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block page_title %}Reading Assessment{% endblock %}</title>
+    <title>{% if crla_official_assessment_data.assessment_kind == 'crla' %}PABASA | CRLA{% else %}{% block page_title %}Reading Assessment{% endblock %}{% endif %}</title>
     <link rel="icon" type="image/png" href="{% static 'pabasa_app/images/pabasalogo.png' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3013,7 +3013,7 @@
         }
 
         .reader-shell:not(.is-story-comprehension):has(.reader-footer.is-official-crla-nav) #retryBtn,
-        .reader-shell:not(.is-story-comprehension):has(.reader-footer.is-official-crla-nav) #quitBtn {
+        body:not(.is-admin-crla-preview) .reader-shell:not(.is-story-comprehension):has(.reader-footer.is-official-crla-nav) #quitBtn {
             display: none;
         }
 
@@ -3759,9 +3759,34 @@
     }
     body.is-crla-reader[data-student-theme] :is(.progress-fill, #crlaQuestionPanel .story-question-progress-fill) {
         position: relative;
+        width: 100% !important;
         border-radius: inherit;
-        background: linear-gradient(90deg, #245ec9 0% 72%, #f6c94c 72% 92%, #d85b60 92%) !important;
+        background: linear-gradient(90deg,
+            #245ec9 0% var(--crla-finished, 0%),
+            #f6c94c var(--crla-finished, 0%) var(--crla-current-end, 0%),
+            #d85b60 var(--crla-current-end, 0%) 100%) !important;
     }
+    .crla-progress-legend {
+        display: flex;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: .7rem;
+        font-size: .7rem;
+        color: var(--muted);
+        line-height: 1.2;
+    }
+    .crla-progress-legend[hidden] { display: none; }
+    .crla-progress-legend span::before {
+        content: "";
+        display: inline-block;
+        width: .5rem;
+        height: .5rem;
+        margin-right: .25rem;
+        border-radius: 50%;
+        background: #245ec9;
+    }
+    .crla-progress-legend .progress-current::before { background: #f6c94c; }
+    .crla-progress-legend .progress-remaining::before { background: #d85b60; }
     body.is-crla-reader .reader-shell.is-story-reading > .reader-stage > .reader-card {
         outline: none;
     }
@@ -3774,6 +3799,81 @@
     body.is-crla-reader .story-reading-timer-track {
         stroke: rgba(36, 94, 201, .12);
     }
+    .crla-brand-logo { display: none; }
+    body.is-crla-reader .crla-brand-logo {
+        display: block;
+        width: 104px;
+        height: 58px;
+        object-fit: contain;
+        margin-inline: auto;
+        padding: .3rem;
+        background: #fff;
+        border-radius: 10px;
+    }
+    body.is-crla-reader .completion-mark,
+    body.is-crla-reader .story-reading-modal-icon { display: none; }
+    body.is-crla-reader .completion-card::after { content: none; }
+    body.is-crla-reader :is(.completion-kicker, .completion-classification-label) { color: #245ec9; }
+    body.is-crla-reader .completion-kicker { background: #edf4ff; border-color: #dce7f8; }
+    body.is-crla-reader .completion-disclaimer.is-encouragement { background: #edf4ff; border-color: #dce7f8; color: #34567b; }
+    body.is-crla-reader :is(.completion-primary, .story-reading-timer-dialog button) { background: #245ec9; color: #fff; }
+    body.is-crla-reader .story-reading-timer-dialog button { box-shadow: 0 4px 0 #173f8b; }
+    body.is-crla-reader .story-reading-timer-dialog button:hover { background: #173f8b; }
+    body.is-crla-reader :is(.story-reading-timer-overlay, .story-reading-countdown-overlay) {
+        background: rgba(16, 35, 68, .45);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+    body.is-crla-reader .story-reading-timer-dialog {
+        gap: .7rem;
+        padding: clamp(1rem, 3dvh, 2rem);
+        background: #fff;
+        border-color: #dce7f8;
+        box-shadow: 0 24px 60px rgba(16, 35, 68, .25);
+    }
+    body.is-crla-reader .story-reading-timer-dialog :is(h2, .story-reading-countdown-number) { color: #18345e; margin: 0; }
+    body.is-crla-reader .story-reading-timer-dialog p { color: #526b8b; margin: 0; }
+    body.is-crla-reader .reader-shell:is(.is-story-selection, .is-story-ready-state) {
+        height: 100dvh;
+        min-height: 0;
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: .65rem;
+    }
+    body.is-crla-reader .reader-shell:is(.is-story-selection, .is-story-ready-state) .reader-stage { align-items: stretch; }
+    body.is-crla-reader .reader-shell:is(.is-story-selection, .is-story-ready-state) .reader-card {
+        height: 100%;
+        min-height: 0 !important;
+        grid-template-rows: minmax(0, 1fr);
+        padding: .85rem;
+    }
+    body.is-crla-reader .reader-shell.is-story-selection .official-crla-status { display: none !important; }
+    body.is-crla-reader .reader-shell.is-story-selection .reader-card {
+        height: fit-content;
+        max-height: 100%;
+        align-self: center;
+    }
+    body.is-crla-reader #storySelectionPanel {
+        align-self: center;
+        max-height: 100%;
+        min-height: 0 !important;
+        padding: 0 !important;
+        gap: .6rem;
+        grid-template-rows: auto minmax(0, 1fr);
+    }
+    body.is-crla-reader #storySelectionPanel .story-selection-head { gap: .2rem; }
+    body.is-crla-reader #storySelectionPanel .story-selection-head::before { display: none; }
+    body.is-crla-reader #storySelectionGrid.story-selection-grid { margin: 0 !important; gap: .85rem !important; min-height: 0; }
+    body.is-crla-reader #storySelectionPanel .story-choice-banner {
+        min-height: 0;
+        height: clamp(110px, 25dvh, 230px);
+        aspect-ratio: auto;
+        flex-shrink: 0;
+    }
+    body.is-crla-reader #storySelectionPanel .story-choice-badges { padding: .5rem .75rem .2rem; }
+    body.is-crla-reader #storySelectionPanel .story-choice-card h3 { padding-inline: .75rem; font-size: clamp(1rem, 1.5vw, 1.3rem); }
+    body.is-crla-reader #storySelectionPanel .story-choice-preview { padding: .2rem .75rem .4rem; }
+    body.is-crla-reader #storySelectionPanel .story-choice-preview p { line-height: 1.4; max-height: 2.8em; }
+    body.is-crla-reader #storySelectionPanel .story-choice-actions { padding: .4rem .75rem .65rem; }
     body.is-crla-reader .story-reading-timer-progress {
         stroke: #245ec9;
     }
@@ -3821,6 +3921,158 @@
         }
     }
     @media (max-width: 1024px) {
+        body.is-crla-reader .reader-shell {
+            height: 100dvh;
+            min-height: 0;
+            grid-template-rows: auto minmax(0, 1fr);
+            gap: .55rem;
+            padding: .65rem;
+        }
+        body.is-crla-reader .reader-shell:is(.is-complete, .is-learner-experience) {
+            grid-template-rows: minmax(0, 1fr);
+        }
+        body.is-crla-reader .reader-top {
+            padding: .6rem;
+            gap: .45rem;
+        }
+        body.is-crla-reader .reader-title { gap: .5rem; }
+        body.is-crla-reader .level-mark.level-mark-deped {
+            width: 60px;
+            height: 38px;
+            padding: 4px;
+        }
+        body.is-crla-reader .eyebrow { font-size: .64rem; }
+        body.is-crla-reader .test-meta { font-size: .83rem; }
+        body.is-crla-reader .reader-progress-card { gap: .35rem; }
+        body.is-crla-reader .progress-head { gap: .35rem; flex-wrap: nowrap; }
+        body.is-crla-reader .counter { font-size: .72rem; padding: .35rem .5rem; }
+        body.is-crla-reader .header-actions { gap: .3rem; }
+        body.is-crla-reader :is(.header-action-btn, .pause-btn, #btnToggleMic, #btnTestMic) {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            min-height: 36px;
+            flex: 0 0 36px;
+            padding: 0;
+        }
+        body.is-crla-reader .reader-stage { align-items: stretch; }
+        body.is-crla-reader .reader-card:has(.official-crla-status) {
+            height: 100%;
+            min-height: 0 !important;
+            padding: .75rem;
+            gap: .45rem;
+            grid-template-rows: auto minmax(0, 1fr) auto;
+        }
+        body.is-crla-reader .word-stage {
+            min-width: 0;
+            min-height: 0;
+            padding: .35rem;
+            gap: .4rem;
+        }
+        body.is-crla-reader .reader-shell.is-story-reading .word-stage { padding: .35rem; }
+        body.is-crla-reader .reader-shell.is-story-reading .reading-title {
+            font-size: 1.25rem;
+        }
+        body.is-crla-reader .reader-shell.is-story-reading .reading-word {
+            font-size: clamp(1rem, 2.4vw, 1.4rem);
+            line-height: 1.45;
+            margin-top: .5rem;
+        }
+        body.is-crla-reader .reader-shell.reader-word .reading-word {
+            font-size: clamp(2rem, min(16vw, 20dvh), 5rem);
+        }
+        body.is-crla-reader .reader-shell.reader-sentence .reading-word {
+            font-size: clamp(1.25rem, min(5vw, 7dvh), 2rem);
+            line-height: 1.35;
+            padding: .3rem;
+        }
+        body.is-crla-reader .reader-footer {
+            margin-top: 0 !important;
+            padding-bottom: 0 !important;
+        }
+        body.is-crla-reader .reader-shell.is-story-selection .reader-card { height: fit-content; grid-template-rows: minmax(0, 1fr); }
+        body.is-crla-reader .reader-shell.is-story-selection .official-crla-status { display: none !important; }
+        body.is-crla-reader #storySelectionPanel {
+            height: auto !important;
+            max-height: 100%;
+            align-self: center;
+            min-height: 0 !important;
+            padding: 0 !important;
+            gap: .5rem;
+            grid-template-rows: auto minmax(0, 1fr);
+        }
+        body.is-crla-reader #storySelectionPanel .story-selection-head { gap: .2rem; }
+        body.is-crla-reader #storySelectionPanel .story-selection-head::before { display: none; }
+        body.is-crla-reader .story-selection-subtitle { margin: 0; font-size: .85rem; }
+        body.is-crla-reader #storySelectionGrid.story-selection-grid { margin: 0 !important; gap: .5rem !important; }
+        body.is-crla-reader #storySelectionPanel .story-choice-card {
+            display: grid !important;
+            grid-template-columns: clamp(52px, 14vw, 88px) minmax(0, 1fr);
+            grid-template-rows: auto minmax(0, 1fr) auto;
+            min-height: 0;
+        }
+        body.is-crla-reader #storySelectionPanel .story-choice-banner {
+            grid-column: 1;
+            grid-row: 1 / -1;
+            min-height: 0;
+            height: auto;
+            aspect-ratio: auto;
+        }
+        body.is-crla-reader #storySelectionPanel .story-choice-badges { display: none; }
+        body.is-crla-reader #storySelectionPanel .story-choice-card h3 { padding: .5rem .5rem .2rem; font-size: 1rem; }
+        body.is-crla-reader #storySelectionPanel .story-choice-preview { padding: 0 .5rem; }
+        body.is-crla-reader #storySelectionPanel .story-choice-preview p { font-size: .85rem; line-height: 1.3; max-height: 2.6em; }
+        body.is-crla-reader #storySelectionPanel .story-choice-preview::after { display: none; }
+        body.is-crla-reader #storySelectionPanel .story-choice-actions { min-height: 0; margin: 0; padding: .4rem; }
+        body.is-crla-reader #storySelectionPanel .story-choice-actions .btn { min-height: 44px; padding: .3rem; font-size: .85rem; }
+        body.is-crla-reader .reader-shell:has(#crlaQuestionPanel:not(.d-none)) .reader-card {
+            grid-template-rows: minmax(0, 1fr);
+        }
+        body.is-crla-reader #crlaQuestionPanel .story-question-shell { gap: .5rem; }
+        body.is-crla-reader #crlaQuestionPanel :is(.story-question-card, .story-answer-card) {
+            padding: .65rem;
+            gap: .35rem;
+        }
+        body.is-crla-reader #crlaQuestionPanel .story-question-titlebar h2 { font-size: 1.3rem; }
+        body.is-crla-reader #crlaQuestionPanel :is(.story-question-text, .story-answer-text) {
+            min-height: 0;
+            font-size: 1rem;
+        }
+        body.is-crla-reader #crlaQuestionPanel .story-question-nav {
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)) !important;
+            gap: .4rem;
+        }
+        body.is-crla-reader #crlaQuestionPanel .story-question-nav .btn {
+            grid-column: auto;
+            width: 100%;
+            min-height: 44px;
+            padding: .4rem;
+            font-size: .85rem;
+        }
+        body.is-crla-reader .completion-card {
+            padding: 1rem;
+            gap: .65rem;
+        }
+        body.is-crla-reader .completion-mark { width: 52px; height: 52px; font-size: 1.5rem; }
+        body.is-crla-reader .completion-card h1 { font-size: 1.5rem; }
+        body.is-crla-reader .completion-classification-panel { padding: .75rem; }
+        body.is-crla-reader #learnerExperiencePage { min-height: 0; height: 100%; }
+        body.is-crla-reader #learnerExperiencePage .learner-experience-content {
+            width: 100%;
+            max-height: none;
+            padding: .75rem;
+            gap: .5rem;
+        }
+        body.is-crla-reader #learnerExperiencePage h1 { font-size: clamp(2rem, 6dvh, 3rem); }
+        body.is-crla-reader #learnerExperiencePage .learner-experience-instruction { font-size: 1.25rem; }
+        body.is-crla-reader #learnerExperiencePage .rating-option { padding: .5rem .15rem; }
+        body.is-crla-reader #learnerExperiencePage .rating-option img { height: clamp(64px, 20dvh, 150px); }
+        body.is-crla-reader #learnerExperiencePage .rating-number { font-size: 1.25rem; }
+        body.is-crla-reader #learnerExperiencePage .continue-button {
+            min-height: 44px;
+            min-width: min(220px, 100%);
+            padding: .4rem 1.5rem;
+        }
         body.is-crla-reader .reader-footer.is-official-crla-nav {
             grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
             grid-template-areas: "controls next";
@@ -3832,7 +4084,7 @@
         }
         body.is-crla-reader .reader-footer.is-official-crla-nav .recording-controls {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr));
             gap: .6rem;
             justify-self: stretch;
             width: 100%;
@@ -3864,6 +4116,35 @@
             grid-template-columns: minmax(0, 1fr);
             grid-template-areas: "controls" "next";
         }
+    }
+    @media (max-width: 1024px) and (max-height: 700px) {
+        body.is-crla-reader .reader-top { padding: .45rem; gap: .3rem; }
+        body.is-crla-reader .eyebrow { margin-bottom: 0; line-height: 1.2; }
+        body.is-crla-reader .level-mark.level-mark-deped { width: 48px; height: 32px; }
+        body.is-crla-reader .reader-title > div:last-child {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            column-gap: .4rem;
+        }
+        body.is-crla-reader .reader-title .eyebrow { flex-basis: 100%; }
+        body.is-crla-reader .reader-card:has(.official-crla-status) { gap: .25rem; padding: .6rem; }
+        body.is-crla-reader .reader-shell.is-story-reading .word-stage { gap: .25rem; padding-block: .15rem; }
+        body.is-crla-reader .reader-shell.is-story-reading .reading-title { font-size: 1.1rem; }
+        body.is-crla-reader .reader-shell.is-story-reading .reading-word { margin-top: .25rem; line-height: 1.35; }
+        body.is-crla-reader .reader-shell .official-crla-status { min-height: 1.5rem; font-size: .85rem; }
+        body.is-crla-reader .reader-footer.is-official-crla-nav :is(#btnStartReading, #btnStopReading, #btnReadAloud, #nextBtn) {
+            min-height: 44px;
+            padding-block: .4rem !important;
+        }
+    }
+    @media (max-width: 1024px) {
+        body.is-crla-reader .reader-shell.crla-needs-content-room {
+            height: auto;
+            min-height: 100dvh;
+            grid-template-rows: auto auto;
+        }
+        body.is-crla-reader .reader-shell.crla-needs-content-room .reader-card { height: auto; }
     }
     @media (prefers-reduced-motion: reduce) {
         body.is-crla-reader :is(.progress-fill, #crlaQuestionPanel .story-question-progress-fill) {
@@ -3978,6 +4259,7 @@
                 <div class="progress-track" aria-hidden="true">
                     <div class="progress-fill" id="progressFill"></div>
                 </div>
+                <div class="crla-progress-legend" hidden><span>Finished</span><span class="progress-current">Current</span><span class="progress-remaining">Remaining</span></div>
             </div>
         </header>
 
@@ -4072,6 +4354,7 @@
                             <p class="story-question-kicker">CRLA COMPREHENSION</p>
                             <div class="story-question-titlebar"><h2 class="story-question-title" id="crlaQuestionTitle">Reading Comprehension</h2><span class="story-question-counter" id="crlaQuestionCounter">Question 1 of 1</span></div>
                             <div class="story-question-progress" aria-hidden="true"><div class="story-question-progress-track"><div class="story-question-progress-fill" id="crlaQuestionProgressFill"></div></div></div>
+                            <div class="crla-progress-legend" hidden><span>Finished</span><span class="progress-current">Current</span><span class="progress-remaining">Remaining</span></div>
                         </div>
                         <div class="story-question-card"><p class="story-question-label">Question</p><div class="story-question-body" id="crlaQuestionText"></div></div>
                         <div class="story-answer-card" aria-live="polite" aria-atomic="true"><p class="story-answer-label">Your spoken answer</p><div class="story-answer-text is-empty" id="crlaAnswerInput">Your spoken answer will appear here.</div><p class="story-answer-feedback d-none" id="crlaAnswerFeedback" role="status"></p></div>
@@ -4119,6 +4402,7 @@
         </div>
         <div class="story-reading-timer-overlay d-none" id="storyReadingInstructionOverlay" role="dialog" aria-modal="true" aria-labelledby="storyReadingInstructionTitle">
             <div class="story-reading-timer-dialog">
+                <img class="crla-brand-logo" src="{% static 'pabasa_app/images/deped-logo-philippines-v1.png' %}" alt="Department of Education">
                 <div class="story-reading-modal-icon" aria-hidden="true"><i class="bi bi-book-half"></i></div>
                 <h2 id="storyReadingInstructionTitle">Ready to Read!</h2>
                 <p>You have 2 minutes and 59 seconds to read the story.<br>Read as much as you can. Do your best!</p>
@@ -4152,7 +4436,7 @@
             <p class="pause-subtitle">Take a breath. Continue when ready.</p>
             <button id="resumeBtn" type="button" role="menuitem"><i class="bi bi-play-circle me-2"></i> Resume</button>
             <button id="retryBtn" type="button" role="menuitem"><i class="bi bi-arrow-counterclockwise me-2"></i> Start Again</button>
-            <button id="quitBtn" type="button" role="menuitem"><i class="bi bi-door-open me-2"></i> Exit</button>
+            <button id="quitBtn" type="button" role="menuitem"><i class="bi bi-door-open me-2"></i> {% if is_admin_preview %}Quit{% else %}Exit{% endif %}</button>
         </div>
 
         <div class="mic-test-overlay d-none" id="micTestOverlay" role="dialog" aria-modal="true" aria-labelledby="micTestTitle">
@@ -4201,6 +4485,7 @@
 
         <section class="completion-page" id="completionPage" aria-live="polite" aria-atomic="true">
             <article class="completion-card">
+                <img class="crla-brand-logo" src="{% static 'pabasa_app/images/deped-logo-philippines-v1.png' %}" alt="Department of Education">
                 <div class="completion-mark">{% if is_my_materials_completion %}✓{% else %}A{% endif %}</div>
                 <div class="completion-kicker">{% if is_my_materials_completion %}My Materials{% else %}Reading Assessment Results{% endif %}</div>
                 <h1 id="completionTitle">{% if is_my_materials_completion %}Reading complete!{% else %}Assessment complete{% endif %}</h1>
@@ -4228,7 +4513,7 @@
                 <div class="rating-form" role="radiogroup" aria-label="Learner experience rating">
                     {% for rating in "12345" %}
                     <button class="rating-option" type="button" role="radio" aria-checked="false" data-rating="{{ rating }}" aria-label="Rating {{ rating }}">
-                        <img src="{% static 'pabasa_app/images/learner_experience/' %}{{ rating }}.png" alt="Rating {{ rating }}">
+                        <img src="{% static 'pabasa_app/images/learner_experience/' %}{{ rating }}.webp" alt="Rating {{ rating }}">
                         <span class="rating-number">{{ rating }}</span>
                     </button>
                     {% endfor %}

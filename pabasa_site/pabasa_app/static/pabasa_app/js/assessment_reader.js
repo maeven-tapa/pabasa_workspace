@@ -150,6 +150,8 @@
         }
         const isCrla = officialAssessmentData?.assessment_kind === "crla";
         document.body.classList.toggle("is-crla-reader", isCrla);
+        document.body.classList.toggle("is-admin-crla-preview", isAdminPreview && isCrla);
+        if (isCrla) document.title = "PABASA | CRLA";
         if (isCrla) {
             const levelMark = shell.querySelector(".level-mark");
             if (levelMark) {
@@ -715,9 +717,9 @@
                 updated_at: new Date().toISOString(),
             };
             if (isAdminPreview) {
-                adminPreviewEndState = savedState;
-                sessionStorage.setItem(adminPreviewStateKey, JSON.stringify(savedState));
                 if (!["completed", "early_completed_words", "learner_experience"].includes(savedState.stage)) {
+                    adminPreviewEndState = savedState;
+                    sessionStorage.setItem(adminPreviewStateKey, JSON.stringify(savedState));
                     return Promise.resolve({ success: true, preview_only: true, student_end_assessment_state: savedState });
                 }
                 return fetch("/api/admin/crla-preview/score/", {
@@ -726,7 +728,9 @@
                     body: JSON.stringify(savedState),
                 }).then(async response => {
                     const result = await response.json();
-                    if (!response.ok || !result.success) return null;
+                    if (!response.ok || !result.success || !result.student_end_assessment_state
+                        || typeof result.student_end_assessment_state !== "object"
+                        || Array.isArray(result.student_end_assessment_state)) return null;
                     adminPreviewEndState = result.student_end_assessment_state;
                     sessionStorage.setItem(adminPreviewStateKey, JSON.stringify(adminPreviewEndState));
                     return result;
@@ -811,8 +815,10 @@
                 ...(patch || {}),
             };
             if (isAdminPreview) {
-                adminPreviewEndState = nextState;
-                sessionStorage.setItem(adminPreviewStateKey, JSON.stringify(nextState));
+                if (!["completed", "early_completed_words", "learner_experience"].includes(nextState.stage)) {
+                    adminPreviewEndState = nextState;
+                    sessionStorage.setItem(adminPreviewStateKey, JSON.stringify(nextState));
+                }
                 const previewOperation = studentEndStateWriteQueue.then(() => writeStudentEndState({
                     ...readStudentEndState(), ...(patch || {}),
                 }, options));
@@ -1706,7 +1712,7 @@
                 nextBtn.textContent = "Next →";
             }
             if (prevBtn) prevBtn.textContent = "← Back";
-            if (counter) counter.textContent = `Story segment ${currentPageIndex + 1}/${getCurrentPageCount()}`;
+            if (counter) counter.textContent = storySegmentCounterLabel();
             if (progressFill) progressFill.style.width = `${((currentPageIndex + 1) / getCurrentPageCount()) * 100}%`;
             updateFooterForStoryState("story_reading");
         }
@@ -1771,7 +1777,9 @@
             const question = currentStoryQuestions[currentStoryQuestionIndex] || {};
             if (crlaQuestionTitle) crlaQuestionTitle.textContent = currentSelectedStory?.title || "Reading Comprehension";
             if (crlaQuestionText) crlaQuestionText.textContent = question.question || "No comprehension question is available for this story.";
-            if (crlaQuestionCounter) crlaQuestionCounter.textContent = `Question ${currentStoryQuestionIndex + 1} of ${currentStoryQuestions.length}`;
+            if (crlaQuestionCounter) crlaQuestionCounter.textContent = currentStoryQuestions.length
+                ? `Question ${currentStoryQuestionIndex + 1} of ${currentStoryQuestions.length}`
+                : "No comprehension questions";
             if (crlaAnswerInput) {
                 crlaAnswerInput.textContent = currentStoryAnswers[currentStoryQuestionIndex] || "Your spoken answer will appear here.";
                 crlaAnswerInput.classList.toggle("is-empty", !currentStoryAnswers[currentStoryQuestionIndex]);
@@ -1785,35 +1793,48 @@
             }
             // Next doubles as Skip for official CRLA comprehension.  It must
             // remain available even before the learner records an answer.
-            if (crlaQuestionNextBtn) crlaQuestionNextBtn.disabled = false;
+            if (crlaQuestionNextBtn) {
+                crlaQuestionNextBtn.disabled = false;
+                crlaQuestionNextBtn.textContent = currentStoryQuestions.length ? "Next" : "Continue";
+            }
+            crlaQuestionStartReadingBtn?.classList.toggle("d-none", !currentStoryQuestions.length);
+            crlaQuestionReadAloudBtn?.classList.toggle("d-none", !currentStoryQuestions.length);
             const progress = document.getElementById("crlaQuestionProgressFill");
             if (progress) progress.style.width = `${((currentStoryQuestionIndex + 1) / Math.max(1, currentStoryQuestions.length)) * 100}%`;
+            syncCrlaProgress();
         }
 
         let crlaSpeechRecognition = null;
         let crlaSpeechAttemptActive = false;
+        let crlaSpokenAttemptProcessing = false;
 
         async function completeCRLASpokenAttempt(transcript, questionIndex) {
-            const answer = String(transcript || "").trim();
-            currentStoryAnswers[questionIndex] = answer;
-            if (crlaAnswerInput) {
-                crlaAnswerInput.textContent = answer || "No speech detected.";
-                crlaAnswerInput.classList.toggle("is-empty", !answer);
+            if (crlaSpokenAttemptProcessing) return;
+            crlaSpokenAttemptProcessing = true;
+            try {
+                const answer = String(transcript || "").trim();
+                currentStoryAnswers[questionIndex] = answer;
+                if (crlaAnswerInput) {
+                    crlaAnswerInput.textContent = answer || "No speech detected.";
+                    crlaAnswerInput.classList.toggle("is-empty", !answer);
+                }
+                let result = false;
+                if (answer) {
+                    try { result = await checkStoryAnswerTranscript(answer, questionIndex); }
+                    catch (error) { result = false; }
+                }
+                currentStoryResults[questionIndex] = Boolean(result);
+                await persistCRLAComprehensionState();
+                if (currentStoryQuestionIndex !== questionIndex) return;
+                if (currentStoryQuestionIndex < currentStoryQuestions.length - 1) {
+                    currentStoryQuestionIndex += 1;
+                    renderCRLAQuestion();
+                    return;
+                }
+                await finishCRLAComprehension();
+            } finally {
+                crlaSpokenAttemptProcessing = false;
             }
-            let result = false;
-            if (answer) {
-                try { result = await checkStoryAnswerTranscript(answer, questionIndex); }
-                catch (error) { result = false; }
-            }
-            currentStoryResults[questionIndex] = Boolean(result);
-            await persistCRLAComprehensionState();
-            if (currentStoryQuestionIndex !== questionIndex) return;
-            if (currentStoryQuestionIndex < currentStoryQuestions.length - 1) {
-                currentStoryQuestionIndex += 1;
-                renderCRLAQuestion();
-                return;
-            }
-            await finishCRLAComprehension();
         }
 
         async function finishCRLAComprehension() {
@@ -1853,7 +1874,11 @@
                 comprehension_correct: correctAnswers,
                 total_questions: currentStoryQuestions.length,
             };
-            await showLearnerExperience();
+            const prepared = await showLearnerExperience();
+            if (!prepared && crlaAnswerFeedback) {
+                crlaAnswerFeedback.textContent = "We could not prepare your results. Please try Continue again.";
+                crlaAnswerFeedback.classList.remove("d-none");
+            }
         }
 
         function renderLearnerExperienceState() {
@@ -2004,7 +2029,6 @@
             currentStoryQuestionIndex = Math.min(Math.max(Number.parseInt(persistedState.crla_question_index, 10) || 0, 0), Math.max(0, currentStoryQuestions.length - 1));
             currentStoryAnswers = Array.isArray(persistedState.crla_answers) ? currentStoryQuestions.map((_, index) => String(persistedState.crla_answers[index] || "")) : new Array(currentStoryQuestions.length).fill("");
             currentStoryResults = Array.isArray(persistedState.crla_results) ? currentStoryQuestions.map((_, index) => persistedState.crla_results[index] === true ? true : persistedState.crla_results[index] === false ? false : null) : new Array(currentStoryQuestions.length).fill(null);
-            if (crlaQuestionPanel && !currentStoryQuestions.length) crlaQuestionPanel.classList.add("d-none");
             renderCRLAQuestion();
             btnStartReading?.classList.add("d-none"); btnStopReading?.classList.add("d-none"); btnReadAloud?.classList.add("d-none"); prevBtn?.classList.add("d-none"); nextBtn?.classList.add("d-none");
             updateFooterForStoryState("story_comprehension");
@@ -2167,6 +2191,7 @@
             if (nextState === "story_selection" || nextState === "story_ready") {
                 if (readingHelperText) readingHelperText.textContent = "Choose a story to continue.";
             }
+            syncCrlaProgress();
         }
 
         function hashString(value) {
@@ -2906,6 +2931,25 @@
                             );
                             updateUI();
                             renderStoryReadingState(restoredStory);
+                            while (!liveSessionPaused && !liveSessionEnded && !liveSessionEndRedirecting
+                                && isCrlaStorySegmentResolved(currentPageIndex)) {
+                                if (currentPageIndex >= getCurrentPageCount() - 1) {
+                                    const recordedElapsed = Number(persistedEndState.story_reading_elapsed_ms);
+                                    if (!isCurrentLiveAssessment() && startTime === null
+                                        && Number.isFinite(recordedElapsed) && recordedElapsed > 0) {
+                                        startTime = Date.now() - Math.min(storyReadingDurationMs, recordedElapsed);
+                                    }
+                                    stopReading({ allowIdleStoryCompletion: true, allowCompletedStorySegment: true });
+                                    return;
+                                }
+                                const previousSegmentIndex = currentPageIndex;
+                                currentPageIndex += 1;
+                                currentStorySegmentIndex = currentPageIndex;
+                                resetStorySegmentState(previousSegmentIndex, currentPageIndex, "completed_segment_recovery");
+                                updateStudentEndState({ stage: "story_reading", story_segment_index: currentPageIndex });
+                                updateUI();
+                                renderStoryReadingState(restoredStory);
+                            }
                             const restoredElapsed = Number(persistedEndState.story_reading_elapsed_ms);
                             const restoredStart = persistedEndState.story_reading_elapsed_ms != null && Number.isFinite(restoredElapsed)
                                 ? Date.now() - Math.max(0, Math.min(storyReadingDurationMs, restoredElapsed))
@@ -3680,6 +3724,7 @@
             }
             syncPhraseMicrophoneButton();
             renderOfficialCrlaStatus();
+            syncCrlaProgress();
         }
 
         // The helper is deliberately derived from the existing CRLA lifecycle.
@@ -3689,25 +3734,24 @@
             if (!helper || !isOfficialAssessmentLaunch || !isCrla) return;
             const text = document.getElementById("readingHelperText");
             const dots = helper.querySelector(".helper-dot");
-            const processing = Boolean(isSendingChunk || pendingAudioChunk || crlaLiveSpeech?.pending
-                || (crlaLiveSpeech?.active && hasHeardSinceLastChunk));
+            const processing = Boolean(isSendingChunk || pendingAudioChunk || crlaLiveSpeech?.pending);
             const activelyListening = Boolean(
                 isRecording && !isMuted && recognitionActive
-                && (shell?.classList.contains("is-hearing") || hasHeardSinceLastChunk || speechFrameCount > 0)
+                && (shell?.classList.contains("is-hearing") || speechFrameCount > 0)
             );
             const wrong = Boolean(readingWord?.querySelector(".is-wrong"));
             const correct = Boolean(readingWord?.querySelector(".is-read"));
             const retry = wrong && !processing && !itemLocked[currentIndex];
             let status = `Read the ${getCurrentSectionLabel()}`;
             let animated = false;
-            if (processing) { status = "Processing..."; animated = true; }
-            else if (activelyListening) { status = "Listening..."; animated = true; }
+            if (activelyListening) { status = "Hearing you..."; animated = true; }
+            else if (processing) { status = "Processing..."; animated = true; }
             else if (correct) status = "Great Job!";
             else if (retry) status = "Try to read again";
             else if (wrong) status = "Good try!";
             helper.hidden = false;
             helper.classList.toggle("is-status-active", animated);
-            helper.classList.toggle("is-status-processing", processing);
+            helper.classList.toggle("is-status-processing", processing && !activelyListening);
             if (text) text.textContent = status;
             if (dots) dots.setAttribute("aria-hidden", "true");
         }
@@ -4280,6 +4324,14 @@
                 if (!results[index]) results[index] = "omission";
             }
             syncStrictStoryCounts();
+        }
+
+        function isCrlaStorySegmentResolved(segmentIndex) {
+            if (!isStrictStoryReading()) return false;
+            const results = storyWordResults[segmentIndex] || {};
+            const total = readableWordCount(itemPages[0]?.[segmentIndex] || "");
+            return total > 0 && Array.from({length: total}, (_, index) => results[index])
+                .every(result => ["correct", "substitution", "omission", "miscue"].includes(result));
         }
 
         function finalizeStoryReading() {
@@ -5216,10 +5268,10 @@
                     : activeWordIndex;
                 const paragraphChunkCompleted = mode === "paragraph"
                     // Generic completion stops at an omission too. A strict
-                    // story can also finish from the server's aligned results
-                    // when the omission run and spoken tail were all consumed.
+                    // story also finishes when alignment resolves every word,
+                    // including an ending substitution or omission.
                     && (data.complete === true || (isStrictStoryReading()
-                        && sequentialParagraphResults.some(result => result.type === "omission")))
+                        && sequentialParagraphResults.length > 0))
                     && finalResolvedTargetIndex === data.word_syllable_ranges.length - 1;
                 storyDebug({
                     event: "post_miscue_sequential_consumption",
@@ -5754,6 +5806,87 @@
             return !isSendingChunk && !pendingAudioChunk && !crlaLiveSpeech?.pending && !crlaSpeechFailure;
         }
 
+        function syncCrlaProgress() {
+            if (!isCrla) return;
+            let total = Math.max(1, items.length);
+            let finished = currentIndex + (itemLocked[currentIndex] ? 1 : 0);
+            if (currentStoryState === "story_reading" && currentSelectedStory) {
+                total = Math.max(1, readableWordCount(currentSelectedStory.content || ""));
+                finished = Object.values(storyWordResults).reduce((count, results) => (
+                    count + Object.values(results).filter(Boolean).length
+                ), 0);
+            } else if (currentStoryState === "story_comprehension") {
+                total = Math.max(1, currentStoryQuestions.length);
+                finished = currentStoryQuestionIndex
+                    + (currentStoryResults[currentStoryQuestionIndex] != null ? 1 : 0);
+            } else if (["story_selection", "story_ready"].includes(currentStoryState)) {
+                total = 1;
+                finished = 0;
+            }
+            if (shell.classList.contains("is-complete") || currentStoryState === "learner_experience") finished = total;
+            finished = Math.max(0, Math.min(total, finished));
+            const current = finished < total ? 1 : 0;
+            const finishedPercent = (finished / total) * 100;
+            const currentEnd = ((finished + current) / total) * 100;
+            for (const fill of [progressFill, document.getElementById("crlaQuestionProgressFill")]) {
+                if (!fill) continue;
+                fill.style.setProperty("--crla-finished", `${finishedPercent}%`);
+                fill.style.setProperty("--crla-current-end", `${currentEnd}%`);
+                const track = fill.parentElement;
+                track.removeAttribute("aria-hidden");
+                track.closest(".story-question-progress")?.removeAttribute("aria-hidden");
+                track.setAttribute("role", "progressbar");
+                track.setAttribute("aria-label", "Section progress");
+                track.setAttribute("aria-valuemin", "0");
+                track.setAttribute("aria-valuemax", String(total));
+                track.setAttribute("aria-valuenow", String(finished));
+                track.setAttribute("aria-valuetext", `${finished} finished, ${current} current, ${total - finished - current} remaining`);
+            }
+            document.querySelectorAll(".crla-progress-legend").forEach(legend => { legend.hidden = false; });
+        }
+
+        let crlaReadingFitFrame = null;
+        function storySegmentCounterLabel() {
+            const label = isCrla && window.matchMedia("(max-width: 600px)").matches ? "Segment" : "Story segment";
+            return `${label} ${currentPageIndex + 1}/${getCurrentPageCount()}`;
+        }
+        function scheduleCrlaReadingFit() {
+            if (!isCrla || crlaReadingFitFrame !== null) return;
+            crlaReadingFitFrame = window.requestAnimationFrame(() => {
+                crlaReadingFitFrame = null;
+                if (!readingWord) return;
+                if (currentStoryState === "story_reading" && counter) counter.textContent = storySegmentCounterLabel();
+                readingWord.style.removeProperty("font-size");
+                shell.classList.remove("crla-needs-content-room");
+                if (!window.matchMedia("(max-width: 1024px)").matches || readingWord.hidden
+                    || getComputedStyle(readingWord).display === "none") return;
+                const stage = readingWord.closest(".word-stage");
+                if (!stage || !stage.clientHeight) return;
+                const stageStyle = getComputedStyle(stage);
+                const children = [...stage.children].filter(child => !child.hidden && getComputedStyle(child).display !== "none");
+                const otherHeight = children.reduce((height, child) => {
+                    const style = getComputedStyle(child);
+                    return height + (child === readingWord ? 0 : child.getBoundingClientRect().height)
+                        + (parseFloat(style.marginTop) || 0) + (parseFloat(style.marginBottom) || 0);
+                }, 0);
+                const available = stage.clientHeight - (parseFloat(stageStyle.paddingTop) || 0)
+                    - (parseFloat(stageStyle.paddingBottom) || 0) - otherHeight
+                    - (Math.max(0, children.length - 1) * (parseFloat(stageStyle.rowGap) || 0));
+                let size = parseFloat(getComputedStyle(readingWord).fontSize);
+                const minimum = mode === "paragraph" ? 14 : mode === "sentence" ? 16 : 24;
+                for (let step = 0; step < 12 && size > minimum; step += 1) {
+                    const ratio = Math.max(readingWord.scrollHeight / Math.max(1, available),
+                        readingWord.scrollWidth / Math.max(1, readingWord.clientWidth));
+                    if (ratio <= 1.01) break;
+                    size = Math.max(minimum, Math.floor(size / ratio * .96 * 10) / 10);
+                    readingWord.style.fontSize = `${size}px`;
+                }
+                // Retain readable content for exceptional text/zoom sizes.
+                // Ordinary paginated CRLA material fits the available screen.
+                shell.classList.toggle("crla-needs-content-room", readingWord.scrollHeight > available + 1);
+            });
+        }
+
         function updateUI() {
             if (currentStoryState === "learner_experience") {
                 setLearnerExperienceView(true);
@@ -5806,6 +5939,7 @@
             // prevents a previous green word from carrying "Great Job!" into
             // the next turn.
             renderOfficialCrlaStatus();
+            syncCrlaProgress();
             if (nextBtn) {
                 const isLastPage = currentPageIndex >= getCurrentPageCount() - 1;
                 const onLastItem = currentIndex === items.length - 1;
@@ -8092,6 +8226,16 @@
         function goBackToAssessments() {
             clearStoryReadingTimer();
             if (isAdminPreview) {
+                itemResultVersion += 1;
+                isRecording = false;
+                pendingAudioChunk = null;
+                clearSentenceItemTimer();
+                clearOfficialSentenceItemCountdown();
+                stopSpeechRecognition();
+                stopReadAloud();
+                crlaSpeechAttemptActive = false;
+                try { crlaSpeechRecognition?.abort(); } catch (error) {}
+                crlaSpeechRecognition = null;
                 sessionStorage.removeItem(adminPreviewStateKey);
                 window.location.assign(adminPreviewReturnUrl || "/dashboard/admin/official-reading-assessments/");
                 return;
@@ -8164,11 +8308,14 @@
         });
         crlaQuestionStartReadingBtn?.addEventListener("click", startCRLASpokenAttempt);
         crlaQuestionNextBtn?.addEventListener("click", async () => {
-            if (!currentStoryQuestions.length) return;
+            if (!currentStoryQuestions.length) {
+                await finishCRLAComprehension();
+                return;
+            }
             const questionIndex = currentStoryQuestionIndex;
             // A captured answer is already being graded and will advance
             // automatically through completeCRLASpokenAttempt.
-            if (currentStoryAnswers[questionIndex]) return;
+            if (crlaSpokenAttemptProcessing) return;
             if (currentStoryResults[questionIndex] === null) {
                 // Stop an in-progress recording before skipping so a delayed
                 // recognition callback cannot replace the skipped result.
@@ -8398,6 +8545,15 @@
                 crlaQuestionIndex: currentStoryQuestionIndex,
                 isRecording,
             });
+        }
+        if (isCrla && readingWord) {
+            const fitObserver = new ResizeObserver(scheduleCrlaReadingFit);
+            fitObserver.observe(shell.querySelector(".reader-footer"));
+            fitObserver.observe(readerTop);
+            const textObserver = new MutationObserver(scheduleCrlaReadingFit);
+            textObserver.observe(readingWord.closest(".word-stage"), {childList: true, subtree: true, characterData: true});
+            window.addEventListener("resize", scheduleCrlaReadingFit);
+            document.fonts.ready.then(scheduleCrlaReadingFit);
         }
         loadItems();
         startLiveCountdown();
