@@ -199,10 +199,16 @@ L23_G6_ACCEPTED_SPEECH = {
 # Lesson 24 Gawain 1's visible Big Box is present in the workbook source, but
 # no authoritative answer key or ordered word paths are available in the
 # project. Keep this empty rather than accepting guessed combinations.
+L24_G1_ACTIVITY_KEY = 'aral-l24-g1-v-syllable-builder'
 L24_G1_CANONICAL_WORDS = ()
 L24_G1_ACCEPTED_SPEECH = {
     'lin': {'lin'}, 'sa': {'sa'}, 'van': {'van'}, 'va': {'va'},
-    'e': {'e'}, 'la': {'la'}, 'i': {'i'}, 'vi': {'vi'}, 'vio': {'vio'},
+    'e': {'e'}, 'la': {'la'}, 'i': {'i'},
+    # Chirp 3 (fil-PH) has repeatedly returned the isolated target /vi/ as
+    # the letter token "V". Keep this exact whole-token equivalent local to
+    # the Lesson 24 Gawain 1 evaluator; it is not a general letter rule.
+    'vi': {'vi', 'v'},
+    'vio': {'vio'},
     'le': {'le'}, 'val': {'val'}, 'a': {'a'},
 }
 
@@ -1207,9 +1213,11 @@ def normalize_l24_g1_speech(value):
     return ' '.join(re.sub(r'[^a-z\s]', ' ', text).split())
 
 
-def l24_g1_pronunciation_match(expected, transcript):
+def l24_g1_pronunciation_match(expected, transcript, activity_key=''):
     canonical = normalize_l24_g1_speech(expected)
     heard = normalize_l24_g1_speech(transcript)
+    if activity_key != L24_G1_ACTIVITY_KEY:
+        return False
     return bool(heard and heard in L24_G1_ACCEPTED_SPEECH.get(canonical, {canonical}))
 
 
