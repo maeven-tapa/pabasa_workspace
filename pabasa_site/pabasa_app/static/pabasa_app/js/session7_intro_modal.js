@@ -88,6 +88,8 @@
   const lesson19Gawain2 = key === 'session-7-lesson-19-gawain-2';
   const lesson19Gawain3 = key === 'session-7-lesson-19-gawain-3';
   const lesson19Gawain4 = key === 'session-7-lesson-19-gawain-4';
+  const lesson2021Gawain1 = key === 'session-7-lesson-20-21-gawain-1';
+  const lesson2021Gawain2 = key === 'session-7-lesson-20-21-gawain-2';
   const introAudio = lesson19Gawain2
       ? new Audio('/static/pabasa_app/prescribed/audio/SESSION_7/LESSON_19/GAWAIN_2/basahin_ngalan_isulat_nawawalang_pantig_tts.mp3')
       : null;
@@ -111,7 +113,25 @@
   backdrop.setAttribute('role', 'dialog');
   backdrop.setAttribute('aria-modal', 'true');
   backdrop.setAttribute('aria-labelledby', `${backdrop.id}-title`);
-  backdrop.innerHTML = lesson19Gawain3
+  backdrop.innerHTML = lesson2021Gawain2
+    ? `<div class="lesson-start-modal lesson-13-start-modal">
+        <p class="lesson-start-label lesson-13-start-label">${hasSavedProgress ? 'MAY NA-SAVE KANG PROGRESO!' : escapeHtml(label)}</p>
+        <h2 class="lesson-start-title lesson-13-start-title" id="${backdrop.id}-title">${hasSavedProgress ? 'May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?' : 'Handa ka na?'}</h2>
+        <div class="lesson-start-actions lesson-13-start-actions">
+          <button type="button" data-session7-start>${hasSavedProgress ? 'IPAGPATULOY' : 'SIMULAN'}</button>
+          <button type="button" data-session7-later>${hasSavedProgress ? 'SIMULAN ULIT' : 'MAMAYA NA LANG'}</button>
+        </div>
+      </div>`
+    : lesson2021Gawain1
+    ? `<div class="lesson-start-modal lesson-13-start-modal session7-l2021-g1-start-card">
+        <p class="lesson-start-label lesson-13-start-label">${escapeHtml(label)}</p>
+        <h2 class="lesson-start-title lesson-13-start-title" id="${backdrop.id}-title">${escapeHtml(title)}</h2>
+        <div class="lesson-start-actions lesson-13-start-actions">
+          <button type="button" data-session7-start>${hasSavedProgress ? 'IPAGPATULOY' : 'SIMULAN'}</button>
+          <button type="button" data-session7-later>${hasSavedProgress ? 'SIMULAN ULIT' : 'MAMAYA NA LANG'}</button>
+        </div>
+      </div>`
+    : lesson19Gawain3
     ? `<div class="lesson-start-modal lesson-13-start-modal session7-g3-start-card">
         <p class="lesson-start-label lesson-13-start-label">${escapeHtml(label)}</p>
         <h2 class="lesson-start-title lesson-13-start-title" id="${backdrop.id}-title">${hasSavedProgress ? 'May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?' : 'Handa ka nang magbasa at pumili ng tamang salita?'}</h2>

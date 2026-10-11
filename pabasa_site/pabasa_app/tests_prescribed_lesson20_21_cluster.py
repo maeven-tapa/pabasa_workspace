@@ -1,5 +1,6 @@
 import json
 import uuid
+from pathlib import Path
 
 from django.test import TestCase
 from django.urls import reverse
@@ -78,3 +79,64 @@ class PrescribedLesson2021ClusterTests(TestCase):
             teacher_page.context['prescribed_lesson_20_21_activities'][0]['activity_key'], self.key,
         )
         self.assertContains(teacher_page, 'prescribed-lesson-20-21-activities')
+
+
+class PrescribedLesson2021SyllabificationTests(TestCase):
+    key = 'session-7-lesson-20-21-gawain-2'
+
+    def setUp(self):
+        token = uuid.uuid4().hex
+        school = School.objects.create(name=f'Syllables {token}', code=f'SY-{token}')
+        self.student = User.objects.create(
+            custom_id=f'STU-{token}', role='student', first_name='Syllable', last_name='Learner',
+            middle_initial='', suffix='', sex='female', birth_month=1, birth_day=1, birth_year=2018,
+            email=f'syllables-{token}@example.com', password_hash='hashed', school_record=school,
+        )
+        self.teacher = User.objects.create(
+            custom_id=f'TCH-{token}', role='teacher', first_name='Syllable', last_name='Teacher',
+            middle_initial='', suffix='', sex='female', birth_month=1, birth_day=1, birth_year=1990,
+            email=f'syllables-teacher-{token}@example.com', password_hash='hashed', teacher_role='Teacher',
+            school_record=school,
+        )
+        prescribed_term_fixture(self.student, teacher=self.teacher)
+        session = self.client.session
+        session.update({'user_id': self.student.id, 'user_role': 'student', 'email': self.student.email})
+        session.save()
+
+    def test_worked_example_is_visible_but_unscored_and_reading_is_required(self):
+        page = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.key}))
+
+        self.assertTemplateUsed(page, 'pabasa_app/prescribed_cluster_syllabification_page.html')
+        payload = page.context['prescribed_activity_data']
+        self.assertEqual(payload['items'][0]['word'], 'bloke')
+        self.assertEqual(payload['items'][0]['example_division'], 'blo•ke')
+        self.assertEqual(payload['items'][1]['example_division'], '')
+        self.assertNotIn('answer', payload['items'][1])
+
+        progress_url = reverse('prescribed_activity_progress', kwargs={'activity_key': self.key})
+        rejected = self.client.post(progress_url, data=json.dumps({
+            'candidate_answer': 'glo•bo',
+            'state': {'phase': 'syllabification', 'state_version': 1},
+        }), content_type='application/json')
+        self.assertEqual(rejected.status_code, 400)
+
+        read = self.client.post(progress_url, data=json.dumps({
+            'state': {'phase': 'oral_reading', 'completed_oral_reads': [0], 'state_version': 1},
+        }), content_type='application/json')
+        self.assertEqual(read.status_code, 200)
+        accepted = self.client.post(progress_url, data=json.dumps({
+            'candidate_answer': 'glo•bo',
+            'state': {'phase': 'syllabification', 'completed_oral_reads': [0], 'state_version': 2},
+        }), content_type='application/json')
+        self.assertTrue(accepted.json()['accepted'])
+        saved = StudentActivityProgress.objects.get(student=self.student, activity_key=self.key)
+        self.assertEqual(saved.completed_items, 1)
+        self.assertEqual(saved.state['submitted_syllable_divisions'], ['glo•bo'])
+
+    def test_re_rendered_basahin_button_has_a_direct_microphone_action(self):
+        template = Path(__file__).with_name('templates') / 'pabasa_app' / 'prescribed_cluster_syllabification_page.html'
+        source = template.read_text(encoding='utf-8')
+
+        self.assertIn("window.BasahinButton?.decorate(oral)", source)
+        self.assertIn("oral.addEventListener('click',event=>", source)
+        self.assertIn("void (recovery?listen(index):read(index))", source)
