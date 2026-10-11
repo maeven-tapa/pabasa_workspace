@@ -39,9 +39,11 @@
     .aral-card-eyebrow { margin:0 0 .3rem; color:#2b87b5; font-size:.7rem; font-weight:900; letter-spacing:.1em; text-transform:uppercase; }
     .aral-heading-row { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
     .aral-term-control { display:flex; align-items:center; gap:.45rem; flex:0 0 auto; }
-    .aral-term-control label { margin:0; color:#6d818d; font-size:.72rem; font-weight:800; }
-    .aral-term-control select { width:auto; min-width:6.3rem; padding:.35rem 2rem .35rem .6rem; border-color:#d6e5ec; border-radius:9px; color:#31566b; font-size:.75rem; font-weight:800; }
-    .aral-term-control select:focus { border-color:#2ea8e5; box-shadow:0 0 0 .2rem rgba(46,168,229,.18); }
+    .aral-term-control label { margin:0; color:var(--dash-text, #31566b); font-size:.85rem; font-weight:900; }
+    .aral-term-control .directory-select { position:relative; min-width:7rem; }
+    .aral-term-control .student-filter-trigger { min-height:38px; padding:.5rem .75rem; }
+    .aral-term-control .student-filter-value { font-size:1rem; font-weight:800; }
+    .aral-term-control .student-filter-menu { min-width:100%; right:0; left:auto; }
     .aral-card-heading { margin:0; color:#10466e; font-size:1.18rem; font-weight:900; }
     .aral-section-label { display:inline-flex; margin-top:.42rem; padding:.28rem .62rem; border-radius:999px; background:#eaf7fd; color:#17658f; font-size:.78rem; font-weight:800; }
     .aral-card-description { max-width:58ch; margin:.62rem 0 0; color:#667985; font-size:.84rem; line-height:1.45; }
@@ -1110,7 +1112,8 @@
         transition: transform 0.18s ease;
     }
 
-    .student-filter-wrap.is-open .student-filter-trigger i {
+    .student-filter-wrap.is-open .student-filter-trigger i,
+    .directory-select.is-open .student-filter-trigger i {
         transform: rotate(180deg);
     }
 
@@ -1131,7 +1134,8 @@
         overflow: hidden;
     }
 
-    .student-filter-wrap.is-open .student-filter-menu {
+    .student-filter-wrap.is-open .student-filter-menu,
+    .directory-select.is-open .student-filter-menu {
         display: grid;
         gap: 0.25rem;
     }
@@ -1466,7 +1470,7 @@
 <section class="aral-exit-readiness-card" aria-labelledby="aralStoryPerformanceTitle">
     <div class="aral-performance-panel">
         <p class="aral-card-eyebrow">ARAL Program</p>
-        <div class="aral-heading-row"><h2 class="aral-card-heading" id="aralStoryPerformanceTitle">ARAL Exit Readiness</h2><form class="aral-term-control" method="get"><label for="aralTermSelect">Term</label><select id="aralTermSelect" name="aral_term" onchange="this.form.submit()" aria-describedby="aralStoryPerformanceTitle">{% for option in aral_term_options %}<option value="{{ option.value }}"{% if option.value == selected_aral_term %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></form></div>
+        <div class="aral-heading-row"><h2 class="aral-card-heading" id="aralStoryPerformanceTitle">ARAL Exit Readiness</h2><form class="aral-term-control" method="get"><label for="aralTermSelect">Term</label><div class="directory-select" id="aralTermSelect" data-default="{{ selected_aral_term }}"><input type="hidden" name="aral_term" value="{{ selected_aral_term }}"><button class="student-filter-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="student-filter-trigger-text"><span class="student-filter-value">{{ selected_aral_term_label }}</span></span><i class="bi bi-chevron-down" aria-hidden="true"></i></button><div class="student-filter-menu" role="listbox" aria-label="Term">{% for option in aral_term_options %}<button class="student-filter-option{% if option.value == selected_aral_term %} is-selected{% endif %}" type="button" role="option" aria-selected="{% if option.value == selected_aral_term %}true{% else %}false{% endif %}" data-value="{{ option.value }}"><span class="student-filter-option-text"><span class="student-filter-option-title">{{ option.label }}</span></span><i class="bi bi-check2 student-filter-check" aria-hidden="true"></i></button>{% endfor %}</div></div></form></div>
         <span class="aral-section-label">{% if assessment_week_section %}{{ assessment_week_section.grade_level }} · {{ assessment_week_section.section|default:assessment_week_section.class_name }}{% else %}Assigned section not available{% endif %}</span>
         <p class="aral-card-description">Student progress toward ARAL exit across performance and prescribed activities.</p>
         <div class="aral-chart-wrap">
@@ -2628,6 +2632,11 @@ function bindStudentDirectoryFilters() {
         });
         options.forEach(option => option.addEventListener('click', () => {
             wrap.dataset.value = option.dataset.value || '';
+            if (wrap.id === 'aralTermSelect') {
+                wrap.querySelector('input[name="aral_term"]').value = wrap.dataset.value;
+                wrap.closest('form')?.submit();
+                return;
+            }
             if (wrap.id === 'assessmentPeriodFilterWrap') {
                 wrap.dataset.assessment = option.dataset.assessment || '';
             }
