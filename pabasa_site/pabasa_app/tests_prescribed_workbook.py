@@ -61,6 +61,53 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertIn('playPrescribedAudio(a.instruction)', script)
         self.assertIn('id="wb-instruction-replay"', script)
 
+    def test_session8_only_hides_rendered_duplicate_restart_controls(self):
+        targets = {
+            'aral-l22-g1-c-syllable-builder': 'prescribed_workbook.js',
+            'aral-l22-g2-c-word-reading': 'prescribed_l22_g2_reading.js',
+            'aral-l22-g3-c-word-search': 'prescribed_l22_g3_word_search.js',
+            'aral-l22-g4-f-syllable-builder': 'prescribed_l22_g4_f_builder.js',
+            'aral-l22-g5-f-word-search': 'prescribed_l22_g5_f_word_search.js',
+            'aral-l22-g6-f-word-reading': 'prescribed_l22_g2_reading.js',
+            'aral-l23-g1-n-syllable-builder': 'prescribed_workbook.js',
+            'aral-l23-g2-n-word-reading': 'prescribed_l23_g2_reading.js',
+            'aral-l23-g6-q-syllable-builder': 'prescribed_workbook.js',
+            'aral-l24-g2-v-word-reading': 'prescribed_l24_g2_reading.js',
+            'aral-l24-g3-x-repeat': 'prescribed_l24_g3_repeat.js',
+            'aral-l24-g4-x-syllable-builder': 'prescribed_workbook.js',
+            'aral-l24-g5-z-syllabication': 'prescribed_workbook.js',
+            'aral-l24-g6-z-word-search': 'prescribed_workbook.js',
+            'aral-l24-g7-z-word-reading': 'prescribed_workbook.js',
+        }
+        self.assertEqual(set(targets), {
+            'aral-l22-g1-c-syllable-builder', 'aral-l22-g2-c-word-reading',
+            'aral-l22-g3-c-word-search', 'aral-l22-g4-f-syllable-builder',
+            'aral-l22-g5-f-word-search', 'aral-l22-g6-f-word-reading',
+            'aral-l23-g1-n-syllable-builder', 'aral-l23-g2-n-word-reading',
+            'aral-l23-g6-q-syllable-builder', 'aral-l24-g2-v-word-reading',
+            'aral-l24-g3-x-repeat', 'aral-l24-g4-x-syllable-builder',
+            'aral-l24-g5-z-syllabication', 'aral-l24-g6-z-word-search',
+            'aral-l24-g7-z-word-reading',
+        })
+        js_root = Path(__file__).parent / 'static/pabasa_app/js'
+        for source_name in set(targets.values()):
+            source = (js_root / source_name).read_text(encoding='utf-8')
+            self.assertNotIn('Ulitin Mula sa Simula', source)
+
+        workbook_source = (js_root / 'prescribed_workbook.js').read_text(encoding='utf-8')
+        self.assertIn('Subukan Muli', workbook_source)
+        self.assertIn('Pakinggan Muli', workbook_source)
+        self.assertIn('wb-s9-a1-complete-reset', workbook_source)
+        self.assertIn('wb-s9-a2-complete-reset', workbook_source)
+
+        controls_source = (js_root / 'prescribed_session8_11_controls.js').read_text(encoding='utf-8')
+        self.assertIn("action:'restart',revision:Number(state.revision || 0)", controls_source)
+
+        legacy_source = (js_root / 'prescribed_l24_g3_word_reading.js').read_text(encoding='utf-8')
+        self.assertIn('Ulitin Mula sa Simula', legacy_source)
+        template_source = (Path(__file__).parent / 'templates/pabasa_app/prescribed_workbook_page.html').read_text(encoding='utf-8')
+        self.assertNotIn('prescribed_l24_g3_word_reading.js', template_source)
+
     def test_session9_activity2_keeps_workbook_instruction_and_requires_drawing_and_courteous_word(self):
         activity = get_activity('aral-s9-a2-helping-drawing')
         self.assertEqual(activity['interaction_type'], 'drawing')

@@ -4605,11 +4605,20 @@
                 const resultType = String(result.type || "").trim().toLowerCase();
                 const genericallyConfirmedCorrect = targetIndex < confirmedWordIndex && status === "correct";
                 const activeUnresolvedMiscue = targetIndex === confirmedWordIndex && status === "miscue";
+                // The generic matcher stops at a skipped word. Story alignment
+                // confirms omissions when the learner resumes on a later word;
+                // consume the entire omission run, not just its first word.
+                let confirmedStoryOmission = false;
+                if (isStrictStoryReading() && resultType === "omission" && status === "miscue") {
+                    let followingIndex = targetIndex + 1;
+                    while (resultsByTargetIndex.get(followingIndex)?.type === "omission") followingIndex += 1;
+                    confirmedStoryOmission = resultsByTargetIndex.get(followingIndex)?.result === "correct";
+                }
                 const safelyResolvedAfterMiscue = firstMiscueResolved && (
                     status === "correct"
                     || resultType === "multi_token_substitution"
                 );
-                if (!genericallyConfirmedCorrect && !activeUnresolvedMiscue && !safelyResolvedAfterMiscue) {
+                if (!genericallyConfirmedCorrect && !activeUnresolvedMiscue && !safelyResolvedAfterMiscue && !confirmedStoryOmission) {
                     break;
                 }
                 if (paragraphWordResults[targetIndex] !== "miscue") {
@@ -5206,7 +5215,11 @@
                     ? Number(paragraphChunkMiscueResult?.expected_index ?? activeWordIndex)
                     : activeWordIndex;
                 const paragraphChunkCompleted = mode === "paragraph"
-                    && data.complete === true
+                    // Generic completion stops at an omission too. A strict
+                    // story can also finish from the server's aligned results
+                    // when the omission run and spoken tail were all consumed.
+                    && (data.complete === true || (isStrictStoryReading()
+                        && sequentialParagraphResults.some(result => result.type === "omission")))
                     && finalResolvedTargetIndex === data.word_syllable_ranges.length - 1;
                 storyDebug({
                     event: "post_miscue_sequential_consumption",
@@ -5422,14 +5435,18 @@
             }
         }
 
+        function usesCrlaNextWordHighlight() {
+            return isCrla && (mode === "sentence" || mode === "paragraph");
+        }
+
         function markCrlaNextWord(word) {
-            if (!isCrla) return;
+            if (!usesCrlaNextWordHighlight()) return;
             word.classList.add("is-next-word");
             word.setAttribute("aria-current", "true");
         }
 
         function markCrlaUnreadWord(word, isNext = false) {
-            if (!isCrla) return;
+            if (!usesCrlaNextWordHighlight()) return;
             word.classList.add("is-unread-word");
             if (isNext) {
                 word.classList.add("is-current");
@@ -5505,7 +5522,7 @@
                 }
                 const word = document.createElement("span");
                 word.className = "syllable";
-                if (wordIndex === targetIndex) word.classList.add("is-current");
+                if (!isCrla && wordIndex === targetIndex) word.classList.add("is-current");
                 word.textContent = part;
                 readingWord.appendChild(word);
                 wordIndex += 1;

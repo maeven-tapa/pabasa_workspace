@@ -28,11 +28,11 @@
         </header>
         ${finished ? `<section class="l24g2-complete"><h2>Magaling!</h2><p>Natapos mo ang Gawain 2.</p><div><a class="l24g2-primary" href="${next}">Susunod</a><a class="l24g2-secondary" href="${esc(data.back_url || '/dashboard/assessment/')}">Bumalik sa Aking Aralin</a></div></section>` : `<div class="l24g2-layout">
           <section class="l24g2-word-panel">${column(headers[0] || 'V', rows.map(row => row[0]).filter(Boolean))}${column(headers[1] || 'v', rows.map(row => row[1]).filter(Boolean))}</section>
-          <section class="l24g2-reading-panel"><h2>BASAHIN</h2><p class="l24g2-label">Tunog / Salitang Babasahin</p><strong class="l24g2-target">${esc(word())}</strong><p class="l24g2-attempts">Pagsubok: ${Number(state.reading_attempts || 0)} / 3</p><div class="l24g2-actions"><button class="l24g2-primary" id="read" type="button">🎙 Simulan ang Pagbasa</button>${state.reading_phase === 'help' ? '<button class="l24g2-secondary" id="retry" type="button">Subukan Muli</button>' : ''}</div><div class="l24g2-heard"><span>NARINIG KO</span><strong>${esc(state.last_transcript || '—')}</strong></div><p class="l24g2-feedback ${kind}" role="status" aria-live="polite">${esc(message || state.last_feedback || '')}</p><button class="l24g2-reset" id="restart" type="button">Ulitin Mula sa Simula</button></section>
+          <section class="l24g2-reading-panel"><h2>BASAHIN</h2><p class="l24g2-label">Tunog / Salitang Babasahin</p><strong class="l24g2-target">${esc(word())}</strong><p class="l24g2-attempts">Pagsubok: ${Number(state.reading_attempts || 0)} / 3</p><div class="l24g2-actions"><button class="l24g2-primary" id="read" type="button">🎙 Simulan ang Pagbasa</button>${state.reading_phase === 'help' ? '<button class="l24g2-secondary" id="retry" type="button">Subukan Muli</button>' : ''}</div><div class="l24g2-heard"><span>NARINIG KO</span><strong>${esc(state.last_transcript || '—')}</strong></div><p class="l24g2-feedback ${kind}" role="status" aria-live="polite">${esc(message || state.last_feedback || '')}</p></section>
         </div>`}
       </section></div>`;
     document.getElementById('instruction').onclick = playInstruction;
-    if (!finished) { document.getElementById('read').onclick = state.reading_phase === 'help' ? listen : record; document.getElementById('restart').onclick = restart; document.getElementById('retry')?.addEventListener('click', retry); }
+    if (!finished) { document.getElementById('read').onclick = state.reading_phase === 'help' ? listen : record; document.getElementById('retry')?.addEventListener('click', retry); }
   }
   async function request(event, form = null) {
     const body = form || JSON.stringify({...event, revision: Number(state.revision || 0)});
@@ -87,7 +87,6 @@
   }
   async function listen() { if (busy) return; busy = true; render(); try { await playAudio(word()); await request({action:'read_aloud'}); const message = 'Pakinggan ang tamang pagbigkas, pagkatapos ay subukan mong basahin.'; render(message); await playFeedback(message); } catch (error) { const message = error.message || 'Hindi available ang audio.'; render(message, 'bad'); await playFeedback(message).catch(() => {}); } finally { busy = false; } }
   async function retry() { if (busy) return; busy = true; try { await request({action:'retry_reading'}); const message = 'Handa ka na?'; render(message); await playFeedback(message); } catch (error) { const message = error.message || 'Hindi pa kailangan ang pag-ulit.'; render(message, 'bad'); await playFeedback(message).catch(() => {}); } finally { busy = false; } }
-  async function restart() { if (busy || !window.confirm('Sigurado ka bang gusto mong magsimula muli? Mawawala ang kasalukuyang progreso sa Gawain 2.')) return; busy = true; try { await request({action:'restart'}); render(); } catch (error) { render(error.message || 'Hindi na-reset ang gawain.', 'bad'); } finally { busy = false; } }
   document.addEventListener('pabasa:l24-started', () => { playInstruction(); }, {once: true});
   window.addEventListener('pagehide', () => {stream?.getTracks().forEach(track => track.stop()); if (audio) audio.pause();});
   render();

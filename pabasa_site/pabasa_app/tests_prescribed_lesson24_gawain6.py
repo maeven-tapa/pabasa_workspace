@@ -78,7 +78,7 @@ class Lesson24Gawain6WordSearchTests(SimpleTestCase):
         root = Path(__file__).parent
         js = (root / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
         views = (root / 'views.py').read_text(encoding='utf-8')
-        self.assertIn('let audioRun = 0, instructionSpoken = false, pendingSpeech = \'\', g6CompletionPromise = null;', js)
+        self.assertIn('g6CompletionPromise = null', js)
         self.assertIn('if(g6Search&&state.completed&&!wasCompleted)await completeG6();', js)
         completion_branch = js.split('if(g6Search){', 1)[1].split('if(g7Reading){', 1)[0]
         self.assertIn('BUMALIK SA AKING ARALIN', completion_branch)
@@ -89,7 +89,10 @@ class Lesson24Gawain6WordSearchTests(SimpleTestCase):
         self.assertIn('id="wb-g6-completion-modal"', completion_branch)
         self.assertNotIn('content.innerHTML=`<div class="wb-g6-completion-modal"', completion_branch)
         self.assertIn("if(g6Search&&L24_G6_WORD_SEARCH_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);", js)
-        self.assertIn('g6CompletionPromise=null;modal.remove();perform({action:\'restart\'})', js)
+        self.assertNotIn('wb-g6-complete-reset', completion_branch)
+        self.assertNotIn('wb-g6-reset', js)
+        controls = (root / 'static/pabasa_app/js/prescribed_session8_11_controls.js').read_text(encoding='utf-8')
+        self.assertIn("action:'restart',revision:Number(state.revision || 0)", controls)
         g6_view = views.split("audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_2/GAWAIN_6/'", 1)[1].split("if activity_key == 'aral-l24-g7-z-word-reading':", 1)[0]
         self.assertIn("'completion_url': reverse('prescribed_activity_complete'", g6_view)
 
