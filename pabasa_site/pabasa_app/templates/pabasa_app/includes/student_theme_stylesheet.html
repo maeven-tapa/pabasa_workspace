@@ -1,0 +1,15 @@
+{% load static %}
+{% comment %}Sky is styled by the base templates; only the equipped theme needs an extra stylesheet.{% endcomment %}
+{% if student_theme_slug == 'forest' %}
+<link rel="stylesheet" href="{% static 'pabasa_app/forest-theme.css' %}?v=storybook-forest-4">
+{% elif student_theme_slug == 'treasure' %}
+<link rel="stylesheet" href="{% static 'pabasa_app/treasure-theme.css' %}?v=storybook-treasure-1">
+{% elif student_theme_slug == 'space' %}
+<link rel="stylesheet" href="{% static 'pabasa_app/space-theme.css' %}?v=storybook-space-1">
+{% elif student_theme_slug == 'library' %}
+<link rel="stylesheet" href="{% static 'pabasa_app/library-theme.css' %}?v=storybook-library-1">
+{% elif student_theme_slug == 'zoo' %}
+<link rel="stylesheet" href="{% static 'pabasa_app/zoo-theme.css' %}?v=storybook-zoo-1">
+{% elif student_theme_slug == 'ocean' %}
+<link rel="stylesheet" href="{% static 'pabasa_app/ocean-theme.css' %}?v=storybook-ocean-1">
+{% endif %}

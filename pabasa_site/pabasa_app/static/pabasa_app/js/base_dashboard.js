@@ -629,21 +629,11 @@ var getStudentClassData = window.getStudentClassData = function() {
                 stage: 'student_bootstrap_classes_fetch_start',
                 timestamp: Math.round(performance.now() * 100) / 100,
             });
-            fetch('/api/student/classes/', {
-                method: 'GET',
-                credentials: 'same-origin',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            }).then(async (r) => {
+            window.PabasaStudentClasses.load().then((data) => {
                 const fetchDoneAt = performance.now();
-                let jsonParseStartedAt = performance.now();
-                const data = await r.json();
-                const jsonParseDoneAt = performance.now();
                 console.warn('PABASA_FRONTEND_PROFILE', {
                     stage: 'student_bootstrap_classes_fetch_complete',
                     elapsed_ms: Math.round((fetchDoneAt - studentBootstrapStartedAt) * 100) / 100,
-                    json_parse_ms: Math.round((jsonParseDoneAt - jsonParseStartedAt) * 100) / 100,
-                    status: r.status,
-                    ok: r.ok,
                     classes_count: Array.isArray(data?.classes) ? data.classes.length : null,
                 });
                 return data;

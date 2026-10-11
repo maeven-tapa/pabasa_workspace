@@ -1,3 +1,4 @@
+{% if student_theme_slug == 'forest' %}
 <div class="forest-world" aria-hidden="true">
     <div class="forest-sky"></div>
     <div class="forest-rays"></div>
@@ -35,6 +36,7 @@
     </svg>
     <div class="forest-mushrooms"><i></i><i></i><i></i></div>
 </div>
+{% elif student_theme_slug == 'ocean' %}
 <div class="ocean-world" aria-hidden="true">
     <div class="ocean-sky"></div>
     <div class="ocean-sun"></div>
@@ -58,6 +60,7 @@
         <path d="M157 53q9 4 18-2" fill="none" stroke="#06384f" stroke-width="4" stroke-linecap="round"/>
     </svg>
 </div>
+{% elif student_theme_slug == 'zoo' %}
 <div class="zoo-world" aria-hidden="true">
     <div class="zoo-sky"></div>
     <div class="zoo-sun"></div>
@@ -84,6 +87,7 @@
         <path d="M32 110h86" stroke="#27272a" stroke-width="8" stroke-linecap="round"/>
     </svg>
 </div>
+{% elif student_theme_slug == 'library' %}
 <div class="library-world" aria-hidden="true">
     <div class="library-glow"></div>
     <div class="library-shelves"><i></i><i></i><i></i></div>
@@ -106,6 +110,7 @@
         <path d="M42 111h46" stroke="#34154f" stroke-width="6" stroke-linecap="round"/>
     </svg>
 </div>
+{% elif student_theme_slug == 'space' %}
 <div class="space-world" aria-hidden="true">
     <div class="space-nebula"></div>
     <div class="space-stars">
@@ -130,6 +135,7 @@
         <path d="M70 76h40l16 20H54Z" fill="rgba(187,247,255,.38)"/>
     </svg>
 </div>
+{% elif student_theme_slug == 'treasure' %}
 <div class="treasure-world" aria-hidden="true">
     <div class="treasure-sky"></div>
     <div class="treasure-sun"></div>
@@ -157,3 +163,4 @@
         <circle cx="48" cy="121" r="7" fill="#f5c84f"/><circle cx="65" cy="124" r="7" fill="#f5c84f"/><circle cx="132" cy="122" r="7" fill="#f5c84f"/>
     </svg>
 </div>
+{% endif %}

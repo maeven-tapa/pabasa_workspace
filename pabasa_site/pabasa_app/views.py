@@ -1141,12 +1141,11 @@ def _official_crla_assessment_phase(student=None, request=None, on_date=None):
     if not student or getattr(student, 'role', '') != 'student':
         return 'intervention'
 
-    joined_sections = [
-        section
-        for section in Section.objects.filter(is_active=True).only('id', 'students')
-        if section.has_student(student, active_only=True)
-    ]
-    if not joined_sections:
+    has_joined_section = Section.objects.filter(
+        is_active=True, enrollments__student_id=student.pk,
+        enrollments__status='active', enrollments__is_active=True,
+    ).exists()
+    if not has_joined_section:
         return 'intervention'
 
     active_calendar = _school_calendar_for_user(student) or _active_school_calendar(check_date)
@@ -33894,37 +33893,46 @@ def get_student_joined_classes(request):
         reader_state = _reader_assessment_state(student_user)
         aral_eligible = bool(reader_state.get('aral_eligible'))
         
-        # Get all active sections where this student is enrolled
+        # Match Section.has_student(active_only=True) in SQL, without scanning
+        # every school's sections or materializing the roster just to count it.
         section_scan_started_at = time.perf_counter()
-        sections = Section.objects.filter(is_active=True).order_by('class_name')
+        enrolled_section_ids = Enrollment.objects.filter(
+            student_id=student_user.id, status='active', is_active=True,
+        ).values('section_id')
+        sections = Section.objects.filter(
+            is_active=True, pk__in=enrolled_section_ids,
+        ).select_related('teacher', 'school_calendar').annotate(
+            active_student_count=Count(
+                'enrollments',
+                filter=Q(enrollments__status='active', enrollments__is_active=True),
+            ),
+        ).order_by('class_name')
         joined_classes = []
         
         for section in sections:
-            # Check if student is actively enrolled in this section
-            if section.has_student(student_user, active_only=True):
-                aral_progress = _student_current_aral_progress(
-                    student_user,
-                    section,
-                ) if official_crla_completed and aral_eligible else {'total': 0, 'completed': 0}
-                joined_classes.append({
-                    'id': section.id,
-                    'section_id': section.id,
-                    'code': section.class_code,
-                    'name': section.class_name,
-                    'subject': section.subject or '',
-                    'description': section.description or '',
-                    'header': section.header or section.class_code[:4],
-                    'teacher_id': section.teacher.custom_id if section.teacher else None,
-                    'teacher_name': f"{section.teacher.first_name} {section.teacher.last_name}" if section.teacher else '',
-                'student_count': section.get_student_count(),
-                    'assessment_week_enabled': bool(section.assessment_week_enabled),
-                    'official_crla_completed': official_crla_completed,
-                    'aral_eligible': aral_eligible,
-                    'current_aral_week': aral_progress.get('week'),
-                    'aral_week_total': aral_progress['total'],
-                    'aral_week_completed': aral_progress['completed'],
+            aral_progress = _student_current_aral_progress(
+                student_user,
+                section,
+            ) if official_crla_completed and aral_eligible else {'total': 0, 'completed': 0}
+            joined_classes.append({
+                'id': section.id,
+                'section_id': section.id,
+                'code': section.class_code,
+                'name': section.class_name,
+                'subject': section.subject or '',
+                'description': section.description or '',
+                'header': section.header or section.class_code[:4],
+                'teacher_id': section.teacher.custom_id if section.teacher else None,
+                'teacher_name': f"{section.teacher.first_name} {section.teacher.last_name}" if section.teacher else '',
+                'student_count': section.active_student_count,
+                'assessment_week_enabled': bool(section.assessment_week_enabled),
+                'official_crla_completed': official_crla_completed,
+                'aral_eligible': aral_eligible,
+                'current_aral_week': aral_progress.get('week'),
+                'aral_week_total': aral_progress['total'],
+                'aral_week_completed': aral_progress['completed'],
                 'created_at': section.created_at.isoformat(),
-                })
+            })
         
         logger.warning(
             "PABASA_DASHBOARD_PROFILE %s",

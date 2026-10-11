@@ -3682,12 +3682,7 @@
         @keyframes storyCallPulse { 50% { box-shadow:0 0 0 10px rgba(217,76,98,.16),0 6px 0 #b43c50; } }
         @media (max-width:680px) { .story-call-video { min-height:350px; } .story-call-stage { min-height:280px; } .story-call-maya { max-width:88%; } .story-call-bubble { top:2%; right:0; width:72%; padding:.75rem; } .story-call-bubble p { font-size:1rem; } .story-call-bubble:after { left:auto; right:28px; bottom:-20px; border-right-color:transparent; border-top-color:#fffdf4; } .story-question-nav { grid-template-columns:1fr 1fr !important; } .story-call-mic { grid-column:1 / -1; grid-row:1; } }
 </style>
-<link rel="stylesheet" href="{% static 'pabasa_app/forest-theme.css' %}?v=storybook-forest-3">
-<link rel="stylesheet" href="{% static 'pabasa_app/treasure-theme.css' %}?v=storybook-treasure-1">
-<link rel="stylesheet" href="{% static 'pabasa_app/space-theme.css' %}?v=storybook-space-1">
-<link rel="stylesheet" href="{% static 'pabasa_app/library-theme.css' %}?v=storybook-library-1">
-<link rel="stylesheet" href="{% static 'pabasa_app/zoo-theme.css' %}?v=storybook-zoo-1">
-<link rel="stylesheet" href="{% static 'pabasa_app/ocean-theme.css' %}?v=storybook-ocean-1">
+{% include "pabasa_app/includes/student_theme_stylesheet.html" %}
 <style>
     body.is-crla-reader[data-student-theme] {
         background:

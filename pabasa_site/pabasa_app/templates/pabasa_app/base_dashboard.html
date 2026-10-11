@@ -14,12 +14,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{% static 'pabasa_app/notification_nav.css' %}">
     <link rel="stylesheet" href="{% static 'pabasa_app/notifications_shared.css' %}">
-    <link rel="stylesheet" href="{% static 'pabasa_app/forest-theme.css' %}?v=storybook-forest-4">
-    <link rel="stylesheet" href="{% static 'pabasa_app/treasure-theme.css' %}?v=storybook-treasure-1">
-    <link rel="stylesheet" href="{% static 'pabasa_app/space-theme.css' %}?v=storybook-space-1">
-    <link rel="stylesheet" href="{% static 'pabasa_app/library-theme.css' %}?v=storybook-library-1">
-    <link rel="stylesheet" href="{% static 'pabasa_app/zoo-theme.css' %}?v=storybook-zoo-1">
-    <link rel="stylesheet" href="{% static 'pabasa_app/ocean-theme.css' %}?v=storybook-ocean-1">
+    {% if nav_role == 'student' %}
+    {% include "pabasa_app/includes/student_theme_stylesheet.html" %}
+    {% endif %}
     <style>
         :root {
             --dash-primary: #2EA8E5;
@@ -3904,7 +3901,10 @@
         window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
     </script>
     <script src="{% static 'pabasa_app/js/class_materials.js' %}?v=20261010-summary-1"></script>
-    <script src="{% static 'pabasa_app/js/base_dashboard.js' %}?v=20261011-sidebar-slide"></script>
+    {% if nav_role == 'student' %}
+    <script src="{% static 'pabasa_app/js/student_classes.js' %}?v=20261011-1"></script>
+    {% endif %}
+    <script src="{% static 'pabasa_app/js/base_dashboard.js' %}?v=20261011-shared-classes-1"></script>
     <script src="{% static 'pabasa_app/js/notifications_shared.js' %}"></script>
     <script>
         (() => {

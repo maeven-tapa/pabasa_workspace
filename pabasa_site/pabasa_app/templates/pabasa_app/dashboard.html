@@ -3776,18 +3776,10 @@
             }
             try {
                 const fetchStartedAt = performance.now();
-                const response = await fetch('/dashboard/student/classes/', {
-                    method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                    }
-                });
+                const data = await window.PabasaStudentClasses.load();
                 perfLog("fetch_student_classes_complete", {
                     elapsed_fetch_ms: Math.round((performance.now() - fetchStartedAt) * 100) / 100,
-                    status: response.status,
-                    ok: response.ok,
                 });
-                const data = await response.json();
                 if (data.success && Array.isArray(data.classes)) {
                     // Create map of Section ID -> class details from database
                     const classMap = {};
@@ -4048,21 +4040,11 @@
                 timestamp: Math.round(classFetchStartedAt * 100) / 100,
             });
             try {
-                const response = await fetch('/dashboard/student/classes/', {
-                    method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                    }
-                });
+                const data = await window.PabasaStudentClasses.load();
                 const responseDoneAt = performance.now();
-                const data = await response.json();
-                const jsonDoneAt = performance.now();
                 console.warn('PABASA_FRONTEND_PROFILE', {
                     stage: 'dashboard_student_classes_fetch_complete',
                     elapsed_fetch_ms: Math.round((responseDoneAt - classFetchStartedAt) * 100) / 100,
-                    json_parse_ms: Math.round((jsonDoneAt - responseDoneAt) * 100) / 100,
-                    status: response.status,
-                    ok: response.ok,
                     classes_count: Array.isArray(data?.classes) ? data.classes.length : null,
                 });
                 if (data.success && Array.isArray(data.classes)) {
@@ -4309,6 +4291,7 @@
                 }
 
                 // Remove from local saved codes and update UI
+                window.PabasaStudentClasses.invalidate();
                 const remainingCodes = getSavedCodes().filter((savedSectionId) => String(savedSectionId) !== String(pendingUnenrollSectionId));
                 await setJoinedState(remainingCodes);
 
@@ -4354,6 +4337,7 @@
 
         window.addEventListener("storage", (event) => {
             if ([teacherClassesKey, "pabasa_section_readings", "pabasa_seen_material_ids"].includes(event.key)) {
+                window.PabasaStudentClasses.invalidate();
                 setJoinedState(getSavedCodes());
             }
         });

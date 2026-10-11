@@ -97,6 +97,7 @@ function setup() {
     const studentSource = fs.readFileSync(path.join(templates, 'dashboard.html'), 'utf8');
     let studentRequests = 0;
     const student = vm.createContext({
+        window: {},
         fetch: async () => {
             studentRequests++;
             return { ok: true, status: 200, json: async () => ({ success: true,
@@ -104,6 +105,8 @@ function setup() {
             }) };
         }, console: { warn() {}, error() {} }, performance: { now: () => 0 }, perfLog() {},
     });
+    vm.runInContext(fs.readFileSync(path.join(__dirname,
+        '../pabasa_site/pabasa_app/static/pabasa_app/js/student_classes.js'), 'utf8'), student);
     vm.runInContext(extract(studentSource, 'let initialStudentClasses = null;', 'const renderClassCards =') +
         extract(studentSource, 'const fetchStudentClassesFromDatabase =', '// Initialize with database classes'), student);
     const ids = await vm.runInContext('fetchStudentClassesFromDatabase()', student);
@@ -111,6 +114,9 @@ function setup() {
     assert.equal(ids[0], '17');
     assert.equal(details['17'].name, 'Class A');
     assert.equal(studentRequests, 1, 'student initial IDs and cards share one response');
+    await vm.runInContext('fetchClassDetailsFromDatabase(["17"])', student);
+    assert.equal(studentRequests, 1, 'layout updates reuse the page class listing');
+    vm.runInContext('window.PabasaStudentClasses.invalidate()', student);
     await vm.runInContext('fetchClassDetailsFromDatabase(["17"])', student);
     assert.equal(studentRequests, 2, 'later student refresh still contacts the server');
 
