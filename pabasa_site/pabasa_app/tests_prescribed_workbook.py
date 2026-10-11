@@ -139,11 +139,24 @@ class WorkbookStateTests(SimpleTestCase):
 
         self.assertIn("activity_key == 'aral-l23-g7-q-word-reading'", template)
         self.assertIn('<div id="wb-progress-row">', template)
-        self.assertIn('if(qReading)readingHeading.remove()', script)
+        self.assertIn('if(qReading||l23G3||l24G3WordReading)readingHeading.remove()', script)
         self.assertIn('#wb-progress-track', css)
         self.assertIn('grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))', css)
         self.assertIn('width:clamp(260px,24vw,320px)', css)
         self.assertIn('width:clamp(220px,24vw,280px)', css)
+
+    def test_targeted_ui_consistency_repairs_are_guarded(self):
+        root = Path(__file__).parent
+        script = (root / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
+        g4_css = (root / 'static/pabasa_app/css/prescribed_l23_g4_syllabication.css').read_text(encoding='utf-8')
+        g7_css = (root / 'static/pabasa_app/css/prescribed_l23_g7_reading.css').read_text(encoding='utf-8')
+
+        self.assertIn('qReading||l23G3||l24G3WordReading', script)
+        self.assertIn("activity_key === 'aral-l23-g3-j-word-reading'", script)
+        self.assertIn("activity_key === 'aral-l24-g3-x-word-reading'", script)
+        self.assertIn('max-width:100%;min-width:0', g4_css)
+        self.assertIn('width:min(230px,100%)', g4_css)
+        self.assertIn('background:#b9dfe3', g7_css)
 
     def test_session8_duplicate_header_instructions_are_activity_scoped_and_audio_backed(self):
         hidden = {
