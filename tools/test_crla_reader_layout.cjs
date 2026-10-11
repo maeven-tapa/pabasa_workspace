@@ -11,7 +11,13 @@ const source = fs.readFileSync(process.env.CRLA_READER_SOURCE_PATH ||
 // Expose the actual speech entry point only in this test to hold a provider
 // request across the teacher's End Session action without microphone hardware.
 const testSource = source.replace('        loadItems();',
-  '        window.__readerTest = {sendAudioChunk, currentSpeechContext, handleSpeechResult, strictStoryEvidence};\n        loadItems();');
+  `        window.__readerTest = {sendAudioChunk, currentSpeechContext, handleSpeechResult, strictStoryEvidence,
+    setFixtureHearing({speaking = false, pending = false, buffered = false} = {}) {
+      isRecording = speaking || pending || buffered; recognitionActive = isRecording;
+      isSendingChunk = pending; hasHeardSinceLastChunk = buffered; speechFrameCount = speaking ? 3 : 0;
+      shell.classList.toggle('is-hearing', speaking); renderOfficialCrlaStatus();
+    }};
+        loadItems();`);
 const rendered = spawnSync(process.env.CRLA_PYTHON_PATH || 'python', ['-c', `
 import os, json, django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pabasa_site.settings')
@@ -63,7 +69,7 @@ async function snapshot(page) {
   try {
     const selectedWidths = process.env.CRLA_VIEWPORT_WIDTHS?.split(',').map(Number);
     for (const viewport of [{width: 1366, height: 768}, {width: 1024, height: 768},
-      {width: 768, height: 1024}, {width: 390, height: 844}, {width: 320, height: 740}]
+      {width: 768, height: 1024}, {width: 844, height: 390}, {width: 390, height: 844}, {width: 320, height: 568}]
       .filter(viewport => !selectedWidths || selectedWidths.includes(viewport.width))) {
       for (const debug of [1366, 390].includes(viewport.width) ? [false, true] : [false]) {
         for (const [branch, mode] of Object.entries(modes)) {
@@ -146,7 +152,8 @@ async function snapshot(page) {
           const expectedMode = mode === 'para' ? 'paragraph' : mode;
           assert.deepEqual(before.shellModes, [`reader-${expectedMode}`]);
           assert.deepEqual(before.cardModes, [`content-${expectedMode}`]);
-          if (mode !== 'para') assert.ok(parseFloat(before.fontSize) >= 32, JSON.stringify(before));
+          if (mode !== 'para') assert.ok(parseFloat(before.fontSize) >=
+            (mode === 'sentence' && viewport.width <= 1024 ? 20 : 32), JSON.stringify(before));
           paused = false;
           await page.waitForURL(resumedUrl);
           await page.waitForFunction(() => !document.getElementById('readingWord').textContent.includes('Loading'));
@@ -154,12 +161,29 @@ async function snapshot(page) {
           await page.reload();
           await page.waitForFunction(() => !document.getElementById('readingWord').textContent.includes('Loading'));
           assert.deepEqual(await snapshot(page), before, `${branch}, ${viewport.width}px, debug=${debug}: refresh`);
+          assert.equal(await page.title(), 'PABASA | CRLA');
+          if (!debug && viewport.width <= 1024) {
+            const size = await page.evaluate(() => ({width: document.documentElement.scrollWidth,
+              height: document.documentElement.scrollHeight, viewportHeight: window.innerHeight}));
+            assert.ok(size.width <= viewport.width && size.height <= size.viewportHeight + 1,
+              `${branch}: reading screen fits without scrolling at ${viewport.width}px: ${JSON.stringify(size)}`);
+          }
           const section = {words: 'Word', rhymes: 'Rhymes', sentences: 'Sentence', story_reading: 'Story'}[branch];
           const headerSection = branch === 'rhymes' ? 'Rhyme' : section;
           assert.equal(await page.locator('.reader-top .eyebrow').textContent(), `${headerSection} Reading Assessment`,
             `${branch}: heading follows the recovered section`);
           assert.equal(await page.locator('#readingHelperText').textContent(), `Read the ${section}`,
             `${branch}: reading instruction follows the recovered section`);
+          if (viewport.width === 1366 && !debug) {
+            await page.evaluate(() => window.__readerTest.setFixtureHearing({speaking: true, pending: true}));
+            assert.equal(await page.locator('#readingHelperText').textContent(), 'Hearing you...');
+            assert.ok(!await page.locator('.official-crla-status').evaluate(el => el.classList.contains('is-status-processing')));
+            await page.evaluate(() => window.__readerTest.setFixtureHearing({pending: true}));
+            assert.equal(await page.locator('#readingHelperText').textContent(), 'Processing...');
+            await page.evaluate(() => window.__readerTest.setFixtureHearing({buffered: true}));
+            assert.equal(await page.locator('#readingHelperText').textContent(), `Read the ${section}`);
+            await page.evaluate(() => window.__readerTest.setFixtureHearing());
+          }
           const layout = await page.evaluate(() => {
             const card = document.querySelector('.reader-card').getBoundingClientRect();
             const word = document.getElementById('readingWord');

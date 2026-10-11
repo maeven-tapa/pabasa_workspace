@@ -671,7 +671,9 @@ class AssessmentWorkflowBranchingTests(TestCase):
         self.assertNotIn("crlaQuestionNextBtn.disabled = true", recording)
 
         next_handler = source.split('crlaQuestionNextBtn?.addEventListener("click", async () => {', 1)[1].split('crlaQuestionReadAloudBtn?.addEventListener', 1)[0]
-        self.assertIn("if (currentStoryAnswers[questionIndex]) return;", next_handler)
+        # Only an in-flight grading attempt blocks Next. A saved spoken answer
+        # must still allow retrying the transition after a scoring failure.
+        self.assertIn("if (crlaSpokenAttemptProcessing) return;", next_handler)
         self.assertIn("currentStoryResults[questionIndex] === null", next_handler)
         self.assertIn("crlaSpeechRecognition?.abort()", next_handler)
         self.assertNotIn('completeCRLASpokenAttempt(', next_handler)

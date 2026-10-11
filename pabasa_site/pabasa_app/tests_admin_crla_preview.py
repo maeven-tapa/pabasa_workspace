@@ -5,6 +5,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from django.core.exceptions import PermissionDenied
 from django.test import RequestFactory, SimpleTestCase
+from django.template.loader import render_to_string
 
 from . import views
 from .scoring import crla_part2_profile, crla_reading_profile
@@ -26,6 +27,19 @@ class AdminCrlaPreviewTests(SimpleTestCase):
         with patch.object(views, '_get_official_reading_material', return_value=self.material) as resolver:
             self.assertIs(views._admin_published_crla(12), self.material)
         resolver.assert_called_once_with(12)
+
+    def test_crla_tab_title_and_preview_quit_on_all_reader_surfaces(self):
+        for surface in ('word', 'sentence', 'para'):
+            with self.subTest(surface=surface):
+                html = render_to_string(f'pabasa_app/reading_{surface}_page.html', {
+                    'crla_official_assessment_id': 12,
+                    'crla_official_assessment_data': {'assessment_kind': 'crla'},
+                    'is_admin_preview': True,
+                })
+                self.assertIn('<title>PABASA | CRLA</title>', html)
+                self.assertIn('Quit</button>', html)
+        regular = render_to_string('pabasa_app/reading_word_page.html')
+        self.assertIn('<title>Word Reading Assessment</title>', regular)
 
     def test_resolver_rejects_missing_inactive_or_unpublished_records(self):
         for material in (None, SimpleNamespace(is_active=False, status='published'),
