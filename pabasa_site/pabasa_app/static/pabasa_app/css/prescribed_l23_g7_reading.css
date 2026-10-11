@@ -159,3 +159,12 @@
   .wb-page.wb-l23-g7-reading #wb-action button { width: 100%; min-width: 0; }
 }
 @media (max-width: 380px) { .wb-page.wb-l23-g7-reading .wb-j-word { min-height: 68px; padding-inline: 6px; font-size: 1.04rem; } }
+
+/* Gawain 7 keeps the progress readout on the same center axis as the shell. */
+.wb-page.wb-l23-g7-reading #wb-progress-row { display:grid; justify-items:center; gap:16px; width:min(320px,100%); margin:0 auto; }
+.wb-page.wb-l23-g7-reading #wb-progress-row #wb-progress { width:100%; margin:0; }
+.wb-page.wb-l23-g7-reading #wb-progress-track { width:100%; height:10px; overflow:hidden; border-radius:999px; background:rgba(255,255,255,.72); box-shadow:inset 0 1px 3px rgba(24,62,99,.12); }
+.wb-page.wb-l23-g7-reading #wb-progress-fill { display:block; width:0; height:100%; border-radius:inherit; background:var(--l23-g7-teal); transition:width .2s ease; }
+.wb-page.wb-l23-g7-reading .wb-j-grid { max-width:900px; grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); }
+@media (min-width:1200px) and (max-width:1439px) { .wb-page.wb-l23-g7-reading #wb-progress-row { width:clamp(260px,24vw,320px); } }
+@media (min-width:1024px) and (max-width:1199px) { .wb-page.wb-l23-g7-reading #wb-progress-row { width:clamp(220px,24vw,280px); } }

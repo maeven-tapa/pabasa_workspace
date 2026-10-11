@@ -98,6 +98,7 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertNotIn('wb-l23-g3-subtitle', workbook)
         self.assertIn('<h2>BASAHIN</h2>', workbook)
         self.assertIn('<h2>BASAHIN</h2>', l24_reading)
+
         self.assertIn('wb-reading-target', workbook)
         self.assertIn('wb-g7-current-word', workbook)
         self.assertIn('wb-l23-g3-target', workbook)
@@ -129,6 +130,20 @@ class WorkbookStateTests(SimpleTestCase):
             'workbook_payload': {'activity': get_activity('aral-l24-g3-x-word-reading')},
         })
         self.assertNotIn('prescribed_l24_g3_word_reading.js', x_word_html)
+
+    def test_lesson23_gawain7_uses_horizontal_progress_and_single_main_title(self):
+        root = Path(__file__).parent
+        template = (root / 'templates/pabasa_app/prescribed_workbook_page.html').read_text(encoding='utf-8')
+        script = (root / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
+        css = (root / 'static/pabasa_app/css/prescribed_l23_g7_reading.css').read_text(encoding='utf-8')
+
+        self.assertIn("activity_key == 'aral-l23-g7-q-word-reading'", template)
+        self.assertIn('<div id="wb-progress-row">', template)
+        self.assertIn('if(qReading)readingHeading.remove()', script)
+        self.assertIn('#wb-progress-track', css)
+        self.assertIn('grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))', css)
+        self.assertIn('width:clamp(260px,24vw,320px)', css)
+        self.assertIn('width:clamp(220px,24vw,280px)', css)
 
     def test_session8_duplicate_header_instructions_are_activity_scoped_and_audio_backed(self):
         hidden = {

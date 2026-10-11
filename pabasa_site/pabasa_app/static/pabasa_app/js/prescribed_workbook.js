@@ -584,7 +584,7 @@
     const current=Number(state.index||0), done=new Set(state.completed_words||[]);
     content.innerHTML=`${instructionBanner()}<section class="wb-focus wb-j-reading"><h2>Mga salitang may letrang Jj</h2><div class="wb-j-grid">${a.items.map((it,i)=>`<div class="wb-j-word ${done.has(i)?'is-done':''} ${i===current?'is-current':''}" aria-current="${i===current?'step':'false'}">${esc(it.text)}${done.has(i)?'<span aria-label="Tapos na"> ✓</span>':''}</div>`).join('')}</div><p class="wb-j-feedback" id="wb-j-feedback" role="status" aria-live="polite">${esc(state.last_feedback||'Handa ka na.')}</p></section>`;
     const readingHeading=content.querySelector('.wb-j-reading h2');
-    if(readingHeading)readingHeading.textContent=a.title;
+    if(readingHeading){if(qReading)readingHeading.remove();else readingHeading.textContent=a.title;}
     const replay=document.getElementById('wb-instruction-replay');
     replay.onclick=()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>{const text=e.message||'Hindi available ang panuto.';setJFeedback(text,true);if((l23G3&&G3_MAPPED_TEXT.has(text))||(qReading&&G7_MAPPED_TEXT.has(text))||(l24G3WordReading&&L24_G3_WORD_MAPPED_TEXT.has(text)))playPrescribedAudio(text,true).catch(()=>{});});};
     if(!preview)speakInstruction();
