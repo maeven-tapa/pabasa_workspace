@@ -1,0 +1,56 @@
+/* Gawain 7: keep both activity phases inside the available screen. */
+body.gawain7-page{height:100dvh;min-height:0;overflow:hidden}
+body.session67-activity.gawain7-page .page{width:min(1200px,calc(100% - 24px))!important;height:100dvh!important;padding:8px 0!important;overflow:hidden!important;gap:6px!important}
+body.session67-activity.gawain7-page .back{position:relative!important;width:auto;min-width:0;min-height:42px;max-height:42px;padding:6px 16px;font-size:.95rem}
+body.session67-activity.gawain7-page .card{flex:1 1 auto!important;width:100%!important;height:auto!important;min-height:0!important;margin:0!important;padding:clamp(10px,2dvh,22px) clamp(10px,2vw,26px)!important;overflow:hidden!important;border-radius:clamp(20px,3vw,32px)!important}
+.gawain7-page .page{height:100dvh;min-height:0;padding:clamp(8px,1.5dvh,16px) clamp(10px,2vw,24px);display:flex;flex-direction:column;gap:clamp(6px,1dvh,12px)}
+.gawain7-page .back{position:relative;top:auto;left:auto;align-self:flex-start;min-height:44px;max-height:48px;padding:7px 18px;font-size:.95rem;flex:none}
+.gawain7-page .card{position:relative;inset:auto;transform:none;flex:1;min-height:0;height:auto;max-height:none;width:min(1050px,100%);margin:0 auto;padding:clamp(12px,2dvh,22px) clamp(12px,2.5vw,30px);overflow:hidden;justify-content:center;gap:0}
+.gawain7-page .g7-header{flex:none;margin:0 auto clamp(5px,.8dvh,10px)}
+.gawain7-page .g7-header .eyebrow{margin-bottom:clamp(4px,.6dvh,8px);padding:5px 14px;font-size:clamp(.66rem,1.4vw,.85rem)}
+.gawain7-page .g7-header h1{font-size:clamp(1.35rem,2.7vw,2.15rem);line-height:1.08}
+.gawain7-page .g7-stage{flex:none;gap:6px;margin:clamp(3px,.7dvh,8px) auto 0;flex-wrap:nowrap}
+.gawain7-page .g7-stage span{padding:6px 10px;font-size:clamp(.7rem,1.4vw,.92rem)}
+.gawain7-page .g7-item-progress{flex:none;margin:clamp(5px,.8dvh,10px) auto 0;font-size:clamp(.86rem,1.4vw,1rem)}
+.gawain7-page .g7-match-help{flex:none;margin:clamp(3px,.5dvh,7px) auto 0;font-size:clamp(.82rem,1.5vw,.98rem)}
+.gawain7-page .board{flex:1;min-height:0;height:auto;width:min(850px,100%);gap:clamp(8px,2vw,22px);margin:clamp(5px,.9dvh,10px) auto 0}
+.gawain7-page .column{min-height:0;grid-template-rows:minmax(20px,auto) repeat(5,minmax(0,1fr));gap:clamp(3px,.6dvh,7px)}
+.gawain7-page .column h2{margin:0;font-size:clamp(.83rem,1.6vw,1rem);line-height:1.1}
+.gawain7-page .item,.gawain7-page .word-card{min-height:0;height:100%;padding:2px 8px;font-size:clamp(.94rem,1.8vw,1.18rem);border-radius:13px}
+.gawain7-page .item img{width:min(64px,18vw);height:100%;max-height:clamp(34px,6dvh,56px);object-fit:contain}
+.gawain7-page .g7-status{flex:none;min-height:1.3em;margin:clamp(4px,.7dvh,9px) 0 0;font-size:clamp(.82rem,1.4vw,1rem);line-height:1.2}
+.gawain7-page .g7-reading-word{margin:clamp(16px,4dvh,38px) auto clamp(12px,3dvh,28px);font-size:clamp(3rem,11vw,6rem)}
+.gawain7-page .g7-read-actions .button{min-height:clamp(52px,8dvh,68px)}
+.gawain7-page .g7-intro-steps{margin:clamp(12px,3dvh,28px) auto}
+.gawain7-page .g7-intro-step{min-height:clamp(90px,16dvh,148px)}
+.gawain7-page .s6-modal .s6-card{max-height:calc(100dvh - 24px);overflow:auto}
+.gawain7-page :is(button,a):focus-visible{outline:4px solid #b56816;outline-offset:3px}
+@media(max-width:620px){
+  body.session67-activity.gawain7-page .back{width:100px!important;min-height:42px;max-height:42px;font-size:0}
+  .gawain7-page .page{padding:8px;gap:6px}
+  .gawain7-page .back{position:relative;top:auto;left:auto;width:100px;min-width:0;min-height:42px;max-height:42px;font-size:0}
+  .gawain7-page .back::before{content:'← Bumalik';font-size:.9rem}
+  .gawain7-page .card{padding:10px 8px;border-radius:20px}
+  .gawain7-page .g7-header h1{font-size:clamp(1.18rem,5vw,1.6rem)}
+  .gawain7-page .g7-stage span{padding:5px 6px;font-size:clamp(.62rem,2.4vw,.8rem)}
+  .gawain7-page .board{grid-template-columns:1fr 1fr;gap:6px;margin-top:5px}
+  .gawain7-page .column{gap:3px}
+  .gawain7-page .item,.gawain7-page .word-card{min-height:0;padding:2px 3px;font-size:clamp(.82rem,3vw,1rem)}
+  .gawain7-page .item img{width:min(42px,14vw);max-height:clamp(30px,6dvh,44px)}
+  .gawain7-page .g7-read-actions{flex-direction:row;gap:5px}
+  .gawain7-page .g7-read-actions .button{width:auto;min-width:0;flex:1;padding:8px 5px;font-size:.9rem}
+  .gawain7-page .g7-intro-steps{grid-template-columns:1fr auto 1fr;gap:4px}
+  .gawain7-page .g7-intro-step{min-height:90px;padding:7px;font-size:.85rem}
+  .gawain7-page .g7-arrow{transform:none;font-size:1rem}
+}
+@media(max-height:600px){
+  .gawain7-page .page{gap:4px;padding:5px}
+  .gawain7-page .back{min-height:36px;max-height:36px;padding:4px 13px}
+  .gawain7-page .card{padding-top:7px;padding-bottom:7px}
+  .gawain7-page .g7-header .eyebrow{padding:3px 10px;margin-bottom:3px}
+  .gawain7-page .g7-header h1{font-size:clamp(1.12rem,3vw,1.5rem)}
+  .gawain7-page .g7-stage span{padding:3px 7px}
+  .gawain7-page .g7-item-progress,.gawain7-page .g7-match-help{margin-top:3px}
+  .gawain7-page .column{grid-template-rows:18px repeat(5,minmax(0,1fr))}
+  .gawain7-page .item img{max-height:32px}
+}

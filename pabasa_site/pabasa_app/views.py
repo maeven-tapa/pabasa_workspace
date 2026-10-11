@@ -14325,7 +14325,7 @@ def _normalized_oral_picture_match_state(activity, raw_state):
                 'selected_pair': raw.get('selected_pair') if isinstance(raw.get('selected_pair'), dict) else {},
                 'state_version': version}
     oral_index = len(unlocked)  # server owns the next word
-    phase = 'completion' if raw.get('phase') == 'completion' else ('matching' if oral_index == total else ('intro' if raw.get('phase') == 'intro' and not unlocked else 'oral_reading'))
+    phase = 'completion' if raw.get('phase') == 'completion' else ('matching' if oral_index == total else ('intro' if raw.get('phase') in (None, 'intro') and not unlocked else 'oral_reading'))
     return {'phase': phase, 'current_oral_word_index': oral_index, 'unlocked_oral_words': unlocked,
             'stt_attempts': stt, 'read_aloud_plays': aloud, 'matches': matches,
             'picture_attempts': picture_attempts, 'needs_reread': False,

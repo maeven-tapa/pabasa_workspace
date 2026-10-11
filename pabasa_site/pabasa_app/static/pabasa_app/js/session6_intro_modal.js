@@ -198,9 +198,9 @@
   backdrop.setAttribute('aria-labelledby', `${backdrop.id}-title`);
   backdrop.innerHTML = `<div class="lesson-start-modal lesson-13-start-modal">
     <p class="lesson-start-label lesson-13-start-label">${hasSavedProgress ? 'MAY NA-SAVE KANG PROGRESO!' : escapeHtml(label)}</p>
-    <h2 class="lesson-start-title lesson-13-start-title" id="${backdrop.id}-title">${hasSavedProgress ? 'May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?' : escapeHtml(title)}</h2>
+    <h2 class="lesson-start-title lesson-13-start-title" id="${backdrop.id}-title">${hasSavedProgress ? 'May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?' : key === 'lesson-17-18-gawain-7' ? 'Basahin nang malakas ang limang salita. Pagkatapos, itapat ang bawat larawan sa ngalan nito.' : escapeHtml(title)}</h2>
     <div class="lesson-start-actions lesson-13-start-actions">
-      <button type="button" data-session6-start>${hasSavedProgress ? 'IPAGPATULOY' : 'SIMULAN'}</button>
+      <button type="button" data-session6-start>${hasSavedProgress ? 'IPAGPATULOY' : key === 'lesson-17-18-gawain-7' ? 'TINGNAN ANG GAWAIN' : 'SIMULAN'}</button>
       <button type="button" data-session6-later>${hasSavedProgress ? 'SIMULAN ULIT' : 'MAMAYA NA LANG'}</button>
     </div>
   </div>`;
