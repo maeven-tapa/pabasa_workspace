@@ -35,6 +35,25 @@ class Session8LocalRecordingContractTests(unittest.TestCase):
                 self.assertIn("append('audio'", source)
                 self.assertNotIn('window.Basahin.attachStreamResult', source)
 
+    def test_only_legacy_session8_reading_controls_use_shared_basahin_presentation(self):
+        targets = {
+            'prescribed_l22_g2_reading.js': ('aral-l22-g2-c-word-reading', 'aral-l22-g6-f-word-reading'),
+            'prescribed_l22_g4_f_builder.js': ('aral-l22-g4-f-syllable-builder',),
+            'prescribed_l23_g2_reading.js': ('aral-l23-g2-n-word-reading',),
+            'prescribed_l24_g2_reading.js': ('aral-l24-g2-v-word-reading',),
+            'prescribed_l24_g3_repeat.js': ('aral-l24-g3-x-repeat',),
+        }
+        self.assertEqual(sum(map(len, targets.values())), 6)
+        for source_name in targets:
+            with self.subTest(script=source_name):
+                source = (APP_ROOT / 'static/pabasa_app/js' / source_name).read_text(encoding='utf-8')
+                self.assertIn('window.BasahinButton?.decorate', source)
+                self.assertIn('getUserMedia', source)
+
+        workbook = (APP_ROOT / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
+        self.assertIn('window.Basahin?.bindActivity', workbook)
+        self.assertIn("window.BasahinButton?.LABEL||'Basahin'", workbook)
+
 
 class Session8ClipSubmissionBehaviorTests(SimpleTestCase):
     """Exercise uploaded-clip submission through STT and activity evaluation."""

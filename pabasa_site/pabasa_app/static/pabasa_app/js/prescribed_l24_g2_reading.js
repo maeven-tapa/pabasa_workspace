@@ -32,7 +32,7 @@
         </div>`}
       </section></div>`;
     document.getElementById('instruction').onclick = playInstruction;
-    if (!finished) { document.getElementById('read').onclick = state.reading_phase === 'help' ? listen : record; document.getElementById('retry')?.addEventListener('click', retry); }
+    if (!finished) { document.getElementById('read').onclick = state.reading_phase === 'help' ? listen : record; window.BasahinButton?.decorate(document.getElementById('read')); document.getElementById('retry')?.addEventListener('click', retry); }
   }
   async function request(event, form = null) {
     const body = form || JSON.stringify({...event, revision: Number(state.revision || 0)});

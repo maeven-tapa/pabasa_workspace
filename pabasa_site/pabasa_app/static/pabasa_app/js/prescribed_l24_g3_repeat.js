@@ -155,6 +155,7 @@
     if (!finished) {
       document.getElementById('listen')?.addEventListener('click', listen);
       document.getElementById('speak')?.addEventListener('click', record);
+      window.BasahinButton?.decorate(document.getElementById('speak'));
       document.getElementById('retry')?.addEventListener('click', retry);
     }
   }
