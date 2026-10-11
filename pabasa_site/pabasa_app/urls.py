@@ -1,8 +1,13 @@
 from django.urls import path
 from . import views
+from . import lesson15_reading
 from . import crla_stream
 
 urlpatterns = [
+    path('api/lesson-15-gawain-3/skip/', lesson15_reading.skip, name='lesson15_reading_skip'),
+    path('api/teacher/lesson-15-gawain-3/reviews/', lesson15_reading.reviews, name='lesson15_reading_reviews'),
+    path('api/teacher/lesson-15-gawain-3/classify/', lesson15_reading.classify, name='lesson15_reading_classify'),
+    path('api/teacher/lesson-15-gawain-3/audio/<int:attempt_pk>/', lesson15_reading.audio, name='lesson15_reading_audio'),
     path('', views.home, name='home'),
     path('learner-experience-rating/', views.learner_experience_rating, name='learner_experience_rating'),
     
