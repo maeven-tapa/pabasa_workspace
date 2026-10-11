@@ -25,6 +25,53 @@ from .reading_stt import l22_c_pronunciation_match
 
 
 class WorkbookStateTests(SimpleTestCase):
+    def test_session8_reading_target_labels_are_removed_from_active_renderers(self):
+        js_root = Path(__file__).parent / 'static/pabasa_app/js'
+        workbook = (js_root / 'prescribed_workbook.js').read_text(encoding='utf-8')
+        l24_reading = (js_root / 'prescribed_l24_g2_reading.js').read_text(encoding='utf-8')
+
+        for source in (workbook, l24_reading):
+            self.assertNotIn('Tunog / Salitang Babasahin', source)
+            self.assertNotIn('Salitang Babasahin', source)
+
+        self.assertNotIn('wb-reading-target-label', workbook)
+        self.assertNotIn('wb-g7-subtitle', workbook)
+        self.assertNotIn('wb-l23-g3-subtitle', workbook)
+        self.assertIn('<h2>BASAHIN</h2>', workbook)
+        self.assertIn('<h2>BASAHIN</h2>', l24_reading)
+        self.assertIn('wb-reading-target', workbook)
+        self.assertIn('wb-g7-current-word', workbook)
+        self.assertIn('wb-l23-g3-target', workbook)
+        self.assertIn('l24g2-target', l24_reading)
+
+        rendered_sources = {
+            'aral-l22-g1-c-syllable-builder': 'prescribed_workbook.js',
+            'aral-l22-g2-c-word-reading': 'prescribed_workbook.js',
+            'aral-l22-g6-f-word-reading': 'prescribed_workbook.js',
+            'aral-l23-g1-n-syllable-builder': 'prescribed_workbook.js',
+            'aral-l23-g2-n-word-reading': 'prescribed_workbook.js',
+            'aral-l23-g3-j-word-reading': 'prescribed_workbook.js',
+            'aral-l23-g6-q-syllable-builder': 'prescribed_workbook.js',
+            'aral-l24-g1-v-syllable-builder': 'prescribed_workbook.js',
+            'aral-l24-g2-v-word-reading': 'prescribed_l24_g2_reading.js',
+            'aral-l24-g3-x-word-reading': 'prescribed_workbook.js',
+            'aral-l24-g7-z-word-reading': 'prescribed_workbook.js',
+        }
+        for activity_key, source_name in rendered_sources.items():
+            with self.subTest(activity_key=activity_key):
+                activity = get_activity(activity_key)
+                html = render_to_string('pabasa_app/prescribed_workbook_page.html', {
+                    'workbook_payload': {'activity': activity},
+                })
+                self.assertIn(source_name, html)
+                self.assertIn(activity['title'], html)
+                self.assertTrue(activity['items'])
+
+        x_word_html = render_to_string('pabasa_app/prescribed_workbook_page.html', {
+            'workbook_payload': {'activity': get_activity('aral-l24-g3-x-word-reading')},
+        })
+        self.assertNotIn('prescribed_l24_g3_word_reading.js', x_word_html)
+
     def test_session8_duplicate_header_instructions_are_activity_scoped_and_audio_backed(self):
         hidden = {
             'aral-l23-g1-n-syllable-builder': 'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita mula rito.',
