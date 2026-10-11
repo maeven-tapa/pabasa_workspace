@@ -86,6 +86,16 @@ function enableStreaming(e, {startError, finishError, hasSpeech = true, deferred
   return instances;
 }
 
+test('L14 G2 streaming pins Filipino and carries only the displayed target', async () => {
+  const e = environment(), streams = enableStreaming(e);
+  e.window.location.pathname = '/dashboard/assessment/activity/prescribed/lesson-14-gawain-2/';
+  const captured = e.api.capture({fields: {language:'English', target_text:'mata', prescribed_activity_key:'lesson-14-gawain-2'}});
+  await e.clock.tick(4000);
+  await captured;
+  assert.equal(streams.length, 1);
+  assert.deepEqual({...streams[0].options.fields}, {activity_key:'lesson-14-gawain-2',language:'fil-PH',target_text:'mata'});
+});
+
 test('prescribed capture streams during speech, keeps audio and attaches only flushed signed results', async () => {
   const e = environment(), live = enableStreaming(e, {deferredFinish:true});
   let settled = false;

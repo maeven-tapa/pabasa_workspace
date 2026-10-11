@@ -24912,6 +24912,18 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
     mode = (request.POST.get('mode') or '').strip().lower()
     language = (request.POST.get('language') or '').strip()
     language_code = language_code_for(language, mode)
+    lesson14_g2_reading = request.POST.get('prescribed_activity_key') == 'lesson-14-gawain-2'
+    lesson15_g2_reading = request.POST.get('prescribed_activity_key') == 'lesson-15-gawain-2-angkop-na-pantig'
+    guarded_filipino_reading = lesson14_g2_reading or lesson15_g2_reading
+    recognition_context, recognition_metadata = None, {}
+    if guarded_filipino_reading:
+        from .reading_stt import lesson14_gawain2_recognition_context, lesson15_gawain2_recognition_context
+        language_code = 'fil-PH'
+        try:
+            context_for = lesson15_gawain2_recognition_context if lesson15_g2_reading else lesson14_gawain2_recognition_context
+            recognition_context = context_for(target_text)
+        except ValueError as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
     phrase_hints = [] if language_code.lower() == 'fil-ph' else list(dict.fromkeys(
         phrase_hints_for(language, mode) + target_phrase_hints(target_text, language_code)
     ))
@@ -24936,6 +24948,7 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
     knowlez_selected = not official_crla_assessment and uses_knowlez_stt(request)
     local_api_key_fallback = (
         not knowlez_selected
+        and not guarded_filipino_reading
         and _local_api_key_stt_fallback(request, api_key, credentials_file, selected_model)
     )
     if local_api_key_fallback:
@@ -24950,7 +24963,8 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
             return JsonResponse({'success': False, 'error': str(exc)}, status=403)
     if stream_transcript is None:
         try:
-            stream_transcript = prescribed_stream_transcript(request, language_code)
+            stream_transcript = prescribed_stream_transcript(request, language_code,
+                **({'response_metadata': recognition_metadata} if guarded_filipino_reading else {}))
         except PermissionError as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=403)
     words = []
@@ -24972,6 +24986,8 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
                 location=location,
                 mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
                 credentials_file=credentials_file,
+                **({'recognition_context': recognition_context, 'response_metadata': recognition_metadata}
+                   if guarded_filipino_reading and stt_model == 'chirp_3' else {}),
             )
         logger.warning(
             "FREE_MODE_STT_DIAGNOSTIC provider=%s model=%s language=%s "
@@ -25014,6 +25030,15 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
             activity_syllables = []
         is_clap_phase2 = request.POST.get('phase2_strict') == '1'
         matching_transcript = transcript
+        # Never let ASCII normalization strip Hangul and accept a remaining
+        # Filipino fragment, nor reuse a previous TASS prefix for this attempt.
+        rejected_language = False
+        if guarded_filipino_reading:
+            from .reading_stt import contains_hangul
+            rejected_language = contains_hangul(transcript) or any(
+                code.lower().startswith('ko') for code in recognition_metadata.get('response_language_codes', []))
+            if rejected_language:
+                matching_transcript, syllable_context = '', ''
         # Session 5 Lesson 14 Gawain 4 accepts Google's Ana/Anna variant only
         # for the displayed phrase "salamin ni Ana". Keep the raw transcript.
         if (
@@ -25306,6 +25331,14 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
             'stt_fallback_reason': fallback_reason,
             **stt_word_metadata(words, model_used),
         })
+        if guarded_filipino_reading:
+            analysis.update(stt_requested_language_codes=['fil-PH'],
+                stt_response_language_codes=recognition_metadata.get('response_language_codes', []),
+                stt_recognition_context=recognition_context if model_used == 'chirp_3' else [],
+                stt_language_autodetection=False)
+            if rejected_language:
+                analysis.update(complete=False, recognition_rejected_reason='non_filipino_language',
+                    syllable_context='', syllable_stitching_applied=False, syllable_stitched_transcript='')
         if lesson15_context:
             from .lesson15_reading import retain_reading
             analysis = retain_reading(lesson15_context, audio, analysis)

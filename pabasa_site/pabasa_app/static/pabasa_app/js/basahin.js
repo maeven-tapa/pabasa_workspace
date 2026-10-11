@@ -37,9 +37,14 @@
         || !window.WebSocket || !window.AudioWorkletNode || !AudioContext?.prototype
         || !('audioWorklet' in AudioContext.prototype)
         || !window.__PABASA_CRLA_PCM_WORKLET__) return null;
-    return {activity_key: key, language: options.fields?.language
+    const context = {activity_key: key, language: options.fields?.language
       || options.language || options.button?.dataset?.basahinLanguage || pageContext.language
       || (document.documentElement?.lang === 'en' ? 'English' : 'Filipino')};
+    if (key === 'lesson-14-gawain-2') {
+      context.language = 'fil-PH';
+      context.target_text = options.fields?.target_text;
+    }
+    return context;
   }
 
   // Keep the original decodable audio for saved recordings, and carry only

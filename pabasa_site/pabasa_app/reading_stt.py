@@ -315,6 +315,39 @@ def target_phrase_hints(target_text, language_code):
     return list(dict.fromkeys(hints))[:100]
 
 
+def lesson14_gawain2_recognition_context(target_text):
+    """One complete displayed word, not a broad vocabulary or isolated sounds."""
+    from .prescribed_activity_catalog import prescribed_activity
+    words = [item['word'] for item in prescribed_activity('lesson-14-gawain-2')['items']]
+    for word in words:
+        if str(target_text).strip().casefold() == word.casefold():
+            return [word]
+    raise ValueError('Invalid Lesson 14 Gawain 2 reading item.')
+
+
+def chirp_recognition_adaptation(context):
+    """Optional server-supplied current-item context; no artificial boost."""
+    from google.cloud.speech_v2.types import cloud_speech
+    return cloud_speech.SpeechAdaptation(phrase_sets=[
+        cloud_speech.SpeechAdaptation.AdaptationPhraseSet(
+            inline_phrase_set=cloud_speech.PhraseSet(phrases=[{'value': word} for word in context]))
+    ])
+
+
+def lesson15_gawain2_recognition_context(target_text):
+    """L15 G2 reads the complete picture words before syllable matching."""
+    from .prescribed_activity_catalog import prescribed_activity
+    items = prescribed_activity('lesson-15-gawain-2-angkop-na-pantig')['part1_items']
+    for item in items:
+        if str(target_text).strip().casefold() == item['word'].casefold():
+            return [item['word']]
+    raise ValueError('Invalid Lesson 15 Gawain 2 reading item.')
+
+
+def contains_hangul(text):
+    return bool(re.search(r'[\u1100-\u11ff\u3130-\u318f\ua960-\ua97f\uac00-\ud7af\ud7b0-\ud7ff\uffa0-\uffdc]', str(text or '')))
+
+
 def target_aware_syllable_stitching(
     target_text,
     current_syllable_index,
@@ -450,6 +483,8 @@ def transcribe_audio_bytes_with_model(
     credentials_file="",
     word_details=None,
     allow_fallback=True,
+    recognition_context=None,
+    response_metadata=None,
 ):
     if str(language_code).lower() == "fil-ph":
         model = model or "chirp_3"
@@ -468,6 +503,8 @@ def transcribe_audio_bytes_with_model(
                 location,
                 credentials_file,
                 word_details=word_details,
+                **({'recognition_context': recognition_context, 'response_metadata': response_metadata}
+                   if model == 'chirp_3' and (recognition_context or response_metadata is not None) else {}),
             )
             if transcript or not allow_fallback or not api_key:
                 return transcript, model, ""
@@ -523,10 +560,12 @@ def transcribe_audio_bytes_v2_chirp3(
     credentials_file,
     timeout_seconds=12,
     word_details=None,
+    recognition_context=None,
+    response_metadata=None,
 ):
     return _transcribe_audio_bytes_v2_chirp(
         audio_bytes, language_code, project_id, location, credentials_file,
-        "chirp_3", timeout_seconds, word_details,
+        "chirp_3", timeout_seconds, word_details, recognition_context, response_metadata,
     )
 
 
@@ -551,6 +590,7 @@ def stt_word_metadata(words, model):
 def _transcribe_audio_bytes_v2_chirp(
     audio_bytes, language_code, project_id, location, credentials_file,
     model, timeout_seconds, word_details,
+    recognition_context=None, response_metadata=None,
 ):
     if not project_id:
         raise RuntimeError("Set GOOGLE_CLOUD_PROJECT_ID in settings.py to use Chirp.")
@@ -576,6 +616,7 @@ def _transcribe_audio_bytes_v2_chirp(
         language_codes=[language_code],
         model=model,
         features=cloud_speech.RecognitionFeatures(**features),
+        **({'adaptation': chirp_recognition_adaptation(recognition_context)} if recognition_context else {}),
     )
     request = cloud_speech.RecognizeRequest(
         recognizer=f"projects/{project_id}/locations/{location or 'global'}/recognizers/_",
@@ -593,6 +634,9 @@ def _transcribe_audio_bytes_v2_chirp(
                 raise
             time.sleep(random.uniform(0.2, 0.5))
     transcripts = []
+    if response_metadata is not None:
+        response_metadata['response_language_codes'] = list(dict.fromkeys(
+            result.language_code for result in response.results if result.language_code))
     for result in response.results:
         if not result.alternatives:
             continue

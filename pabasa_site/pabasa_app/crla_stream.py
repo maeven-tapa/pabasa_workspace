@@ -214,9 +214,14 @@ def prescribed_stream_ticket(request):
         data = json.loads(request.body)
         activity_key = str(data['activity_key'])
         activity = authorize_prescribed(request, activity_key)
-        if data.get('language') and str(data['language']).lower() not in {'filipino', 'tagalog', 'english', 'fil-ph', 'en-ph', 'en-us'}:
+        if activity_key == 'lesson-14-gawain-2':
+            from .reading_stt import lesson14_gawain2_recognition_context
+            context = lesson14_gawain2_recognition_context(data.get('target_text'))
+            language = 'fil-PH'
+        elif data.get('language') and str(data['language']).lower() not in {'filipino', 'tagalog', 'english', 'fil-ph', 'en-ph', 'en-us'}:
             raise ValueError('Invalid language.')
-        language = language_code_for(data.get('language') or activity.get('language', 'Filipino'), 'reading')
+        else:
+            language = language_code_for(data.get('language') or activity.get('language', 'Filipino'), 'reading')
         if language not in {'fil-PH', 'en-PH', 'en-US'}:
             raise ValueError('Invalid language.')
         model = views._requested_chirp_model(request) or getattr(settings, 'GOOGLE_STT_MODEL', 'chirp_3').strip()
@@ -227,6 +232,8 @@ def prescribed_stream_ticket(request):
         payload = {'session': session_binding(request.session), 'purpose': 'prescribed',
                    'activity_key': activity_key,
                    'fields': {'language': language, 'mode': 'reading'}}
+        if activity_key == 'lesson-14-gawain-2':
+            payload['fields'].update(target_text=context[0], recognition_context=context)
         return JsonResponse({'success': True, 'ticket': signing.dumps(payload, salt=TICKET_SALT, compress=True),
                              'path': STREAM_PATH})
     except PermissionError as exc:
@@ -235,7 +242,7 @@ def prescribed_stream_ticket(request):
         return JsonResponse({'success': False, 'error': 'Invalid reading context.'}, status=400)
 
 
-def prescribed_stream_transcript(request, language_code):
+def prescribed_stream_transcript(request, language_code, response_metadata=None):
     """Accept only a completed, signed provider utterance for this login/activity."""
     token = request.POST.get('prescribed_stream_token')
     if not token:
@@ -268,6 +275,11 @@ def prescribed_stream_transcript(request, language_code):
                 or views._requested_chirp_model(request) not in {'', 'chirp_3'}
                 or language_code_for(result['fields']['language'], 'reading') != language_code):
             raise ValueError('Speech provider or language changed.')
+        if activity_key == 'lesson-14-gawain-2':
+            if result['fields'].get('target_text') != request.POST.get('target_text'):
+                raise ValueError('Speech reading item changed.')
+            if response_metadata is not None:
+                response_metadata['response_language_codes'] = result.get('response_language_codes', [])
         return result['transcript']
     except (signing.BadSignature, PermissionError, ValueError, TypeError, KeyError) as exc:
         raise PermissionError('Speech session is unavailable. Start recording again.') from exc
@@ -402,7 +414,7 @@ async def crla_websocket(scope, receive, send):
         from google.api_core.client_options import ClientOptions
         from google.cloud.speech_v2 import SpeechAsyncClient
         from google.cloud.speech_v2.types import cloud_speech
-        from .reading_stt import language_code_for
+        from .reading_stt import language_code_for, chirp_recognition_adaptation
         location = settings.GOOGLE_STT_LOCATION
         client = SpeechAsyncClient(
             credentials=await sync_to_async(speech_credentials, thread_sensitive=False)(),
@@ -421,6 +433,8 @@ async def crla_websocket(scope, receive, send):
                 streaming_features=cloud_speech.StreamingRecognitionFeatures(interim_results=True),
             ),
         )
+        if payload.get('activity_key') == 'lesson-14-gawain-2':
+            config.streaming_config.config.adaptation = chirp_recognition_adaptation(fields['recognition_context'])
 
         async def requests():
             yield config
@@ -453,6 +467,7 @@ async def crla_websocket(scope, receive, send):
             stream_id = uuid.uuid4().hex
             sequence = 0
             utterance = []
+            response_languages = []
             transcript_size = 0
             responses = await client.streaming_recognize(requests=requests(), retry=None, timeout=260)
             await emit({'type': 'ready'})
@@ -464,6 +479,8 @@ async def crla_websocket(scope, receive, send):
                     if not transcript:
                         continue
                     if result.is_final:
+                        if result.language_code and result.language_code not in response_languages:
+                            response_languages.append(result.language_code)
                         if payload.get('purpose') == 'prescribed' or payload.get('complete_utterance'):
                             transcript_size += len(transcript)
                             if transcript_size > 20000:
@@ -483,8 +500,10 @@ async def crla_websocket(scope, receive, send):
                 finished = {'type': 'finished'}
                 if payload.get('purpose') == 'prescribed' or payload.get('complete_utterance'):
                     finished['has_speech'] = bool(utterance)
+                    language_metadata = ({'response_language_codes': response_languages}
+                        if payload.get('activity_key') == 'lesson-14-gawain-2' else {})
                     finished['result_token'] = signing.dumps(
-                        {**payload, 'transcript': ' '.join(utterance)},
+                        {**payload, **language_metadata, 'transcript': ' '.join(utterance)},
                         salt=PRESCRIBED_RESULT_SALT if payload.get('purpose') == 'prescribed' else MATERIAL_RESULT_SALT,
                         compress=True)
                 await emit(finished)
