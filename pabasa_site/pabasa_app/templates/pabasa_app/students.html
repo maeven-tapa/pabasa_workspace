@@ -98,7 +98,7 @@
     .aral-summary-item:last-child .aral-summary-help::after { right:0; left:auto; transform:translate(0, .2rem); }
     .aral-summary-item:last-child .aral-summary-help:hover::after, .aral-summary-item:last-child .aral-summary-help:focus-visible::after { transform:translate(0, 0); }
     .aral-summary-value { display:block; margin-top:.18rem; color:#10466e; font-size:1.25rem; font-weight:900; }
-    .aral-benchmark-note { margin:.9rem 0 0; color:#8998a0; font-size:.7rem; }
+    .aral-benchmark-note { margin:.9rem 0 0; color:#4A6680; font-size:13px; font-weight:500; }
     .aral-ready-panel { display:flex; flex-direction:column; }
     .aral-ready-panel > .aral-empty-state { min-height:8rem; }
     .aral-ready-list { display:grid; gap:.35rem; margin:1rem 0; }
@@ -1486,10 +1486,10 @@
         </div>
         <div class="aral-summary" aria-label="Story performance summary">
             <div class="aral-summary-item"><span class="aral-summary-label">ARAL Students <span class="aral-summary-help" tabindex="0" role="img" aria-label="Students enrolled in the assigned ARAL section for the selected term." data-tooltip="Students enrolled in the assigned ARAL section for the selected term.">i</span></span><strong class="aral-summary-value">{% if aral_student_count %}{{ aral_student_count }}{% else %}—{% endif %}</strong></div>
-            <div class="aral-summary-item"><span class="aral-summary-label">Meeting All Indicators <span class="aral-summary-help" tabindex="0" role="img" aria-label="Students meeting all Prescribed and Supplementary Activity criteria." data-tooltip="Students meeting all Prescribed and Supplementary Activity criteria.">i</span></span><strong class="aral-summary-value">{% if aral_meeting_all_indicators_count %}{{ aral_meeting_all_indicators_count }}{% else %}—{% endif %}</strong></div>
-            <div class="aral-summary-item"><span class="aral-summary-label">Needs Review <span class="aral-summary-help" tabindex="0" role="img" aria-label="Students not yet meeting all activity criteria." data-tooltip="Students not yet meeting all activity criteria.">i</span></span><strong class="aral-summary-value">{% if aral_needs_review_count %}{{ aral_needs_review_count }}{% else %}—{% endif %}</strong></div>
+            <div class="aral-summary-item"><span class="aral-summary-label">Meeting Exit Criteria <span class="aral-summary-help" tabindex="0" role="img" aria-label="Students meeting either the Prescribed or Supplementary Activity criteria." data-tooltip="Students meeting either the Prescribed or Supplementary Activity criteria.">i</span></span><strong class="aral-summary-value">{% if aral_meeting_all_indicators_count %}{{ aral_meeting_all_indicators_count }}{% else %}—{% endif %}</strong></div>
+            <div class="aral-summary-item"><span class="aral-summary-label">Not Yet Meeting Exit Criteria <span class="aral-summary-help" tabindex="0" role="img" aria-label="Students who have not yet met either the Prescribed or Supplementary Activity exit criteria." data-tooltip="Students who have not yet met either the Prescribed or Supplementary Activity exit criteria.">i</span></span><strong class="aral-summary-value">{% if aral_needs_review_count %}{{ aral_needs_review_count }}{% else %}—{% endif %}</strong></div>
         </div>
-        <p class="aral-benchmark-note">Exit when all four areas are at least 3/5 and the total score is at least 12/20.</p>
+        <p class="aral-benchmark-note">Students may exit the ARAL Program by scoring at least 3/5 in all four areas (12/20 overall) or by completing all Prescribed Activities.</p>
     </div>
     <div class="aral-ready-panel" aria-labelledby="aralReadyTitle">
         <h2 class="aral-card-heading" id="aralReadyTitle">Students Ready for Exit</h2>
@@ -1519,7 +1519,7 @@
         <div class="modal-body">
             {% if aral_exit_students %}<div class="aral-modal-list" role="list">{% for student in aral_exit_students %}<div class="aral-modal-student" role="listitem"><div class="aral-modal-student-header"><span class="aral-modal-student-name">{{ student.name }}</span><button type="button" class="student-aral-action aral-ready-exit-action" data-student-id="{{ student.id }}" data-student-name="{{ student.name|escape }}" data-aral-action="exit">Exit ARAL Program</button></div><dl class="aral-modal-scores"><div class="aral-modal-score"><dt>Story Reading</dt><dd>{{ student.scores.story_reading|floatformat:'-1' }}/5</dd></div><div class="aral-modal-score"><dt>5W Questions</dt><dd>{{ student.scores.five_w_questions|floatformat:'-1' }}/5</dd></div><div class="aral-modal-score"><dt>Story Response</dt><dd>{{ student.scores.story_response|floatformat:'-1' }}/5</dd></div><div class="aral-modal-score"><dt>Story Retelling</dt><dd>{{ student.scores.story_retelling|floatformat:'-1' }}/5</dd></div><div class="aral-modal-score aral-modal-total"><dt>Total</dt><dd>{{ student.total_score|floatformat:'-1' }}/20</dd></div></dl></div>{% endfor %}</div>{% else %}<div class="aral-empty-state" role="status"><strong>No students ready for exit yet</strong><span>Students will appear here once the required performance data and exit criteria are available.</span></div>{% endif %}
         </div>
-        <div class="modal-footer"><div>{% if aral_exit_students %}<p class="aral-modal-count">{{ aral_exit_students|length }} student{{ aral_exit_students|length|pluralize }}</p>{% endif %}<p class="aral-modal-criteria">Exit when all four areas are at least 3/5 and the total score is at least 12/20.</p></div></div>
+        <div class="modal-footer"><div>{% if aral_exit_students %}<p class="aral-modal-count">{{ aral_exit_students|length }} student{{ aral_exit_students|length|pluralize }}</p>{% endif %}<p class="aral-modal-criteria">Students may exit the ARAL Program by scoring at least 3/5 in all four areas (12/20 overall) or by completing all Prescribed Activities.</p></div></div>
     </div></div>
 </div>
 <div class="modal fade aral-exit-modal" id="aralReviewStudentsModal" tabindex="-1" aria-labelledby="aralReviewStudentsModalTitle" aria-describedby="aralReviewStudentsModalContext">
