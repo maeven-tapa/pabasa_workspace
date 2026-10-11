@@ -172,7 +172,7 @@ const {chromium} = require('C:/Users/Prince/.cache/codex-runtimes/codex-primary-
  for(const [index,grade] of ['GREEN','YELLOW','RED'].entries()){
   await review.locator(`[data-item-index="${index}"] select`).selectOption(grade);
   await review.waitForFunction(i=>!document.querySelector(`[data-item-index="${i}"] select`).disabled,index);
-  assert.ok((await review.locator('.session5-evaluation-summary strong').textContent()).includes(`${index+2} / 22`),await review.locator('.lesson15-review-feedback').textContent());
+  assert.ok((await review.locator('.session5-evaluation-summary strong').textContent()).includes(`${index+1} / 22 Reviewed`),await review.locator('.lesson15-review-feedback').textContent());
  }
  assert.equal(await review.locator('[data-item-index="3"] select').count(),0);
  const refreshed=await teacher.request.get(base+'/api/teacher/lesson-15-gawain-3/reviews/?student_id='+process.env.L15_STUDENT_ID);

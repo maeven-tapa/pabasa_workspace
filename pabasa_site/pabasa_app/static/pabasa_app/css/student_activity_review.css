@@ -1,7 +1,7 @@
 .student-progress-review-trigger{display:flex;align-items:center;justify-content:space-between;gap:1rem;width:100%;margin-top:.85rem;padding:.9rem 1rem;border:1px solid #cce0e9;border-radius:.8rem;background:#f5fbfe;color:#176078;text-align:left;font:inherit;cursor:pointer}
 .student-progress-review-trigger strong,.student-progress-review-trigger small{display:block}
 .student-progress-review-trigger small{margin-top:.25rem;color:#637b88;font-size:.82rem}
-.student-progress-review-trigger:hover{background:#eaf6fa;border-color:#2483a4}
+.student-progress-review-trigger:not(:disabled):hover{background:#eaf6fa;border-color:#2483a4}
 .student-progress-review-trigger:focus-visible{outline:3px solid #2483a4;outline-offset:3px}
 .student-progress-review-dialog{--review-viewport-width:100vw;--review-viewport-height:100dvh;box-sizing:border-box;width:min(1120px,calc(var(--review-viewport-width) - 32px));max-width:none;max-height:calc(var(--review-viewport-height) - 48px);margin:auto;padding:0;border:1px solid #dce8ed;border-radius:1rem;background:#fff;color:#203746;font:inherit;box-shadow:0 24px 70px #173f6355;overflow:hidden}
 /* Native dialogs retain their dashboard ancestor's zoom in the top layer. */
@@ -18,4 +18,78 @@
 .student-progress-review-body .session4-recording-review{margin-top:0}
 body.dark-theme .student-progress-review-trigger,body.dark-theme .student-progress-review-dialog,body.dark-theme .student-progress-review-close{background:#172c38;color:#edf5f8;border-color:#395260}
 body.dark-theme .student-progress-review-trigger small,body.dark-theme .student-progress-review-header small{color:#a9ccd9}
+body.dark-theme .student-progress-review-trigger:not(:disabled):hover{background:#203e50;border-color:#52899e}
+.student-progress-review-trigger:disabled,body.dark-theme .student-progress-review-trigger:disabled{background:#f0f1f2;border-color:#d5d8db;color:#7b8086;cursor:not-allowed;transform:none;box-shadow:none;transition:none;animation:none}
+.student-progress-review-trigger:disabled small,body.dark-theme .student-progress-review-trigger:disabled small{color:#7b8086}
 @media(max-width:600px){.student-progress-review-dialog{width:calc(var(--review-viewport-width) - 20px);max-height:calc(var(--review-viewport-height) - 24px)}.student-progress-review-header,.student-progress-review-body{padding:.9rem}}
+
+/* Only the seven explicitly opted-in activity reviews use this compact layout. */
+.student-progress-review-dialog--compact-reading{width:min(1080px,calc(var(--review-viewport-width) - 32px));font-family:"Nunito","Segoe UI",sans-serif}
+@media(min-width:992px){.dashboard-app-shell .student-progress-review-dialog--compact-reading{width:min(calc(1080px / var(--dashboard-display-scale,1)),calc(var(--review-viewport-width) - 32px))}}
+.student-progress-review-dialog--compact-reading .student-progress-review-header{padding:.75rem 1rem .5rem;border:0}
+.student-progress-review-dialog--compact-reading .student-progress-review-header small{font-size:.7rem;font-weight:800;color:#137d81;letter-spacing:.08em}
+.student-progress-review-dialog--compact-reading .student-progress-review-header h2{font-family:"Righteous","Nunito",sans-serif;color:#173f63;font-size:1.2rem;line-height:1.3;margin:.15rem 0 0}
+.student-progress-review-dialog--compact-reading .student-progress-review-close:focus-visible{outline:3px solid #2483a4;outline-offset:2px}
+.student-progress-review-dialog--compact-reading .student-progress-review-body{display:flex;overflow:hidden;padding:.25rem 1rem 1rem}
+.student-progress-review-dialog--compact-reading .student-progress-recording,
+.student-progress-review-dialog--compact-reading .student-progress-recording-panel,
+.student-progress-review-dialog--compact-reading .compact-reading-review{display:flex;flex:1 1 auto;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+.student-progress-review-dialog--compact-reading .student-progress-recording,
+.student-progress-review-dialog--compact-reading .student-progress-recording-panel{margin:0!important;padding:0!important;border:0!important}
+.student-progress-review-dialog--compact-reading .session5-fluency-review{display:contents}
+.student-progress-review-dialog--compact-reading .session5-fluency-review>h6,
+.student-progress-review-dialog--compact-reading .session5-fluency-review>p{display:none}
+.student-progress-review-dialog--compact-reading .session5-evaluation-summary{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;flex-shrink:0;gap:.3rem .75rem;margin:0 0 .5rem;padding:.6rem .75rem;background:#eef7f7;border-radius:.6rem;color:#173f63;font-size:.88rem}
+.student-progress-review-dialog--compact-reading .session5-evaluation-summary span{font-size:.78rem;color:#58717e}
+.student-progress-review-dialog--compact-reading .reading-review-list{display:block;flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.student-progress-review-dialog--compact-reading .session5-fluency-header,
+.student-progress-review-dialog--compact-reading .session5-fluency-row,
+.student-progress-review-dialog--compact-reading .session4-letter-recording{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr);gap:.75rem;align-items:center;padding:.55rem .75rem;border:0;border-radius:.5rem;margin:0 0 .2rem;background:#fbfdfe}
+.student-progress-review-dialog--compact-reading .session5-fluency-header{position:sticky;top:0;z-index:1;background:#eef4f7;color:#58717e;font-size:.7rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.student-progress-review-dialog--compact-reading .session5-fluency-row:nth-child(odd),
+.student-progress-review-dialog--compact-reading .session4-letter-recording:nth-child(odd){background:#f0f7f8}
+.student-progress-review-dialog--compact-reading .session5-fluency-text{min-width:0;font-size:.9rem;color:#173f63}
+.student-progress-review-dialog--compact-reading .session5-fluency-text strong,
+.student-progress-review-dialog--compact-reading .session5-fluency-text small{display:block;overflow-wrap:anywhere}
+.student-progress-review-dialog--compact-reading .session5-fluency-text small{font-size:.75rem;color:#617984;margin-top:.2rem}
+.student-progress-review-dialog--compact-reading .session5-fluency-number{display:inline;color:#176078;font-weight:800}
+.student-progress-review-dialog--compact-reading .session5-fluency-audio{min-width:0;font-size:.78rem;color:#71808a}
+.student-progress-review-dialog--compact-reading .session5-fluency-audio audio{display:block;width:100%;max-width:260px;height:36px}
+.student-progress-review-dialog--compact-reading .reading-review-classification{min-width:0;font-size:.85rem}
+.student-progress-review-dialog--compact-reading .reading-review-classification select{width:100%;min-width:0;min-height:36px;font:inherit;padding:.35rem 1.8rem .35rem .5rem;border:1px solid #c4d4da;border-radius:.5rem;background-color:#fff;color:#203746}
+.student-progress-review-dialog--compact-reading .reading-review-classification select:focus-visible{outline:3px solid #2483a4;outline-offset:2px}
+.student-progress-review-dialog--compact-reading .session5-review-state{display:block;margin-top:.2rem;font-size:.72rem;color:#617984}
+.student-progress-review-dialog--compact-reading .reading-review-red{color:#a73333}
+.student-progress-review-dialog--compact-reading .reading-review-neutral{color:#71808a;font-size:.8rem}
+.student-progress-review-dialog--compact-reading .session4-score-controls{display:flex;gap:.35rem}
+.student-progress-review-dialog--compact-reading .session4-score-button{min-height:36px;font-size:.78rem;padding:.3rem .45rem}
+.student-progress-review-dialog--compact-reading .session4-score-feedback:empty,
+.student-progress-review-dialog--compact-reading .lesson15-review-feedback:empty{display:none}
+.student-progress-review-dialog--compact-reading .lesson15-review-feedback{flex-shrink:0;font-size:.8rem;margin:.4rem 0 0;color:#a73333}
+.student-progress-review-dialog--compact-reading .lesson1-review-actions,
+.student-progress-review-dialog--compact-reading .lesson29-review-actions{display:flex;flex-shrink:0;flex-wrap:wrap;gap:.4rem;margin-top:.5rem}
+.student-progress-review-dialog--compact-reading .student-progress-audio-controls{box-sizing:border-box;max-width:260px;width:100%;min-width:0;min-height:36px}
+.student-progress-review-dialog--compact-reading .student-progress-retell-play{flex-shrink:0}
+.student-progress-review-dialog--compact-reading .student-progress-retell-progress{min-width:0;flex:1 1 0}
+body.dark-theme .student-progress-review-dialog--compact-reading .student-progress-review-header h2{color:#edf5f8}
+body.dark-theme .student-progress-review-dialog--compact-reading .session5-evaluation-summary,
+body.dark-theme .student-progress-review-dialog--compact-reading .session5-fluency-header,
+body.dark-theme .student-progress-review-dialog--compact-reading .session5-fluency-row,
+body.dark-theme .student-progress-review-dialog--compact-reading .session4-letter-recording{background:#203946;color:#edf5f8}
+body.dark-theme .student-progress-review-dialog--compact-reading .session5-fluency-text,
+body.dark-theme .student-progress-review-dialog--compact-reading .session5-evaluation-summary span{color:#d5e7ec}
+@media(max-width:700px){
+    .student-progress-review-dialog--compact-reading{width:calc(var(--review-viewport-width) - 20px)}
+    .student-progress-review-dialog--compact-reading .student-progress-review-header{padding:.65rem .75rem .4rem}
+    .student-progress-review-dialog--compact-reading .student-progress-review-body{padding:.25rem .75rem .75rem}
+    .student-progress-review-dialog--compact-reading .student-progress-review-header h2{font-size:1.05rem}
+    .student-progress-review-dialog--compact-reading .session5-fluency-header{display:none}
+    .student-progress-review-dialog--compact-reading .session5-fluency-row,
+    .student-progress-review-dialog--compact-reading .session4-letter-recording{grid-template-columns:minmax(0,1fr);gap:.4rem;padding:.65rem}
+    .student-progress-review-dialog--compact-reading .session5-fluency-row>.session5-fluency-audio,
+    .student-progress-review-dialog--compact-reading .session5-fluency-row>.reading-review-classification,
+    .student-progress-review-dialog--compact-reading .session4-letter-recording>.session5-fluency-audio,
+    .student-progress-review-dialog--compact-reading .session4-letter-recording>.reading-review-classification{grid-column:auto}
+    .student-progress-review-dialog--compact-reading .session5-fluency-audio audio{max-width:none}
+    .student-progress-review-dialog--compact-reading .student-progress-audio-controls{max-width:none}
+}

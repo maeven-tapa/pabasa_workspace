@@ -117,6 +117,7 @@ urlpatterns = [
     path('api/lesson-13-gawain-1/recording/', views.lesson_13_gawain_1_recording, name='lesson_13_gawain_1_recording'),
     path('api/session-4-gawain-2/recording/', views.session_4_gawain_2_recording, name='session_4_gawain_2_recording'),
     path('api/teacher/lesson-1-gawain-1/recordings/', views.teacher_lesson_1_gawain_1_recordings, name='teacher_lesson_1_gawain_1_recordings'),
+    path('api/teacher/prescribed/review-availability/', views.teacher_prescribed_review_availability, name='teacher_prescribed_review_availability'),
     path('api/teacher/lesson-29-trace-say/recordings/', views.teacher_lesson29_trace_say_recordings, name='teacher_lesson29_trace_say_recordings'),
     path('api/teacher/lesson-29-trace-say/score/', views.teacher_lesson29_trace_say_score, name='teacher_lesson29_trace_say_score'),
     path('api/teacher/session-4-gawain-1/recordings/', views.teacher_session_4_gawain_1_recordings, name='teacher_session_4_gawain_1_recordings'),

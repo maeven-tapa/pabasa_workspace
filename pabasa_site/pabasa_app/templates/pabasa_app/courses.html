@@ -2,9 +2,9 @@
 {% load static %}
 
 {% block extra_head %}
-<script src="{% static 'pabasa_app/js/lesson15_reading_review.js' %}" defer></script>
-<link rel="stylesheet" href="{% static 'pabasa_app/css/student_activity_review.css' %}?v=3">
-<script src="{% static 'pabasa_app/js/student_activity_review.js' %}?v=3" defer></script>
+<script src="{% static 'pabasa_app/js/lesson15_reading_review.js' %}?v=4" defer></script>
+<link rel="stylesheet" href="{% static 'pabasa_app/css/student_activity_review.css' %}?v=6">
+<script src="{% static 'pabasa_app/js/student_activity_review.js' %}?v=6" defer></script>
 <link rel="stylesheet" href="{% static 'pabasa_app/css/aral_session_folder_icon.css' %}?v=20261010-2">
 <script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[data-prescribed-activity="lesson-7-gawain-1"]').forEach(x=>x.dataset.prescribedActivity='lesson-7-gawain-1')});</script>
 <script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[data-prescribed-activity="letrang-msa"]').forEach(x=>x.dataset.prescribedActivity='lesson-6-gawain-1');document.querySelectorAll('[data-prescribed-preview="letrang-msa"]').forEach(x=>x.dataset.prescribedPreview='lesson-6-gawain-1')});</script>
@@ -10671,7 +10671,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const previous = select.dataset.previousValue || '', selected = select.value;
         if (!selected) { select.value = previous; return; }
         select.disabled = true;
-        ensureCsrfToken().then(token => fetch('{% url "teacher_session_5_lesson_14_gawain_4_classify" %}', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':token}, body:JSON.stringify({submission_id:Number(submissionId), classification:selected})})).then(response => response.json().then(data => ({response,data}))).then(({response,data}) => { if (!response.ok || !data.success) throw new Error(data.error || 'Classification could not be saved.'); select.dataset.previousValue=selected; row.querySelector('.session5-review-state')?.replaceChildren('reviewed'); showToast('Grade saved successfully.', 'success'); }).catch(error => { select.value=previous; showToast(error.message || 'Classification could not be saved.', 'error'); }).finally(() => { select.disabled=false; });
+        ensureCsrfToken().then(token => fetch('{% url "teacher_session_5_lesson_14_gawain_4_classify" %}', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':token}, body:JSON.stringify({submission_id:Number(submissionId), classification:selected})})).then(response => response.json().then(data => ({response,data}))).then(({response,data}) => { if (!response.ok || !data.success) throw new Error(data.error || 'Classification could not be saved.'); select.dataset.previousValue=selected; window.StudentActivityReview.markReviewed(row, {classification:selected, classification_source:'teacher', review_status:'reviewed'}); row.querySelector('.session5-review-state')?.replaceChildren('reviewed'); showToast('Grade saved successfully.', 'success'); }).catch(error => { select.value=previous; showToast(error.message || 'Classification could not be saved.', 'error'); }).finally(() => { select.disabled=false; });
     });
 
     document.addEventListener('click', function(event) {
@@ -14823,6 +14823,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             window.__studentProgressStudentId = studentId;
             window.__studentProgressStudentName = studentName || '';
             const assessmentDetails = await fetchAssessmentProgressDetails(tasks.map(task => task.assessmentId));
+            const reviewOptions = {
+                url: "{% url 'teacher_prescribed_review_availability' %}", studentId,
+                onError: message => showToast(message, 'error'), completed: {},
+            };
+            if (tasks.some(isPrescribedProgressTask)) {
+                try {
+                    reviewOptions.completed = await window.StudentActivityReview.availability(reviewOptions.url, studentId);
+                } catch (error) {
+                    reviewOptions.onError(error.message);
+                }
+            }
             const activityRows = tasks.flatMap(task => {
                 const taskKey = String(task.assessmentId || '');
                 const rawKey = String(rawRecordId(task.assessmentId));
@@ -14943,8 +14954,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const lesson29Recordings = isLesson29TraceSay && Array.isArray(attempt?.recordings) ? attempt.recordings : [];
                     const session4Recordings = usesLetterSoundScores && Array.isArray(attempt?.session4_recordings) ? attempt.session4_recordings : [];
                     const session5Recordings = isSession5Fluency && Array.isArray(attempt?.session5_recordings) ? attempt.session5_recordings : [];
-                    const session5Finalized = session5Recordings.filter(recording => ['GREEN','YELLOW'].includes(recording.classification) || (recording.classification === 'RED' && ['teacher','skipped'].includes(recording.classification_source))).length;
-                    const session5RecordingHtml = attempt?.lesson15_review ? window.Lesson15ReadingReview.render(session5Recordings, studentId, escapeHtml, '{% url "lesson15_reading_classify" %}') : `<div class="session5-evaluation-summary"><strong>Reading Evaluation — ${session5Finalized} / 22 Graded</strong><span>Pending Review: ${session5Recordings.filter(recording => recording.review_status === 'pending').length} · Skipped: ${session5Recordings.filter(recording => recording.classification === 'RED' && recording.classification_source === 'skipped').length} · Unresolved: ${session5Recordings.filter(recording => recording.classification === 'UNRESOLVED').length}</span></div><div class="session5-fluency-table"><div class="session5-fluency-header"><span>#</span><span>Reading Item</span><span>Student Recording</span><span>Classification</span></div>${Array.from({length:22}, (_, index) => { const recording=session5Recordings.find(item => Number(item.item_index)===index) || {}; const value=['GREEN','YELLOW','RED'].includes(recording.classification) ? recording.classification : ''; const skipped=value==='RED' && recording.classification_source==='skipped'; return `<div class="session5-fluency-row" data-submission-id="${escapeHtml(recording.submission_id || '')}"><span class="session5-fluency-number">${index+1}</span><span class="session5-fluency-text"><strong>${escapeHtml(recording.expected_text || 'No item data')}</strong><small>${escapeHtml(recording.transcript || 'No transcript')}</small></span><span class="session5-fluency-audio">${recording.recording_url ? `<audio controls preload="metadata" src="${escapeHtml(recording.recording_url)}"></audio>` : '<span class="text-muted">No recording</span>'}</span><span><select class="form-select form-select-sm session5-fluency-select" data-previous-value="${value}" ${!recording.submission_id || skipped ? 'disabled' : ''}><option value="" ${!value ? 'selected' : ''}>Select Grade</option><option value="GREEN" ${value==='GREEN' ? 'selected' : ''}>🟢 Nabasa nang maayos</option><option value="YELLOW" ${value==='YELLOW' ? 'selected' : ''}>🟡 Nabasa pero medyo putol-putol</option><option value="RED" ${value==='RED' ? 'selected' : ''}>🔴 Hindi Nabasa</option></select><small class="session5-review-state">${escapeHtml(skipped ? 'Skipped · Hindi Nabasa · Awtomatiko' : (recording.review_status || 'Pending Review'))}</small></span></div>`; }).join('')}</div>`;
+                    const session5RecordingHtml = attempt?.lesson15_review
+                        ? window.Lesson15ReadingReview.render(session5Recordings, studentId, escapeHtml, '{% url "lesson15_reading_classify" %}')
+                        : window.StudentActivityReview.renderFluency(session5Recordings, escapeHtml);
                     const session4Reviewed = usesLetterSoundScores && session4Recordings.length > 0 && session4Recordings.every(recording => recording.teacher_score !== null && recording.teacher_score !== undefined);
                     const session4Score = usesLetterSoundScores
                         ? (session4Reviewed ? `${attempt.session4_correct_items}/${attempt.session4_total_items}` : 'Awaiting teacher')
@@ -14962,7 +14974,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             return `<div class="student-progress-audio-controls lesson29-letter-recording"><span class="me-2">${letterLabel}</span><button type="button" class="student-progress-retell-play" data-url="${escapeHtml(recording.recording_url)}" aria-label="Play letter recording ${recordingIndex + 1}"><i class="bi bi-play-fill"></i></button><input class="student-progress-retell-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"><span class="student-progress-retell-time">0:00 / ${duration}</span></div>`;
                         }).join('');
                     const recordingHtml = usesLetterSoundScores
-                            ? `<div class="session4-recording-review"><h6>Teacher Review</h6><p>Listen to each recording and score the student's letter sound.</p><div class="session4-recording-list">${session4RecordingHtml}</div></div>`
+                            ? (isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1 || isLesson29TraceSay
+                                ? window.StudentActivityReview.renderLetterScores(session4Recordings, task.assessmentId, studentId, escapeHtml)
+                                : `<div class="session4-recording-review"><h6>Teacher Review</h6><p>Listen to each recording and score the student's letter sound.</p><div class="session4-recording-list">${session4RecordingHtml}</div></div>`)
                         : (retellRecordingAvailable
                             ? `<div class="student-progress-audio-controls"><button type="button" class="student-progress-retell-play" data-url="${escapeHtml(attempt.recording_url)}" aria-label="Play recording"><i class="bi bi-play-fill"></i></button><input class="student-progress-retell-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"><span class="student-progress-retell-time">0:00 / ${escapeHtml(formatStudentProgressAudioTime(attempt.recording_duration_seconds))}</span></div>`
                             : '<span class="student-progress-recording-unavailable">Recording unavailable</span>');
@@ -14975,7 +14989,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         : displayedScore;
                     const typeLabel = task.activityLabel || 'Reading Activity';
                     return `
-                        <article class="student-progress-card${isLesson1Recording ? ' lesson1-recording-card' : ''}${usesLetterSoundScores ? ' session4-recording-card' : ''}">
+                        <article class="student-progress-card${isLesson1Recording ? ' lesson1-recording-card' : ''}${usesLetterSoundScores ? ' session4-recording-card' : ''}" data-review-activity="${escapeHtml(task.assessmentId || '')}" data-review-prescribed="${isPrescribedProgressTask(task)}">
                             <div class="student-progress-card-header">
                                 <div class="student-progress-identity">
                                     <span class="student-progress-type">${escapeHtml(typeLabel)}</span>
@@ -14990,7 +15004,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             </div>
                             ${(isRetellStory || isStoryResponse || isLesson1Recording || isLesson29TraceSay || isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1 || isSession5Fluency) ? `<div class="student-progress-recording" data-recording-key="${escapeHtml(retellRecordingKey)}">
                                 <div class="student-progress-recording-panel">
-                                    ${isSession5Fluency ? `<div class="session5-fluency-review"><h6>Teacher Review</h6><p>Listen to the reading and choose the final classification.</p>${session5RecordingHtml || '<span>Walang recording na isinumite.</span>'}</div>` : recordingHtml}
+                                    ${isSession5Fluency ? `<div class="session5-fluency-review">${session5RecordingHtml}</div>` : isLesson1Recording ? window.StudentActivityReview.renderSingleRecording(attempt, recordingHtml, escapeHtml) : recordingHtml}
                                     ${isLesson1Recording && (attempt?.can_retry || attempt?.can_check) ? `<div class="d-flex gap-2 mt-2 lesson1-review-actions"><button type="button" class="btn btn-outline-secondary btn-sm student-progress-lesson1-action" data-id="${escapeHtml(attempt.submission_id || '')}" data-action="retry" ${attempt.can_retry ? '' : 'disabled'}>Retry</button><button type="button" class="btn btn-primary btn-sm student-progress-lesson1-action" data-id="${escapeHtml(attempt.submission_id || '')}" data-action="checked" ${attempt.can_check ? '' : 'disabled'}>Mark as Checked</button></div>` : ''}
                                     ${isLesson29TraceSay && (attempt?.can_retry || attempt?.can_check) ? `<div class="d-flex gap-2 mt-2 lesson29-review-actions"><button type="button" class="btn btn-outline-secondary btn-sm student-progress-lesson29-action" data-student-id="${escapeHtml(attempt.student_id || '')}" data-action="retry" ${attempt.can_retry ? '' : 'disabled'}>Retry</button><button type="button" class="btn btn-primary btn-sm student-progress-lesson29-action" data-student-id="${escapeHtml(attempt.student_id || '')}" data-action="checked" ${attempt.can_check ? '' : 'disabled'}>Mark as Complete</button></div>` : ''}
                                 </div>
@@ -15000,17 +15014,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 });
                 window.StudentActivityReview.closeAll(list);
                 list.innerHTML = rows.length ? rows.join('') : '<div class="student-progress-empty">No reading activities found.</div>';
-                window.StudentActivityReview.mount(list);
+                window.StudentActivityReview.mount(list, reviewOptions);
                 hydrateStudentProgressAudioDurations(list);
             };
-            if (searchInput && !searchInput.dataset.bound) {
-                searchInput.dataset.bound = 'true';
-                searchInput.addEventListener('input', renderRows);
-            }
-            if (sortInput && !sortInput.dataset.bound) {
-                sortInput.dataset.bound = 'true';
-                sortInput.addEventListener('change', renderRows);
-            }
+            // Rebind to this student's current records and completion snapshot.
+            if (searchInput) searchInput.oninput = renderRows;
+            if (sortInput) sortInput.onchange = renderRows;
             renderRows();
         }
 
@@ -15103,6 +15112,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             })).then(response => response.json().then(data => ({ response, data }))).then(({ response, data }) => {
                 if (!response.ok || !data.success) throw new Error(data.error || 'Score could not be saved.');
                 buttons.forEach(button => button.classList.toggle('selected', button === session4ScoreButton));
+                window.StudentActivityReview.markReviewed(row, {teacher_score: Number(session4ScoreButton.dataset.score)});
                 const card = row.closest('.student-progress-card');
                 const score = card?.querySelector('.student-progress-score');
                 if (score) score.textContent = data.all_reviewed ? `${data.correct_items}/${data.total_items}` : 'Awaiting teacher';
@@ -15142,6 +15152,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 row?.querySelector('.badge')?.replaceChildren(document.createTextNode(data.status === 'checked' ? 'Completed' : 'Retry'));
                 const score = row?.querySelector('.student-progress-score');
                 if (score) score.textContent = data.status === 'checked' ? '1' : '-';
+                window.StudentActivityReview.updateSingleReview(row?.querySelector('.student-progress-recording'), data.status);
                 row?.querySelectorAll('.student-progress-lesson1-action').forEach(button => { button.disabled = true; });
                 if (data.status === 'checked') row?.querySelector('.lesson1-review-actions')?.remove();
                 showToast('Recording review updated', 'success');

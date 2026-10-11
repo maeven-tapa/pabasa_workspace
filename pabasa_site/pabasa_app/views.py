@@ -22244,6 +22244,50 @@ def _teacher_session4_student_ids(teacher):
 
 @login_required(role='teacher')
 @require_http_methods(['GET'])
+@never_cache
+def teacher_prescribed_review_availability(request):
+    """Read completion, independently of recordings and teacher grades."""
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    try:
+        student_id = int(request.GET.get('student_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'A valid student is required.'}, status=400)
+    if str(student_id) not in {str(value) for value in _teacher_session4_student_ids(teacher)}:
+        return JsonResponse({'success': False, 'error': 'Student access denied.'}, status=403)
+    student = get_object_or_404(User, pk=student_id, role='student', is_archived=False)
+    lifecycle = _current_learning_context(student)
+    calendar, term = lifecycle.get('school_calendar'), lifecycle.get('term')
+    completed = {}
+    if calendar and term in (1, 2, 3):
+        if not Enrollment.objects.filter(student=student, school_calendar=calendar,
+                section__teacher=teacher, section__is_active=True, status='active', is_active=True).exists():
+            return JsonResponse({'success': False, 'error': 'Student access denied.'}, status=403)
+        completed = {
+            'prescribed-' + key: done
+            for key, done in _current_progress_queryset(student, lifecycle).values_list('activity_key', 'activity_completed')
+        }
+        # Material-backed prescribed cards use persisted assessment completion,
+        # never the presence of a recording or a manual grade.
+        results = Assessment.objects.filter(student=student, attempt_status='completed',
+            completed_at__isnull=False, is_active=True).filter(
+                Q(supplementary_school_calendar=calendar, supplementary_term=term)
+                | Q(enrollment__school_calendar=calendar, official_term=term)
+            ).values_list('material_id', 'source_assessment_id', 'material__assessment_id')
+        for material_id, assessment_id, material_assessment_id in results:
+            if material_id:
+                completed[f'material-{material_id}'] = True
+            for identifier in (assessment_id, material_assessment_id):
+                if identifier:
+                    completed[str(identifier)] = True
+                    completed[f'assessment-{identifier}'] = True
+    activity_id = request.GET.get('activity_id')
+    if activity_id is not None:
+        completed = {activity_id: completed.get(activity_id, False)}
+    return JsonResponse({'success': True, 'completed': completed})
+
+
+@login_required(role='teacher')
+@require_http_methods(['GET'])
 def teacher_session_4_gawain_1_recordings(request):
     teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
     try:
