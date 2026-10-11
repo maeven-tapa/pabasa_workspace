@@ -25089,6 +25089,21 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
             and ReadingMatcher.normalize_spoken_words(transcript) == ['check']
         ):
             matching_transcript = 'tsek'
+        # This picture-word activity uses the Filipino workbook spelling.
+        # Retain the provider's exact words for the speech debug panel.
+        if (
+            request.POST.get('prescribed_activity_key') in {
+                'session-7-lesson-20-21-gawain-1',
+                'session-7-lesson-20-21-gawain-3',
+            }
+            and language_code.lower() == 'fil-ph'
+            and mode == 'reading'
+            and ReadingMatcher.normalize_word(target_text) == 'tsokolate'
+            and ReadingMatcher.normalize_spoken_words(transcript) in (
+                ['choco', 'latte'], ['chocolate'],
+            )
+        ):
+            matching_transcript = 'tsokolate'
         # Chirp 3 may spell the Filipino pronunciation of "riles" this way.
         # Keep the provider transcript unchanged for the speech debug panel.
         if (

@@ -73,8 +73,9 @@
         const url = String(args[0]?.url || args[0] || '');
         const transcription = /\/transcribe\/(?:[?#]|$)/.test(url);
         const workbook = /\/api\/dashboard\/assessment\/activity\/prescribed\/[^/]+\/progress\/(?:[?#]|$)/.test(url);
+        const session7PictureConnection = document.querySelector('[data-prescribed-session-controls]')?.dataset.prefix === 'prescribed-s7-l20-21-g3';
         const gawain1 = document.querySelector('[data-prescribed-session-controls]')?.dataset.prefix === 'prescribed-s7-l19-g1';
-        if (transcription || (workbook && !gawain1)) response.clone().json().then(publish).catch(error => {
+        if (transcription || (workbook && !gawain1 && !session7PictureConnection)) response.clone().json().then(publish).catch(error => {
           document.querySelectorAll('[data-speech-debug-output]').forEach(output => {
             const panel = panelFor(output);
             setPanelValue(panel, 'status', 'Malformed STT response');

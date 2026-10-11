@@ -90,6 +90,7 @@
   const lesson19Gawain4 = key === 'session-7-lesson-19-gawain-4';
   const lesson2021Gawain1 = key === 'session-7-lesson-20-21-gawain-1';
   const lesson2021Gawain2 = key === 'session-7-lesson-20-21-gawain-2';
+  const lesson2021Gawain4 = key === 'session-7-lesson-20-21-gawain-4';
   const introAudio = lesson19Gawain2
       ? new Audio('/static/pabasa_app/prescribed/audio/SESSION_7/LESSON_19/GAWAIN_2/basahin_ngalan_isulat_nawawalang_pantig_tts.mp3')
       : null;
@@ -119,6 +120,16 @@
         <h2 class="lesson-start-title lesson-13-start-title" id="${backdrop.id}-title">${hasSavedProgress ? 'May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?' : 'Handa ka na?'}</h2>
         <div class="lesson-start-actions lesson-13-start-actions">
           <button type="button" data-session7-start>${hasSavedProgress ? 'IPAGPATULOY' : 'SIMULAN'}</button>
+          <button type="button" data-session7-later>${hasSavedProgress ? 'SIMULAN ULIT' : 'MAMAYA NA LANG'}</button>
+        </div>
+      </div>`
+    : lesson2021Gawain4
+    ? `<div class="lesson-start-modal lesson-13-start-modal session7-l2021-g4-start-card">
+        <p class="lesson-start-label lesson-13-start-label">${hasSavedProgress ? 'MAY NA-SAVE KANG PROGRESO!' : escapeHtml(label)}</p>
+        <h2 class="lesson-start-title lesson-13-start-title" id="${backdrop.id}-title">${hasSavedProgress ? 'Handa ka nang magpatuloy?' : 'Handa ka nang magbasa at bumilog?'}</h2>
+        <p class="session7-g4-start-copy">${hasSavedProgress ? 'Ipagpatuloy ang iyong gawain kung saan ka huminto.' : 'Basahin ang mga salita at hanapin ang may klaster.'}</p>
+        <div class="lesson-start-actions lesson-13-start-actions">
+          <button type="button" data-session7-start>${hasSavedProgress ? 'IPAGPATULOY' : 'TULOY'}</button>
           <button type="button" data-session7-later>${hasSavedProgress ? 'SIMULAN ULIT' : 'MAMAYA NA LANG'}</button>
         </div>
       </div>`

@@ -58,6 +58,27 @@ class BasahinReadingVerdictTests(SimpleTestCase):
         self.assertFalse(self.transcribe('tsek', 'check', prescribed_activity_key='another-activity')['complete'])
         self.assertFalse(self.transcribe('tsek', 'checker', prescribed_activity_key='session-7-lesson-20-21-gawain-1')['complete'])
 
+    def test_session7_picture_tsokolate_provider_spellings(self):
+        key = 'session-7-lesson-20-21-gawain-3'
+        for heard in ('Choco Latte', 'chocolate'):
+            with self.subTest(heard=heard):
+                result = self.transcribe('tsokolate', heard, prescribed_activity_key=key)
+                self.assertTrue(result['complete'])
+                self.assertEqual(result['raw_transcript'], heard)
+        self.assertFalse(self.transcribe('tsokolate', 'chocolate')['complete'])
+        self.assertFalse(self.transcribe('tsokolate', 'chocolate bar', prescribed_activity_key=key)['complete'])
+        self.assertFalse(self.transcribe('kutsara', 'chocolate', prescribed_activity_key=key)['complete'])
+
+    def test_session7_gawain1_tsokolate_provider_spellings(self):
+        key = 'session-7-lesson-20-21-gawain-1'
+        for heard in ('Choco Latte', 'chocolate'):
+            with self.subTest(heard=heard):
+                result = self.transcribe('tsokolate', heard, prescribed_activity_key=key)
+                self.assertTrue(result['complete'])
+                self.assertEqual(result['raw_transcript'], heard)
+        self.assertFalse(self.transcribe('tsokolate', 'chocolate bar', prescribed_activity_key=key)['complete'])
+        self.assertFalse(self.transcribe('kutsara', 'chocolate', prescribed_activity_key=key)['complete'])
+
     def test_gawain_5_riles_accepts_reported_speech_spellings(self):
         for heard in ('rieles', 'reless', 'reles', 'reeles'):
             with self.subTest(heard=heard):
