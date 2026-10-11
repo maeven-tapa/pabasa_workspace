@@ -82,7 +82,8 @@
   function render() {
     const completed = Boolean(state.completed), count = Object.keys(found()).length;
     if (completed) {
-      app.innerHTML = `<div class="shell"><header class="header"><a class="back" href="${esc(data.back_url)}">${backLabel}</a><p class="eyebrow">LESSON 22 • GAWAIN 3</p><h1>Hanap-Salita</h1></header><section class="complete"><h2>Magaling! Nahanap mo ang lahat ng salita!</h2><p class="progress">Nahanap: 9 / 9</p><a class="button" href="${esc(data.back_url)}">Bumalik sa Aking Aralin</a></section></div>`;
+      app.innerHTML = `<div class="shell"><header class="header"><a class="back" href="${esc(data.back_url)}">${backLabel}</a><p class="eyebrow">LESSON 22 • GAWAIN 3</p><h1>Hanap-Salita</h1></header></div>`;
+      window.Session8CompletionPopup?.show({title:'Magaling!',message:'Nahanap mo ang lahat ng salita.',backUrl:data.back_url});
       moveBackOutsideShell();
       return;
     }

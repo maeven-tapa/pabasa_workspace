@@ -25,6 +25,60 @@ from .reading_stt import l22_c_pronunciation_match
 
 
 class WorkbookStateTests(SimpleTestCase):
+    def test_session8_completion_popup_contract_covers_all_renderers(self):
+        root = Path(__file__).parent
+        js_root = root / 'static/pabasa_app/js'
+        css_root = root / 'static/pabasa_app/css'
+        popup = (js_root / 'session8_completion_popup.js').read_text(encoding='utf-8')
+        popup_css = (css_root / 'session8_completion_popup.css').read_text(encoding='utf-8')
+        shared = (js_root / 'prescribed_workbook.js').read_text(encoding='utf-8')
+        controls = (root / 'templates/pabasa_app/session8_11_prescribed_controls.html').read_text(encoding='utf-8')
+
+        self.assertIn("aria-modal','true'", popup)
+        self.assertIn("node.inert=true", popup)
+        self.assertIn('Bumalik sa Aking Aralin', popup)
+        self.assertNotIn('Magpatuloy', popup)
+        self.assertNotIn('Susunod', popup)
+        self.assertIn('backdrop-filter:blur(6px)', popup_css)
+        self.assertIn('place-items:center', popup_css)
+        self.assertIn('session8_completion_popup.css', controls)
+        self.assertIn('session8_completion_popup.js', controls)
+
+        shared_keys = {
+            'aral-l22-g1-c-syllable-builder', 'aral-l23-g1-n-syllable-builder',
+            'aral-l23-g3-j-word-reading', 'aral-l23-g4-j-syllabication',
+            'aral-l23-g6-q-syllable-builder', 'aral-l23-g7-q-word-reading',
+            'aral-l24-g1-v-syllable-builder', 'aral-l24-g3-x-word-reading',
+            'aral-l24-g4-x-pictures', 'aral-l24-g4-x-syllable-builder',
+            'aral-l24-g5-z-syllabication', 'aral-l24-g6-z-word-search',
+            'aral-l24-g7-z-word-reading',
+        }
+        self.assertEqual(len(shared_keys), 13)
+        for key in shared_keys:
+            self.assertIn(repr(key), shared)
+        self.assertIn('Session8CompletionPopup?.show', shared)
+
+        dedicated = {
+            'aral-l22-g2-c-word-reading': 'prescribed_l22_g2_reading.js',
+            'aral-l22-g6-f-word-reading': 'prescribed_l22_g2_reading.js',
+            'aral-l22-g3-c-word-search': 'prescribed_l22_g3_word_search.js',
+            'aral-l22-g4-f-syllable-builder': 'prescribed_l22_g4_f_builder.js',
+            'aral-l22-g5-f-word-search': 'prescribed_l22_g5_f_word_search.js',
+            'aral-l23-g2-n-word-reading': 'prescribed_l23_g2_reading.js',
+            'aral-l23-g5-j-word-search': 'prescribed_l23_g5_j_word_search.js',
+            'aral-l24-g2-v-word-reading': 'prescribed_l24_g2_reading.js',
+            'aral-l24-g3-x-repeat': 'prescribed_l24_g3_repeat.js',
+        }
+        self.assertEqual(len(dedicated), 9)
+        for key, source_name in dedicated.items():
+            with self.subTest(activity_key=key):
+                self.assertIn(key, ACTIVITIES)
+                self.assertTrue((js_root / source_name).exists())
+        self.assertIn('dedicatedCompletions', popup)
+        for selector in ('.l23g2-page .panel.complete', '.l23g5-page .complete',
+                         '.l24g2-complete', '.l24g3-repeat-dialog-backdrop'):
+            self.assertIn(selector, popup)
+
     def test_session8_reading_target_labels_are_removed_from_active_renderers(self):
         js_root = Path(__file__).parent / 'static/pabasa_app/js'
         workbook = (js_root / 'prescribed_workbook.js').read_text(encoding='utf-8')
@@ -1080,7 +1134,7 @@ class PrescribedWorkbookFlowTests(TestCase):
         self.assertEqual(next_response.context['workbook_payload']['activity']['activity_key'], g3_key)
 
         source = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_l22_g2_reading.js').read_text(encoding='utf-8')
-        self.assertIn('Magpatuloy sa Gawain 3', source)
+        self.assertNotIn('Magpatuloy sa Gawain 3', source)
         self.assertIn('Bumalik sa Aking Aralin', source)
         self.assertNotIn('id="restart">Ulitin Mula sa Simula</button></section></div>`;document.getElementById(\'restart\')', source)
 

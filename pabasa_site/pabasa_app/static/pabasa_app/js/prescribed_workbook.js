@@ -453,7 +453,31 @@
     if(qBuilder&&actionHost&&action.parentElement!==actionHost)actionHost.appendChild(action);
     action.replaceChildren();
     if(g6Search&&!state.completed)document.getElementById('wb-g6-completion-modal')?.remove();
-    if(state.completed){
+    if(state.completed&&!session9Activity){
+      const completionCopy={
+        'aral-l22-g1-c-syllable-builder':['Magaling!','Natapos mo ang Gawain 1.'],
+        'aral-l23-g1-n-syllable-builder':['Magaling!','Natapos mo ang Gawain 1.'],
+        'aral-l23-g3-j-word-reading':['Mahusay!','Natapos mo ang gawain!'],
+        'aral-l23-g4-j-syllabication':['Natapos mo ang gawain!','Natapos mo ang Gawain 4.'],
+        'aral-l23-g6-q-syllable-builder':['Magaling!','Natapos mo ang Gawain 6.'],
+        'aral-l23-g7-q-word-reading':['Mahusay!','Natapos mo ang gawain!'],
+        'aral-l24-g1-v-syllable-builder':['Magaling!','Natapos mo ang Gawain 1.'],
+        'aral-l24-g3-x-word-reading':['Magaling!','Natapos mo ang Gawain 3.'],
+        'aral-l24-g4-x-pictures':['Magaling!','Natapos mo ang gawain.'],
+        'aral-l24-g4-x-syllable-builder':['Magaling!','Natapos mo ang Gawain 4.'],
+        'aral-l24-g5-z-syllabication':['Magaling!','Natapos mo ang Gawain 5!'],
+        'aral-l24-g6-z-word-search':['Magaling!','Natapos mo ang Gawain 6.'],
+        'aral-l24-g7-z-word-reading':['Magaling!','Natapos mo ang Gawain 7!'],
+      }[a.activity_key]||['Magaling!',`Natapos mo ang Gawain ${a.activity_number||a.display_gawain_number||''}.`];
+      content.innerHTML='';
+      action.replaceChildren();
+      window.Session8CompletionPopup?.show({
+        title:completionCopy[0],
+        message:completionCopy[1],
+        backUrl:data.back_url||document.getElementById('wb-back')?.href||document.getElementById('wb-g1-back')?.href||'#',
+      });
+      return;
+      /* Session 8 completion is handled by the shared overlay above. */
       const completionWord=a.activity_key==='aral-l23-g1-n-syllable-builder'?'Niño':(state.found_words||[]).join(', ');
       if(g6Search){
         renderL24G6WordSearch();
