@@ -91,3 +91,4 @@
   .l23g5-page .activity-card { padding-inline: 9px; }
   .l23g5-page .cell { font-size: 1rem; }
 }
+.l23g5-page .instruction,.l23g5-page #tts{display:none!important}.l23g5-page #feedback{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}

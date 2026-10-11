@@ -180,6 +180,54 @@ class WorkbookStateTests(SimpleTestCase):
         template_source = (Path(__file__).parent / 'templates/pabasa_app/prescribed_workbook_page.html').read_text(encoding='utf-8')
         self.assertNotIn('prescribed_l24_g3_word_reading.js', template_source)
 
+    def test_session8_wp5_remaining_cleanup_is_scoped_to_the_approved_activities(self):
+        targets = {
+            'aral-l22-g3-c-word-search', 'aral-l22-g4-f-syllable-builder',
+            'aral-l22-g5-f-word-search', 'aral-l22-g6-f-word-reading',
+            'aral-l23-g1-n-syllable-builder', 'aral-l23-g2-n-word-reading',
+            'aral-l23-g3-j-word-reading', 'aral-l23-g4-j-syllabication',
+            'aral-l23-g5-j-word-search', 'aral-l23-g6-q-syllable-builder',
+            'aral-l23-g7-q-word-reading', 'aral-l24-g1-v-syllable-builder',
+            'aral-l24-g2-v-word-reading', 'aral-l24-g3-x-repeat',
+            'aral-l24-g4-x-pictures', 'aral-l24-g3-x-word-reading',
+            'aral-l24-g4-x-syllable-builder', 'aral-l24-g5-z-syllabication',
+            'aral-l24-g6-z-word-search', 'aral-l24-g7-z-word-reading',
+        }
+        self.assertEqual(len(targets), 20)
+        self.assertTrue(targets.issubset(ACTIVITIES))
+
+        css_root = Path(__file__).parent / 'static/pabasa_app/css'
+        sources = {
+            'prescribed_l22_g2_reading.css': ('l22g6-page',),
+            'prescribed_l22_g3_word_search.css': ('l22g3-page', 'l22g5-page'),
+            'prescribed_l22_g4_f_builder.css': ('l22g4-page',),
+            'prescribed_l23_g2_reading.css': ('l23g2-page',),
+            'prescribed_l23_g5_j_word_search.css': ('l23g5-page',),
+            'prescribed_l24_g3_repeat.css': ('wb-l24-g3-repeat-page',),
+            'prescribed_workbook.css': (
+                'wb-l23-page', 'wb-l23-g3-page', 'wb-l23-g4-syllabication',
+                'wb-l23-g6-page', 'wb-l23-g7-reading', 'wb-l24-g1-page',
+                'wb-l24-g2-page', 'wb-l24-g4-pictures-page', 'wb-l24-g3-word-page',
+                'wb-l24-g4-builder-page', 'wb-l24-g5-page', 'wb-l24-g6-page',
+                'wb-l24-g7-page',
+            ),
+        }
+        for filename, selectors in sources.items():
+            source = (css_root / filename).read_text(encoding='utf-8')
+            with self.subTest(filename=filename):
+                for selector in selectors:
+                    self.assertIn(selector, source)
+                self.assertIn('clip:rect(0,0,0,0)', source)
+
+        shared = (css_root / 'prescribed_workbook.css').read_text(encoding='utf-8')
+        self.assertNotIn('wb-l22-g1-page #wb-instruction-replay', shared)
+        self.assertNotIn('wb-l23-g3-page .wb-l23-g3-list-panel h2', shared)
+        self.assertNotIn('wb-l24-g5-page .wb-g5-panel-heading', shared)
+        self.assertNotIn('wb-l24-g6-page .wb-g6-help', shared)
+
+        g4 = (css_root / 'prescribed_l22_g4_f_builder.css').read_text(encoding='utf-8')
+        self.assertNotIn('.l22g4-page .tile small', g4)
+
     def test_session9_activity2_keeps_workbook_instruction_and_requires_drawing_and_courteous_word(self):
         activity = get_activity('aral-s9-a2-helping-drawing')
         self.assertEqual(activity['interaction_type'], 'drawing')
