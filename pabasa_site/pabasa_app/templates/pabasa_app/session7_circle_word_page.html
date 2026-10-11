@@ -119,12 +119,22 @@
       const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
       const attemptKey = (item, word) => `${item}:${word}`;
       let state = Object.assign({phase:'intro',current_item_index:0,current_oral_word_index:0,orally_completed_words:{},stt_attempt_counts:{},read_aloud_play_counts:{},selected_answers:{},completed_correct_answers:[],state_version:0}, d.progress?.state || {});
-      let busy = false, requestId = 0, stream = null, modelAudio = null, narrationAudio = null, narrationDone = null, narrationId = 0, narrationBusy = false, feedbackReady = true, introInstructionPlayed = false, introVisible = true;
+      let busy = false, requestId = 0, speechController = null, stream = null, modelAudio = null, narrationAudio = null, narrationDone = null, narrationId = 0, narrationBusy = false, feedbackReady = true, introInstructionPlayed = false, introVisible = true;
       const current = () => Math.max(0, Number(state.current_item_index) || 0);
       const total = items.length;
       const orallyDone = index => state.orally_completed_words?.[String(index)] || [];
       const activeWord = () => items[current()]?.choices?.[orallyDone(current()).length] || '';
       const stopTracks = () => { stream?.getTracks().forEach(track => track.stop()); stream = null; };
+      const cancelSpeech = () => {
+        requestId++;
+        speechController?.abort(); speechController = null;
+        window.Basahin?.cancelAll?.();
+        stopTracks();
+        busy = false;
+        if (!introVisible && state.phase === 'oral_reading') render();
+        else updateControls();
+        debugState({mic:'Stopped',recorder:'Inactive',vad:'Waiting'});
+      };
       const stopAudio = audio => { if (!audio) return; audio.onended = audio.onerror = null; audio.pause(); audio.currentTime = 0; };
       const stopNarration = () => { narrationId++; stopAudio(narrationAudio); narrationAudio = null; narrationDone?.(); narrationDone = null; narrationBusy = false; updateControls(); };
       const updateControls = () => {
@@ -257,7 +267,8 @@
           const form = new FormData(); form.append('audio',blob,'session7-lesson19-gawain3.webm');window.Basahin.attachStreamResult?.(form,blob); form.append('target_text',word); form.append('language','Filipino'); form.append('mode','reading');
           window.__session7L19G3ExpectedText = String(form.get('target_text'));
           const expectedField = document.getElementById('prescribed-s7-l19-g3-debug-expected'); if (expectedField) expectedField.textContent = window.__session7L19G3ExpectedText;
-          const response = await fetch(d.transcribe_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form});
+          speechController = new AbortController();
+          const response = await fetch(d.transcribe_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form,signal:speechController.signal});
           const result = await response.json().catch(() => ({}));
           if (mine !== requestId) return;
           if (!response.ok || !result.success || typeof result.complete !== 'boolean') throw Object.assign(Error(result.error || 'Invalid speech response.'),{speechResult:result});
@@ -282,7 +293,7 @@
             await playMapped(localAudio.retry);
             if (listenFirst) await playMapped(localAudio.listenPrompt);
           }
-        } finally { stopTracks(); debugState({mic:'Stopped',recorder:'Inactive'}); busy = false; updateControls(); }
+        } finally { if (mine === requestId) { speechController = null; stopTracks(); debugState({mic:'Stopped',recorder:'Inactive'}); busy = false; updateControls(); } }
       }
       async function listen(index,wordIndex,word,button) {
         if (busy || narrationBusy) return;
@@ -333,12 +344,12 @@
         if (!introInstructionPlayed) { introInstructionPlayed = true; await playMapped(localAudio.instruction); }
       };
       window.addEventListener('lesson-start-ready', openIntro);
-      window.addEventListener('session7-prescribed-cancel', () => { requestId++; stopTracks(); stopNarration(); stopAudio(modelAudio); modelAudio = null; busy = false; });
-      window.addEventListener('prescribed-session-paused', () => { requestId++; stopTracks(); stopNarration(); stopAudio(modelAudio); modelAudio = null; busy = false; document.body.classList.add('prescribed-session-paused'); publishExpected(); debugState({mic:'Stopped',recorder:'Inactive'}); });
+      window.addEventListener('session7-prescribed-cancel', () => { cancelSpeech(); stopNarration(); stopAudio(modelAudio); modelAudio = null; });
+      window.addEventListener('prescribed-session-paused', () => { cancelSpeech(); stopNarration(); stopAudio(modelAudio); modelAudio = null; document.body.classList.add('prescribed-session-paused'); publishExpected(); });
       window.addEventListener('prescribed-session-resumed', () => { document.body.classList.remove('prescribed-session-paused'); publishExpected(); if (!introVisible && state.phase === 'oral_reading') void playMapped(localAudio.highlight[String(activeWord()).toLocaleLowerCase('fil-PH')]); });
-      window.addEventListener('pagehide', () => { requestId++; stopTracks(); stopNarration(); stopAudio(modelAudio); });
+      window.addEventListener('pagehide', () => { cancelSpeech(); stopNarration(); stopAudio(modelAudio); });
       render();
-      window.__session7LeaveAdapter = {saveCurrentProgress:() => save(),cleanup:() => { requestId++; stopTracks(); stopNarration(); stopAudio(modelAudio); }};
+      window.__session7LeaveAdapter = {saveCurrentProgress:() => save(),cleanup:() => { cancelSpeech(); stopNarration(); stopAudio(modelAudio); }};
     })();
   </script>
   {% include 'pabasa_app/session8_11_prescribed_controls.html' with prefix='prescribed-s7-l19-g3' help_text='Basahin muna ang tatlong salita, pagkatapos piliin ang salitang tumutukoy sa larawan.' %}
