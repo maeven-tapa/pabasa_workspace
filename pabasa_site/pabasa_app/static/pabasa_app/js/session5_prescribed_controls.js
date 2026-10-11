@@ -357,6 +357,15 @@
     else if (!back.textContent.includes('Bumalik sa Aking Gawain')) back.textContent = 'Bumalik sa Aking Gawain';
     back.addEventListener('click', event => { event.preventDefault(); openLeave('activity'); });
   }
+  const pauseBack = q('-back');
+  if (pauseBack && !pauseBack.dataset.session5LeaveBound) {
+    pauseBack.dataset.session5LeaveBound = 'true';
+    pauseBack.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      openLeave('pause');
+    });
+  }
   leaveNo?.addEventListener('click', event => {
     event.preventDefault();
     const source = leaveModal?.dataset.source;
@@ -406,7 +415,13 @@
       return;
     }
     console.log('[SESSION5 EXIT] navigating');
-    window.location.href = '/dashboard/assessment/';
+    const destination = document.querySelector('[data-session5-return-url]')?.dataset.session5ReturnUrl
+      || document.querySelector('.back, .lesson-13-back, .g4-back')?.href;
+    if (!destination) {
+      failLeave(new Error('Aking Aralin destination is unavailable'));
+      return;
+    }
+    window.location.href = destination;
   });
   window.__session5ControlsInitialized[prefix] = true;
   scheduleExpectedTextRefresh();

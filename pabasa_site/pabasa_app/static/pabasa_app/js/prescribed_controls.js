@@ -63,8 +63,28 @@
       const close = modal => { if (modal) modal.hidden = true; };
       const closeAll = () => [help, pause, restart, audio, leave].forEach(close);
       const open = modal => { closeAll(); if (modal) modal.hidden = false; };
+      const helpContent = {
+        'prescribed-s5l13g1': ['Tingnan ang letra', 'Tingnan ang letrang ipinapakita.', 'Sabihin ang tunog', 'Bigkasin nang malinaw ang tamang tunog.', 'Magpatuloy', 'Sundin ang gawain at magpatuloy sa susunod na letra.'],
+        'prescribed-s5l13g3': ['Basahin ang pangungusap', 'Tingnan ang buong pangungusap.', 'Magsalita nang malinaw', 'Basahin nang malinaw at hindi nagmamadali.', 'Magpatuloy', 'Sundin ang button para sa susunod na pangungusap.'],
+        'prescribed-s5l14g1': ['Tingnan ang larawan', 'Tingnan at kilalanin ang nasa larawan.', 'Tukuyin ang tunog', 'Alamin ang unang tunog ng salita.', 'Piliin ang T o N', 'Piliin ang tamang sagot at magpatuloy.'],
+        'prescribed-s5l14g2': ['Piliin ang salita', 'Pumili ng salita sa Hanay A.', 'Itugma ang pantig', 'Piliin ang tamang pantig sa Hanay B.', 'Magpatuloy', 'Tapusin ang mga tugma at sundin ang susunod na bahagi.'],
+        'prescribed-s5l14g3': ['Tingnan ang larawan', 'Tingnan ang larawan at salitang may patlang.', 'Punan ang pantig', 'Piliin o ilagay ang pantig na nawawala.', 'Suriin at magpatuloy', 'Tingnan ang sagot at magpatuloy sa susunod.'],
+        'prescribed-s5l15g1': ['Tingnan ang larawan', 'Suriing mabuti ang larawan.', 'Piliin ang salita', 'Piliin ang salitang tumutugma sa larawan.', 'Magpatuloy', 'Sundin ang gawain para sa susunod na larawan.'],
+        'prescribed-s5l15g2': ['Tingnan ang salita', 'Tingnan ang larawan at salitang may patlang.', 'Itugma ang pantig', 'Piliin ang pantig na angkop sa salita.', 'Sundin ang bawat bahagi', 'Tapusin ang bahagi at magpatuloy sa susunod.'],
+        'prescribed-s5l14g4': ['Basahin ang teksto', 'Basahin ang salita, parirala, o pangungusap.', 'Magsalita nang malinaw', 'Basahin nang maayos at hindi nagmamadali.', 'Magpatuloy', 'Tapusin ang bawat bahagi at magpatuloy.'],
+        'prescribed-s5l15g3': ['Basahin ang teksto', 'Basahin ang bawat salita, parirala, o pangungusap.', 'Magsalita nang malinaw', 'Bigkasin ang binabasa nang malinaw.', 'Magpatuloy', 'Sundin ang gawain para sa susunod na teksto.']
+      }[config.prefix];
+      if (help && helpContent) {
+        help.querySelectorAll('.session5-controls-step').forEach((step, index) => {
+          const title = step.querySelector('strong');
+          const text = step.querySelector('p');
+          if (title) title.textContent = helpContent[index * 2];
+          if (text) text.textContent = helpContent[index * 2 + 1];
+        });
+      }
       q('-help-btn')?.addEventListener('click', async () => { cancelReading(); await config.adapter.cancelAttempt?.('help'); open(help); });
       q('-help-close')?.addEventListener('click', () => { config.adapter.resume?.(); close(help); });
+      q('-help-ack')?.addEventListener('click', () => { config.adapter.resume?.(); close(help); });
       q('-audio-settings-btn')?.addEventListener('click', () => { cancelReading(); config.adapter.pause?.(); open(pause); });
       q('-resume')?.addEventListener('click', () => { close(pause); config.adapter.resume?.(); });
       q('-restart')?.addEventListener('click', () => open(restart));
