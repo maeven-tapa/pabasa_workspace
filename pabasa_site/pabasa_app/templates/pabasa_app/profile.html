@@ -1476,6 +1476,84 @@
     @media(max-width:900px){body:has(.player-profile) .profile-main{grid-template-columns:1fr}}
     @media(max-width:560px){body:has(.player-profile) .profile-details-mini{grid-template-columns:1fr}.settings-theme-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
+    /* Shared PABASA settings surface for teacher and student profiles. */
+    .player-settings-modal .modal-dialog { width:min(calc(100% - 1.5rem), 760px); max-width:760px; }
+    .player-settings-modal .modal-content {
+        background:var(--dash-panel) !important;
+        border:1px solid var(--dash-border) !important;
+        border-radius:24px;
+        box-shadow:var(--dash-shadow) !important;
+    }
+    .player-settings-modal .modal-header {
+        align-items:center;
+        background:linear-gradient(180deg, color-mix(in srgb, var(--dash-primary-soft) 72%, var(--dash-panel)), var(--dash-panel));
+        border-bottom:1px solid var(--dash-border);
+        gap:.75rem;
+        padding:1rem 1.25rem .85rem;
+    }
+    .player-settings-modal .modal-title {
+        align-items:center;
+        color:var(--dash-text);
+        display:flex;
+        font-size:1.2rem;
+        font-weight:900;
+        gap:.6rem;
+        margin:0;
+    }
+    .player-settings-modal .modal-title i {
+        align-items:center;
+        background:color-mix(in srgb, var(--dash-primary) 12%, var(--dash-panel));
+        border-radius:10px;
+        color:var(--dash-primary);
+        display:inline-flex;
+        height:2.15rem;
+        justify-content:center;
+        width:2.15rem;
+    }
+    .player-settings-modal .btn-close { margin:0 0 0 auto; opacity:.7; padding:.65rem; }
+    .player-settings-modal .btn-close:hover,
+    .player-settings-modal .btn-close:focus { background:color-mix(in srgb, var(--dash-primary) 10%, transparent); opacity:1; }
+    .player-settings-modal .modal-body { max-height:min(70vh, 680px); padding:1rem 1.25rem 1.25rem !important; }
+    .settings-accordion { display:grid; gap:.6rem; }
+    .settings-accordion .accordion-item {
+        background:transparent;
+        border:1px solid var(--dash-border);
+        border-radius:14px !important;
+        margin:0;
+        overflow:hidden;
+    }
+    .settings-accordion .accordion-button {
+        background:color-mix(in srgb, var(--dash-primary-soft) 35%, var(--dash-panel));
+        color:var(--dash-text);
+        font-weight:900;
+        gap:.55rem;
+        min-height:50px;
+        padding:.7rem .9rem;
+    }
+    .settings-accordion .accordion-button i { color:var(--dash-primary); font-size:1rem; }
+    .settings-accordion .accordion-button:not(.collapsed) {
+        background:color-mix(in srgb, var(--dash-primary-soft) 72%, var(--dash-panel));
+        box-shadow:none;
+        color:var(--dash-primary-deep);
+    }
+    .settings-accordion .accordion-body {
+        background:var(--dash-panel);
+        border-top:1px solid var(--dash-border);
+        padding:1rem;
+    }
+    .settings-accordion .profile-info-row { border-bottom:1px solid color-mix(in srgb, var(--dash-border) 70%, transparent); padding:.65rem 0; }
+    .settings-accordion .profile-info-row:first-child { padding-top:0; }
+    .settings-accordion .profile-info-row:last-child { border-bottom:0; }
+    .settings-accordion .btn { border-radius:10px; font-weight:800; }
+    .settings-accordion .btn-primary { background:var(--dash-primary); border-color:var(--dash-primary); box-shadow:0 4px 10px color-mix(in srgb, var(--dash-primary) 20%, transparent); }
+    .settings-accordion .form-label { color:var(--dash-text); font-size:.8rem; font-weight:800; }
+    @media(max-width:600px) {
+        .player-settings-modal .modal-dialog { width:calc(100% - 1rem); margin:.5rem auto; }
+        .player-settings-modal .modal-header { padding:.85rem 1rem .7rem; }
+        .player-settings-modal .modal-body { max-height:calc(100vh - 125px); padding:.75rem 1rem 1rem !important; }
+        .settings-accordion .accordion-body { padding:.85rem; }
+    }
+
     .student-edit-modal { z-index:2000; }
     .student-edit-modal .modal-dialog { max-width:760px; }
     .student-edit-modal .modal-content { background:var(--dash-panel); border:1px solid var(--dash-border); border-radius:24px; box-shadow:0 24px 70px rgba(0,0,0,.42); max-height:calc(100vh - 2rem); overflow:hidden; }
