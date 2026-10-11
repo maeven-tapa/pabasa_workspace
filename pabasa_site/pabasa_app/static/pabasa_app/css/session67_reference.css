@@ -91,6 +91,39 @@ body.session67-activity .card {
   overflow: auto !important;
 }
 
+/* Lesson 16 Gawain 4 fits its reading and writing steps in the desktop card. */
+@media (min-width: 821px) and (min-height: 700px) {
+  body.session67-activity.lesson-16-gawain-4-page .page {
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+  }
+
+  body.session67-activity.lesson-16-gawain-4-page .back {
+    min-height: 56px;
+  }
+
+  body.session67-activity.lesson-16-gawain-4-page .card {
+    margin-top: 12px !important;
+    padding-top: clamp(16px, 2.5vh, 26px) !important;
+    padding-bottom: 14px !important;
+    overflow: visible !important;
+  }
+
+  body.session67-activity.lesson-16-gawain-4-page .steps {
+    margin-bottom: clamp(10px, 2vh, 18px);
+  }
+
+  body.session67-activity.lesson-16-gawain-4-page .image-wrap {
+    min-height: 0;
+    padding: 10px;
+  }
+
+  body.session67-activity.lesson-16-gawain-4-page .image,
+  body.session67-activity.lesson-16-gawain-4-page .oral-image {
+    height: min(34vh, 320px);
+  }
+}
+
 @media (max-width: 680px) {
   body.session67-activity .page {
     width: min(100% - 24px, 680px) !important;
