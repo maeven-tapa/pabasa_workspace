@@ -124,15 +124,6 @@
           <a class="l24g3-repeat-secondary" href="${back}">Bumalik sa Aking Aralin</a>
         </div>
       </section>
-    </div>` : dialog === 'reset' ? `<div class="l24g3-repeat-dialog-backdrop" role="presentation">
-      <section class="l24g3-repeat-dialog" role="dialog" aria-modal="true" aria-labelledby="l24g3-reset-title">
-        <h2 id="l24g3-reset-title">Sigurado ka bang gusto mong ulitin mula sa simula?</h2>
-        <p>Magsisimula muli ang iyong progreso sa Gawain 3.</p>
-        <div class="l24g3-repeat-dialog-actions">
-          <button class="l24g3-repeat-primary" id="reset-confirm" type="button" ${controlsLocked ? 'disabled' : ''}>Oo, Ulitin Mula sa Simula</button>
-          <button class="l24g3-repeat-secondary" id="reset-cancel" type="button" ${controlsLocked ? 'disabled' : ''}>Hindi, Bumalik</button>
-        </div>
-      </section>
     </div>` : '';
     root.innerHTML = `<div class="l24g3-repeat-shell">
       <a class="l24g3-repeat-back" href="${back}">← <span>Aking Aralin</span></a>
@@ -157,7 +148,6 @@
             <p class="l24g3-repeat-attempts">Pagsubok: ${Number(currentState.attempts || 0)} / 3</p>
             <div class="l24g3-repeat-heard"><span>NARINIG KO</span><strong>${esc(state.last_transcript || '—')}</strong></div>
             <p class="l24g3-repeat-feedback ${kind}" role="status">${esc(state.last_feedback || '')}</p>
-            <button class="l24g3-repeat-reset" id="restart" type="button" ${controlsLocked ? 'disabled' : ''}>Ulitin Mula sa Simula</button>
           </section>
         </div>`}
       </section>${dialogMarkup}</div>`;
@@ -166,10 +156,7 @@
       document.getElementById('listen')?.addEventListener('click', listen);
       document.getElementById('speak')?.addEventListener('click', record);
       document.getElementById('retry')?.addEventListener('click', retry);
-      document.getElementById('restart')?.addEventListener('click', restart);
     }
-    document.getElementById('reset-confirm')?.addEventListener('click', confirmRestart);
-    document.getElementById('reset-cancel')?.addEventListener('click', cancelRestart);
   }
   async function announceCompletion() {
     if (completionAudioStarted || !state.completed) return;
@@ -263,35 +250,6 @@
       await playMappedFeedback(feedback); render(error.message || feedback, 'bad');
     }
     finally { busy = false; render(); }
-  }
-  function restart() {
-    if (busy || state.completed || dialog) return;
-    dialog = 'reset';
-    render();
-  }
-  function cancelRestart() {
-    if (busy || dialog !== 'reset') return;
-    dialog = '';
-    render();
-  }
-  async function confirmRestart() {
-    if (busy || dialog !== 'reset') return;
-    busy = true;
-    requestId += 1;
-    stream?.getTracks().forEach(track => track.stop()); stream = null;
-    stopAudio();
-    render('Nire-reset ang gawain…');
-    try {
-      await speak('Nire-reset ang gawain…');
-      await request({action: 'restart'});
-      dialog = '';
-      completionAudioStarted = false;
-      render();
-    } catch (error) {
-      const feedback = mappedStateTexts.has(error.message) ? error.message : 'Hindi na-reset ang gawain.';
-      await playMappedFeedback(feedback);
-      render(error.message || feedback, 'bad');
-    } finally { busy = false; render(); }
   }
   document.addEventListener('pabasa:l24-started', () => { playInstruction(); }, {once: true});
   window.addEventListener('pagehide', () => { requestId += 1; stream?.getTracks().forEach(track => track.stop()); stopAudio(); });
