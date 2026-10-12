@@ -1714,6 +1714,10 @@
 
 {% block content %}
 <section class="teacher-dashboard">
+    <div class="teacher-assessment-request-card" aria-label="Prescribed activity review">
+        <div><h2>Session 8 and 9 prescribed activities</h2><p>View a student's Session 8 results or manually check Session 9 drawings.</p></div>
+        <a class="btn btn-primary" href="{% url 'teacher_prescribed_review_page' %}">Open activity review</a>
+    </div>
     <div class="teacher-dashboard-columns">
     <div class="teacher-dashboard-main">
             <section class="teacher-glance" aria-labelledby="teacherGlanceTitle">

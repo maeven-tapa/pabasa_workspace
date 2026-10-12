@@ -38,6 +38,7 @@ urlpatterns = [
     path('api/signup/sections/', views.student_signup_sections, name='signup_sections'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('dashboard/teacher/', views.dashboard_teacher, name='dashboard_teacher'),
+    path('dashboard/teacher/prescribed-review/', views.teacher_prescribed_review_page, name='teacher_prescribed_review_page'),
     path('dashboard/admin/', views.dashboard_admin, name='dashboard_admin'),
     path('dashboard/admin/users/', views.admin_users, name='admin_users'),
     path('dashboard/admin/students/', views.admin_students, name='admin_students'),
@@ -279,6 +280,8 @@ urlpatterns = [
     path('dashboard/teacher/overview/', views.get_teacher_overview, name='get_teacher_overview'),
     # API: authoritative teacher student list (used by frontend JS)
     path('dashboard/teacher/students-api/', views.get_teacher_students_api, name='get_teacher_students_api'),
+    path('api/teacher/prescribed-progress/', views.teacher_prescribed_progress, name='teacher_prescribed_progress'),
+    path('api/teacher/prescribed-review-action/', views.teacher_prescribed_review_action, name='teacher_prescribed_review_action'),
     path('dashboard/teacher/student-crla-observation-level/', views.update_teacher_crla_observation_level, name='update_teacher_crla_observation_level'),
     # Courses API for teachers
     path('dashboard/teacher/courses/', views.get_teacher_courses_api, name='get_teacher_courses_api'),

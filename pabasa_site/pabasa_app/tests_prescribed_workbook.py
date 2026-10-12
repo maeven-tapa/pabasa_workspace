@@ -1482,3 +1482,70 @@ class PrescribedWorkbookFlowTests(TestCase):
                 self.assertEqual(response.json()['tts_language'], 'en-PH')
                 self.assertEqual(response.json()['voice_name'], '')
                 self.assertEqual(synthesize.call_args.args[2], 'en-PH')
+
+
+class TeacherSession89IntegrationTests(TestCase):
+    def setUp(self):
+        school = School.objects.create(name='Teacher Review School', code='TRS')
+        self.student = User.objects.create(custom_id='TR-STUDENT', role='student', first_name='Review', last_name='Student', email='review-student@example.com', password_hash='test', sex='N/A', birth_month=1, birth_day=1, birth_year=2016, school_record=school)
+        self.teacher = User.objects.create(custom_id='TR-TEACHER', role='teacher', first_name='Review', last_name='Teacher', email='review-teacher@example.com', password_hash='test', sex='N/A', birth_month=1, birth_day=1, birth_year=1990, school_record=school)
+        self.section = Section.objects.create(school=school, class_code='TR-1', class_name='Teacher Review', subject='Reading', teacher=self.teacher, is_active=True)
+        self.section.add_student(self.student)
+        from .prescribed_test_fixtures import prescribed_term_fixture
+        prescribed_term_fixture(self.student, teacher=self.teacher, section=self.section)
+
+    def set_session(self, user):
+        session = self.client.session
+        session.update({'user_id': user.pk, 'user_role': user.role, 'email': user.email})
+        session.save()
+
+    def test_teacher_session8_progress_is_read_only_and_activity_scoped(self):
+        self.set_session(self.teacher)
+        page = self.client.get(reverse('teacher_prescribed_review_page'))
+        self.assertEqual(page.status_code, 200, page.content)
+        response = self.client.get(reverse('teacher_prescribed_progress'), {'student_id': self.student.pk, 'session': 8})
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(len(response.json()['activities']), 22)
+        self.assertTrue(all('preview_url' in row and 'artifact' not in row for row in response.json()['activities']))
+
+    @patch('pabasa_app.views._student_can_open_prescribed_activity', return_value=True)
+    def test_session9_submission_waits_for_teacher_and_complete_persists(self, _open):
+        self.set_session(self.student)
+        stroke = {'color': '#183e63', 'width': 5, 'points': [[1, 1], [4, 4]]}
+        response = self.client.post(reverse('prescribed_activity_progress', kwargs={'activity_key': 'aral-s9-a1-family-drawing'}), json.dumps({'action': 'answer', 'revision': 0, 'answer': {'text': 'This is my family.', 'strokes': [stroke]}}), content_type='application/json')
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertFalse(response.json()['progress']['activity_completed'])
+        self.assertTrue(response.json()['state']['awaiting_teacher_verdict'])
+        self.set_session(self.teacher)
+        response = self.client.get(reverse('teacher_prescribed_progress'), {'student_id': self.student.pk, 'session': 9})
+        self.assertEqual(response.status_code, 200, response.content)
+        row = next(item for item in response.json()['activities'] if item['activity_key'] == 'aral-s9-a1-family-drawing')
+        self.assertEqual(row['status'], 'Pending Teacher Review')
+        self.assertEqual(row['artifact']['text'], 'This is my family.')
+        response = self.client.post(reverse('teacher_prescribed_review_action'), json.dumps({'student_id': self.student.pk, 'activity_key': 'aral-s9-a1-family-drawing', 'action': 'complete'}), content_type='application/json')
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertTrue(response.json()['activity_completed'])
+
+    def test_teacher_review_rejects_unenrolled_students(self):
+        outsider = User.objects.create(custom_id='TR-OUTSIDER', role='teacher', first_name='Other', last_name='Teacher', email='other-teacher@example.com', password_hash='test', sex='N/A', birth_month=1, birth_day=1, birth_year=1990, school_record=self.student.school_record)
+        self.set_session(outsider)
+        response = self.client.get(reverse('teacher_prescribed_progress'), {'student_id': self.student.pk, 'session': 8})
+        self.assertEqual(response.status_code, 403)
+        response = self.client.post(reverse('teacher_prescribed_review_action'), json.dumps({'student_id': self.student.pk, 'activity_key': 'aral-s9-a1-family-drawing', 'action': 'complete'}), content_type='application/json')
+        self.assertEqual(response.status_code, 403)
+
+    @patch('pabasa_app.views._student_can_open_prescribed_activity', return_value=True)
+    def test_session9_retry_keeps_activity_incomplete_and_allows_resubmission(self, _open):
+        stroke = {'color': '#183e63', 'width': 5, 'points': [[1, 1], [4, 4]]}
+        self.set_session(self.student)
+        url = reverse('prescribed_activity_progress', kwargs={'activity_key': 'aral-s9-a2-helping-drawing'})
+        first = self.client.post(url, json.dumps({'action': 'answer', 'revision': 0, 'answer': {'text': 'Please', 'strokes': [stroke]}}), content_type='application/json')
+        self.assertEqual(first.status_code, 200, first.content)
+        self.set_session(self.teacher)
+        review = self.client.post(reverse('teacher_prescribed_review_action'), json.dumps({'student_id': self.student.pk, 'activity_key': 'aral-s9-a2-helping-drawing', 'action': 'retry'}), content_type='application/json')
+        self.assertEqual(review.status_code, 200, review.content)
+        self.assertFalse(review.json()['activity_completed'])
+        self.set_session(self.student)
+        second = self.client.post(url, json.dumps({'action': 'answer', 'revision': 0, 'answer': {'text': 'Thank you', 'strokes': [stroke]}}), content_type='application/json')
+        self.assertEqual(second.status_code, 200, second.content)
+        self.assertFalse(second.json()['progress']['activity_completed'])

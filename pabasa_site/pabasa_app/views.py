@@ -6292,6 +6292,12 @@ def dashboard_teacher(request):
     return render(request, 'pabasa_app/dashboard_teacher.html', _dashboard_context(request, 'teacher'))
 
 
+def teacher_prescribed_review_page(request):
+    if not _check_auth(request) or request.session.get('user_role') != 'teacher':
+        return redirect('auth')
+    return render(request, 'pabasa_app/teacher_prescribed_review.html', _dashboard_context(request, 'teacher'))
+
+
 def dashboard_admin(request):
     if not _check_auth(request):
         return redirect('auth')
@@ -14779,7 +14785,16 @@ def prescribed_activity_page(request, activity_key):
         if preview or admin_preview:
             if role not in {'teacher', 'admin'}:
                 return HttpResponseForbidden()
-            student = None
+            requested_student_id = request.GET.get('student_id')
+            if requested_student_id:
+                try:
+                    student = User.objects.get(pk=int(requested_student_id), role='student', is_archived=False)
+                except (TypeError, ValueError, User.DoesNotExist):
+                    return HttpResponseForbidden()
+                if role == 'teacher' and str(student.pk) not in {str(value) for value in _teacher_session4_student_ids(User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first())}:
+                    return HttpResponseForbidden()
+            else:
+                student = None
         else:
             if role != 'student':
                 return HttpResponseForbidden()
@@ -14787,7 +14802,9 @@ def prescribed_activity_page(request, activity_key):
             if not student:
                 return redirect('assessment')
         lifecycle = _current_learning_context(student) if student else None
-        progress = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first() if student else None
+        progress = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first() if student and lifecycle.get('term') in (1, 2, 3) else None
+        if student and not progress:
+            progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).order_by('-updated_at', '-id').first()
         state = progress.state if progress and isinstance(progress.state, dict) else (
             initial_l22_g2_state() if activity_key == 'aral-l22-g2-c-word-reading' else
             initial_l24_g2_state() if activity_key == 'aral-l24-g2-v-word-reading' else
@@ -20503,6 +20520,14 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
                 verified = bool(result.get('complete'))
 
         updated = apply_event(workbook, state, event, verified)
+        if activity_key in {'aral-s9-a1-family-drawing', 'aral-s9-a2-helping-drawing'} and event.get('action') == 'answer' and updated.get('completed'):
+            # Session 9 submissions are complete only after a teacher verdict.
+            # Keep the learner's actual drawing/text in state while exposing a
+            # durable pending-review marker instead of final completion.
+            updated['submitted'] = True
+            updated['awaiting_teacher_verdict'] = True
+            updated['pending_review'] = True
+            updated['completed'] = False
         updated['revision'] = int(updated.get('revision', 0)) + 1
         total = int(workbook.get('progress_total') or len(workbook['items']))
         if activity_key == 'aral-l24-g4-x-syllable-builder':
@@ -20601,6 +20626,12 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Prescribed activities are not currently available.'}, status=403)
     if not _student_can_open_prescribed_activity(student, activity_key):
         return JsonResponse({'success': False, 'error': 'Complete the previous activity first.'}, status=403)
+    if activity_key in {'aral-s9-a1-family-drawing', 'aral-s9-a2-helping-drawing'}:
+        progress = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
+        state = progress.state if progress and isinstance(progress.state, dict) else {}
+        if not progress or not progress.activity_completed or not state.get('checked'):
+            return JsonResponse({'success': False, 'error': 'Teacher review is required before completion.'}, status=400)
+        return JsonResponse({'success': True, 'result': {'items_completed': progress.completed_items, 'correct_items': progress.correct_items}})
     if activity_key == 'lesson-15-gawain-3':
         progress = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         if not progress or not progress.activity_completed:
@@ -22086,6 +22117,105 @@ def session_4_gawain_2_recording(request):
             except Exception:
                 logger.warning('Unable to remove replaced Session 4 Gawain 2 recording: %s', old_name, exc_info=True)
     return JsonResponse({'success': True, 'recording_id': submission.id, 'item_index': item_index, 'substep': substep})
+
+
+@login_required(role='teacher')
+@require_http_methods(['GET'])
+def teacher_prescribed_progress(request):
+    """Teacher read-only progress for Session 8 and review queue for Session 9."""
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    try:
+        student_id = int(request.GET.get('student_id'))
+        session_number = int(request.GET.get('session', '8'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'A valid student and session are required.'}, status=400)
+    if session_number not in (8, 9) or str(student_id) not in {str(value) for value in _teacher_session4_student_ids(teacher)}:
+        return JsonResponse({'success': False, 'error': 'Student access denied.'}, status=403)
+    student = User.objects.filter(pk=student_id, role='student', is_archived=False).first()
+    if not student:
+        return JsonResponse({'success': False, 'error': 'Student not found.'}, status=404)
+    activities = [item for item in active_prescribed_activities() if int(item.get('session_number') or 0) == session_number]
+    rows = []
+    for activity in activities:
+        progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity['activity_key']).order_by('-updated_at', '-id').first()
+        state = progress.state if progress and isinstance(progress.state, dict) else {}
+        pending = bool(state.get('awaiting_teacher_verdict') or state.get('pending_review'))
+        checked = bool(state.get('checked') and progress and progress.activity_completed)
+        if checked:
+            status = 'Completed'
+        elif pending:
+            status = 'Pending Teacher Review'
+        elif state or progress:
+            status = 'In Progress'
+        else:
+            status = 'Not Started'
+        artifact = None
+        if session_number == 9:
+            answer = (state.get('answers') or {}).get('item-1') if isinstance(state.get('answers'), dict) else None
+            artifact = {'text': (answer or {}).get('text', state.get('draft', {}).get('text', '')) if isinstance(answer or state.get('draft'), dict) else '',
+                        'strokes': (answer or {}).get('strokes', state.get('draft', {}).get('strokes', [])) if isinstance(answer or state.get('draft'), dict) else []}
+        row = {'activity_key': activity['activity_key'], 'session_number': session_number,
+                     'lesson_number': activity.get('lesson_number'), 'gawain_number': activity.get('gawain_number'),
+                     'title': activity.get('title'), 'status': status,
+                     'completed_items': progress.completed_items if progress else 0,
+                     'correct_items': progress.correct_items if progress else 0,
+                     'total_items': progress.total_items if progress else len(activity.get('items') or []),
+                     'updated_at': progress.updated_at.isoformat() if progress else None,
+                     'preview_url': reverse('prescribed_activity_page', kwargs={'activity_key': activity['activity_key']}) + f'?preview=1&student_id={student_id}'}
+        if artifact is not None:
+            row['artifact'] = artifact
+        rows.append(row)
+    return JsonResponse({'success': True, 'student': {'id': student.id, 'name': f'{student.first_name} {student.last_name}'.strip() or student.custom_id}, 'session': session_number, 'activities': rows})
+
+
+@login_required(role='teacher')
+@csrf_protect
+@require_http_methods(['POST'])
+def teacher_prescribed_review_action(request):
+    """Approve or return one of the two Session 9 drawing submissions."""
+    teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
+    try:
+        payload = json.loads(request.body or '{}')
+        student_id = int(payload.get('student_id'))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({'success': False, 'error': 'Invalid review request.'}, status=400)
+    key = str(payload.get('activity_key') or '')
+    action = str(payload.get('action') or '')
+    if key not in {'aral-s9-a1-family-drawing', 'aral-s9-a2-helping-drawing'} or action not in {'retry', 'complete'}:
+        return JsonResponse({'success': False, 'error': 'Invalid Session 9 review action.'}, status=400)
+    if str(student_id) not in {str(value) for value in _teacher_session4_student_ids(teacher)}:
+        return JsonResponse({'success': False, 'error': 'Student access denied.'}, status=403)
+    student = User.objects.filter(pk=student_id, role='student', is_archived=False).first()
+    activity = prescribed_activity(key)
+    if not student or not activity:
+        return JsonResponse({'success': False, 'error': 'Student or activity not found.'}, status=404)
+    progress = StudentActivityProgress.objects.filter(student=student, activity_key=key).order_by('-updated_at', '-id').first()
+    if not progress:
+        return JsonResponse({'success': False, 'error': 'No submitted work exists.'}, status=400)
+    from .prescribed_workbook import initial_s9_a1_state, initial_s9_a2_state
+    state = dict(progress.state if isinstance(progress.state, dict) else {})
+    if action == 'retry':
+        history = list(state.get('review_history') or [])
+        history.append({'action': 'retry', 'at': timezone.now().isoformat()})
+        fresh = initial_s9_a1_state() if key == 'aral-s9-a1-family-drawing' else initial_s9_a2_state()
+        fresh['review_history'] = history
+        fresh['retry_requested'] = True
+        progress.state = fresh
+        progress.current_index = progress.completed_items = progress.correct_items = 0
+        progress.activity_completed = False
+    else:
+        if not state.get('awaiting_teacher_verdict') and not state.get('submitted'):
+            return JsonResponse({'success': False, 'error': 'Submit the drawing before completing review.'}, status=400)
+        state.update({'checked': True, 'awaiting_teacher_verdict': False, 'pending_review': False, 'completed': True, 'submitted': True})
+        history = list(state.get('review_history') or [])
+        history.append({'action': 'complete', 'at': timezone.now().isoformat()})
+        state['review_history'] = history
+        total = len(activity.get('items') or []) or 1
+        progress.current_index = progress.completed_items = progress.correct_items = total
+        progress.total_items = total
+        progress.activity_completed = True
+    progress.save(update_fields=['state', 'current_index', 'completed_items', 'correct_items', 'total_items', 'activity_completed', 'updated_at'])
+    return JsonResponse({'success': True, 'action': action, 'activity_key': key, 'activity_completed': progress.activity_completed, 'state': progress.state})
 
 
 @login_required(role='teacher')

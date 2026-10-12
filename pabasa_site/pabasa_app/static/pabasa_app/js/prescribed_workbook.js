@@ -455,6 +455,10 @@
     if(qBuilder&&actionHost&&action.parentElement!==actionHost)actionHost.appendChild(action);
     action.replaceChildren();
     if(g6Search&&!state.completed)document.getElementById('wb-g6-completion-modal')?.remove();
+    if((s9Family||s9Helping)&&state.awaiting_teacher_verdict&&!preview){
+      content.innerHTML=`<div class="wb-focus wb-s9-pending-review" role="status"><h2>Submitted for teacher review</h2><p>Your drawing and writing are saved. Your teacher will review this activity before it is marked complete.</p></div>`;
+      return;
+    }
     if(state.completed&&!session9Activity){
       const completionCopy={
         'aral-l22-g1-c-syllable-builder':['Magaling!','Natapos mo ang Gawain 1.'],
@@ -1000,7 +1004,7 @@
     }
     if(s9Helping){
       const canvas=document.getElementById('wb-canvas'),ctx=canvas.getContext('2d'),width=1200,height=525;
-      let strokes=structuredClone(state.draft?.strokes||[]),redoStack=[],stroke=null,erasing=false;
+      let strokes=structuredClone((preview?state.answers?.['item-1']?.strokes:state.draft?.strokes)||[]),redoStack=[],stroke=null,erasing=false;
       let tool=state.draft?.tool==='eraser'?'eraser':'draw',color=state.draft?.color||'#183e63',size=state.draft?.size||'medium';
       const brush={small:4,medium:8,large:14}, eraser={small:22,medium:34,large:50};
       const redraw=()=>{ctx.clearRect(0,0,width,height);for(const current of strokes){ctx.strokeStyle=current.color;ctx.lineWidth=current.width||8;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();current.points.forEach((point,index)=>index?ctx.lineTo(...point):ctx.moveTo(...point));ctx.stroke();}};
@@ -1023,7 +1027,7 @@
       return;
     }else if(s9Family){
       const canvas=document.getElementById('wb-canvas'),ctx=canvas.getContext('2d'),width=900,height=500;
-      let strokes=structuredClone(state.draft?.strokes||[]),redoStack=[],stroke=null,erasing=false;
+      let strokes=structuredClone((preview?state.answers?.['item-1']?.strokes:state.draft?.strokes)||[]),redoStack=[],stroke=null,erasing=false;
       let tool=state.draft?.tool==='eraser'?'eraser':'draw',color=state.draft?.color||'#183e63',size=state.draft?.size||'medium';
       const brush={small:4,medium:8,large:14},eraser={small:22,medium:34,large:50};
       const redraw=()=>{ctx.clearRect(0,0,width,height);for(const current of strokes){ctx.strokeStyle=current.color;ctx.lineWidth=current.width||5;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();current.points.forEach((point,index)=>index?ctx.lineTo(...point):ctx.moveTo(...point));ctx.stroke();}};

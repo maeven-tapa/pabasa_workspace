@@ -622,8 +622,10 @@ def normalize_s9_a1_state(state):
     answers = state.get('answers') if isinstance(state.get('answers'), dict) else {}
     completed_answer = answers.get('item-1') if isinstance(answers.get('item-1'), dict) else None
     normalize = lambda value: re.sub(r'[.\s]+$', '', str(value).strip()).replace('’', "'").casefold()
-    completed = bool(state.get('completed')) or bool(
-        completed_answer and normalize(completed_answer.get('text')) == normalize('This is my family.')
+    completed = (not state.get('awaiting_teacher_verdict') and not state.get('pending_review')) and (
+        bool(state.get('completed')) or bool(
+            completed_answer and normalize(completed_answer.get('text')) == normalize('This is my family.')
+        )
     )
     state['draft'] = {
         'strokes': strokes,
