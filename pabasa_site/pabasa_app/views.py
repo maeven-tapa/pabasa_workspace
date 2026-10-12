@@ -31774,6 +31774,109 @@ def teacher_correct_student_outcome(request):
     return JsonResponse({'success': True, 'outcome': new_outcome})
 
 
+def _class_management_calendar(teacher, section):
+    """Resolve the school calendar's dated term, never its legacy term field."""
+    if _school_for_user(teacher):
+        calendars = list(_user_school_calendar_queryset(teacher).filter(is_active=True).prefetch_related('events'))
+    else:
+        calendars = list(SchoolCalendar.objects.filter(pk=section.school_calendar_id, is_active=True).prefetch_related('events'))
+    current = []
+    for candidate in calendars:
+        start, end = _school_year_bounds(candidate)
+        if start and end and start.start_date <= system_today() <= end.end_date:
+            current.append((start.start_date, candidate.pk, candidate))
+    calendar = max(current, key=lambda item: item[:2])[2] if current else next(iter(calendars), None)
+    if not calendar:
+        return {'id': None, 'school_year': None, 'term': None,
+                'scope': '',
+                'label': 'School Year unavailable | No Active Term'}
+    term = _calendar_current_term(calendar)
+    if calendar.pk == section.school_calendar_id:
+        # Reuse the prefetched blocks for year-end controls in this request.
+        section.school_calendar = calendar
+    return {
+        'id': calendar.pk, 'school_year': calendar.school_year, 'term': term,
+        'scope': f'{calendar.pk}:{calendar.school_year}:{term or ""}',
+        'label': f'School Year {calendar.school_year} | ' + (f'Term {term}' if term else 'No Active Term'),
+    }
+
+
+def _class_management_roster(section, calendar_context):
+    """Year-scoped membership with finalized reading labels for the active term.
+
+    A term transition never mutates or filters these memberships. Dashboard
+    activity metrics are deliberately excluded from this one-second feed.
+    """
+    enrollments = []
+    if calendar_context['id'] == section.school_calendar_id:
+        enrollments = list(_current_section_enrollments(section).select_related('student').order_by('student_id'))
+    term = calendar_context['term']
+    official_levels = {}
+    if enrollments and term in (1, 2, 3):
+        # Enrollment owns the result's section and school year; official_term
+        # owns its term. Reusable materials and preferences are not result scope.
+        result_scope = Q(
+            enrollment_id__in=[enrollment.pk for enrollment in enrollments],
+            student_id=F('enrollment__student_id'),
+        ) | Q(
+            # Legacy rows may identify their year through the section only.
+            # A conflicting enrollment must never fall back to this branch.
+            enrollment__isnull=True, section=section,
+            section__school_calendar_id=calendar_context['id'],
+        )
+        results = official_crla_result_queryset().filter(
+            result_scope, student_id__in=[enrollment.student_id for enrollment in enrollments],
+            official_term=term,
+        ).order_by('student_id', '-completed_at', '-updated_at', '-id')
+        for result in results:
+            level = canonical_crla_classification(result.crla_classification or result.classification)
+            if level:
+                official_levels.setdefault(result.student_id, level)
+    finalization_open = _teacher_year_end_finalization_open(section)
+    students = []
+    for enrollment in enrollments:
+        student = enrollment.student
+        level = official_levels.get(student.pk, 'Pending')
+        data = {
+            'id': student.pk, 'name': _display_user_name(student),
+            'pabasa_id': student.custom_id or '', 'email': student.email or '',
+            'reading_level': level, 'joined_at': _format_joined_date(enrollment.joined_at.isoformat()),
+            'outcome_label': enrollment.get_outcome_display(),
+            'can_finalize': bool(finalization_open and student.account_status == 'active'),
+        }
+        data['sync_version'] = hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
+        data['enrollment'] = enrollment
+        students.append(data)
+    version = hashlib.sha256(json.dumps([
+        (student['id'], student['sync_version']) for student in students
+    ]).encode()).hexdigest()
+    return students, version, finalization_open
+
+
+def _class_management_sync_response(request, teacher, section):
+    calendar_context = _class_management_calendar(teacher, section)
+    students, version, finalization_open = _class_management_roster(section, calendar_context)
+    unchanged = request.GET.get('roster_version') == version
+    payload = {'success': True, 'section_id': section.pk, 'roster_version': version,
+               'total_students': len(students), 'unchanged': unchanged}
+    if not unchanged:
+        context = {'section': section, 'finalization_open': finalization_open}
+        payload['students'] = [{
+            'id': student['id'], 'version': student['sync_version'],
+            'row_html': render_to_string('pabasa_app/partials/_class_student_row.html',
+                                         dict(context, student=student), request=request),
+            'card_html': render_to_string('pabasa_app/partials/_class_student_card.html',
+                                          dict(context, student=student), request=request),
+        } for student in students]
+    if request.GET.get('include_calendar') == '1' or request.GET.get('calendar_scope') != calendar_context['scope']:
+        # A scope change travels with its reading labels, even between the
+        # regular metadata checks, so the header and table cannot disagree.
+        payload['calendar'] = calendar_context
+    response = JsonResponse(payload)
+    response['Cache-Control'] = 'no-store, private'
+    return response
+
+
 @login_required(role='teacher')
 def class_management_view(request):
     """View to manage specific class details and student enrollment"""
@@ -31802,25 +31905,11 @@ def class_management_view(request):
         teacher=teacher_user, is_active=True
     ).order_by('class_name', 'id'))
 
-    roster_students, _, _ = _teacher_student_roster_payload(teacher_user, section=section)
-    students_table = []
-    finalization_open = _teacher_year_end_finalization_open(section)
+    calendar_context = _class_management_calendar(teacher_user, section)
+    students_table, roster_version, finalization_open = _class_management_roster(section, calendar_context)
     section_enrollments = {e.student_id: e for e in _current_section_enrollments(
         section, statuses=('active', 'completed')
     ).select_related('student')}
-    for student in roster_students:
-        enrollment = section_enrollments.get(student.get('id'))
-        students_table.append({
-            'id': student.get('id'),
-            'name': student.get('name', ''),
-            'pabasa_id': student.get('custom_id', ''),
-            'email': student.get('email', ''),
-            'reading_level': student.get('reading_level') or 'Pending',
-            'joined_at': student.get('joined_at_display') or '',
-            'enrollment': enrollment,
-            'outcome_label': enrollment.get_outcome_display() if enrollment else 'Not Finalized',
-            'can_finalize': bool(finalization_open and enrollment and enrollment.status == 'active' and enrollment.student.account_status == 'active'),
-        })
         
     # Fetch all students for the "Add Student" popup
     # We exclude students who are already actively enrolled in this class
@@ -31842,6 +31931,8 @@ def class_management_view(request):
         'sections': all_sections,
         'available_students': available_students,
         'students_table': students_table,
+        'roster_version': roster_version,
+        'section_calendar': calendar_context,
         'page_title': f"Manage {section.class_name}"
         ,'finalization_open': finalization_open,
         'finalization_counts': {
@@ -37487,6 +37578,13 @@ def get_teacher_students_api(request):
         crla_term = int(term_value) if term_value in {'1', '2', '3'} else None
         crla_phase = phase_value if phase_value in {'pretest', 'midtest', 'posttest'} else None
         selected_section = None
+        if request.GET.get('sync') == 'management':
+            if not section_value.isdigit():
+                return JsonResponse({'success': False, 'error': 'A section is required.'}, status=400)
+            selected_section = _teacher_current_sections(teacher).filter(pk=int(section_value)).first()
+            if not selected_section:
+                return JsonResponse({'success': False, 'error': 'You are not authorized for this class or section.'}, status=403)
+            return _class_management_sync_response(request, teacher, selected_section)
         if section_value:
             selected_section = Section.objects.filter(pk=section_value, teacher=teacher, is_active=True).first()
             if not selected_section:

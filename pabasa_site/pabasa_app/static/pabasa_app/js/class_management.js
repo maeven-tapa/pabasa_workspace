@@ -117,7 +117,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     try { window.dispatchEvent(new CustomEvent('pabasa:teacher-classes-updated', { detail: { section_id: sectionId } })); } catch (e) { console.warn(e); }
 
                     if (typeof showToast === 'function') showToast('Student added successfully.', 'success'); else try{ alert('Student added successfully.'); }catch(e){}
-                    setTimeout(() => window.location.reload(), 1200);
+                    clickedButton.disabled = true;
+                    clickedButton.textContent = "Enrolled";
                 } else {
                     if (typeof showToast === 'function') showToast('Error: ' + data.error, 'error'); else try{ alert('Error: ' + data.error); }catch(e){}
                     clickedButton.disabled = false;

@@ -3,6 +3,9 @@
 
 {% block extra_head %}
 <style>
+    .student-sync-status { flex-basis: 100%; min-height: 1.25rem; line-height: 1.25rem; font-size: .78rem; color: #826542; }
+    @media (max-width: 720px) { .student-sync-status { min-height: 2.5rem; } }
+    #studentSyncRetry { border: 0; background: transparent; color: inherit; text-decoration: underline; padding: 0; }
     :root {
         --page-spacing-xs: 8px;
         --page-spacing-sm: 14px;
@@ -1280,19 +1283,20 @@
                 <input type="hidden" name="section_id" value="{{ section.id }}">
                 <div class="section-information-summary">
                     <h2 class="section-information-name">{{ section.grade_level }} - {{ section.section|default:section.class_name }}</h2>
-                    <p class="section-information-calendar">School Year {{ section.school_calendar.school_year }} | Term {{ section.school_calendar.current_term }}</p>
+                    <p class="section-information-calendar" id="sectionCalendar">{{ section_calendar.label }}</p>
                 </div>
             </form>
 
             <hr class="section-information-divider">
 
-        <section class="section-information-students" data-section-id="{{ section.id }}">
+        <section class="section-information-students" data-section-id="{{ section.id }}" data-sync-url="{% url 'get_teacher_students_api' %}" data-roster-version="{{ roster_version }}" data-calendar-scope="{{ section_calendar.scope }}">
             <div class="card-header">
                 <div class="section-title-group">
                     <div class="section-heading">
                         <h2>Enrolled Students</h2>
                     </div>
                     <span class="student-count" id="enrolledStudentCount">{{ students_table|length }} enrolled</span>
+                    <span class="student-sync-status" role="status" aria-live="polite"><span id="studentSyncError"></span> <button type="button" id="studentSyncRetry" hidden>Retry</button></span>
                 </div>
             </div>
 
@@ -1324,31 +1328,13 @@
                     </thead>
                     <tbody>
                         {% for student in students_table %}
-                        <tr data-student-id="{{ student.id }}" data-student-key="{{ student.pabasa_id|default_if_none:'' }}" data-student-name="{{ student.name|default_if_none:'' }}" data-search="{{ student.name|default_if_none:'' }} {{ student.pabasa_id|default_if_none:'' }} {{ student.email|default_if_none:'' }}" data-sort-name="{{ student.name|default_if_none:'' }}" data-sort-pabasa="{{ student.pabasa_id|default_if_none:'' }}" data-sort-reading="{{ student.reading_level|default:'Pending' }}" data-sort-joined="{{ student.joined_at|default_if_none:'' }}" data-sort-outcome="{{ student.outcome_label|default:'Not Finalized' }}">
-                            <td class="student-name-cell"><strong>{{ student.name }}</strong></td>
-                            <td class="student-pabasa-id"><span class="pabasa-badge">{{ student.pabasa_id }}</span></td>
-                            <td>{{ student.email }}</td>
-                            <td class="student-reading-level"><span class="status-chip reading-level-chip" data-reading-level="{{ student.reading_level|default:'Pending' }}">{{ student.reading_level|default:'Pending' }}</span></td>
-                            <td class="student-year-end-outcome">
-                                <div class="year-end-outcome-group{% if finalization_open and student.can_finalize %} is-finalization-open{% endif %}">
-                                    {% if not finalization_open or not student.can_finalize %}<div class="year-end-outcome-status">
-                                        {% if student.enrollment.student.is_archived %}<span class="status-chip"><i class="bi bi-archive me-1"></i>Archived</span>
-                                        {% elif student.enrollment.outcome == 'promoted' %}<span class="status-chip"><i class="bi bi-hourglass-split me-1"></i>Promoted — Pending Admin Archive</span>
-                                        {% elif student.enrollment.outcome == 'retained' %}<span class="status-chip"><i class="bi bi-check-circle me-1"></i>Retained</span>
-                                        {% else %}<span class="status-chip">Not Finalized</span>{% endif %}
-                                    </div>{% endif %}
-                                    {% if student.can_finalize %}<form method="post" action="{% url 'teacher_finalize_student' %}" class="year-end-outcome-form" data-finalize-form="true">{% csrf_token %}<input type="hidden" name="student_id" value="{{ student.enrollment.student_id }}"><input type="hidden" name="section_id" value="{{ section.id }}"><select name="outcome" class="form-select form-select-sm" required><option value="">Choose outcome</option><option value="promoted">Promoted</option><option value="retained">Retained</option></select><button class="btn btn-sm btn-outline-primary" type="submit"><i class="bi bi-check2-square me-1"></i>Finalize</button></form>{% endif %}
-                                    {% if finalization_open and student.enrollment.status == 'completed' and student.enrollment.finalized_by_id == request.session.user_id and not student.enrollment.student.is_archived %}<form method="post" action="{% url 'teacher_correct_student_outcome' %}" class="year-end-outcome-form" data-finalize-form="true" data-correction-form="true">{% csrf_token %}<input type="hidden" name="student_id" value="{{ student.enrollment.student_id }}"><input type="hidden" name="section_id" value="{{ section.id }}"><select name="outcome" class="form-select form-select-sm" required><option value="">Correct to…</option><option value="promoted">Promoted</option><option value="retained">Retained</option></select><button class="btn btn-sm btn-outline-warning" type="submit"><i class="bi bi-arrow-counterclockwise me-1"></i>Correct</button></form>{% endif %}
-                                </div>
-                            </td>
-                            <td class="student-actions"><button type="button" class="btn btn-sm btn-outline-danger drop-student-btn" data-bs-toggle="modal" data-bs-target="#dropStudentModal" data-student-id="{{ student.id }}" data-student-name="{{ student.name }}"><i class="bi bi-person-dash me-1"></i>Drop Student</button></td>
-                        </tr>
+                        {% include "pabasa_app/partials/_class_student_row.html" %}
                         {% empty %}
                         <tr>
                             <td colspan="6" class="text-center py-4 text-muted">No students have joined yet.</td>
                         </tr>
                         {% endfor %}
-                        {% if students_table %}<tr class="student-no-results" id="studentNoResults"><td colspan="6" class="text-center py-4 text-muted">No students found.</td></tr>{% endif %}
+                        <tr class="student-no-results" id="studentNoResults"><td colspan="6" class="text-center py-4 text-muted">No students found.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1357,26 +1343,7 @@
 
             <div class="student-cards" aria-label="Enrolled students list">
                 {% for student in students_table %}
-                <article class="student-card" data-student-id="{{ student.id }}" data-student-key="{{ student.pabasa_id|default_if_none:'' }}" data-student-name="{{ student.name|default_if_none:'' }}" data-search="{{ student.name|default_if_none:'' }} {{ student.pabasa_id|default_if_none:'' }} {{ student.email|default_if_none:'' }}" data-sort-name="{{ student.name|default_if_none:'' }}" data-sort-pabasa="{{ student.pabasa_id|default_if_none:'' }}" data-sort-reading="{{ student.reading_level|default:'Pending' }}" data-sort-joined="{{ student.joined_at|default_if_none:'' }}" data-sort-outcome="{{ student.outcome_label|default:'Not Finalized' }}">
-                    <div class="student-card-top">
-                        <div>
-                            <h3 class="student-card-name">{{ student.name }}</h3>
-                            <div class="student-card-meta">
-                                <span class="student-card-pill">{{ student.pabasa_id }}</span>
-                                <span>{{ student.reading_level|default:'Pending' }}</span>
-                            </div>
-                        </div>
-                        <span class="student-card-pill">Enrolled</span>
-                    </div>
-                    <div class="student-card-meta">
-                        <span><i class="bi bi-envelope me-1"></i>{{ student.email }}</span>
-                    </div>
-                    <div class="student-card-actions">
-                        <span class="status-chip reading-level-chip" data-reading-level="{{ student.reading_level|default:'Pending' }}">{{ student.reading_level|default:'Pending' }}</span>
-                        <span class="status-chip">{{ student.outcome_label }}</span>
-                        <button type="button" class="btn btn-sm btn-outline-danger drop-student-btn" data-bs-toggle="modal" data-bs-target="#dropStudentModal" data-student-id="{{ student.id }}" data-student-name="{{ student.name }}"><i class="bi bi-person-dash me-1"></i>Drop Student</button>
-                    </div>
-                </article>
+                {% include "pabasa_app/partials/_class_student_card.html" %}
                 {% empty %}
                 <div class="student-card text-muted">No students have joined yet.</div>
                 {% endfor %}
@@ -1601,12 +1568,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function removeDroppedStudent() {
-        const row = pendingTrigger?.closest('tr');
-        const card = pendingTrigger?.closest('.student-card');
-        row?.remove();
-        card?.remove();
-        const count = document.getElementById('enrolledStudentCount');
-        if (count) count.textContent = `${Math.max(0, (parseInt(count.textContent, 10) || 0) - 1)} enrolled`;
+        // Fetch after the write; discard any snapshot requested before it.
+        window.dispatchEvent(new Event('studentEnrollmentChanged'));
     }
 
     successOk.addEventListener('click', function () {
@@ -1616,23 +1579,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (finalizeOutcomeModal && finalizeOutcomeQuestion && confirmFinalizeButton) {
         finalizeInstance = bootstrap.Modal.getOrCreateInstance(finalizeOutcomeModal);
-        document.querySelectorAll('form[data-finalize-form="true"]').forEach(form => {
-            form.addEventListener('submit', function (event) {
-                event.preventDefault();
-                pendingFinalizeForm = form;
-                const studentName = form.closest('tr')?.querySelector('td strong')?.textContent?.trim() || 'this student';
-                const selectedOutcome = form.querySelector('select[name="outcome"]')?.value || '';
-                const outcomeLabel = selectedOutcome === 'promoted' ? 'Promoted' : selectedOutcome === 'retained' ? 'Retained' : 'the selected outcome';
-                finalizeOutcomeQuestion.textContent = `Are you sure you want to finalize ${studentName} as ${outcomeLabel}?`;
-                finalizeOutcomeError.classList.add('d-none');
-                finalizeOutcomeError.textContent = '';
-                finalizeOutcomeModal.querySelector('.modal-title').textContent = form.dataset.correctionForm === 'true' ? 'Correct Student Outcome' : 'Finalize Student Outcome';
-                finalizeOutcomeModal.querySelector('#finalizeOutcomeWarning').textContent = form.dataset.correctionForm === 'true'
-                    ? 'The completed enrollment will remain historical.'
-                    : "Once finalized, this student's year-end outcome cannot be changed.";
-                confirmFinalizeLabel.textContent = form.dataset.correctionForm === 'true' ? 'Confirm Correction' : 'Confirm Finalize';
-                finalizeInstance.show();
-            });
+        document.addEventListener('submit', function (event) {
+            const form = event.target.closest('form[data-finalize-form="true"]');
+            if (!form) return;
+            event.preventDefault();
+            pendingFinalizeForm = form;
+            const studentName = form.closest('tr')?.querySelector('td strong')?.textContent?.trim() || 'this student';
+            const selectedOutcome = form.querySelector('select[name="outcome"]')?.value || '';
+            const outcomeLabel = selectedOutcome === 'promoted' ? 'Promoted' : selectedOutcome === 'retained' ? 'Retained' : 'the selected outcome';
+            finalizeOutcomeQuestion.textContent = `Are you sure you want to finalize ${studentName} as ${outcomeLabel}?`;
+            finalizeOutcomeError.classList.add('d-none');
+            finalizeOutcomeError.textContent = '';
+            finalizeOutcomeModal.querySelector('.modal-title').textContent = form.dataset.correctionForm === 'true' ? 'Correct Student Outcome' : 'Finalize Student Outcome';
+            finalizeOutcomeModal.querySelector('#finalizeOutcomeWarning').textContent = form.dataset.correctionForm === 'true'
+                ? 'The completed enrollment will remain historical.'
+                : "Once finalized, this student's year-end outcome cannot be changed.";
+            confirmFinalizeLabel.textContent = form.dataset.correctionForm === 'true' ? 'Confirm Correction' : 'Confirm Finalize';
+            finalizeInstance.show();
         });
 
         finalizeSuccessInstance = bootstrap.Modal.getOrCreateInstance(finalizeSuccessModal);
@@ -1653,6 +1616,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 await hideModalAndWait(finalizeInstance, finalizeOutcomeModal);
                 finalizeSuccessMessage.textContent = `Student outcome finalized as ${result.outcome === 'promoted' ? 'Promoted' : 'Retained'}.`;
                 finalizeSuccessInstance.show();
+                window.dispatchEvent(new Event('studentEnrollmentChanged'));
             } catch (error) {
                 finalizeOutcomeError.textContent = error.message || 'Unable to finalize this outcome.';
                 finalizeOutcomeError.classList.remove('d-none');
@@ -1710,8 +1674,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const matchingCards = cards.filter(card => (card.dataset.search || '').toLocaleLowerCase().includes(query)).sort(compare);
         if (cardContainer) matchingCards.forEach(card => cardContainer.appendChild(card));
         rows.forEach(row => { row.hidden = !pageItems.includes(row); });
-        matchingCards.forEach((card, index) => { card.hidden = index < (currentPage - 1) * pageSize || index >= currentPage * pageSize; });
-        if (noResults) noResults.style.display = visible.length ? 'none' : 'table-row';
+        const pageCards = matchingCards.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+        cards.forEach(card => { card.hidden = !pageCards.includes(card); });
+        if (noResults) noResults.style.display = visible.length || !rows.length ? 'none' : 'table-row';
         if (pagination) {
             pagination.innerHTML = '';
             pagination.style.display = 'flex';
@@ -1749,69 +1714,7 @@ document.addEventListener('DOMContentLoaded', function () {
     refreshStudents();
 });
 </script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const studentsSection = document.querySelector('.section-information-students[data-section-id]');
-    const tableBody = document.querySelector('.student-table tbody');
-    const cardContainer = document.querySelector('.student-cards');
-    const count = document.getElementById('enrolledStudentCount');
-    const sectionId = studentsSection?.dataset.sectionId;
-    if (!studentsSection || !tableBody || !sectionId) return;
-
-    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
-    const studentRow = student => {
-        const id = escapeHtml(student.id);
-        const name = escapeHtml(student.name || '');
-        const pabasaId = escapeHtml(student.custom_id || '');
-        const email = escapeHtml(student.email || '');
-        const search = escapeHtml(`${student.name || ''} ${student.custom_id || ''} ${student.email || ''}`);
-        return `<tr data-student-id="${id}" data-student-key="${pabasaId}" data-student-name="${name}" data-search="${search}" data-sort-name="${name}" data-sort-pabasa="${pabasaId}" data-sort-reading="Pending" data-sort-joined="${escapeHtml(student.joined_at_display || '')}" data-sort-outcome="Not Finalized"><td class="student-name-cell"><strong>${name}</strong></td><td class="student-pabasa-id"><span class="pabasa-badge">${pabasaId}</span></td><td>${email}</td><td class="student-reading-level"><span class="status-chip reading-level-chip" data-reading-level="Pending">Pending</span></td><td class="student-year-end-outcome"><div class="year-end-outcome-group"><div class="year-end-outcome-status"><span class="status-chip">Not Finalized</span></div></div></td><td class="student-actions"><button type="button" class="btn btn-sm btn-outline-danger drop-student-btn" data-bs-toggle="modal" data-bs-target="#dropStudentModal" data-student-id="${id}" data-student-name="${name}"><i class="bi bi-person-dash me-1"></i>Drop Student</button></td></tr>`;
-    };
-    const studentCard = student => {
-        const id = escapeHtml(student.id);
-        const name = escapeHtml(student.name || '');
-        const pabasaId = escapeHtml(student.custom_id || '');
-        const email = escapeHtml(student.email || '');
-        const search = escapeHtml(`${student.name || ''} ${student.custom_id || ''} ${student.email || ''}`);
-        return `<article class="student-card" data-student-id="${id}" data-student-key="${pabasaId}" data-student-name="${name}" data-search="${search}" data-sort-name="${name}" data-sort-pabasa="${pabasaId}" data-sort-reading="Pending" data-sort-joined="${escapeHtml(student.joined_at_display || '')}" data-sort-outcome="Not Finalized"><div class="student-card-top"><div><h3 class="student-card-name">${name}</h3><div class="student-card-meta"><span class="student-card-pill">${pabasaId}</span><span>Pending</span></div></div><span class="student-card-pill">Enrolled</span></div><div class="student-card-meta"><span><i class="bi bi-envelope me-1"></i>${email}</span></div><div class="student-card-actions"><span class="status-chip reading-level-chip" data-reading-level="Pending">Pending</span><span class="status-chip">Not Finalized</span><button type="button" class="btn btn-sm btn-outline-danger drop-student-btn" data-bs-toggle="modal" data-bs-target="#dropStudentModal" data-student-id="${id}" data-student-name="${name}"><i class="bi bi-person-dash me-1"></i>Drop Student</button></div></article>`;
-    };
-    let lastIds = new Set(Array.from(document.querySelectorAll('[data-student-id]')).map(element => element.dataset.studentId));
-    let polling = false;
-    async function syncEnrollmentRows() {
-        if (polling || document.hidden) return;
-        polling = true;
-        try {
-            const response = await fetch(`{% url 'get_teacher_students_api' %}?section_id=${encodeURIComponent(sectionId)}`, {credentials: 'same-origin', cache: 'no-store', headers: {'Accept': 'application/json'}});
-            const data = await response.json();
-            if (!response.ok || !data.success || String(data.crla?.section_id || sectionId) !== String(sectionId)) return;
-            const students = Array.isArray(data.students) ? data.students : [];
-            const nextIds = new Set(students.map(student => String(student.id)));
-            if (nextIds.size === lastIds.size && [...nextIds].every(id => lastIds.has(id))) return;
-            tableBody.querySelectorAll('tr[data-student-id]').forEach(row => { if (!nextIds.has(row.dataset.studentId)) row.remove(); });
-            cardContainer?.querySelectorAll('.student-card[data-student-id]').forEach(card => { if (!nextIds.has(card.dataset.studentId)) card.remove(); });
-            tableBody.querySelectorAll('tr:not([data-student-id]):not(#studentNoResults)').forEach(row => row.remove());
-            cardContainer?.querySelectorAll('.student-card:not([data-student-id])').forEach(card => card.remove());
-            const existingIds = new Set(Array.from(tableBody.querySelectorAll('tr[data-student-id]')).map(row => row.dataset.studentId));
-            const newStudents = students.filter(student => !existingIds.has(String(student.id)));
-            if (newStudents.length) {
-                tableBody.insertAdjacentHTML('beforeend', newStudents.map(studentRow).join(''));
-                cardContainer?.insertAdjacentHTML('beforeend', newStudents.map(studentCard).join(''));
-            } else if (!nextIds.size) {
-                tableBody.insertAdjacentHTML('beforeend', '<tr data-enrollment-empty><td colspan="6" class="text-center py-4 text-muted">No students have joined yet.</td></tr>');
-                cardContainer?.insertAdjacentHTML('beforeend', '<div class="student-card text-muted" data-enrollment-empty>No students have joined yet.</div>');
-            }
-            if (count) count.textContent = `${nextIds.size} enrolled`;
-            lastIds = nextIds;
-            window.refreshStudentDirectory?.();
-        } catch (error) {
-            // Polling is best-effort; the existing table remains usable offline.
-        } finally {
-            polling = false;
-        }
-    }
-    window.setInterval(syncEnrollmentRows, 1000);
-});
-</script>
+<script src="{% static 'pabasa_app/js/class_management_sync.js' %}?v=calendar-roster-2"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 });
@@ -1967,75 +1870,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     rebuildOptions();
 });
 </script>
-<script>
-document.addEventListener('DOMContentLoaded', async function () {
-    const levelClassMap = {
-        'Low Emerging Readers': 'level-low',
-        'High Emerging Readers': 'level-high',
-        'Developing Readers': 'level-developing',
-        'Transitioning Readers': 'level-transitioning',
-        'Readers at Grade Level': 'level-grade',
-        'Pending': 'level-pending'
-    };
 
-    function applyReadingLevelChipState(chip, level) {
-        const normalizedLevel = String(level || 'Pending').trim() || 'Pending';
-        chip.textContent = normalizedLevel;
-        chip.dataset.readingLevel = normalizedLevel;
-        chip.className = `status-chip reading-level-chip ${levelClassMap[normalizedLevel] || 'level-pending'}`;
-    }
-
-    async function refreshClassReadingLevels() {
-        try {
-            const response = await fetch('/dashboard/teacher/students-api/?ts=' + Date.now(), {
-                method: 'GET',
-                credentials: 'same-origin',
-                cache: 'no-store',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Cache-Control': 'no-cache, no-store, max-age=0',
-                    'Pragma': 'no-cache'
-                }
-            });
-            if (!response || !response.ok) return;
-            const data = await response.json();
-            if (!data || !data.success || !Array.isArray(data.students)) return;
-
-            const latestLevels = new Map();
-            data.students.forEach(student => {
-                const keys = [
-                    student?.custom_id,
-                    student?.pabasa_id,
-                    student?.student_id,
-                    student?.id,
-                    student?.name,
-                ];
-                const level = student?.reading_level || student?.level || student?.adapted_reading_level || 'Pending';
-                keys.filter(Boolean).forEach(key => {
-                    latestLevels.set(String(key).trim().toLowerCase(), level);
-                });
-            });
-
-            document.querySelectorAll('.reading-level-chip').forEach(chip => {
-                const row = chip.closest('tr, article');
-                const fallback = String(chip.dataset.readingLevel || 'Pending').trim();
-                const key = row ? String(row.dataset.studentKey || row.dataset.studentName || '').trim().toLowerCase() : '';
-                const level = key ? (latestLevels.get(key) || fallback) : fallback;
-                applyReadingLevelChipState(chip, level || 'Pending');
-            });
-        } catch (error) {
-            console.warn('Could not refresh class reading levels', error);
-        }
-    }
-
-    await refreshClassReadingLevels();
-    window.addEventListener('pabasa:assessment-completed', function () {
-        refreshClassReadingLevels();
-    });
-    window.addEventListener('studentAdded', function () {
-        refreshClassReadingLevels();
-    });
-});
-</script>
-<script src="{% static 'pabasa_app/js/class_management.js' %}?v=class-student-loading-20260624"></script>
+<script src="{% static 'pabasa_app/js/class_management.js' %}?v=calendar-roster-2"></script>
 {% endblock %}

@@ -1,0 +1,20 @@
+<article class="student-card" data-student-id="{{ student.id }}" data-sync-version="{{ student.sync_version }}" data-student-key="{{ student.pabasa_id|default_if_none:'' }}" data-student-name="{{ student.name|default_if_none:'' }}" data-search="{{ student.name|default_if_none:'' }} {{ student.pabasa_id|default_if_none:'' }} {{ student.email|default_if_none:'' }}" data-sort-name="{{ student.name|default_if_none:'' }}" data-sort-pabasa="{{ student.pabasa_id|default_if_none:'' }}" data-sort-reading="{{ student.reading_level|default:'Pending' }}" data-sort-joined="{{ student.joined_at|default_if_none:'' }}" data-sort-outcome="{{ student.outcome_label|default:'Not Finalized' }}">
+                    <div class="student-card-top">
+                        <div>
+                            <h3 class="student-card-name">{{ student.name }}</h3>
+                            <div class="student-card-meta">
+                                <span class="student-card-pill">{{ student.pabasa_id }}</span>
+                                <span>{{ student.reading_level|default:'Pending' }}</span>
+                            </div>
+                        </div>
+                        <span class="student-card-pill">Enrolled</span>
+                    </div>
+                    <div class="student-card-meta">
+                        <span><i class="bi bi-envelope me-1"></i>{{ student.email }}</span>
+                    </div>
+                    <div class="student-card-actions">
+                        <span class="status-chip reading-level-chip" data-reading-level="{{ student.reading_level|default:'Pending' }}">{{ student.reading_level|default:'Pending' }}</span>
+                        <span class="status-chip">{{ student.outcome_label }}</span>
+                        <button type="button" class="btn btn-sm btn-outline-danger drop-student-btn" data-bs-toggle="modal" data-bs-target="#dropStudentModal" data-student-id="{{ student.id }}" data-student-name="{{ student.name }}"><i class="bi bi-person-dash me-1"></i>Drop Student</button>
+                    </div>
+                </article>
