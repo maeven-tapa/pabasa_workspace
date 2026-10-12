@@ -127,7 +127,7 @@
         if (!response.ok || !data.success || !data.completed || typeof data.completed !== 'object') {
             throw new Error('Review availability could not be checked. Refresh student progress and try again.');
         }
-        return data.completed;
+        return data.reviewable || data.completed;
     }
 
     function mount(root, options = {}) {

@@ -21913,11 +21913,8 @@ def lesson_1_gawain_1_page(request):
     progress = StudentActivityProgress.objects.filter(
         student_id=request.session.get('user_id'), activity_key='lesson-1-gawain-1'
     ).first()
-    if progress and (progress.activity_completed or progress.current_index >= progress.total_items):
-        if not progress.activity_completed:
-            progress.activity_completed = True
-            progress.save(update_fields=['activity_completed', 'updated_at'])
-        return redirect('assessment')
+    # A submitted recording has current_index == total_items while awaiting
+    # teacher review. Opening the page must not turn that into approval.
     submission = StudentActivityRecordingSubmission.objects.filter(
         student_id=request.session.get('user_id'), activity_key='lesson-1-gawain-1'
     ).first() if not getattr(request, '_admin_prescribed_preview', False) else None
@@ -21949,16 +21946,24 @@ def lesson_1_gawain_1_page(request):
 def lesson_1_gawain_1_submit(request):
     student = User.objects.filter(pk=request.session.get('user_id'), role='student', is_archived=False).first()
     audio = request.FILES.get('audio')
-    if not student or not audio:
+    if not student or not audio or not audio.size:
         return JsonResponse({'success': False, 'error': 'A recording is required.'}, status=400)
-    existing = StudentActivityRecordingSubmission.objects.filter(student=student, activity_key='lesson-1-gawain-1').first()
-    if existing and existing.status != 'retry':
-        return JsonResponse({'success': True, 'already_submitted': True, 'submission_id': existing.id})
     try:
         duration = max(0, int(request.POST.get('duration_seconds') or 0))
     except (TypeError, ValueError):
-        duration = None
+        duration = 0
+    if request.POST.get('video_completed') != 'true' or not duration:
+        return JsonResponse({'success': False, 'error': 'Finish the video and recording before submitting.'}, status=400)
+    try:
+        progress_scope = _current_progress_scope(student, _current_learning_context(student), 'lesson-1-gawain-1')
+    except ValueError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=409)
     with transaction.atomic():
+        # Serialize requests for this student, including the first submission.
+        User.objects.select_for_update().get(pk=student.pk)
+        existing = StudentActivityRecordingSubmission.objects.filter(student=student, activity_key='lesson-1-gawain-1').first()
+        if existing and existing.status != 'retry':
+            return JsonResponse({'success': True, 'already_submitted': True, 'submission_id': existing.id, 'status': existing.status})
         if existing:
             submission = existing
             submission.audio_file = audio
@@ -21973,11 +21978,11 @@ def lesson_1_gawain_1_submit(request):
                 student=student, activity_key='lesson-1-gawain-1', audio_file=audio, duration_seconds=duration or None,
             )
         StudentActivityProgress.objects.update_or_create(
-            student=student, activity_key='lesson-1-gawain-1',
+            **progress_scope,
             defaults={'current_index': 1, 'completed_items': 1, 'correct_items': 0, 'total_items': 1,
                       'activity_completed': submission.status == 'checked', 'state': {'submitted': True, 'submission_id': submission.id, 'status': submission.status}},
         )
-    return JsonResponse({'success': True, 'submission_id': submission.id})
+    return JsonResponse({'success': True, 'submission_id': submission.id, 'status': submission.status})
 
 
 @login_required(role='student')
@@ -22377,7 +22382,7 @@ def _teacher_session4_student_ids(teacher):
 @require_http_methods(['GET'])
 @never_cache
 def teacher_prescribed_review_availability(request):
-    """Read completion, independently of recordings and teacher grades."""
+    """Read completion and review readiness without approving pending work."""
     teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
     try:
         student_id = int(request.GET.get('student_id'))
@@ -22411,10 +22416,22 @@ def teacher_prescribed_review_availability(request):
                 if identifier:
                     completed[str(identifier)] = True
                     completed[f'assessment-{identifier}'] = True
+    reviewable = dict(completed)
+    # Lesson 1 approval happens inside review, so its submitted attempt must
+    # be reviewable before activity_completed becomes true. Keep the actual
+    # completion map unchanged and require the current term's submission link.
+    progress = _current_progress_queryset(student, lifecycle).filter(activity_key='lesson-1-gawain-1').first()
+    state = progress.state if progress and isinstance(progress.state, dict) else {}
+    if state.get('submitted') and state.get('submission_id'):
+        reviewable['prescribed-lesson-1-gawain-1'] = StudentActivityRecordingSubmission.objects.filter(
+            pk=state['submission_id'], student=student, activity_key='lesson-1-gawain-1',
+            status__in=['submitted', 'checked'],
+        ).exclude(audio_file='').exists()
     activity_id = request.GET.get('activity_id')
     if activity_id is not None:
         completed = {activity_id: completed.get(activity_id, False)}
-    return JsonResponse({'success': True, 'completed': completed})
+        reviewable = {activity_id: reviewable.get(activity_id, False)}
+    return JsonResponse({'success': True, 'completed': completed, 'reviewable': reviewable})
 
 
 @login_required(role='teacher')
@@ -22766,30 +22783,54 @@ def teacher_lesson_1_gawain_1_audio(request, submission_id):
 @csrf_protect
 @require_http_methods(['POST'])
 def teacher_lesson_1_gawain_1_review_action(request):
-    payload = json.loads(request.body or '{}')
-    submission = StudentActivityRecordingSubmission.objects.filter(pk=payload.get('submission_id'), activity_key='lesson-1-gawain-1').first()
+    try:
+        payload = json.loads(request.body or '{}')
+        submission_id = int(payload.get('submission_id'))
+    except (ValueError, TypeError, AttributeError):
+        return JsonResponse({'success': False, 'error': 'A valid recording is required.'}, status=400)
+    submission = StudentActivityRecordingSubmission.objects.filter(pk=submission_id, activity_key='lesson-1-gawain-1').first()
     teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
     allowed = {entry.get('student_id') for section in Section.objects.filter(teacher=teacher, is_active=True) for entry in section.get_enrolled_students(active_only=True) if entry.get('student_id')} if teacher else set()
     if not submission or submission.student_id not in allowed:
         return JsonResponse({'success': False, 'error': 'Recording not found.'}, status=404)
     action = str(payload.get('action') or '').strip().lower()
-    if action == 'retry':
-        if submission.status == 'checked':
-            return JsonResponse({'success': False, 'error': 'A checked recording cannot be sent for retry.'}, status=409)
-        submission.status = 'retry'
-        submission.submitted_at = system_now()
-        submission.save(update_fields=['status', 'submitted_at', 'updated_at'])
-        StudentActivityProgress.objects.filter(student=submission.student, activity_key='lesson-1-gawain-1').update(activity_completed=False, state={'submitted': False, 'retry_requested': True, 'submission_id': submission.id})
-    elif action == 'checked':
-        if submission.status == 'checked':
-            return JsonResponse({'success': True, 'status': 'checked'})
-        if submission.status != 'submitted':
-            return JsonResponse({'success': False, 'error': 'Only a submitted recording can be marked as checked.'}, status=409)
-        submission.status = 'checked'; submission.checked_by_id = request.session.get('user_id'); submission.checked_at = system_now(); submission.submitted_at = submission.checked_at
-        submission.save(update_fields=['status', 'checked_by', 'checked_at', 'submitted_at', 'updated_at'])
-        StudentActivityProgress.objects.update_or_create(student=submission.student, activity_key='lesson-1-gawain-1', defaults={'current_index': 1, 'completed_items': 1, 'correct_items': 0, 'total_items': 1, 'activity_completed': True, 'state': {'submitted': True, 'checked': True, 'submission_id': submission.id}})
-    else:
+    if action not in {'retry', 'checked'}:
         return JsonResponse({'success': False, 'error': 'Invalid review action.'}, status=400)
+    lifecycle = _current_learning_context(submission.student)
+    try:
+        progress_scope = _current_progress_scope(submission.student, lifecycle, 'lesson-1-gawain-1')
+    except ValueError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=409)
+    if not Enrollment.objects.filter(student=submission.student, school_calendar=lifecycle['school_calendar'],
+            section__teacher=teacher, section__is_active=True, status='active', is_active=True).exists():
+        return JsonResponse({'success': False, 'error': 'Student access denied.'}, status=403)
+    with transaction.atomic():
+        # Use the same student lock as automatic submission so review and
+        # resubmission cannot overwrite one another's status/progress.
+        User.objects.select_for_update().get(pk=submission.student_id)
+        submission.refresh_from_db()
+        progress = StudentActivityProgress.objects.filter(**progress_scope).first()
+        state = progress.state if progress and isinstance(progress.state, dict) else {}
+        if not progress or state.get('submission_id') != submission.id:
+            return JsonResponse({'success': False, 'error': 'This recording is not the current activity attempt.'}, status=409)
+        if action == 'retry':
+            if submission.status == 'checked':
+                return JsonResponse({'success': False, 'error': 'A completed recording cannot be sent for retry.'}, status=409)
+            submission.status = 'retry'
+            submission.save(update_fields=['status', 'updated_at'])
+            defaults = {'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': 1,
+                        'activity_completed': False, 'state': {'submitted': False, 'retry_requested': True, 'submission_id': submission.id}}
+        else:
+            if submission.status not in {'submitted', 'checked'} or not submission.audio_file:
+                return JsonResponse({'success': False, 'error': 'Only a submitted recording can be marked as complete.'}, status=409)
+            if submission.status != 'checked':
+                submission.status = 'checked'
+                submission.checked_by = teacher
+                submission.checked_at = system_now()
+                submission.save(update_fields=['status', 'checked_by', 'checked_at', 'updated_at'])
+            defaults = {'current_index': 1, 'completed_items': 1, 'correct_items': 1, 'total_items': 1,
+                        'activity_completed': True, 'state': {'submitted': True, 'checked': True, 'submission_id': submission.id}}
+        StudentActivityProgress.objects.update_or_create(**progress_scope, defaults=defaults)
     return JsonResponse({'success': True, 'status': submission.status})
 
 
@@ -23148,6 +23189,10 @@ def lesson_3_activity_progress(request):
         if not isinstance(state, dict): state = {}
         if key not in {'lesson-1-gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1', 'lesson-4-gawain-2', 'lesson-5-gawain-1', 'lesson-6-gawain-1', 'lesson-7-gawain-1'} or total <= 0:
             raise ValueError('Invalid Lesson 3 activity.')
+        if key == 'lesson-1-gawain-1':
+            # This recording activity advances only via audio submission and
+            # teacher review, never a legacy chart progress or reset request.
+            raise ValueError('Recording progress is managed by submission and teacher review.')
         if not (0 <= completed <= total and 0 <= correct <= total and 0 <= index <= total):
             raise ValueError('Invalid activity progress.')
         if done and (completed < total or index < total):

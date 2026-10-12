@@ -5,13 +5,14 @@ const path = require('node:path');
 const {chromium} = require(process.env.PABASA_PLAYWRIGHT_PATH || 'playwright-core');
 const root = path.resolve(__dirname, '..');
 const app = path.join(root, 'pabasa_site/pabasa_app');
-const template = fs.readFileSync(path.join(app, 'templates/pabasa_app/courses.html'), 'utf8');
+const template = fs.readFileSync(path.join(app, 'templates/pabasa_app/courses.html'), 'utf8').replace(/\r\n/g, '\n');
 const between = (start, end) => {
     const first = template.indexOf(start), last = template.indexOf(end, first);
     assert(first >= 0 && last > first, start);
     return template.slice(first, last);
 };
 const live = Boolean(process.env.PABASA_REVIEW_SERVER);
+const lesson1Only = process.env.PABASA_REVIEW_LESSON1_ONLY === '1';
 const liveUrls = JSON.parse(process.env.PABASA_REVIEW_URLS || '{}');
 const urls = text => text.replace(/{% url ["']([^"']+)["'] %}/g, (_, name) => liveUrls[name] || '/test/'+name);
 const progress = between('        function progressStudentMatches(', "        if (e.target.closest('.view-student-progress'))");
@@ -21,7 +22,7 @@ const fluency = between("    document.addEventListener('change', function(event)
 const adapter = between('    function installCourseInlineModalAdapter() {', '    installCourseInlineModalAdapter();');
 const modalHtml = between('<div class="modal fade" id="studentProgressModal"', '<script>\ndocument.addEventListener');
 const courseCss = [...template.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(match => match[1]).join('\n').replace(/{% static ["']([^"']+)["'] %}/g, '/static/$1');
-const dashboard = fs.readFileSync(path.join(app, 'templates/pabasa_app/base_dashboard.html'), 'utf8');
+const dashboard = fs.readFileSync(path.join(app, 'templates/pabasa_app/base_dashboard.html'), 'utf8').replace(/\r\n/g, '\n');
 const dashboardCss = [...dashboard.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(match => match[1]).join('\n');
 const displayScale = dashboard.slice(dashboard.indexOf('        (() => {\n            const applyDashboardDisplayScale'), dashboard.indexOf('    </script>', dashboard.indexOf('const applyDashboardDisplayScale')));
 async function assertReviewFits(dialog) {
@@ -85,7 +86,8 @@ const formatDateTime=String,formatCourseReportDuration=String,ensureCsrfToken=as
 class Modal{constructor(element){this._element=element;Modal.instances.set(element,this)}show(){this._element.classList.add('show')}hide(){this._element.classList.remove('show');this._element.dispatchEvent(new Event('hidden.bs.modal'))}static getOrCreateInstance(element){return Modal.getInstance(element)||new Modal(element)}static getInstance(element){return Modal.instances.get(element)}}
 Modal.instances=new WeakMap();window.bootstrap={Modal};
 ${audio}
-${urls(progress)}
+${urls(lesson1Only ? progress.replace('const tasks = courseProgressTasks(course, studentId);',
+    "const tasks = courseProgressTasks(course, studentId).filter(task=>task.assessmentId==='prescribed-lesson-1-gawain-1');") : progress)}
 ${urls(grades)}
 ${urls(fluency)}
 ${adapter}
@@ -151,8 +153,8 @@ new (require('node:vm').Script)(setup);
             assert.deepEqual(errors,[]);
             await page.evaluate(()=>window.openProgress());
             const cards=page.locator('#studentProgressList > .student-progress-card');
-            assert.equal(await cards.count(),7);
-            assert.deepEqual(await cards.locator('.student-progress-type').allTextContents(),['Session 1','Session 4','Session 4','Session 5','Session 5','Session 5','Session 13']);
+            assert.equal(await cards.count(),lesson1Only?1:7);
+            assert.deepEqual(await cards.locator('.student-progress-type').allTextContents(),lesson1Only?['Session 1']:['Session 1','Session 4','Session 4','Session 5','Session 5','Session 5','Session 13']);
             assert.equal(await page.locator('dialog[open]').count(),0);
             assert.equal(await page.locator('.session4-letter-recording:visible').count(),0);
             assert.equal(await page.locator('.session5-fluency-row:visible').count(),0);
@@ -278,7 +280,7 @@ new (require('node:vm').Script)(setup);
                 await cards.nth(index).locator('.student-progress-review-trigger').click();
                 await cards.nth(index).locator('dialog[open]').waitFor({state:'visible'});
             };
-            for(const [index,count] of [[1,4],[2,8],[3,4],[6,11]]){
+            for(const [index,count] of (lesson1Only?[]:[[1,4],[2,8],[3,4],[6,11]])){
                 await openReview(index);
                 const dialog=cards.nth(index).locator('dialog');
                 await assertReviewFits(dialog);
@@ -349,7 +351,7 @@ new (require('node:vm').Script)(setup);
                 assert.equal(await dialog.locator('.session4-score-button.selected').getAttribute('data-score'),'1');
                 await dialog.locator('.student-progress-review-close').click();
             }
-            for(const index of [4,5]){
+            for(const index of (lesson1Only?[]:[4,5])){
             await openReview(index);
             const fluencyDialog=cards.nth(index).locator('dialog');
             await assertReviewFits(fluencyDialog);
@@ -417,6 +419,8 @@ new (require('node:vm').Script)(setup);
             }
             await openReview(0);
             const singleDialog=cards.nth(0).locator('dialog');
+            assert.equal(await singleDialog.locator('.student-progress-lesson1-action[data-action="checked"]').textContent(),'Mark as Complete');
+            assert.equal(await cards.nth(0).locator('.badge').textContent(),'Pending review');
             await page.evaluate(()=>document.fonts.load('16px bootstrap-icons'));
             assert.equal(await singleDialog.locator('.student-progress-retell-play i').evaluate(node=>getComputedStyle(node,'::before').content==='none'),false);
             assert.equal(await singleDialog.locator('.student-progress-review-header small').textContent(),'SESSION 1');
@@ -443,14 +447,30 @@ new (require('node:vm').Script)(setup);
             await cards.nth(0).locator('.student-progress-lesson1-action[data-action="checked"]').click();
             await page.waitForFunction(()=>!document.querySelector('.lesson1-review-actions'));
             assert.equal(posts.at(-1).url,liveUrls.teacher_lesson_1_gawain_1_review_action || '/test/teacher_lesson_1_gawain_1_review_action');
-            assert.equal(await cards.nth(0).locator('.student-progress-score').textContent(),'1');
+            assert.equal(await cards.nth(0).locator('.student-progress-score').textContent(),'1/1');
             assert.equal(await singleDialog.locator('.session5-evaluation-summary strong').textContent(),'Reading Evaluation — 1 / 1 Reviewed');
             assert.equal(await singleDialog.locator('.single-recording-review-status').textContent(),'Reviewed');
             await cards.nth(0).locator('.student-progress-review-close').click();
             await page.waitForFunction(()=>activeStudentProgressAudio===null);
+            // Search rerenders the current rows. Approval and full credit must
+            // persist there without bringing back the two review actions.
+            await page.locator('#studentProgressSearch').fill('Lesson 1 Gawain 1');
+            assert.equal(await cards.first().locator('.student-progress-score').textContent(),'1/1');
+            assert.equal(await cards.first().locator('.badge').textContent(),'Completed');
+            assert.equal(await cards.first().locator('.student-progress-lesson1-action').count(),0);
+            await page.locator('#studentProgressSearch').fill('');
+            if(lesson1Only){
+                await page.evaluate(()=>bootstrap.Modal.getInstance(document.getElementById('studentProgressModal')).hide());
+                assert.deepEqual(errors,[]);
+                await page.close();
+                console.log('PASS: pending Lesson 1 opens before approval, real recording plays, Mark as Complete saves 1/1, failure restores controls, search retains approval, desktop/mobile review fits. Authorized real endpoints in disposable DB.');
+                continue;
+            }
             if(!live){
                 // A fresh disposable pending submission can still be sent for
                 // retry; this does not bypass the real checked-record policy.
+                await page.evaluate(()=>Object.assign(progressFixtures['prescribed-lesson-1-gawain-1'].attempts[0],
+                    {status:'submitted',can_retry:true,can_check:true}));
                 await page.evaluate(()=>window.openProgress());
                 await openReview(0);
                 await cards.nth(0).locator('.student-progress-lesson1-action[data-action="retry"]').click();
@@ -503,6 +523,6 @@ new (require('node:vm').Script)(setup);
             assert.deepEqual(errors,[]);
             await page.close();
         }
-        if(!process.env.PABASA_REVIEW_GATE_ONLY)console.log('PASS: all seven compact review headers/counts, three columns, neutral unattempted/read-only skipped rows, playback, original fluency/binary scores and Lesson 1 review actions, failure recovery, fixed summary/list-only scrolling, desktop/mobile resizing. '+(live?'Authorized real endpoints in disposable DB.':'Isolated mocked API fixtures at six display configurations, including Trace & Say retry/finalization actions.'));
+        if(!process.env.PABASA_REVIEW_GATE_ONLY&&!lesson1Only)console.log('PASS: all seven compact review headers/counts, three columns, neutral unattempted/read-only skipped rows, playback, original fluency/binary scores and Lesson 1 review actions, failure recovery, fixed summary/list-only scrolling, desktop/mobile resizing. '+(live?'Authorized real endpoints in disposable DB.':'Isolated mocked API fixtures at six display configurations, including Trace & Say retry/finalization actions.'));
     } finally {await browser.close();}
 })().catch(error=>{console.error(error);process.exit(1)});

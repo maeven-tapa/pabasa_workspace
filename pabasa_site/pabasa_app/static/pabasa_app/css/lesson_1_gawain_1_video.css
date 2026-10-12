@@ -1,0 +1,40 @@
+@font-face{font-family:LessonOneFredoka;src:url('../font/fredoka-one.one-regular.ttf') format('truetype');font-display:swap}
+:root{--ink:#183e63;--muted:#627b84}*{box-sizing:border-box}body{margin:0;height:100dvh;padding:26px clamp(16px,4vw,42px) 22px;color:var(--ink);font-family:LessonOneFredoka,Nunito,"Segoe UI",sans-serif;background:#e1f5f7 url('../prescribed/PRESCRIBED-BG.jpg') center/cover no-repeat}
+.page{width:min(1250px,100%);height:100%;margin:auto;display:flex;flex-direction:column;gap:24px}.back{display:inline-flex;align-items:center;justify-content:center;width:280px;max-width:100%;min-height:64px;padding:10px 18px;border:0;border-radius:999px;background:#fff;color:var(--ink);font-size:1.2rem;line-height:1.15;text-align:center;text-decoration:none;box-shadow:0 8px 17px #145ca744;transition:.16s}.back:hover{transform:translateY(-2px);box-shadow:0 10px 22px #145ca755}.back:active{transform:translateY(2px)}.back:focus-visible,button:focus-visible{outline:4px solid #f5d47c;outline-offset:4px}
+.shell{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;margin:0;padding:clamp(10px,2vw,24px);border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63;backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35}.shell video{display:block;width:100%;height:100%;min-width:0;min-height:0;object-fit:contain;border-radius:20px}
+.lesson-one-feedback{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:25;max-width:calc(100vw - 40px);padding:16px 24px;border-radius:22px;background:#fffdf7;color:#164b62;box-shadow:0 12px 32px #123f4d66;text-align:center;font-size:clamp(1.2rem,4vw,2.6rem);pointer-events:none}.lesson-one-feedback[hidden]{display:none}
+.completion{display:none;position:fixed;inset:0;z-index:1000;place-items:center;padding:20px;background:#123f4dcc}.completion.show{display:grid}.page.is-complete{visibility:hidden}.completion-card{width:min(540px,100%);padding:34px 30px 30px;border-radius:26px;background:#fff;text-align:center;box-shadow:0 18px 44px #0004}.completion .check{display:none}.completion h2{margin:0;color:#164b62;font-size:clamp(1.75rem,4vw,2rem);font-weight:900;line-height:1.2}.completion p:not(.save-error){margin:14px 0 24px;color:#164b62;font-size:clamp(1.1rem,2.2vw,1.2rem);font-weight:900}.done{padding:14px 28px;border:0;border-radius:999px;background:#218b8b;color:#fff;font:inherit;font-size:1.05rem;font-weight:900;box-shadow:0 5px 0 #176d6d;cursor:pointer}.done:hover{background:#197878}.save-error{color:#a33b32;font-weight:800}
+@media(max-width:800px){body{padding:14px 14px 18px}.page{gap:20px;padding-top:68px}.back{width:230px;min-height:58px;font-size:1rem}.shell{border-radius:30px}}
+@media(max-height:450px){body{padding:8px 14px}.page{padding-top:0;gap:8px}.back{min-height:42px;font-size:.9rem;width:210px}.shell{padding:8px;border-radius:24px}}
+      .lesson-one-welcome-modal {
+        position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
+        padding: 20px; background: #123f4dcc;
+      }
+      .lesson-one-welcome-card {
+        width: min(560px, 100%); padding: 30px 26px; border-radius: 24px;
+        background: #fffdf7; color: #164b62; text-align: center;
+        box-shadow: 0 20px 50px #0005;
+      }
+      .lesson-one-welcome-card h2 { margin: 0 0 14px; font-size: clamp(1.35rem, 3vw, 2rem); }
+      .lesson-one-welcome-card p { margin: 10px 0; color: #627b84; font-weight: 700; line-height: 1.5; white-space: pre-line; }
+      .lesson-one-welcome-actions { display: flex; gap: 12px; justify-content: center; margin-top: 22px; }
+      .lesson-one-welcome-actions button, .lesson-one-welcome-retry {
+        min-width: 120px; padding: 12px 20px; border: 0; border-radius: 13px;
+        background: #299e9a; color: #fff; font-weight: 900; cursor: pointer;
+      }
+      .lesson-one-welcome-actions button:last-child { background: #d94e43; }
+      .lesson-one-welcome-actions button:disabled { opacity: .45; cursor: wait; }
+      .lesson-one-welcome-retry { margin-top: 14px; background: #627b84; }
+      .lesson-one-welcome-status { min-height: 1.5em; font-size: .9rem; }
+.lesson-one-feedback:not(.is-countdown){top:auto;bottom:18px;transform:translateX(-50%);font-size:clamp(.9rem,2vw,1.15rem);z-index:35}
+
+@media(max-height:450px){.lesson-one-page .s1-controls-tools{top:8px;right:14px;gap:8px}.lesson-one-page .s1-controls-tool{width:44px;height:44px;border-radius:14px;font-size:1.25rem}}
+
+.shell{position:relative}
+.lesson-one-recording-indicator{position:absolute;top:clamp(14px,3vw,30px);left:clamp(14px,3vw,30px);display:flex;align-items:center;gap:10px;max-width:calc(100% - 28px);padding:10px 16px;border:1px solid #efbdc1;border-radius:999px;background:#fff;color:#a71e30;box-shadow:0 4px 16px #183e6329;font-size:clamp(.85rem,2vw,1.05rem);line-height:1.3;pointer-events:none}
+.lesson-one-recording-indicator[hidden]{display:none}
+.lesson-one-recording-dot{flex:none;width:12px;height:12px;border-radius:50%;background:#d5263e;animation:lesson-one-recording-pulse 1.4s ease-out infinite}
+.lesson-one-recording-indicator.is-paused{color:#79510d;border-color:#e4d0a7}
+.lesson-one-recording-indicator.is-paused .lesson-one-recording-dot{background:#a66b0b;animation:none}
+@keyframes lesson-one-recording-pulse{0%{box-shadow:0 0 0 0 #d5263e55}100%{box-shadow:0 0 0 7px #d5263e00}}
+@media(prefers-reduced-motion:reduce){.lesson-one-recording-dot{animation:none}}

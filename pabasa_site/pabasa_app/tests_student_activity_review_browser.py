@@ -23,6 +23,46 @@ class StudentActivityReviewBrowserTests(StaticLiveServerTestCase):
     current = fixtures.Lesson15ReadingTests.current
     skip = fixtures.Lesson15ReadingTests.skip
 
+    def test_lesson1_pending_recording_review_and_full_credit(self):
+        audio = io.BytesIO()
+        with wave.open(audio, 'wb') as recording:
+            recording.setparams((1, 2, 16000, 0, 'NONE', 'not compressed'))
+            recording.writeframes(b'\0\0' * 32000)
+        submitted = self.student_client.post(reverse('lesson_1_gawain_1_submit'), {
+            'audio': SimpleUploadedFile('lesson1.wav', audio.getvalue(), 'audio/wav'),
+            'duration_seconds': '2', 'video_completed': 'true',
+        })
+        self.assertEqual(submitted.status_code, 200)
+        progress = StudentActivityProgress.objects.get(student=self.student,
+            activity_key='lesson-1-gawain-1', school_calendar=self.calendar, term=1)
+        self.assertFalse(progress.activity_completed)
+        row = self.teacher_client.get(reverse('teacher_lesson_1_gawain_1_recordings')).json()['submissions'][0]
+        attempts = {'prescribed-lesson-1-gawain-1': {'attempts': [{
+            'student_id': self.student.pk, 'activity_type': 'lesson_1_recording',
+            'status': row['status'], 'submission_id': row['id'],
+            'recording_available': True, 'recording_url': row['recording_url'],
+            'recording_duration_seconds': row['duration_seconds'],
+            'can_retry': row['can_retry'], 'can_check': row['can_check'],
+        }]}}
+        names = ['teacher_prescribed_review_availability', 'teacher_lesson_1_gawain_1_review_action']
+        environment = dict(os.environ, PABASA_REVIEW_SERVER=self.live_server_url,
+            PABASA_REVIEW_TEACHER_COOKIE=self.teacher_client.cookies['sessionid'].value,
+            PABASA_REVIEW_STUDENT_ID=str(self.student.pk), PABASA_REVIEW_LESSON1_ONLY='1',
+            PABASA_REVIEW_ATTEMPTS=json.dumps(attempts),
+            PABASA_REVIEW_URLS=json.dumps({name: reverse(name) for name in names}))
+        script = Path(__file__).resolve().parents[2] / 'tools' / 'test_student_activity_review.cjs'
+        result = subprocess.run(['node', str(script)], env=environment,
+            capture_output=True, text=True, timeout=120)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        progress.refresh_from_db()
+        self.assertTrue(progress.activity_completed)
+        self.assertEqual((progress.correct_items, progress.total_items), (1, 1))
+        fresh = self.teacher_client.get(reverse('teacher_lesson_1_gawain_1_recordings')).json()['submissions'][0]
+        self.assertEqual(fresh['status'], 'checked')
+        self.assertFalse(fresh['can_check'])
+        self.assertFalse(fresh['can_retry'])
+        print(result.stdout.strip())
+
     def test_completion_gate_with_real_status_refresh_and_direct_events(self):
         # Not started L1 has a reviewed submission; that must NOT unlock review.
         StudentActivityRecordingSubmission.objects.create(student=self.student,
@@ -93,6 +133,11 @@ class StudentActivityReviewBrowserTests(StaticLiveServerTestCase):
         for key in keys + ['lesson-1-gawain-1', 'lesson-15-gawain-3']:
             StudentActivityProgress.objects.update_or_create(student=self.student, activity_key=key,
                 school_calendar=self.calendar, term=1, defaults={'activity_completed': True})
+        # Lesson 1 is pending teacher approval. Its submitted recording must
+        # already open for review, without inventing completion to unlock it.
+        StudentActivityProgress.objects.filter(student=self.student, activity_key='lesson-1-gawain-1',
+            school_calendar=self.calendar, term=1).update(activity_completed=False,
+                state={'submitted': True, 'submission_id': lesson1.pk})
         urls = {name: reverse(name) for name in [
             'teacher_lesson_13_gawain_1_score', 'teacher_session_4_gawain_2_score',
             'teacher_session_5_lesson_14_gawain_4_classify', 'lesson15_reading_classify',
@@ -163,6 +208,10 @@ class StudentActivityReviewBrowserTests(StaticLiveServerTestCase):
         lesson1.refresh_from_db()
         self.assertEqual(lesson1.status, 'checked')
         self.assertIsNone(lesson1.teacher_score, 'Lesson 1 remains a check/retry review, not binary or fluency scoring')
+        progress = StudentActivityProgress.objects.get(student=self.student, activity_key='lesson-1-gawain-1',
+            school_calendar=self.calendar, term=1)
+        self.assertTrue(progress.activity_completed)
+        self.assertEqual((progress.correct_items, progress.total_items), (1, 1))
         fresh = self.teacher_client.get(reverse('teacher_lesson_1_gawain_1_recordings')).json()['submissions'][0]
         self.assertEqual(fresh['status'], 'checked')
         self.assertFalse(fresh['can_check'])

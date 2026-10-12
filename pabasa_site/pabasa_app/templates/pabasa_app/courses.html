@@ -4,7 +4,7 @@
 {% block extra_head %}
 <script src="{% static 'pabasa_app/js/lesson15_reading_review.js' %}?v=4" defer></script>
 <link rel="stylesheet" href="{% static 'pabasa_app/css/student_activity_review.css' %}?v=6">
-<script src="{% static 'pabasa_app/js/student_activity_review.js' %}?v=6" defer></script>
+<script src="{% static 'pabasa_app/js/student_activity_review.js' %}?v=7" defer></script>
 <link rel="stylesheet" href="{% static 'pabasa_app/css/aral_session_folder_icon.css' %}?v=20261010-2">
 <script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[data-prescribed-activity="lesson-7-gawain-1"]').forEach(x=>x.dataset.prescribedActivity='lesson-7-gawain-1')});</script>
 <script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[data-prescribed-activity="letrang-msa"]').forEach(x=>x.dataset.prescribedActivity='lesson-6-gawain-1');document.querySelectorAll('[data-prescribed-preview="letrang-msa"]').forEach(x=>x.dataset.prescribedPreview='lesson-6-gawain-1')});</script>
@@ -11464,7 +11464,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const body = document.getElementById('lesson1RecordingsBody'); body.innerHTML = '<div class="text-muted">Loading recordings...</div>'; bootstrap.Modal.getOrCreateInstance(modal).show();
         const response = await fetch('{% url "teacher_lesson_1_gawain_1_recordings" %}', {credentials:'same-origin'}); const data = await response.json();
         if (!response.ok || !data.success) { body.innerHTML = `<div class="text-danger">${escapeHtml(data.error || 'Unable to load recordings.')}</div>`; return; }
-        body.innerHTML = (data.submissions || []).map(row => `<div class="story-response-review-row"><div class="story-response-review-header"><strong class="story-response-student-name">${escapeHtml(row.student_name)}</strong><span class="story-response-status-badge">${escapeHtml(row.status)}</span></div><p class="small text-muted">${new Date(row.submitted_at).toLocaleString()}</p><audio class="w-100" controls preload="none" src="${escapeHtml(row.recording_url)}"></audio>${row.can_retry || row.can_check ? `<div class="d-flex gap-2 mt-2 lesson1-review-actions">${row.can_retry ? `<button type="button" class="btn btn-outline-secondary lesson1-review-action" data-id="${row.id}" data-action="retry">Retry</button>` : ''}${row.can_check ? `<button type="button" class="btn btn-primary lesson1-review-action" data-id="${row.id}" data-action="checked">Mark as Checked</button>` : ''}</div>` : ''}</div>`).join('') || '<div class="text-muted">No recordings yet.</div>';
+        body.innerHTML = (data.submissions || []).map(row => `<div class="story-response-review-row"><div class="story-response-review-header"><strong class="story-response-student-name">${escapeHtml(row.student_name)}</strong><span class="story-response-status-badge">${escapeHtml(row.status)}</span></div><p class="small text-muted">${new Date(row.submitted_at).toLocaleString()}</p><audio class="w-100" controls preload="none" src="${escapeHtml(row.recording_url)}"></audio>${row.can_retry || row.can_check ? `<div class="d-flex gap-2 mt-2 lesson1-review-actions">${row.can_retry ? `<button type="button" class="btn btn-outline-secondary lesson1-review-action" data-id="${row.id}" data-action="retry">Retry</button>` : ''}${row.can_check ? `<button type="button" class="btn btn-primary lesson1-review-action" data-id="${row.id}" data-action="checked">Mark as Complete</button>` : ''}</div>` : ''}</div>`).join('') || '<div class="text-muted">No recordings yet.</div>';
     }
 
     async function openStoryResponseReview(materialId) {
@@ -14605,6 +14605,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     });
 
     const studentProgressRetellGrades = new Map();
+    const studentProgressLesson1Attempts = new Map();
     let activeStudentProgressAudio = null;
     const stopStudentProgressAudio = () => {
         document.querySelectorAll('.student-progress-recording audio').forEach(audio => audio.pause());
@@ -14922,6 +14923,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const isRetellStory = activityType === 'retell_story';
                     const isStoryResponse = activityType === 'story_response';
                     const isLesson1Recording = activityType === 'lesson_1_recording';
+                    if (isLesson1Recording && attempt?.submission_id) {
+                        studentProgressLesson1Attempts.set(String(attempt.submission_id), attempt);
+                    }
+                    const cardStatus = isLesson1Recording && attempt
+                        ? (attempt.status === 'checked' ? {label: 'Completed', className: 'bg-success'}
+                            : attempt.status === 'retry' ? {label: 'Retry', className: 'bg-warning text-dark'}
+                            : {label: 'Pending review', className: 'bg-warning text-dark'})
+                        : status;
                     const isLesson29TraceSay = activityType === 'lesson_29_trace_say';
                     const isSession4Gawain1 = activityType === 'session_4_gawain_1';
                     const isSession4Gawain2 = activityType === 'session_4_gawain_2';
@@ -14983,7 +14992,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const scoreValue = usesLetterSoundScores
                         ? session4Score
                         : isLesson1Recording
-                        ? (attempt?.status === 'checked' ? '1' : '-')
+                        ? (attempt?.status === 'checked' ? '1/1' : '-')
                         : (isRetellStory || isStoryResponse)
                         ? `<select class="student-progress-retell-score form-select form-select-sm${(isStoryResponse || isRetellStory) && (attempt?.grade_locked || retellGradeValue !== '') ? ' is-locked' : ''}" data-submission-id="${escapeHtml(retellSubmissionId || '')}" data-previous-value="${escapeHtml(retellGradeValue)}" ${(!retellSubmissionId || ((isStoryResponse || isRetellStory) && (attempt?.grade_locked || retellGradeValue !== ''))) ? 'disabled' : ''} aria-label="Teacher score"${(isStoryResponse || isRetellStory) && (attempt?.grade_locked || retellGradeValue !== '') ? ' title="Score is locked after submission."' : ''}><option value="" ${retellGradeValue === '' ? 'selected' : ''}>Not scored</option>${['Poor', 'Fair/Beginning', 'Basic/Approaching', 'Proficient', 'Mastery', 'Ready'].map((label, value) => `<option value="${value}" ${retellGradeValue === String(value) ? 'selected' : ''}>${value} - ${label}</option>`).join('')}</select>`
                         : displayedScore;
@@ -14995,17 +15004,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                     <span class="student-progress-type">${escapeHtml(typeLabel)}</span>
                                     <h6 class="student-progress-title">${escapeHtml(task.title)}</h6>
                                 </div>
-                                <span class="badge ${status.className}">${status.label}</span>
+                                <span class="badge ${cardStatus.className}">${cardStatus.label}</span>
                             </div>
                             <div class="student-progress-stats">
-                                <div class="student-progress-stat"><span class="student-progress-stat-label">Date Completed</span><span class="student-progress-stat-value">${completedAt ? escapeHtml(formatDateTime(completedAt)) : '—'}</span></div>
+                                <div class="student-progress-stat"><span class="student-progress-stat-label">${isLesson1Recording ? 'Date Submitted' : 'Date Completed'}</span><span class="student-progress-stat-value">${completedAt ? escapeHtml(formatDateTime(completedAt)) : '—'}</span></div>
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Time Spent</span><span class="student-progress-stat-value">${timeSpent !== undefined && timeSpent !== null && timeSpent !== '' ? escapeHtml(formatCourseReportDuration(timeSpent)) : '—'}</span></div>
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Score</span><span class="student-progress-stat-value student-progress-score">${scoreValue}</span></div>
                             </div>
                             ${(isRetellStory || isStoryResponse || isLesson1Recording || isLesson29TraceSay || isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1 || isSession5Fluency) ? `<div class="student-progress-recording" data-recording-key="${escapeHtml(retellRecordingKey)}">
                                 <div class="student-progress-recording-panel">
                                     ${isSession5Fluency ? `<div class="session5-fluency-review">${session5RecordingHtml}</div>` : isLesson1Recording ? window.StudentActivityReview.renderSingleRecording(attempt, recordingHtml, escapeHtml) : recordingHtml}
-                                    ${isLesson1Recording && (attempt?.can_retry || attempt?.can_check) ? `<div class="d-flex gap-2 mt-2 lesson1-review-actions"><button type="button" class="btn btn-outline-secondary btn-sm student-progress-lesson1-action" data-id="${escapeHtml(attempt.submission_id || '')}" data-action="retry" ${attempt.can_retry ? '' : 'disabled'}>Retry</button><button type="button" class="btn btn-primary btn-sm student-progress-lesson1-action" data-id="${escapeHtml(attempt.submission_id || '')}" data-action="checked" ${attempt.can_check ? '' : 'disabled'}>Mark as Checked</button></div>` : ''}
+                                    ${isLesson1Recording && (attempt?.can_retry || attempt?.can_check) ? `<div class="d-flex gap-2 mt-2 lesson1-review-actions"><button type="button" class="btn btn-outline-secondary btn-sm student-progress-lesson1-action" data-id="${escapeHtml(attempt.submission_id || '')}" data-action="retry" ${attempt.can_retry ? '' : 'disabled'}>Retry</button><button type="button" class="btn btn-primary btn-sm student-progress-lesson1-action" data-id="${escapeHtml(attempt.submission_id || '')}" data-action="checked" ${attempt.can_check ? '' : 'disabled'}>Mark as Complete</button></div>` : ''}
                                     ${isLesson29TraceSay && (attempt?.can_retry || attempt?.can_check) ? `<div class="d-flex gap-2 mt-2 lesson29-review-actions"><button type="button" class="btn btn-outline-secondary btn-sm student-progress-lesson29-action" data-student-id="${escapeHtml(attempt.student_id || '')}" data-action="retry" ${attempt.can_retry ? '' : 'disabled'}>Retry</button><button type="button" class="btn btn-primary btn-sm student-progress-lesson29-action" data-student-id="${escapeHtml(attempt.student_id || '')}" data-action="checked" ${attempt.can_check ? '' : 'disabled'}>Mark as Complete</button></div>` : ''}
                                 </div>
                             </div>` : ''}
@@ -15141,25 +15150,36 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
         const lesson1Action = event.target.closest('.student-progress-lesson1-action');
         if (lesson1Action) {
-            lesson1Action.disabled = true;
+            const card = lesson1Action.closest('.student-progress-card');
+            if (card?.dataset.reviewBusy === 'true') return;
+            if (card) card.dataset.reviewBusy = 'true';
+            const buttons = [...card.querySelectorAll('.student-progress-lesson1-action')];
+            const disabled = buttons.map(button => button.disabled);
+            buttons.forEach(button => { button.disabled = true; });
             ensureCsrfToken().then(token => fetch('{% url "teacher_lesson_1_gawain_1_review_action" %}', {
                 method: 'POST', credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
                 body: JSON.stringify({ submission_id: lesson1Action.dataset.id, action: lesson1Action.dataset.action })
             })).then(response => response.json().then(data => ({ response, data }))).then(({ response, data }) => {
                 if (!response.ok || !data.success) throw new Error(data.error || 'Review action failed.');
+                const attempt = studentProgressLesson1Attempts.get(String(lesson1Action.dataset.id));
+                if (attempt) Object.assign(attempt, {status: data.status, can_retry: false, can_check: false});
                 const row = lesson1Action.closest('.student-progress-card');
-                row?.querySelector('.badge')?.replaceChildren(document.createTextNode(data.status === 'checked' ? 'Completed' : 'Retry'));
+                const badge = row?.querySelector('.badge');
+                if (badge) {
+                    badge.textContent = data.status === 'checked' ? 'Completed' : 'Retry';
+                    badge.className = data.status === 'checked' ? 'badge bg-success' : 'badge bg-warning text-dark';
+                }
                 const score = row?.querySelector('.student-progress-score');
-                if (score) score.textContent = data.status === 'checked' ? '1' : '-';
+                if (score) score.textContent = data.status === 'checked' ? '1/1' : '-';
                 window.StudentActivityReview.updateSingleReview(row?.querySelector('.student-progress-recording'), data.status);
                 row?.querySelectorAll('.student-progress-lesson1-action').forEach(button => { button.disabled = true; });
                 if (data.status === 'checked') row?.querySelector('.lesson1-review-actions')?.remove();
                 showToast('Recording review updated', 'success');
             }).catch(error => {
-                lesson1Action.disabled = false;
+                buttons.forEach((button, index) => { button.disabled = disabled[index]; });
                 showToast(error.message || 'Review action failed.', 'error');
-            });
+            }).finally(() => { if (card) delete card.dataset.reviewBusy; });
             return;
         }
         const button = event.target.closest('.student-progress-retell-play');
