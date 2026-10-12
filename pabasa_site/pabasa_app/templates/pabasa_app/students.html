@@ -1467,77 +1467,8 @@
     <button class="btn btn-primary btn-sm" type="button" id="viewStudentAssessmentRequests">View</button>
 </section>
 {% endif %}
-<section class="aral-exit-readiness-card" aria-labelledby="aralStoryPerformanceTitle">
-    <div class="aral-performance-panel">
-        <p class="aral-card-eyebrow">ARAL Program</p>
-        <div class="aral-heading-row"><h2 class="aral-card-heading" id="aralStoryPerformanceTitle">ARAL Exit Readiness</h2><form class="aral-term-control" method="get"><label for="aralTermSelect">Term</label><div class="directory-select" id="aralTermSelect" data-default="{{ selected_aral_term }}"><input type="hidden" name="aral_term" value="{{ selected_aral_term }}"><button class="student-filter-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="student-filter-trigger-text"><span class="student-filter-value">{{ selected_aral_term_label }}</span></span><i class="bi bi-chevron-down" aria-hidden="true"></i></button><div class="student-filter-menu" role="listbox" aria-label="Term">{% for option in aral_term_options %}<button class="student-filter-option{% if option.value == selected_aral_term %} is-selected{% endif %}" type="button" role="option" aria-selected="{% if option.value == selected_aral_term %}true{% else %}false{% endif %}" data-value="{{ option.value }}"><span class="student-filter-option-text"><span class="student-filter-option-title">{{ option.label }}</span></span><i class="bi bi-check2 student-filter-check" aria-hidden="true"></i></button>{% endfor %}</div></div></form></div>
-        <span class="aral-section-label">{% if assessment_week_section %}{{ assessment_week_section.grade_level }} · {{ assessment_week_section.section|default:assessment_week_section.class_name }}{% else %}Assigned section not available{% endif %}</span>
-        <p class="aral-card-description">Student progress toward ARAL exit across performance and prescribed activities.</p>
-        <div class="aral-chart-wrap">
-            {% if aral_story_performance_data or aral_prescribed_activity_data %}<div class="aral-chart" role="img" aria-labelledby="aralStoryPerformanceTitle">
-                <div class="aral-chart-axis" aria-hidden="true"><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span></div>
-                <div class="aral-chart-plot">
-                    {% if aral_story_performance_data %}{% for indicator in aral_story_performance_data %}<div class="aral-bar-group" role="button" tabindex="0" data-performance-index="{{ forloop.counter0 }}" aria-label="{{ indicator.label }}: {% if indicator.percentage is not None %}{{ indicator.percentage }}% meet benchmark, {{ indicator.tooltip_count }}{% else %}{{ indicator.tooltip_count }}{% endif %}">{% for bar in indicator.bars %}<span class="aral-bar{% if bar.secondary %} aral-bar--secondary{% endif %}" style="height:{{ bar.height }}%"></span>{% endfor %}<span class="aral-bar-value">{% if indicator.percentage is not None %}{{ indicator.percentage }}%{% else %}—{% endif %}</span><span class="aral-chart-tooltip" aria-hidden="true"><span class="aral-chart-tooltip-category">{{ indicator.label }}</span>{% if indicator.percentage is not None %}<span class="aral-chart-tooltip-percentage">{{ indicator.percentage }}% meet benchmark</span>{% endif %}<span class="aral-chart-tooltip-count">{{ indicator.tooltip_count }}</span><span class="aral-chart-tooltip-count">Click to view students</span></span></div>{% endfor %}{% else %}<div class="aral-bar-group aral-bar-group--placeholder" aria-label="Story Reading: No qualifying results"><span class="aral-bar-value">—</span><span class="aral-chart-tooltip" aria-hidden="true"><span class="aral-chart-tooltip-category">Story Reading</span><span class="aral-chart-tooltip-count">No qualifying results</span></span></div><div class="aral-bar-group aral-bar-group--placeholder" aria-label="5W Questions: No qualifying results"><span class="aral-bar-value">—</span><span class="aral-chart-tooltip" aria-hidden="true"><span class="aral-chart-tooltip-category">5W Questions</span><span class="aral-chart-tooltip-count">No qualifying results</span></span></div><div class="aral-bar-group aral-bar-group--placeholder" aria-label="Story Response: No qualifying results"><span class="aral-bar-value">—</span><span class="aral-chart-tooltip" aria-hidden="true"><span class="aral-chart-tooltip-category">Story Response</span><span class="aral-chart-tooltip-count">No qualifying results</span></span></div><div class="aral-bar-group aral-bar-group--placeholder" aria-label="Story Retelling: No qualifying results"><span class="aral-bar-value">—</span><span class="aral-chart-tooltip" aria-hidden="true"><span class="aral-chart-tooltip-category">Story Retelling</span><span class="aral-chart-tooltip-count">No qualifying results</span></span></div>{% endif %}<div class="aral-bar-group" role="button" tabindex="0" data-prescribed-performance="true" aria-label="{{ aral_prescribed_activity_data.label }}: {{ aral_prescribed_activity_data.percentage }}%, {{ aral_prescribed_activity_data.tooltip_count }}">{% if aral_prescribed_activity_data.percentage > 0 %}{% for bar in aral_prescribed_activity_data.bars %}<span class="aral-bar{% if bar.secondary %} aral-bar--secondary{% endif %}" style="height:{{ bar.height }}%"></span>{% endfor %}{% endif %}<span class="aral-bar-value">{{ aral_prescribed_activity_data.percentage }}%</span><span class="aral-chart-tooltip" aria-hidden="true"><span class="aral-chart-tooltip-category">{{ aral_prescribed_activity_data.label }}</span><span class="aral-chart-tooltip-percentage">{{ aral_prescribed_activity_data.percentage }}% completed</span><span class="aral-chart-tooltip-count">{{ aral_prescribed_activity_data.tooltip_count }}</span></span></div>
-                    {% if aral_story_performance_data %}{% for indicator in aral_story_performance_data %}<span class="aral-bar-label" style="left:{{ indicator.left }}%">{{ indicator.label }}</span>{% endfor %}{% else %}<span class="aral-bar-label" style="left:0%">Story Reading</span><span class="aral-bar-label" style="left:25.7%">5W Questions</span><span class="aral-bar-label" style="left:51.4%">Story Response</span><span class="aral-bar-label" style="left:77.1%">Story Retelling</span>{% endif %}<span class="aral-bar-label aral-chart-label-5">Prescribed Activities</span>
-                </div>
-            </div>
-            {% if aral_story_performance_legend %}<div class="aral-chart-legend">{% for legend in aral_story_performance_legend %}<span class="aral-legend-item{% if legend.secondary %} aral-legend-item--secondary{% endif %}">{{ legend.label }}</span>{% endfor %}</div>{% endif %}
-            {% else %}<div class="aral-empty-state" role="status"><strong>No story performance data yet</strong><span>Performance will appear here once Supplementary Materials results are recorded for this term.</span></div>{% endif %}
-        </div>
-        <div class="aral-summary" aria-label="Story performance summary">
-            <div class="aral-summary-item"><span class="aral-summary-label">ARAL Students <span class="aral-summary-help" tabindex="0" role="img" aria-label="Students enrolled in the assigned ARAL section for the selected term." data-tooltip="Students enrolled in the assigned ARAL section for the selected term.">i</span></span><strong class="aral-summary-value">{% if aral_student_count %}{{ aral_student_count }}{% else %}—{% endif %}</strong></div>
-            <div class="aral-summary-item"><span class="aral-summary-label">Meeting Exit Criteria <span class="aral-summary-help" tabindex="0" role="img" aria-label="Students meeting either the Prescribed or Supplementary Activity criteria." data-tooltip="Students meeting either the Prescribed or Supplementary Activity criteria.">i</span></span><strong class="aral-summary-value">{% if aral_meeting_all_indicators_count %}{{ aral_meeting_all_indicators_count }}{% else %}—{% endif %}</strong></div>
-            <div class="aral-summary-item"><span class="aral-summary-label">Not Yet Meeting Exit Criteria <span class="aral-summary-help" tabindex="0" role="img" aria-label="Students who have not yet met either the Prescribed or Supplementary Activity exit criteria." data-tooltip="Students who have not yet met either the Prescribed or Supplementary Activity exit criteria.">i</span></span><strong class="aral-summary-value">{% if aral_needs_review_count %}{{ aral_needs_review_count }}{% else %}—{% endif %}</strong></div>
-        </div>
-        <p class="aral-benchmark-note">Students may exit the ARAL Program by scoring at least 3/5 in all four areas (12/20 overall) or by completing all Prescribed Activities.</p>
-    </div>
-    <div class="aral-ready-panel" aria-labelledby="aralReadyTitle">
-        <h2 class="aral-card-heading" id="aralReadyTitle">Students Ready for Exit</h2>
-        <span class="aral-section-label">{{ selected_aral_term_label }}</span>
-        <p class="aral-card-description">Students meeting the automatic ARAL exit criteria.</p>
-        {% if aral_exit_students %}<div class="aral-ready-list" aria-label="Students ready for exit">
-            {% for student in aral_exit_students %}<div class="aral-student-row"><span class="aral-student-avatar" aria-hidden="true">{{ student.initials }}</span><span><span class="aral-student-name">{{ student.name }}</span><span class="aral-student-meta">{{ student.section_display }}</span></span><button type="button" class="student-aral-action aral-ready-exit-action" data-student-id="{{ student.id }}" data-student-name="{{ student.name|escape }}" data-aral-action="exit">Exit ARAL Program</button></div>{% endfor %}
-        </div>{% else %}<div class="aral-empty-state" role="status"><strong>{% if aral_enrolled_student_count %}No students automatically ready for exit yet{% else %}No ARAL students enrolled yet{% endif %}</strong><span>{% if aral_enrolled_student_count %}Exit recommendations will appear here once the required performance data and criteria are available. Students may still be reviewed manually.{% else %}ARAL students assigned to this section will appear here once enrollment is recorded.{% endif %}</span></div>{% endif %}
-        <div class="aral-panel-actions" aria-label="Student exit actions">
-            <button class="aral-panel-action" type="button" data-bs-toggle="modal" data-bs-target="#aralExitStudentsModal">View Ready Students{% if aral_exit_students %} <span class="aral-panel-action-badge" aria-label="{{ aral_exit_students|length }} students ready for exit">{{ aral_exit_students|length }}</span>{% endif %}</button>
-            <button class="aral-panel-action" type="button" data-bs-toggle="modal" data-bs-target="#aralExitHistoryModal">View Exit History</button>
-            <button class="aral-panel-action aral-review-all-action" type="button" data-bs-toggle="modal" data-bs-target="#aralReviewStudentsModal">Review Students for Exit{% if aral_review_students %} <span class="aral-panel-action-badge" aria-label="{{ aral_review_students|length }} students requiring manual exit review">{{ aral_review_students|length }}</span>{% endif %}</button>
-        </div>
-    </div>
-</section>
-<div class="modal fade aral-exit-modal" id="aralStoryPerformanceModal" tabindex="-1" aria-labelledby="aralStoryPerformanceModalTitle">
-    <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
-        <div class="modal-header"><div><h2 class="modal-title" id="aralStoryPerformanceModalTitle">Story Performance</h2><p class="modal-context" id="aralStoryPerformanceModalContext">{{ selected_aral_term_label }}</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
-        <div class="modal-body" id="aralStoryPerformanceModalBody"></div>
-    </div></div>
-</div>
-{{ aral_story_performance_data|json_script:"aralStoryPerformanceData" }}
-{{ aral_prescribed_activity_data|json_script:"aralPrescribedActivityData" }}
-<div class="modal fade aral-exit-modal" id="aralExitStudentsModal" tabindex="-1" aria-labelledby="aralExitStudentsModalTitle" aria-describedby="aralExitStudentsModalContext">
-    <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
-        <div class="modal-header"><div><h2 class="modal-title" id="aralExitStudentsModalTitle">Students Ready for Exit</h2><p class="modal-context" id="aralExitStudentsModalContext">{% if assessment_week_section %}{{ assessment_week_section.grade_level }} · {{ assessment_week_section.section|default:assessment_week_section.class_name }} · {% endif %}{{ selected_aral_term_label }}</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
-        <div class="modal-body">
-            {% if aral_exit_students %}<div class="aral-modal-list" role="list">{% for student in aral_exit_students %}<div class="aral-modal-student" role="listitem"><div class="aral-modal-student-header"><span class="aral-modal-student-name">{{ student.name }}</span><button type="button" class="student-aral-action aral-ready-exit-action" data-student-id="{{ student.id }}" data-student-name="{{ student.name|escape }}" data-aral-action="exit">Exit ARAL Program</button></div><dl class="aral-modal-scores"><div class="aral-modal-score"><dt>Story Reading</dt><dd>{{ student.scores.story_reading|floatformat:'-1' }}/5</dd></div><div class="aral-modal-score"><dt>5W Questions</dt><dd>{{ student.scores.five_w_questions|floatformat:'-1' }}/5</dd></div><div class="aral-modal-score"><dt>Story Response</dt><dd>{{ student.scores.story_response|floatformat:'-1' }}/5</dd></div><div class="aral-modal-score"><dt>Story Retelling</dt><dd>{{ student.scores.story_retelling|floatformat:'-1' }}/5</dd></div><div class="aral-modal-score aral-modal-total"><dt>Total</dt><dd>{{ student.total_score|floatformat:'-1' }}/20</dd></div></dl></div>{% endfor %}</div>{% else %}<div class="aral-empty-state" role="status"><strong>No students ready for exit yet</strong><span>Students will appear here once the required performance data and exit criteria are available.</span></div>{% endif %}
-        </div>
-        <div class="modal-footer"><div>{% if aral_exit_students %}<p class="aral-modal-count">{{ aral_exit_students|length }} student{{ aral_exit_students|length|pluralize }}</p>{% endif %}<p class="aral-modal-criteria">Students may exit the ARAL Program by scoring at least 3/5 in all four areas (12/20 overall) or by completing all Prescribed Activities.</p></div></div>
-    </div></div>
-</div>
-<div class="modal fade aral-exit-modal" id="aralReviewStudentsModal" tabindex="-1" aria-labelledby="aralReviewStudentsModalTitle" aria-describedby="aralReviewStudentsModalContext">
-    <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
-        <div class="modal-header"><div><h2 class="modal-title" id="aralReviewStudentsModalTitle">Review Students for Exit</h2><p class="modal-context" id="aralReviewStudentsModalContext">Students who are not currently automatically ready for ARAL exit.</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
-        <div class="modal-body">
-            {% if aral_review_students %}<div class="aral-modal-list" role="list">{% for student in aral_review_students %}<div class="aral-modal-student aral-review-student" role="listitem"><div class="aral-modal-student-header"><span class="aral-modal-student-name">{{ student.student_name }}</span><button type="button" class="student-aral-action aral-ready-exit-action" data-student-id="{{ student.student_id }}" data-student-name="{{ student.student_name|escape }}" data-aral-action="manual_exit">Review for Exit</button></div><dl class="aral-modal-scores"><div class="aral-modal-score"><dt>Story Reading</dt><dd>{% if student.scores.story_reading != None %}{{ student.scores.story_reading|floatformat:'-1' }}/5{% else %}—{% endif %}</dd></div><div class="aral-modal-score"><dt>5W Questions</dt><dd>{% if student.scores.five_w_questions != None %}{{ student.scores.five_w_questions|floatformat:'-1' }}/5{% else %}—{% endif %}</dd></div><div class="aral-modal-score"><dt>Story Response</dt><dd>{% if student.scores.story_response != None %}{{ student.scores.story_response|floatformat:'-1' }}/5{% else %}—{% endif %}</dd></div><div class="aral-modal-score"><dt>Story Retelling</dt><dd>{% if student.scores.story_retelling != None %}{{ student.scores.story_retelling|floatformat:'-1' }}/5{% else %}—{% endif %}</dd></div></dl></div>{% endfor %}</div>{% else %}<div class="aral-empty-state" role="status"><strong>No students available for manual review</strong><span>Students who are not automatically ready for exit will appear here.</span></div>{% endif %}
-        </div>
-    </div></div>
-</div>
-<div class="modal fade aral-exit-modal" id="aralExitHistoryModal" tabindex="-1" aria-labelledby="aralExitHistoryModalTitle" aria-describedby="aralExitHistoryModalContext">
-    <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
-        <div class="modal-header"><div><h2 class="modal-title" id="aralExitHistoryModalTitle">ARAL Exit History</h2><p class="modal-context" id="aralExitHistoryModalContext">{% if assessment_week_section %}{{ assessment_week_section.grade_level }} · {{ assessment_week_section.section|default:assessment_week_section.class_name }} · {% endif %}{{ selected_aral_term_label }}</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
-        <div class="modal-body">
-            {% if aral_exit_history %}<div class="aral-modal-list" role="list">{% for student in aral_exit_history %}<div class="aral-modal-student aral-history-student" role="listitem"><div class="aral-modal-student-header"><span class="aral-modal-student-name">{{ student.student_name }}</span><span class="aral-modal-student-status">{{ student.status }}</span></div><dl class="aral-modal-scores"><div class="aral-modal-score"><dt>Grade &amp; Section</dt><dd>{{ student.section_display }}</dd></div><div class="aral-modal-score"><dt>Term</dt><dd>{{ student.term_label }}</dd></div><div class="aral-modal-score"><dt>Exit Date</dt><dd>{{ student.exit_date }}</dd></div><div class="aral-modal-score"><dt>Exit Type</dt><dd>{{ student.exit_type }}</dd></div>{% if student.reason %}<div class="aral-modal-score aral-history-reason"><dt>Reason</dt><dd>{{ student.reason }}</dd></div>{% endif %}</dl></div>{% endfor %}</div>{% else %}<div class="aral-empty-state" role="status"><strong>No students have exited ARAL yet</strong><span>Students who are not automatically ready for exit will appear here.</span></div>{% endif %}
-        </div>
-    </div></div>
-</div>
+{{ directory_calendar|json_script:"studentDirectoryCalendar" }}
+{% include "pabasa_app/partials/student_aral_terms.html" %}
 <div class="modal fade" id="studentAssessmentRequestsModal" tabindex="-1" aria-labelledby="studentAssessmentRequestsModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
         <div class="modal-header"><span class="assessment-request-modal-icon" aria-hidden="true"><i class="bi bi-clipboard2-check-fill"></i></span><div><h2 class="modal-title" id="studentAssessmentRequestsModalTitle">Student Requests to Take Assessment</h2><small>Review requests from your students</small></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
@@ -1776,15 +1707,15 @@ document.addEventListener('DOMContentLoaded', function () {
                             </button>
                         </div>
                     </div>
-                    <div class="student-filter-wrap directory-select" id="assessmentPeriodFilterWrap" data-default="1" data-assessment="pretest">
+                    <div class="student-filter-wrap directory-select" id="assessmentPeriodFilterWrap" data-default="{{ selected_crla_term|default_if_none:'' }}" data-assessment="{{ selected_crla_phase }}" data-manual="{{ crla_term_manual|yesno:'true,false' }}">
                         <button type="button" class="student-filter-trigger" aria-haspopup="listbox" aria-expanded="false">
-                            <span class="student-filter-trigger-text"><span class="student-filter-label">Assessment Period</span><span class="student-filter-value">Term 1 — Pre-Assessment</span></span>
+                            <span class="student-filter-trigger-text"><span class="student-filter-label">Assessment Period</span><span class="student-filter-value">{% if selected_crla_term == 1 %}Term 1 — Pre-Assessment{% elif selected_crla_term == 2 %}Term 2 — Midline Assessment{% elif selected_crla_term == 3 %}Term 3 — Post-Assessment{% else %}No Active Term{% endif %}</span></span>
                             <i class="bi bi-chevron-down" aria-hidden="true"></i>
                         </button>
                         <div class="student-filter-menu" role="listbox" aria-label="Select assessment period">
-                            <button type="button" class="student-filter-option is-selected" role="option" aria-selected="true" data-value="1" data-assessment="pretest"><span class="student-filter-option-text"><span class="student-filter-option-title">Term 1 — Pre-Assessment</span></span><i class="bi bi-check2 student-filter-check" aria-hidden="true"></i></button>
-                            <button type="button" class="student-filter-option" role="option" aria-selected="false" data-value="2" data-assessment="midtest"><span class="student-filter-option-text"><span class="student-filter-option-title">Term 2 — Midline Assessment</span></span><i class="bi bi-check2 student-filter-check" aria-hidden="true"></i></button>
-                            <button type="button" class="student-filter-option" role="option" aria-selected="false" data-value="3" data-assessment="posttest"><span class="student-filter-option-text"><span class="student-filter-option-title">Term 3 — Post-Assessment</span></span><i class="bi bi-check2 student-filter-check" aria-hidden="true"></i></button>
+                            <button type="button" class="student-filter-option{% if selected_crla_term == 1 %} is-selected{% endif %}" role="option" aria-selected="{% if selected_crla_term == 1 %}true{% else %}false{% endif %}" data-value="1" data-assessment="pretest"><span class="student-filter-option-text"><span class="student-filter-option-title">Term 1 — Pre-Assessment</span></span><i class="bi bi-check2 student-filter-check" aria-hidden="true"></i></button>
+                            <button type="button" class="student-filter-option{% if selected_crla_term == 2 %} is-selected{% endif %}" role="option" aria-selected="{% if selected_crla_term == 2 %}true{% else %}false{% endif %}" data-value="2" data-assessment="midtest"><span class="student-filter-option-text"><span class="student-filter-option-title">Term 2 — Midline Assessment</span></span><i class="bi bi-check2 student-filter-check" aria-hidden="true"></i></button>
+                            <button type="button" class="student-filter-option{% if selected_crla_term == 3 %} is-selected{% endif %}" role="option" aria-selected="{% if selected_crla_term == 3 %}true{% else %}false{% endif %}" data-value="3" data-assessment="posttest"><span class="student-filter-option-text"><span class="student-filter-option-title">Term 3 — Post-Assessment</span></span><i class="bi bi-check2 student-filter-check" aria-hidden="true"></i></button>
                         </div>
                     </div>
                     </div>
@@ -1976,7 +1907,7 @@ let studentDirectoryRequestId = 0;
 let studentDirectoryPage = 1;
 const studentDirectoryPageSize = 10;
 let currentCrlaFinalization = null;
-const studentDirectorySectionId = {{ assessment_week_section.id|default:'null' }};
+let studentDirectorySectionId = {{ assessment_week_section.id|default:'null' }};
 
 function getStudentDirectoryDisplayName(student) {
     const directName = String(student?.name || student?.full_name || student?.display_name || '').trim();
@@ -2528,7 +2459,7 @@ function renderStudentDirectory(sourceStudents) {
         const completedLevelBadgeHtml = student.crla_result ? '' : `<span class="badge rounded-pill level-chip ${levelClass}">${escapeStudentDirectoryHtml(levelText)}</span>`;
         const levelBadgeHtml = `<div class="d-flex flex-column align-items-end gap-1">${completedLevelBadgeHtml}${aralIndicatorHtml}${levelIndicationHtml}</div>`;
         const moveToAral = levelText === 'Readers at Grade Level';
-        const aralActionHtml = moveToAral && !hasExitedAral
+        const aralActionHtml = studentDirectoryActionsAvailable && moveToAral && !hasExitedAral
             ? `<button type="button" class="student-aral-action" data-student-id="${student.id || ''}" data-student-name="${escapeStudentDirectoryHtml(name)}" data-aral-action="move">Move to ARAL Program</button>`
             : '';
         return `
@@ -2559,8 +2490,8 @@ function renderStudentDirectory(sourceStudents) {
             const payload = {
                 student_id: select.dataset.studentId,
                 section_id: studentDirectorySectionId,
-                term: assessmentPeriod?.dataset.value || '1',
-                assessment: assessmentPeriod?.dataset.assessment || 'pretest',
+                term: assessmentPeriod?.dataset.value || '',
+                assessment: assessmentPeriod?.dataset.assessment || '',
                 observation_level: select.value,
             };
             select.disabled = true;
@@ -2610,12 +2541,15 @@ function bindStudentDirectoryFilters() {
     const levelFilterMenu = document.getElementById('readingLevelFilterMenu');
     const levelFilterValue = document.getElementById('readingLevelFilterValue');
     const levelOptions = Array.from(document.querySelectorAll('#readingLevelFilterMenu .student-filter-option'));
-    exportBtn?.addEventListener('click', function (event) {
-        if (this.getAttribute('aria-disabled') === 'true') {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-        }
-    });
+    if (exportBtn && !exportBtn.dataset.disabledClickBound) {
+        exportBtn.dataset.disabledClickBound = 'true';
+        exportBtn.addEventListener('click', function (event) {
+            if (this.getAttribute('aria-disabled') === 'true') {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+            }
+        });
+    }
     document.querySelectorAll('.directory-select').forEach(wrap => {
         const trigger = wrap.querySelector('.student-filter-trigger');
         const value = wrap.querySelector('.student-filter-value');
@@ -2631,12 +2565,12 @@ function bindStudentDirectoryFilters() {
             trigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
         });
         options.forEach(option => option.addEventListener('click', () => {
-            wrap.dataset.value = option.dataset.value || '';
-            if (wrap.id === 'aralTermSelect') {
-                wrap.querySelector('input[name="aral_term"]').value = wrap.dataset.value;
-                wrap.closest('form')?.submit();
+            if (wrap.id === 'aralTermSelect' || wrap.id === 'assessmentPeriodFilterWrap') {
+                selectStudentReviewTerm(wrap, option.dataset.value, true);
+                refreshStudentOverview();
                 return;
             }
+            wrap.dataset.value = option.dataset.value || '';
             if (wrap.id === 'assessmentPeriodFilterWrap') {
                 wrap.dataset.assessment = option.dataset.assessment || '';
             }
@@ -2650,13 +2584,17 @@ function bindStudentDirectoryFilters() {
             trigger.setAttribute('aria-expanded', 'false');
             refreshStudentOverview();
         }));
-        document.addEventListener('click', event => {
-            if (!wrap.contains(event.target)) {
-                wrap.classList.remove('is-open');
-                trigger.setAttribute('aria-expanded', 'false');
-            }
-        });
     });
+    if (!document.body.dataset.directoryCloseBound) {
+        document.body.dataset.directoryCloseBound = 'true';
+        document.addEventListener('click', event => {
+            document.querySelectorAll('.directory-select.is-open').forEach(wrap => {
+                if (wrap.contains(event.target)) return;
+                wrap.classList.remove('is-open');
+                wrap.querySelector('.student-filter-trigger').setAttribute('aria-expanded', 'false');
+            });
+        });
+    }
     if (searchInput && !searchInput.dataset.autoFilterBound) {
         searchInput.dataset.autoFilterBound = 'true';
         searchInput.addEventListener('input', function () {
@@ -2758,7 +2696,7 @@ function bindTeacherAralActions() {
     });
     document.addEventListener('click', event => {
         const button = event.target.closest('.student-aral-action');
-        if (!button || button.disabled) return;
+        if (!button || button.disabled || !studentAralActionAllowed(button)) return;
         pending = button;
         returnToReviewModal = Boolean(reviewModalEl && button.closest('#aralReviewStudentsModal'));
         const move = button.dataset.aralAction === 'move';
@@ -2785,7 +2723,7 @@ function bindTeacherAralActions() {
         if (!pending || pending.disabled) returnToReviewModal = false;
     });
     confirmBtn.addEventListener('click', async () => {
-        if (!pending) return;
+        if (!pending || !pending.isConnected || !studentAralActionAllowed(pending)) return;
         const action = pending.dataset.aralAction;
         const manualExit = action === 'manual_exit';
         if (action === 'move' && !level.value) { error.textContent = 'Choose a reading level.'; error.hidden = false; return; }
@@ -2801,7 +2739,7 @@ function bindTeacherAralActions() {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken() || document.querySelector('[name="csrfmiddlewaretoken"]')?.value || ''
                 },
-                body: JSON.stringify({ student_id: pending.dataset.studentId, action, exit_type: manualExit ? 'manual' : '', reason: trimmedReason, reading_level: level.value, exit_term: document.getElementById('aralTermSelect')?.value || null })
+                body: JSON.stringify({ student_id: pending.dataset.studentId, action, exit_type: manualExit ? 'manual' : '', reason: trimmedReason, reading_level: level.value, exit_term: document.getElementById('aralTermSelect')?.dataset.value || null })
             });
             const payload = await response.json();
             if (!response.ok || !payload.success) throw new Error(payload.error || 'ARAL update failed.');
@@ -2834,83 +2772,6 @@ function csrfToken() {
 
 document.addEventListener('DOMContentLoaded', bindTeacherAralActions);
 
-// Fetch student data from the server API.
-async function refreshStudentOverview() {
-    const requestId = ++studentDirectoryRequestId;
-    let apiStudents = null;
-    let apiLevelCounts = null;
-    let apiTotalStudents = null;
-    let apiSucceeded = false;
-    try {
-        const assessmentPeriod = document.getElementById('assessmentPeriodFilterWrap');
-        const selectedTerm = assessmentPeriod?.dataset.value || '1';
-        const selectedAssessment = assessmentPeriod?.dataset.assessment || 'pretest';
-        const params = new URLSearchParams({ term: selectedTerm, assessment: selectedAssessment, ts: Date.now() });
-        if (studentDirectorySectionId) params.set('section_id', studentDirectorySectionId);
-        const response = await fetch(`/dashboard/teacher/students-api/?${params.toString()}`, {
-            method: 'GET',
-            credentials: 'same-origin',
-            cache: 'no-store',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Cache-Control': 'no-cache, no-store, max-age=0',
-                'Pragma': 'no-cache'
-            }
-        });
-        
-        if (response && response.ok) {
-            const data = await response.json();
-            if (requestId !== studentDirectoryRequestId) return;
-            if (data && data.success) {
-                if (Array.isArray(data.students)) {
-                    apiStudents = data.students;
-                    apiSucceeded = true;
-                }
-                if (data && data.level_counts && typeof data.level_counts === 'object') {
-                    apiLevelCounts = data.level_counts;
-                }
-                window.latestDashboardMetrics = data.dashboard_metrics || {};
-                updateCrlaFinalizationUi(data.crla || null);
-                if (Number.isFinite(Number(data?.total_students))) {
-                    apiTotalStudents = Number(data.total_students);
-                }
-            }
-        }
-    } catch (error) {
-        if (requestId !== studentDirectoryRequestId) return;
-        console.warn('Could not fetch students from API', error);
-    }
-
-    if (requestId !== studentDirectoryRequestId) return;
-    
-    const studentsForUi = apiSucceeded ? normalizeStudentPayload(apiStudents) : [];
-    const authoritativeTotal = Number.isFinite(Number(apiTotalStudents))
-        ? Number(apiTotalStudents)
-        : studentsForUi.length;
-    latestStudentDirectoryTotal = authoritativeTotal;
-    latestStudentDirectoryStudents = buildStudentDirectoryProjection(studentsForUi);
-
-    // Always update statistics and directory from the freshest data we have.
-    updateStudentStatistics(latestStudentDirectoryStudents, apiLevelCounts, apiTotalStudents);
-    renderStudentDirectory(latestStudentDirectoryStudents);
-}
-
-// Initialize on page load
-document.addEventListener("DOMContentLoaded", function() {
-    bindStudentDirectoryFilters();
-    refreshStudentOverview();
-    setInterval(refreshStudentOverview, 30000);
-    window.addEventListener("focus", refreshStudentOverview);
-    document.addEventListener("visibilitychange", function () {
-        if (!document.hidden) {
-            refreshStudentOverview();
-        }
-    });
-    window.addEventListener("studentAdded", refreshStudentOverview);
-    window.addEventListener('pabasa:assessment-completed', function () {
-        refreshStudentOverview();
-    });
-});
 </script>
 
 <script>
@@ -2979,9 +2840,9 @@ document.addEventListener("DOMContentLoaded", function() {
     const storyPerformanceModalBody = document.getElementById('aralStoryPerformanceModalBody');
     if (storyPerformanceDataElement && storyPerformanceModal && storyPerformanceModalTitle && storyPerformanceModalBody) {
         document.body.appendChild(storyPerformanceModal);
-        const storyPerformanceData = JSON.parse(storyPerformanceDataElement.textContent || '[]');
         const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[character]));
         const renderStoryPerformanceDetails = index => {
+            const storyPerformanceData = JSON.parse(document.getElementById('aralStoryPerformanceData')?.textContent || '[]');
             const indicator = storyPerformanceData[index];
             if (!indicator) return;
             storyPerformanceModalTitle.textContent = indicator.label;
@@ -3036,27 +2897,25 @@ document.addEventListener("DOMContentLoaded", function() {
             });
         };
         storyPerformanceModal.addEventListener('shown.bs.modal', diagnoseStoryPerformanceModalPosition, { once: true });
-        document.querySelectorAll('.aral-bar-group[data-performance-index]').forEach(bar => {
-            bar.setAttribute('data-bs-toggle', 'modal');
-            bar.setAttribute('data-bs-target', '#aralStoryPerformanceModal');
-            const openDetails = () => {
-                if (storyPerformanceModal.parentElement !== document.body) document.body.appendChild(storyPerformanceModal);
-                renderStoryPerformanceDetails(Number(bar.dataset.performanceIndex));
-                if (window.bootstrap?.Modal) bootstrap.Modal.getOrCreateInstance(storyPerformanceModal).show();
-            };
-            bar.addEventListener('click', openDetails);
-            bar.addEventListener('keydown', event => {
-                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openDetails(); }
-            });
-        });
+        const openStoryDetails = event => {
+            const bar = event.target.closest('.aral-bar-group[data-performance-index]');
+            if (!bar || (event.type === 'keydown' && !['Enter', ' '].includes(event.key))) return;
+            event.preventDefault();
+            renderStoryPerformanceDetails(Number(bar.dataset.performanceIndex));
+            if (window.bootstrap?.Modal) bootstrap.Modal.getOrCreateInstance(storyPerformanceModal).show();
+        };
+        document.addEventListener('click', openStoryDetails);
+        document.addEventListener('keydown', openStoryDetails);
     }
 
     const prescribedPerformanceDataElement = document.getElementById('aralPrescribedActivityData');
     const prescribedPerformanceBar = document.querySelector('.aral-bar-group[data-prescribed-performance="true"]');
     if (prescribedPerformanceDataElement && prescribedPerformanceBar && storyPerformanceModal && storyPerformanceModalTitle && storyPerformanceModalBody) {
-        const prescribedPerformanceData = JSON.parse(prescribedPerformanceDataElement.textContent || '{}');
         const escapePrescribedHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[character]));
-        const openPrescribedDetails = () => {
+        const openPrescribedDetails = event => {
+            if (!event.target.closest('.aral-bar-group[data-prescribed-performance="true"]') || (event.type === 'keydown' && !['Enter', ' '].includes(event.key))) return;
+            event.preventDefault();
+            const prescribedPerformanceData = JSON.parse(document.getElementById('aralPrescribedActivityData')?.textContent || '{}');
             if (storyPerformanceModal.parentElement !== document.body) document.body.appendChild(storyPerformanceModal);
             storyPerformanceModalTitle.textContent = prescribedPerformanceData.label || 'Prescribed Activities';
             const students = prescribedPerformanceData.students || [];
@@ -3064,10 +2923,8 @@ document.addEventListener("DOMContentLoaded", function() {
             storyPerformanceModalBody.innerHTML = '<div class="aral-modal-performance-summary"><strong>' + prescribedPerformanceData.percentage + '% average completion</strong><span>' + escapePrescribedHtml(prescribedPerformanceData.tooltip_count) + '</span></div>' + (rows ? '<div class="aral-modal-table-wrap"><table class="aral-modal-performance-table"><thead><tr><th scope="col">Student</th><th scope="col">Completed</th><th scope="col">Progress</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<div class="aral-empty-state" role="status"><strong>No qualifying students</strong><span>No enrolled ARAL students are available for this term.</span></div>');
             if (window.bootstrap?.Modal) bootstrap.Modal.getOrCreateInstance(storyPerformanceModal).show();
         };
-        prescribedPerformanceBar.addEventListener('click', openPrescribedDetails);
-        prescribedPerformanceBar.addEventListener('keydown', event => {
-            if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPrescribedDetails(); }
-        });
+        document.addEventListener('click', openPrescribedDetails);
+        document.addEventListener('keydown', openPrescribedDetails);
         prescribedPerformanceBar.setAttribute('tabindex', '0');
     }
 
@@ -3095,4 +2952,5 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 
+<script src="{% static 'pabasa_app/js/students_terms.js' %}"></script>
 {% endblock %}

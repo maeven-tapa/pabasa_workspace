@@ -30346,7 +30346,7 @@ def _supplementary_material_ids(section):
     return set(Material.objects.filter(Q(section=section) | Q(assigned_sections=section), is_active=True).values_list('id', flat=True))
 
 
-def _collect_supplementary_student_results(section, selected_term):
+def _collect_supplementary_student_results(section, selected_term, *, historical_review=False):
     if not section or selected_term not in (1, 2, 3):
         return []
     enrollments = list(_current_section_enrollments(section).select_related('student', 'school_calendar'))
@@ -30358,7 +30358,8 @@ def _collect_supplementary_student_results(section, selected_term):
     # ARAL participation is currently section/calendar scoped; there is no
     # per-student term enrollment field. Do not expose the current ARAL roster
     # as a candidate for a future or otherwise non-active selected term.
-    if selected_term != current_term:
+    # The Students page can opt into historical charts with exit actions disabled.
+    if selected_term != current_term and not historical_review:
         return []
     publications = list(SupplementaryMaterialPublication.objects.filter(
         section=section,
@@ -30526,11 +30527,35 @@ def _prescribed_activity_chart_data(section, selected_term):
     }
 
 
+STUDENT_DIRECTORY_TERM_PHASES = {1: 'pretest', 2: 'midtest', 3: 'posttest'}
+
+
+def _students_calendar_context(teacher, section=None):
+    """Resolve the directory's section and calendar together, including year changes."""
+    sections = _teacher_current_sections(teacher).order_by('class_name', 'id')
+    section = section or sections.first()
+    calendar = _class_management_calendar(teacher, section)
+    if section and section.school_calendar_id != calendar['id']:
+        section = sections.filter(school_calendar_id=calendar['id']).first() if calendar['id'] else None
+    return section, calendar
+
+
+def _students_selected_term(value, calendar, *, automatic=False):
+    if not automatic and str(value or '') in {'1', '2', '3'}:
+        return int(value)
+    return calendar['term'] if calendar['term'] in STUDENT_DIRECTORY_TERM_PHASES else None
+
+
+@login_required(role='teacher')
 def students(request):
     teacher = User.objects.filter(
         id=request.session.get('user_id'), role='teacher', is_archived=False,
     ).first()
-    section = _teacher_current_sections(teacher).order_by('class_name', 'id').first()
+    section, directory_calendar = _students_calendar_context(teacher)
+    selected_crla_term = _students_selected_term(request.GET.get('term'), directory_calendar)
+    selected_aral_term = _students_selected_term(request.GET.get('aral_term'), directory_calendar)
+    aral_actions_available = bool(section and selected_aral_term == directory_calendar['term'] and selected_aral_term)
+    aral_partial = request.GET.get('partial') == 'aral'
     live_crla_material = None
     assessment_week_students = []
     show_student_assessment_requests = False
@@ -30546,23 +30571,11 @@ def students(request):
         for value, label in SchoolCalendar.TERM_CHOICES
         if value in (1, 2, 3)
     ]
-    requested_aral_term = request.GET.get('aral_term')
-    try:
-        requested_aral_term = int(requested_aral_term)
-    except (TypeError, ValueError):
-        requested_aral_term = None
-    selected_aral_term = None
     if section:
-        section_calendar = getattr(section, 'school_calendar', None)
-        current_aral_term = _calendar_current_term(section_calendar) if section_calendar else None
-        calendar_default_term = current_aral_term or getattr(section_calendar, 'current_term', None)
-        selected_aral_term = (
-            requested_aral_term if requested_aral_term in (1, 2, 3)
-            else calendar_default_term if calendar_default_term in (1, 2, 3)
-            else 1
-        )
         request.session['teacher_aral_selected_term'] = selected_aral_term
-        supplementary_students = _collect_supplementary_student_results(section, selected_aral_term)
+        supplementary_students = _collect_supplementary_student_results(
+            section, selected_aral_term, historical_review=True,
+        )
         aral_students = supplementary_students
         exited_student_ids = {
             student.id
@@ -30596,7 +30609,7 @@ def students(request):
         aral_review_students = [
             student for student in aral_students
             if not student.get('ready_for_exit') and not student.get('aral_exited')
-        ]
+        ] if aral_actions_available else []
         enrollments = _current_section_enrollments(section)
         student_ids = enrollments.values_list('student_id', flat=True)
         roster_students = User.objects.filter(
@@ -30654,7 +30667,7 @@ def students(request):
             id__in=[student['id'] for student in assessment_week_students],
             role='student', is_archived=False,
         ).first()
-        if first_student:
+        if first_student and not aral_partial:
             # Keep the first student's material for the existing page-level
             # context, but resolve completion independently for each student.
             live_availability = _official_assessment_availability_for_student(first_student, request)
@@ -30676,7 +30689,13 @@ def students(request):
                 and assessment_week_students
             )
 
-    return render(request, 'pabasa_app/students.html', _dashboard_context(request, 'teacher', {
+    context = {
+        'directory_calendar': directory_calendar,
+        'selected_crla_term': selected_crla_term,
+        'selected_crla_phase': STUDENT_DIRECTORY_TERM_PHASES.get(selected_crla_term, ''),
+        'crla_term_manual': str(request.GET.get('term') or '') in {'1', '2', '3'},
+        'aral_term_manual': str(request.GET.get('aral_term') or '') in {'1', '2', '3'},
+        'aral_actions_available': aral_actions_available,
         'assessment_week_section': section,
         'show_student_assessment_requests': show_student_assessment_requests,
         'assessment_week_toggle_available': bool(
@@ -30698,11 +30717,16 @@ def students(request):
         'selected_aral_term': selected_aral_term,
         'selected_aral_term_label': next(
             (option['label'] for option in aral_term_options if option['value'] == selected_aral_term),
-            'Selected term',
+            'No Active Term',
         ),
         'aral_story_performance_data': _supplementary_chart_data(aral_students),
         'aral_prescribed_activity_data': _prescribed_activity_chart_data(section, selected_aral_term),
-    }))
+    }
+    if aral_partial:
+        response = render(request, 'pabasa_app/partials/student_aral_terms.html', context)
+        response['Cache-Control'] = 'no-store, private'
+        return response
+    return render(request, 'pabasa_app/students.html', _dashboard_context(request, 'teacher', context))
 
 def student_detail(request):
     return render(request, 'pabasa_app/student_detail.html')
@@ -31779,7 +31803,7 @@ def _class_management_calendar(teacher, section):
     if _school_for_user(teacher):
         calendars = list(_user_school_calendar_queryset(teacher).filter(is_active=True).prefetch_related('events'))
     else:
-        calendars = list(SchoolCalendar.objects.filter(pk=section.school_calendar_id, is_active=True).prefetch_related('events'))
+        calendars = list(SchoolCalendar.objects.filter(pk=getattr(section, 'school_calendar_id', None), is_active=True).prefetch_related('events'))
     current = []
     for candidate in calendars:
         start, end = _school_year_bounds(candidate)
@@ -31791,7 +31815,7 @@ def _class_management_calendar(teacher, section):
                 'scope': '',
                 'label': 'School Year unavailable | No Active Term'}
     term = _calendar_current_term(calendar)
-    if calendar.pk == section.school_calendar_id:
+    if section and calendar.pk == section.school_calendar_id:
         # Reuse the prefetched blocks for year-end controls in this request.
         section.school_calendar = calendar
     return {
@@ -37586,12 +37610,21 @@ def get_teacher_students_api(request):
                 return JsonResponse({'success': False, 'error': 'You are not authorized for this class or section.'}, status=403)
             return _class_management_sync_response(request, teacher, selected_section)
         if section_value:
-            selected_section = Section.objects.filter(pk=section_value, teacher=teacher, is_active=True).first()
+            section_scope = _teacher_current_sections(teacher) if request.GET.get('sync') == 'directory' else Section.objects.filter(teacher=teacher, is_active=True)
+            selected_section = section_scope.filter(pk=section_value).first()
             if not selected_section:
                 return JsonResponse({'success': False, 'error': 'You are not authorized for this class or section.'}, status=403)
+        directory_calendar = None
+        if request.GET.get('sync') == 'directory':
+            selected_section, directory_calendar = _students_calendar_context(teacher, selected_section)
+            crla_term = _students_selected_term(
+                term_value, directory_calendar, automatic=request.GET.get('term_mode') == 'auto',
+            )
+            # The dropdown's fixed phase/term pairs also scope historical exports.
+            crla_phase = STUDENT_DIRECTORY_TERM_PHASES.get(crla_term)
         results, level_counts, dashboard_metrics = _teacher_student_roster_payload(
             teacher, section=selected_section, crla_term=crla_term, crla_phase=crla_phase
-        )
+        ) if directory_calendar is None or (selected_section and crla_term) else ([], {}, {})
         crla_material = None
         if crla_term and crla_phase:
             crla_material = _official_reading_active_materials_queryset().filter(
@@ -37601,7 +37634,7 @@ def get_teacher_students_api(request):
         resolution = _crla_finalization_resolution(selected_section, crla_material) if selected_section and crla_material else {
             'completed': 0, 'dropped': 0, 'unresolved': 0, 'total': 0, 'finalize_ready': False,
         }
-        return JsonResponse({
+        payload = {
             'success': True,
             'students': results,
             'level_counts': level_counts,
@@ -37618,7 +37651,19 @@ def get_teacher_students_api(request):
                 'unresolved_count': resolution['unresolved'],
                 'finalize_ready': resolution['finalize_ready'],
             },
-        })
+        }
+        if directory_calendar is not None:
+            payload['directory_terms'] = {
+                'calendar': directory_calendar,
+                'term': crla_term,
+                'assessment': crla_phase,
+                'section_id': selected_section.pk if selected_section else None,
+                'actions_available': bool(selected_section and crla_term and crla_term == directory_calendar['term']),
+            }
+        response = JsonResponse(payload)
+        if directory_calendar is not None:
+            response['Cache-Control'] = 'no-store, private'
+        return response
 
         now = system_now()
         thirty_days_ago = now - timedelta(days=30)
