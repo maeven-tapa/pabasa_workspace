@@ -538,7 +538,12 @@ class PrescribedLesson16ActivityTests(TestCase):
             '16_feedback_completion.mp3',
         ):
             self.assertIn(filename, script)
-        self.assertIn("[audioBase+'00_activity_intro.mp3',audioBase+readPrompts[0]]", script)
+        self.assertIn("if (state.phase === 'intro') { renderIntro(message,kind); return; }", script)
+        self.assertIn('id="l16g3-start"', script)
+        self.assertIn("startOrResume({begin:true})", script)
+        self.assertIn("state.phase === 'intro' && options.begin !== true", script)
+        self.assertIn("await play(audioBase+'00_activity_intro.mp3',gen)", script)
+        self.assertNotIn("[audioBase+'00_activity_intro.mp3',audioBase+readPrompts[0]]", script)
         self.assertIn("[audioBase+'12_feedback_reading_retry.mp3',retryCue,audioBase+wordAudio[", script)
         self.assertIn("[audioBase+'11_feedback_reading_correct.mp3',audioBase+readPrompts[next]]", script)
 

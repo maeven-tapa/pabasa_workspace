@@ -18,6 +18,7 @@
   let pendingProgressSave = Promise.resolve();
   let restartPending = false;
   let audioPlayer = null;
+  let introInstructionPlayed = false;
   const total = 5;
   const request = async (url, body, signal) => {
     const response = await fetch(url, {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify(body),...(signal?{signal}:{})});
@@ -32,6 +33,7 @@
   };
   const cancelWork = () => {
     generation += 1;
+    if (state.phase === 'intro') introInstructionPlayed = false;
     controller?.abort(); controller = null;
     stream?.getTracks().forEach(track => track.stop()); stream = null;
     if (audioPlayer) { audioPlayer.pause(); audioPlayer.currentTime = 0; audioPlayer = null; }
@@ -64,9 +66,14 @@
   const status = (message='', kind='') => `<p class="l16g3-status ${kind}" id="l16g3-status" role="status" aria-live="polite">${esc(message)}</p>`;
   const render = (message='', kind='') => {
     if (progress.activity_completed || state.phase === 'complete') { renderComplete(); return; }
+    if (state.phase === 'intro') { renderIntro(message,kind); return; }
     if (state.phase === 'matching') { renderMatching(message,kind); return; }
     renderOral(message,kind);
     window.dispatchEvent(new CustomEvent('session6-prescribed-render'));
+  };
+  const renderIntro = (message='',kind='') => {
+    app.innerHTML = `<div class="l16g3-intro"><p class="l16g3-eyebrow">Session 6 · Lesson 16 · Gawain 3</p><h1 id="l16g3-title">${esc(data.title)}</h1><p class="l16g3-instruction">Basahin nang malakas ang salita, pagkatapos piliin ang katugmang larawan.</p><button class="l16g3-action" id="l16g3-start" type="button" ${busy?'disabled':''}>${busy?'SINISIMULAN…':'SIMULAN'}</button>${status(message,kind)}</div>`;
+    document.getElementById('l16g3-start').addEventListener('click', () => startOrResume({begin:true}));
   };
   const renderOral = (message='',kind='') => {
     const idx = Number(state.oral_index || 0);
@@ -95,7 +102,7 @@
     app.innerHTML = `<div class="l16g3-complete"><span class="l16g3-star" aria-hidden="true">⭐</span><p class="l16g3-eyebrow">Session 6 · Lesson 16 · Gawain 3</p><h1 id="l16g3-title">Magaling!</h1><p class="l16g3-instruction">Natapos mo ang gawain.</p><a class="l16g3-action" href="${esc(data.back_url)}">BALIK SA AKING ARALIN</a>${status()}</div>`;
   };
   async function readCurrent() {
-    if (busy || state.phase === 'matching') return;
+    if (busy || state.phase !== 'oral_reading') return;
     busy = true; const gen = generation; controller = new AbortController();
     renderOral('Nakikinig sa iyong pagbasa…');
     try {
@@ -196,23 +203,34 @@
       }
     } finally { busy = false; }
   }
-  const startOrResume = async () => {
-    if (busy) return;
-    const fresh = state.phase === 'intro';
+  const startOrResume = async (options = {}) => {
+    if (busy || progress.activity_completed || state.phase === 'complete') return;
+    // The shared Session modal hands off to this first-time instruction page.
+    // Only this page's SIMULAN button creates the student's started attempt.
+    if (state.phase === 'intro' && options.begin !== true) {
+      if (introInstructionPlayed) return;
+      introInstructionPlayed = true;
+      const gen = generation;
+      try { await play(audioBase+'00_activity_intro.mp3',gen); }
+      catch (error) { if (gen === generation) renderIntro(error.message,'is-error'); }
+      return;
+    }
+    cancelWork();
     busy = true;
     const gen = generation;
+    let message = '';
     controller = new AbortController();
+    render();
     try {
       const restored = await send({action:'start'});
       if (gen !== generation) return;
       sync(restored);
       render();
-      if (fresh) await playSequence([audioBase+'00_activity_intro.mp3',audioBase+readPrompts[0]],gen);
-      else if (state.phase === 'matching' && Number(state.matching_index || 0) >= total) await finishCompletion(gen);
+      if (state.phase === 'matching' && Number(state.matching_index || 0) >= total) await finishCompletion(gen);
       else if (state.phase === 'oral_reading') await play(audioBase+readPrompts[Math.min(total-1,Number(state.oral_index||0))],gen);
     } catch (error) {
-      if (gen === generation) render(error.message || 'Hindi naibalik ang gawain. Subukang muli.','is-error');
-    } finally { controller = null; busy = false; if (gen === generation && state.phase !== 'complete') render(); }
+      if (gen === generation) message = error.message || 'Hindi naibalik ang gawain. Subukang muli.';
+    } finally { controller = null; busy = false; if (gen === generation && state.phase !== 'complete') render(message,message?'is-error':''); }
   };
   window.addEventListener('lesson-start-ready', startOrResume);
   window.addEventListener('session6-prescribed-cancel', event => {
