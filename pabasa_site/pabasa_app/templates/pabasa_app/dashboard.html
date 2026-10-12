@@ -2177,45 +2177,180 @@
         justify-content: center;
     }
 
-    /* Keep the student calendar at the same comfortable scale and density as
-       the Teacher Dashboard calendar. Student data and controls stay intact. */
+    /* The compact student calendar keeps its own rhythm within the dashboard card. */
     .student-calendar-card {
-        background: #fff;
         border: 1px solid rgba(16, 70, 110, .1);
         border-radius: 22px;
         box-shadow: 0 12px 28px rgba(16, 70, 110, .08);
         display: flex !important;
         flex-direction: column;
-        gap: .7rem;
-        padding: 1.05rem;
+        gap: .55rem;
+        padding: 1rem;
+        align-self: start;
     }
 
     .student-calendar-card .student-calendar-head { margin-bottom: 0; }
-    .student-calendar-card .student-calendar-head h3 { color: #10466e; font-size: 1.08rem; }
-    .student-calendar-section {
-        border-bottom: 1px solid rgba(16, 70, 110, .1);
-        display: grid;
+    .student-calendar-card .student-calendar-head h3 {
+        align-items: center;
+        color: #10466e;
+        display: flex;
+        font-size: 1.1rem;
         gap: .65rem;
-        padding-bottom: .85rem;
-    }
-    .student-calendar-card .student-calendar-month { line-height: 1.25; margin: 0; }
-    .student-calendar-card .student-calendar-meta { color: #6b7d8f; font-size: .84rem; line-height: 1.3; margin: -.2rem 0 0; }
-    .student-calendar-card .student-calendar-grid {
-        grid-auto-rows: unset;
-        grid-template-rows: 1.55rem repeat(6, minmax(0, 1fr));
-        height: 17.5rem;
-    }
-    .student-calendar-card .student-calendar-grid > div { min-height: 0; padding: .25rem; }
-    .student-calendar-card .student-calendar-weekday { font-size: .72rem; padding: .35rem .1rem !important; }
-    .student-calendar-card .student-calendar-day-number { font-size: .8rem; }
-    .student-calendar-card .student-calendar-event { height: 4px; margin-top: .3rem; }
-    .student-calendar-card .student-calendar-expand {
-        font-size: .78rem;
         line-height: 1.2;
-        margin: .1rem 0 0;
-        min-height: 2rem;
-        padding: .38rem .65rem;
     }
+    .student-calendar-card .student-calendar-head h3 i {
+        align-items: center;
+        background: linear-gradient(145deg, #24b5f7, #7b6df0);
+        border-radius: 11px;
+        box-shadow: 0 4px 10px rgba(72, 131, 218, .2);
+        color: #fff;
+        display: inline-flex;
+        flex: 0 0 2rem;
+        font-size: 1.05rem;
+        height: 2rem;
+        justify-content: center;
+    }
+    .student-calendar-section {
+        display: grid;
+        gap: .5rem;
+        min-width: 0;
+    }
+    .student-calendar-month-row { align-items: center; display: flex; gap: .5rem; justify-content: space-between; min-width: 0; }
+    .student-calendar-card .student-calendar-month { color: #10466e; font-size: 1rem; line-height: 1.2; margin: 0; min-width: 0; }
+    .student-calendar-month-nav { display: inline-flex; flex: 0 0 auto; gap: .25rem; }
+    .student-calendar-month-nav button {
+        align-items: center;
+        background: rgba(255, 255, 255, .72);
+        border: 1px solid rgba(16, 70, 110, .13);
+        border-radius: 9px;
+        color: #10466e;
+        display: inline-flex;
+        height: 1.85rem;
+        justify-content: center;
+        padding: 0;
+        transition: background .15s, box-shadow .15s, transform .15s;
+        width: 1.85rem;
+    }
+    .student-calendar-month-nav button:hover { background: #e5f6ff; transform: translateY(-1px); }
+    .student-calendar-month-nav button:active { transform: translateY(0); }
+    .student-calendar-month-nav button:focus-visible { outline: 2px solid #0ea5e9; outline-offset: 2px; }
+    .student-calendar-card .student-calendar-meta {
+        color: #607487;
+        display: flex !important;
+        flex-wrap: wrap;
+        font-size: .76rem;
+        gap: .15rem .4rem;
+        line-height: 1.3;
+        margin: -.1rem 0 .15rem;
+    }
+    .student-calendar-card .student-calendar-meta strong { color: #36536b; }
+    .student-calendar-meta-divider { color: #91a8b7; }
+    .student-calendar-card .student-calendar-grid {
+        align-content: start;
+        border: 0;
+        gap: clamp(2px, .4vw, 5px);
+        grid-template-rows: 1.45rem repeat(6, 2.4rem);
+        height: auto;
+        overflow: visible;
+    }
+    .student-calendar-card .student-calendar-grid > div { border: 0; min-height: 0; padding: .3rem; }
+    .student-calendar-card .student-calendar-weekday {
+        align-items: center;
+        background: #e8f5ff;
+        border-radius: 8px;
+        color: #336487;
+        display: flex;
+        font-size: .6rem;
+        justify-content: center;
+        letter-spacing: .02em;
+        padding: .2rem .05rem !important;
+    }
+    .student-calendar-card .student-calendar-weekday:first-child { background: #ffedf1; color: #a74968; }
+    .student-calendar-card .student-calendar-weekday:nth-child(7) { background: #f2edff; color: #765bb0; }
+    .student-calendar-card .student-calendar-day {
+        align-items: flex-start;
+        background: rgba(255, 255, 255, .76);
+        border: 1px solid rgba(16, 70, 110, .11) !important;
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+    .student-calendar-card .student-calendar-day.is-adjacent { background: rgba(255, 255, 255, .38); }
+    .student-calendar-card .student-calendar-day.is-placeholder { background: rgba(255, 255, 255, .2); border-color: transparent !important; }
+    .student-calendar-card .student-calendar-day.is-today {
+        background: #e8f7ff;
+        border-color: #4bbbef !important;
+        box-shadow: 0 2px 8px rgba(31, 182, 255, .15);
+    }
+    .student-calendar-card .student-calendar-day-number { color: #10466e; font-size: .9rem; line-height: 1; margin: 0; }
+    .student-calendar-card .student-calendar-day.is-today .student-calendar-day-number { color: #007fbd; }
+    .student-calendar-card .student-calendar-events { display: flex; flex-wrap: wrap; gap: 2px; margin-top: auto; max-width: 100%; padding-top: 3px; }
+    .student-calendar-card .student-calendar-event { border-radius: 50%; display: inline-block; flex: 0 0 5px; height: 5px; margin: 0; padding: 0; width: 5px; }
+    .student-calendar-card .student-calendar-day[tabindex="0"] { cursor: help; transition: border-color .16s, box-shadow .16s, transform .16s; }
+    .student-calendar-card .student-calendar-day[tabindex="0"]:hover,
+    .student-calendar-card .student-calendar-day[tabindex="0"]:focus-visible { border-color: #5bbbea !important; box-shadow: 0 3px 10px rgba(31, 182, 255, .16); transform: translateY(-1px); }
+    .student-calendar-card .student-calendar-day[tabindex="0"]:focus-visible { outline: 2px solid #0ea5e9; outline-offset: 2px; }
+    .student-calendar-tooltip {
+        background: #fff;
+        border: 1px solid rgba(16, 70, 110, .13);
+        border-radius: 12px;
+        box-shadow: 0 10px 26px rgba(16, 70, 110, .2);
+        color: #10466e;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: .78rem;
+        line-height: 1.3;
+        max-height: calc(100dvh - 24px);
+        max-width: min(260px, calc(100vw - 24px));
+        opacity: 0;
+        overflow-y: auto;
+        padding: .6rem .7rem;
+        pointer-events: none;
+        position: fixed;
+        transform: translateY(4px);
+        transition: opacity .16s ease, transform .16s ease, visibility .16s ease;
+        visibility: hidden;
+        width: max-content;
+        z-index: 2000;
+    }
+    .student-calendar-tooltip.is-visible { opacity: 1; transform: translateY(0); visibility: visible; }
+    .student-calendar-tooltip-title { color: #607487; font-size: .68rem; font-weight: 900; margin-bottom: .4rem; text-transform: uppercase; }
+    .student-calendar-tooltip-list { display: grid; gap: .38rem; list-style: none; margin: 0; padding: 0; }
+    .student-calendar-tooltip-list li { align-items: start; display: flex; gap: .45rem; min-width: 0; overflow-wrap: anywhere; }
+    .student-calendar-tooltip-dot { border-radius: 50%; flex: 0 0 .5rem; height: .5rem; margin-top: .25rem; width: .5rem; }
+    body.dark-theme .student-calendar-tooltip { background: #243448; border-color: #45617a; color: #f8fafc; }
+    body.dark-theme .student-calendar-tooltip-title { color: #cbd5e1; }
+    @media (prefers-reduced-motion: reduce) {
+        .student-calendar-tooltip,
+        .student-calendar-card .student-calendar-day[tabindex="0"] { transition: none; }
+    }
+    .student-calendar-card .student-calendar-expand {
+        align-items: center;
+        background: linear-gradient(135deg, #1fb6ff, #0e95df);
+        border: 0;
+        border-radius: 11px;
+        box-shadow: 0 5px 12px rgba(31, 182, 255, .18);
+        display: inline-flex;
+        font-size: .8rem;
+        font-weight: 900;
+        gap: .55rem;
+        justify-content: center;
+        line-height: 1.2;
+        margin: .25rem 0 0;
+        min-height: 2.25rem;
+        padding: .45rem .7rem;
+        transition: background .15s, box-shadow .15s, transform .15s;
+    }
+    .student-calendar-card .student-calendar-expand:hover { background: linear-gradient(135deg, #0e95df, #0879c1); box-shadow: 0 7px 14px rgba(31, 182, 255, .23); transform: translateY(-1px); }
+    .student-calendar-card .student-calendar-expand:active { transform: translateY(0); box-shadow: 0 3px 7px rgba(31, 182, 255, .16); }
+    .student-calendar-card .student-calendar-expand:focus-visible { outline: 2px solid #10466e; outline-offset: 2px; }
+    .student-calendar-card .student-calendar-expand .bi-arrow-up-right { font-size: .68rem; }
+    body.dark-theme .student-calendar-card .student-calendar-month,
+    body.dark-theme .student-calendar-card .student-calendar-meta strong { color: #f8fafc; }
+    body.dark-theme .student-calendar-card .student-calendar-meta { color: #cbd5e1; }
+    body.dark-theme .student-calendar-card .student-calendar-month-nav button { background: #334155; color: #f8fafc; }
+    body.dark-theme .student-calendar-card .student-calendar-weekday { background: #24445d; color: #d7efff !important; }
+    body.dark-theme .student-calendar-card .student-calendar-day.is-today { background: #123c58 !important; }
 
     .my-achievements {
         grid-template-rows: auto minmax(0, 1fr);
@@ -2287,14 +2422,6 @@
             grid-template-rows: none;
         }
 
-        .student-calendar-card .student-calendar-grid {
-            grid-template-rows: none;
-            height: auto;
-        }
-
-        .student-calendar-card .student-calendar-grid > div {
-            min-height: 2.8rem;
-        }
     }
 
     @media (max-width: 900px) {
@@ -2958,8 +3085,14 @@
                     <h3><i class="bi bi-calendar3"></i> School Calendar</h3>
                 </div>
                 <div class="student-calendar-section">
-                    <div class="student-calendar-month" id="studentCalendarMonth"></div>
-                    <div class="student-calendar-meta">School Year: <strong>{{ student_calendar_school_year|default:"Not set" }}</strong> · <strong>{{ student_calendar_current_term|default:"Not set" }}</strong></div>
+                    <div class="student-calendar-month-row">
+                        <div class="student-calendar-month" id="studentCalendarMonth" aria-live="polite"></div>
+                        <div class="student-calendar-month-nav" role="group" aria-label="Change calendar month">
+                            <button type="button" data-compact-calendar-nav="prev" aria-label="Previous month"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+                            <button type="button" data-compact-calendar-nav="next" aria-label="Next month"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                    <div class="student-calendar-meta"><span>School Year <strong>{{ student_calendar_school_year|default:"Not set" }}</strong></span><span class="student-calendar-meta-divider" aria-hidden="true">·</span><span>{{ student_calendar_current_term|default:"Not set" }}</span></div>
 
                     <div class="student-calendar-grid" id="studentCalendarGrid" aria-label="Current month calendar" aria-readonly="true">
                         <div class="student-calendar-weekdays" aria-hidden="true">
@@ -2974,7 +3107,7 @@
                     </div>
 
                     <button type="button" class="btn btn-primary student-calendar-expand" data-bs-toggle="modal" data-bs-target="#studentCalendarModal">
-                        <i class="bi bi-arrows-fullscreen me-2"></i>Expand Calendar
+                        <i class="bi bi-arrows-fullscreen" aria-hidden="true"></i><span>Expand Calendar</span><i class="bi bi-arrow-up-right" aria-hidden="true"></i>
                     </button>
                 </div>
             </article>
@@ -3510,22 +3643,102 @@
             });
         };
 
+        const compactCalendarGrid = document.getElementById('studentCalendarGrid');
+        const compactCalendarTooltip = compactCalendarGrid ? document.createElement('div') : null;
+        let activeCompactCalendarDay = null;
+        if (compactCalendarTooltip) {
+            compactCalendarTooltip.id = 'studentCalendarEventTooltip';
+            compactCalendarTooltip.className = 'student-calendar-tooltip';
+            compactCalendarTooltip.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(compactCalendarTooltip);
+        }
+
+        const hideCompactCalendarTooltip = () => {
+            activeCompactCalendarDay?.removeAttribute('aria-describedby');
+            activeCompactCalendarDay = null;
+            compactCalendarTooltip?.classList.remove('is-visible');
+            compactCalendarTooltip?.setAttribute('aria-hidden', 'true');
+        };
+
+        const showCompactCalendarTooltip = (dayCell) => {
+            if (!compactCalendarTooltip || !dayCell || dayCell === activeCompactCalendarDay) return;
+            const date = parseIsoDate(dayCell.dataset.compactCalendarDate);
+            const events = date ? getEventsForDay(date) : [];
+            if (!events.length) {
+                hideCompactCalendarTooltip();
+                return;
+            }
+            hideCompactCalendarTooltip();
+            const heading = document.createElement('div');
+            heading.className = 'student-calendar-tooltip-title';
+            heading.textContent = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric' }).format(date);
+            const list = document.createElement('ul');
+            list.className = 'student-calendar-tooltip-list';
+            events.forEach((event) => {
+                const item = document.createElement('li');
+                const dot = document.createElement('span');
+                dot.className = 'student-calendar-tooltip-dot';
+                dot.setAttribute('aria-hidden', 'true');
+                dot.style.background = event.scope === 'school' ? '#d97706' : (eventColors[event.event_type]?.swatch || '#6b7280');
+                const title = document.createElement('span');
+                title.textContent = event.title || '';
+                item.append(dot, title);
+                list.appendChild(item);
+            });
+            compactCalendarTooltip.replaceChildren(heading, list);
+            const dayBounds = dayCell.getBoundingClientRect();
+            const tipBounds = compactCalendarTooltip.getBoundingClientRect();
+            const margin = 12;
+            const below = dayBounds.bottom + 8;
+            const above = dayBounds.top - tipBounds.height - 8;
+            const top = below + tipBounds.height <= window.innerHeight - margin ? below : above;
+            compactCalendarTooltip.style.left = `${Math.max(margin, Math.min(dayBounds.left + (dayBounds.width - tipBounds.width) / 2, window.innerWidth - tipBounds.width - margin))}px`;
+            compactCalendarTooltip.style.top = `${Math.max(margin, Math.min(top, window.innerHeight - tipBounds.height - margin))}px`;
+            activeCompactCalendarDay = dayCell;
+            dayCell.setAttribute('aria-describedby', compactCalendarTooltip.id);
+            compactCalendarTooltip.setAttribute('aria-hidden', 'false');
+            compactCalendarTooltip.classList.add('is-visible');
+        };
+
         const renderStudentCompactCalendar = () => {
-            const grid = document.getElementById('studentCalendarGrid');
+            const grid = compactCalendarGrid;
             const month = document.getElementById('studentCalendarMonth');
             if (!grid || !month) return;
+            hideCompactCalendarTooltip();
             month.textContent = formatMonthLabel(currentMonthDate);
             const first = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), 1).getDay();
             const days = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 0).getDate();
+            const occupiedCells = Math.ceil((first + days) / 7) * 7;
             let html = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(day => '<div class="student-calendar-weekday">'+day+'</div>').join('');
-            for (let i = 0; i < Math.ceil((first + days) / 7) * 7; i += 1) {
+            for (let i = 0; i < occupiedCells; i += 1) {
                 const day = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), i - first + 1);
                 const adjacent = day.getMonth() !== currentMonthDate.getMonth();
-                const bars = getEventsForDay(day).map(event => '<span class="student-calendar-event '+(event.scope === 'school' ? 'school' : '')+'" style="background:'+(event.scope === 'school' ? '#d97706' : (eventColors[event.event_type]?.swatch || '#6b7280'))+'" title="'+String(event.title || '').replace(/"/g, '&quot;')+'"></span>').join('');
-                html += '<div class="student-calendar-day '+(adjacent ? 'is-adjacent' : '')+(localIsoDate(day) === localIsoDate(calendarToday) ? ' is-today' : '')+'"><div class="student-calendar-day-number">'+day.getDate()+'</div>'+bars+'</div>';
+                const dayEvents = getEventsForDay(day);
+                const bars = dayEvents.map(event => '<span class="student-calendar-event '+(event.scope === 'school' ? 'school' : '')+'" style="background:'+(event.scope === 'school' ? '#d97706' : (eventColors[event.event_type]?.swatch || '#6b7280'))+'" aria-hidden="true"></span>').join('');
+                html += '<div class="student-calendar-day '+(adjacent ? 'is-adjacent' : '')+(localIsoDate(day) === localIsoDate(calendarToday) ? ' is-today' : '')+'" data-compact-calendar-date="'+localIsoDate(day)+'"'+(dayEvents.length ? ' tabindex="0"' : '')+'><div class="student-calendar-day-number">'+day.getDate()+'</div><div class="student-calendar-events">'+bars+'</div></div>';
             }
+            // Reserve the remaining week rows without adding dates or events.
+            for (let i = occupiedCells; i < 42; i += 1) html += '<div class="student-calendar-day is-placeholder" aria-hidden="true"></div>';
             grid.innerHTML = html;
         };
+
+        compactCalendarGrid?.addEventListener('mouseover', (event) => {
+            const dayCell = event.target.closest('[data-compact-calendar-date]');
+            if (dayCell) showCompactCalendarTooltip(dayCell);
+        });
+        compactCalendarGrid?.addEventListener('mouseout', (event) => {
+            const dayCell = event.target.closest('[data-compact-calendar-date]');
+            if (dayCell && !dayCell.contains(event.relatedTarget) && dayCell === activeCompactCalendarDay) hideCompactCalendarTooltip();
+        });
+        compactCalendarGrid?.addEventListener('focusin', (event) => {
+            const dayCell = event.target.closest('[data-compact-calendar-date]');
+            if (dayCell) showCompactCalendarTooltip(dayCell);
+        });
+        compactCalendarGrid?.addEventListener('focusout', (event) => {
+            if (event.target === activeCompactCalendarDay) hideCompactCalendarTooltip();
+        });
+        window.addEventListener('scroll', hideCompactCalendarTooltip, { passive: true, capture: true });
+        window.addEventListener('resize', hideCompactCalendarTooltip);
 
         // Presentation metadata only: event types, dates and eligibility remain
         // the server's values. Expand ranges with the original weekday rule.
@@ -3587,6 +3800,11 @@
             renderStudentCompactCalendar();
         };
 
+        document.querySelector('.student-calendar-card')?.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-compact-calendar-nav]');
+            if (button) shiftExpandedMonth(button.dataset.compactCalendarNav === 'prev' ? -1 : 1);
+        });
+
         const resetExpandedMonth = () => {
             const now = calendarToday;
             selectedCalendarDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -3596,6 +3814,7 @@
         };
 
         studentCalendarModalElement?.addEventListener('show.bs.modal', () => {
+            hideCompactCalendarTooltip();
             document.body.classList.add('student-calendar-open');
             document.documentElement.classList.add('student-calendar-open');
             renderExpandedCalendar(currentMonthDate);
