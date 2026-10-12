@@ -22154,9 +22154,10 @@ def session_4_gawain_2_recording(request):
             submission.audio_file = audio
             submission.duration_seconds = duration or None
             submission.status = 'submitted'
+            submission.teacher_score = None
             submission.checked_by = None
             submission.checked_at = None
-            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'checked_by', 'checked_at', 'updated_at'])
+            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'teacher_score', 'checked_by', 'checked_at', 'updated_at'])
         else:
             submission = StudentActivityRecordingSubmission.objects.create(
                 student=student, activity_key=activity_key, item_index=item_index, substep=substep,
@@ -22997,8 +22998,13 @@ def session_4_gawain_1_page(request):
     TEST_RESUME_MODAL = True
     context = _dashboard_context(request)
     activity = prescribed_activity('session-4-gawain-1')
-    progress = StudentActivityProgress.objects.filter(student=_active_prescribed_student(request), activity_key='session-4-gawain-1').first()
+    student = _active_prescribed_student(request)
+    progress = StudentActivityProgress.objects.filter(student=student, activity_key='session-4-gawain-1').first()
     state = progress.state if progress and isinstance(progress.state, dict) else {}
+    recorded_items = list(StudentActivityRecordingSubmission.objects.filter(
+        student=student, activity_key='session-4-gawain-1',
+        item_index__gte=0, item_index__lt=len(activity['items']),
+    ).exclude(audio_file='').values_list('item_index', flat=True))
     # Test injection is opt-in only: the normal URL and resume_test=0 use real progress.
     test_resume_modal = TEST_RESUME_MODAL and request.GET.get('resume_test') == '1'
     if test_resume_modal:
@@ -23012,13 +23018,14 @@ def session_4_gawain_1_page(request):
         (test_progress and not test_progress['activity_completed']) or
         (progress and not progress.activity_completed and (
             progress.completed_items > 0 or progress.current_index > 0
-        ))
+        )) or (recorded_items and not (progress and progress.activity_completed))
     )
     context['lesson13_data'] = {
         'activity_key': activity['activity_key'], 'session_number': activity['session_number'],
         'lesson_number': activity['lesson_number'], 'gawain_number': activity['gawain_number'],
         'title': activity['title'], 'instruction': activity['instruction'],
         'items': activity['items'], 'total_items': activity['total_items'],
+        'recorded_items': recorded_items,
         'progress_url': reverse('prescribed_activity_progress', kwargs={'activity_key': activity['activity_key']}),
         'completion_url': reverse('prescribed_activity_complete', kwargs={'activity_key': activity['activity_key']}),
         'next_url': reverse('session_4_gawain_2_page'), 'back_url': reverse('assessment'),
