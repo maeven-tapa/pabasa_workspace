@@ -73,6 +73,7 @@ function walk(node, visit) {
       busy: false, isPaused: false, isActivityPaused: false, prescribedMicMuted: false,
       isMuted: false, muted: false, paused: false, currentIndex: 0,
       generation: 0, speechGeneration: 0, selectedMicDeviceId: '', stream: null,
+      pendingSave: null, disposed: false, isCurrent: token => token === 0,
       pendingRetryAudio: '',
       sentenceReader: {async read(target, index, button, isCurrent) {
         calls++;

@@ -3,15 +3,40 @@
   const node=document.getElementById('prescribed-activity-data'),app=document.getElementById('app');
   if(!node||!app)return;
   const d=JSON.parse(node.textContent||'{}'),csrf=()=>((document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)||[])[1]||''),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let s={...(d.progress?.state||{})},busy=false,paused=false,muted=false,generation=0,audio=null,audioUrl=null,selectedChoice='';
+  let s={...(d.progress?.state||{})},busy=false,paused=false,muted=false,generation=0,pendingSave=null,selectedChoice='';
+  const audioPlayer=window.PrescribedAudioPlayer.create();
+  let disposed=false;
+  // Cached history also retains the shared controls' page-leaving guard.
+  // Reload saved progress on every cached return, including ordinary navigation.
+  window.addEventListener('pageshow',event=>{if(event.persisted)window.location.reload()});
+  const pendingWrites=new Set();
+  window.__lesson30RestartAdapters ||= {};
+  window.__lesson30RestartAdapters.lesson30a3={async waitForPendingSaves(){
+    const results=await Promise.allSettled([...pendingWrites]);
+    const failure=results.find(result=>result.status==='rejected');
+    if(failure)throw failure.reason;
+  }};
   const debugState={status:'Ready',transcript:'No transcript yet.',expected:'—',normalized:'—',result:'—',mic:'Inactive · Unmuted',recorder:'inactive',vad:'waiting',error:'—',raw:'Waiting for response.'};
   const emitDebug=detail=>{Object.assign(debugState,detail);Object.entries(debugState).forEach(([key,value])=>{const field=document.getElementById(`lesson30a3-debug-${key}`);if(field)field.textContent=String(value)});window.dispatchEvent(new CustomEvent('lesson30-lesson30a3-debug',{detail:{...debugState}}));};
   window.Lesson30ActivityDebug={getState:()=>({...debugState}),reset:()=>emitDebug({status:'Ready',transcript:'No transcript yet.',expected:'—',normalized:'—',result:'—',mic:'Inactive · Unmuted',recorder:'inactive',vad:'waiting',error:'—',raw:'Waiting for response.'})};
   function hydrate(){s.current_item=Number(s.current_item||0);s.phase||='answering'}
-  async function post(url,body){const r=await fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify(body)}),x=await r.json();if(!r.ok||!x.success)throw Error(x.error||'Could not save your progress.');if(x.progress?.state)s={...x.progress.state};hydrate();return x}
+  async function post(url,body){
+    const task=(async()=>{
+      const r=await fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify(body)}),x=await r.json();
+      if(!r.ok||!x.success)throw Error(x.error||'Could not save your progress.');
+      if(x.progress?.state)s={...x.progress.state};hydrate();return x;
+    })();
+    // Only an answer/progress save blocks input and narration. The final
+    // completion acknowledgement can run alongside its spoken feedback.
+    if(url===d.progress_url)pendingSave=task;
+    pendingWrites.add(task);
+    try{return await task}finally{pendingWrites.delete(task);if(pendingSave===task)pendingSave=null}
+  }
+
   function steps(){const current=s.phase==='complete'?d.questions.length:s.current_item;return `<div class="progress">${d.questions.map((_,i)=>`<span class="step ${i<current?'done':''} ${i===current&&s.phase!=='complete'?'active':''}">${i+1}</span>`).join('')}</div>`}
   function installChoiceStyles(){if(document.getElementById('lesson30a3-encircle-choice-styles'))return;const style=document.createElement('style');style.id='lesson30a3-encircle-choice-styles';style.textContent=`#app .choices{display:flex;justify-content:center;gap:28px;width:min(720px,100%);margin:20px auto}#app .choice{display:flex;align-items:center;justify-content:center;gap:8px;width:154px;height:154px;min-width:154px;min-height:154px;padding:14px;border:4px solid transparent;border-radius:50%;background:transparent;color:var(--ink);box-shadow:none;text-align:center}#app .choice-letter{display:inline;font-size:clamp(1.4rem,2.5vw,1.8rem);font-weight:900;line-height:1;text-transform:lowercase}#app .choice-letter::after{content:'.'}#app .choice-answer{font-size:clamp(1.45rem,2.8vw,2rem);font-weight:900;line-height:1.15}#app .choice:hover:not(:disabled){border-color:var(--gold);background:#fff8dc;color:var(--ink);transform:scale(1.04);box-shadow:0 0 0 5px #f5d47c55}#app .choice.selected{border-color:var(--gold);background:#fff8dc;color:var(--ink);transform:scale(1.04);box-shadow:0 0 0 5px #f5d47c55}#app .choice.selected.wrong{border-color:var(--bad);background:#fff0f0;box-shadow:0 0 0 5px #b33b4333}@media(max-width:680px){#app .choices{gap:14px;margin:14px auto}#app .choice{width:128px;height:128px;min-width:128px;min-height:128px;padding:10px}#app .choice-answer{font-size:1.3rem}}`;document.head.append(style)}
   function render(message='',kind=''){
+    if(disposed)return;
     hydrate();
     if(s.phase==='complete'||s.current_item>=d.questions.length){window.PrescribedLessonUi.showCompletion(app);post(d.completion_url,{}).catch(()=>{});return}
     const item=d.questions[s.current_item];
@@ -19,10 +44,36 @@
     app.querySelectorAll('[data-choice]').forEach(button=>button.onclick=()=>choose(button.dataset.choice));document.getElementById('listen').onclick=()=>play(item.question);
     emitDebug({status:paused?'Paused':'Ready',expected:item.question,mic:'Inactive · Unmuted',recorder:'inactive',vad:'waiting',raw:'Waiting for response.'});
   }
-  async function play(text){if(busy||paused||!text)return;emitDebug({status:'Playing audio',expected:s.current_item<d.questions.length?d.questions[s.current_item].question:'—',raw:`Playing: ${text}`});busy=true;const buttons=[...app.querySelectorAll('button')],states=buttons.map(button=>({button,disabled:button.disabled}));buttons.forEach(button=>{button.disabled=true;button.classList.add('is-busy')});try{const r=await fetch(d.read_aloud_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf(),'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({target_text:text,language:'English',lesson_tts_key:'lesson-30-gawain-3'})}),x=await r.json();if(!r.ok||!x.success||!x.audio_content)throw Error(x.error||'Could not play audio.');const bytes=Uint8Array.from(atob(x.audio_content),c=>c.charCodeAt(0));audioUrl=URL.createObjectURL(new Blob([bytes],{type:x.mime_type||'audio/mpeg'}));audio=new Audio(audioUrl);await new Promise((ok,bad)=>{audio.onended=ok;audio.onerror=()=>bad(Error('Audio playback failed.'));audio.play().catch(bad)})}catch(e){emitDebug({status:'Error',error:e.message||'Audio playback failed.',raw:`Error: ${e.message||'Audio playback failed.'}`})}finally{busy=false;states.forEach(({button,disabled})=>{if(button.isConnected)button.disabled=disabled});buttons.forEach(button=>{if(button.isConnected)button.classList.remove('is-busy')});if(audioUrl){URL.revokeObjectURL(audioUrl);audioUrl=null}audio=null}}
-  async function choose(choice){if(busy||paused)return;selectedChoice=choice;const attemptGeneration=generation;busy=true;let result,message='',kind='',repeat='',feedback='';try{result=await post(d.progress_url,{action:'choose',item_index:s.current_item,choice});if(attemptGeneration!==generation||paused)throw Error('Selection cancelled.');const completed=s.phase==='complete';message=result.accepted?(completed?'Great job! You completed Comprehension Check.':'Correct! The next question will be read.'):(completed?'You have completed Comprehension Check.':"Let's move to the next question.");kind=result.accepted?'good':'';feedback=result.accepted?(completed?'Great job! You completed Comprehension Check.':'Correct.'):"Let's move to the next question.";repeat=!completed?d.questions[s.current_item].question:'';selectedChoice=''}catch(e){if(e.message!=='Selection cancelled.'){message=e.message;kind='bad';feedback=`Error: ${e.message||'Could not save your answer.'}`}}finally{busy=false}if(attemptGeneration!==generation||paused)return;emitDebug({status:feedback.startsWith('Error:')?'Error':result?.accepted?'Correct':'Next question',result:result?.accepted?'Correct':'Incorrect',error:feedback.startsWith('Error:')?feedback.slice(7):'—',raw:feedback||'Waiting for response.'});render(message,kind);if(feedback&&!feedback.startsWith('Error:'))await play(feedback);if(repeat)await play(repeat)}
+  async function play(text){
+    if(busy||pendingSave||paused||disposed||!text)return false;
+    const token=audioPlayer.generation;
+    emitDebug({status:'Playing audio',expected:s.current_item<d.questions.length?d.questions[s.current_item].question:'—',raw:`Playing: ${text}`});
+    busy=true;
+    const buttons=[...app.querySelectorAll('button')],states=buttons.map(button=>({button,disabled:button.disabled}));
+    buttons.forEach(button=>{button.disabled=true;button.classList.add('is-busy')});
+    try{
+      await audioPlayer.play(async signal=>{
+        const r=await fetch(d.read_aloud_url,{method:'POST',credentials:'same-origin',signal,headers:{'X-CSRFToken':csrf(),'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({target_text:text,language:'English',lesson_tts_key:'lesson-30-gawain-3'})}),x=await r.json();
+        if(!r.ok||!x.success||!x.audio_content)throw Error(x.error||'Could not play audio.');
+        return {blob:new Blob([Uint8Array.from(atob(x.audio_content),c=>c.charCodeAt(0))],{type:x.mime_type||'audio/mpeg'})};
+      });
+      return true;
+    }catch(e){
+      if(e?.name!=='AbortError'&&audioPlayer.isCurrent(token))emitDebug({status:'Error',error:e.message||'Audio playback failed.',raw:`Error: ${e.message||'Audio playback failed.'}`});
+      return false;
+    }finally{
+      if(audioPlayer.isCurrent(token)){
+        busy=false;
+        states.forEach(({button,disabled})=>{if(button.isConnected){button.disabled=disabled;button.classList.remove('is-busy')}});
+      }
+    }
+  }
+
+  async function choose(choice){if(busy||pendingSave||paused||disposed)return;selectedChoice=choice;const attemptGeneration=generation;busy=true;let result,message='',kind='',repeat='',feedback='';try{result=await post(d.progress_url,{action:'choose',item_index:s.current_item,choice});if(attemptGeneration!==generation||paused)throw Error('Selection cancelled.');const completed=s.phase==='complete';message=result.accepted?(completed?'Great job! You completed Comprehension Check.':'Correct! The next question will be read.'):(completed?'You have completed Comprehension Check.':"Let's move to the next question.");kind=result.accepted?'good':'';feedback=result.accepted?(completed?'Great job! You completed Comprehension Check.':'Correct.'):"Let's move to the next question.";repeat=!completed?d.questions[s.current_item].question:'';selectedChoice=''}catch(e){if(e.message!=='Selection cancelled.'){message=e.message;kind='bad';feedback=`Error: ${e.message||'Could not save your answer.'}`}}finally{busy=false}if(attemptGeneration!==generation||paused){if(!paused)render();return}emitDebug({status:feedback.startsWith('Error:')?'Error':result?.accepted?'Correct':'Next question',result:result?.accepted?'Correct':'Incorrect',error:feedback.startsWith('Error:')?feedback.slice(7):'—',raw:feedback||'Waiting for response.'});render(message,kind);if(feedback&&!feedback.startsWith('Error:'))await play(feedback);if(attemptGeneration!==generation||paused)return;if(repeat)await play(repeat)}
   async function reset(e){e?.preventDefault();if(busy)return;busy=true;try{await post(d.progress_url,{reset:true});window.location.reload()}catch(x){busy=false;alert(x.message)}}
-  document.getElementById('lesson30a3-later').onclick=reset;document.getElementById('lesson30a3-go').onclick=async()=>{document.getElementById('lesson30a3-start').hidden=true;document.getElementById('lesson30a3-stage').classList.remove('waiting');try{await play('Comprehension Check. Listen to each question, then choose and encircle the correct answer.');await play(d.questions[s.current_item].question)}catch(e){render(e.message,'bad')}};
-  const cancel=()=>{generation++;audio?.pause();audio=null;busy=false};window.addEventListener('pagehide',cancel);window.addEventListener('lesson30-lesson30a3-pause',()=>{paused=true;cancel();emitDebug({status:'Paused',raw:'Activity paused.'})});window.addEventListener('lesson30-lesson30a3-resume',()=>{paused=false;render()});window.addEventListener('lesson30-lesson30a3-restart',cancel);window.addEventListener('lesson30-lesson30a3-cleanup',cancel);window.addEventListener('lesson30-lesson30a3-mute',e=>{muted=Boolean(e.detail?.muted);emitDebug({mic:`Inactive · ${muted?'Muted':'Unmuted'}`})});
+  document.getElementById('lesson30a3-later').onclick=reset;document.getElementById('lesson30a3-go').onclick=async()=>{document.getElementById('lesson30a3-start').hidden=true;document.getElementById('lesson30a3-stage').classList.remove('waiting');try{if(await play('Comprehension Check. Listen to each question, then choose and encircle the correct answer.'))await play(d.questions[s.current_item].question)}catch(e){render(e.message,'bad')}};
+  const cancel=()=>{generation++;audioPlayer.cancel();busy=Boolean(pendingSave)};window.addEventListener('pagehide',cancel);window.addEventListener('lesson30-lesson30a3-pause',()=>{paused=true;cancel();emitDebug({status:'Paused',raw:'Activity paused.'})});window.addEventListener('lesson30-lesson30a3-resume',()=>{if(disposed)return;paused=false;render()});window.addEventListener('lesson30-lesson30a3-restart',()=>{disposed=true;cancel()});window.addEventListener('lesson30-lesson30a3-cleanup',cancel);window.addEventListener('lesson30-lesson30a3-mute',e=>{muted=Boolean(e.detail?.muted);emitDebug({mic:`Inactive · ${muted?'Muted':'Unmuted'}`})});
   installChoiceStyles();hydrate();render();
+  const pauseModal=document.getElementById('lesson30a3-pause-modal');
+  pauseModal?.addEventListener('click',event=>{if(event.target===pauseModal){paused=false;render()}});
 })();

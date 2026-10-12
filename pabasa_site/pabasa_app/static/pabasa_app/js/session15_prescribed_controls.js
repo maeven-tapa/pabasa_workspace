@@ -37,11 +37,47 @@
     const meter = () => { if (!analyser) return; const values = new Uint8Array(analyser.fftSize); analyser.getByteTimeDomainData(values); let peak = 0; values.forEach(value => { peak = Math.max(peak, Math.abs(value - 128)); }); q('-meter')?.style.setProperty('width', `${Math.min(100, Math.round(peak * 100 / 128))}%`); frame = requestAnimationFrame(meter); };
     const startTest = async () => { const AudioContextCtor = window.AudioContext || window.webkitAudioContext; if (!navigator.mediaDevices?.getUserMedia || !AudioContextCtor) { q('-mic-status').textContent = 'Microphone Status: Unavailable'; return; } stopTest(); try { const id = q('-device')?.value; testStream = await navigator.mediaDevices.getUserMedia(id ? {audio:{deviceId:{exact:id}}} : {audio:true}); testStream.getTracks().forEach(track => { track.enabled = !muted; }); audioContext = new AudioContextCtor(); analyser = audioContext.createAnalyser(); analyser.fftSize = 512; audioContext.createMediaStreamSource(testStream).connect(analyser); q('-mic-status').textContent = 'Microphone Status: Testing live input'; q('-test-toggle').textContent = '■ Stop Test'; meter(); } catch (_) { stopTest(); q('-mic-status').textContent = 'Microphone Status: Access denied or unavailable'; } };
     const data = () => { try { return JSON.parse(document.getElementById('prescribed-activity-data')?.textContent || '{}'); } catch (_) { return {}; } };
-    const reset = async () => { const value = data(), csrf = (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || ''; if (value.progress_url) await fetch(value.progress_url, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':csrf}, body:JSON.stringify({reset:true})}); window.location.reload(); };
-    const adapter = { pause() { cancelRecording(); emit('cancel'); emit('pause'); }, resume() { emit('resume'); }, restart() { cancelRecording(); emit('cancel'); stopTest(); emit('restart'); return reset(); }, cleanup() { cancelRecording(); emit('cancel'); stopTest(); emit('cleanup'); }, setMuted(value) { muted = Boolean(value); updateMic(); emit('mute', {muted}); }, bindDebug, bindAudioTest({audio} = {}) { q('-test-toggle')?.addEventListener('click', () => testStream ? stopTest() : startTest()); q('-device')?.addEventListener('change', () => { if (testStream) { stopTest(); startTest(); } }); q('-audio-close')?.addEventListener('click', () => { stopTest(); q('-audio-settings-modal').hidden = true; }); audio?.addEventListener('click', event => { if (event.target === audio) { stopTest(); q('-pause-modal').hidden = false; } }); refreshDevices(); } };
+    const hasRestartRecovery = prefix === 'lesson31a1' || prefix === 'lesson31a4';
+    let restartInFlight = false, pageLeaving = false;
+    window.addEventListener('pagehide', () => { pageLeaving = true; });
+    const reset = async () => {
+      const value = data(), csrf = (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || '';
+      if (value.progress_url) {
+        const response = await fetch(value.progress_url, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':csrf}, body:JSON.stringify({reset:true})});
+        if (hasRestartRecovery) {
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok || result.success !== true) throw new Error(result.error || 'Could not restart the activity. Please try again.');
+        }
+      }
+      if (!hasRestartRecovery || !pageLeaving) window.location.reload();
+    };
+    const restartActivity = async () => {
+      if (hasRestartRecovery && (restartInFlight || pageLeaving)) return;
+      restartInFlight = true;
+      cancelRecording(); if (!hasRestartRecovery) emit('cancel'); stopTest(); emit('restart', {speechHandledByControls:hasRestartRecovery});
+      try {
+        // Cancellation stops new answers. Let already submitted answers finish
+        // before reset so a late save cannot restore pre-reset progress.
+        if (hasRestartRecovery) await window.__session15RestartAdapters?.[prefix]?.waitForPendingSaves();
+        if (hasRestartRecovery && pageLeaving) return;
+        await reset();
+      }
+      catch (error) {
+        if (!hasRestartRecovery) throw error;
+        if (pageLeaving) return;
+        // A transport failure does not prove reset failed on the server. Keep
+        // this instance disposed and reload authoritative progress in either case.
+        emit('debug', {status:'Restart failed', error:error.message});
+        window.alert('Restart could not be confirmed. Reloading your saved progress.');
+        window.location.reload();
+      }
+    };
+    // PrescribedControls cancels shared speech for toolbar actions. Scoped
+    // activity events cancel narration and invalidate results without repeating it.
+    const adapter = { pause() { cancelRecording(); if (!hasRestartRecovery) emit('cancel'); emit('pause', {speechHandledByControls:hasRestartRecovery}); }, resume() { emit('resume'); }, restart:restartActivity, cleanup() { cancelRecording(); if (!hasRestartRecovery) emit('cancel'); stopTest(); emit('cleanup'); }, setMuted(value) { muted = Boolean(value); updateMic(); emit('mute', {muted, speechHandledByControls:hasRestartRecovery}); }, bindDebug, bindAudioTest({audio} = {}) { q('-test-toggle')?.addEventListener('click', () => testStream ? stopTest() : startTest()); q('-device')?.addEventListener('change', () => { if (testStream) { stopTest(); startTest(); } }); q('-audio-close')?.addEventListener('click', () => { stopTest(); q('-audio-settings-modal').hidden = true; }); audio?.addEventListener('click', event => { if (event.target === audio) { stopTest(); q('-pause-modal').hidden = false; } }); refreshDevices(); } };
     const helpTitles = {lesson31a1:'Circle the Right Word Help', lesson31a2:'Fill in the Blank Help', lesson31a3:'Fix the Sentence Help', lesson31a4:'Say and Circle Help'};
     const helpContent = {lesson31a1:'<div class="s15-step">▶ <span><b>Start when ready.</b><br>Choose Start and wait for the activity to begin.</span></div><div class="s15-step">🎙️ <span><b>Read each choice aloud.</b><br>Say the displayed word clearly at a comfortable pace and normal volume.</span></div><div class="s15-step">🖼️ <span><b>Circle the right word.</b><br>Look at the picture and choose the word that matches it.</span></div>', lesson31a2:'<div class="s15-step">▶ <span><b>Start when ready.</b><br>Choose Start and wait for the activity to begin.</span></div><div class="s15-step">🎙️ <span><b>Read the words aloud.</b><br>Say each displayed word clearly at a comfortable pace and normal volume.</span></div><div class="s15-step">📝 <span><b>Complete the sentence.</b><br>Drag the correct word into the blank, then read the whole sentence aloud.</span></div>', lesson31a3:'<div class="s15-step">▶ <span><b>Start when ready.</b><br>Choose Start and wait for the activity to begin.</span></div><div class="s15-step">🔤 <span><b>Arrange the words.</b><br>Drag each word into the correct order to make a sentence.</span></div><div class="s15-step">🎙️ <span><b>Read the sentence.</b><br>Say the completed sentence clearly at a comfortable pace and normal volume.</span></div>', lesson31a4:'<div class="s15-step">▶ <span><b>Start when ready.</b><br>Choose Start and wait for the activity to begin.</span></div><div class="s15-step">🎙️ <span><b>Say the picture word clearly.</b><br>Say the name of each picture at a comfortable pace and normal volume.</span></div><div class="s15-step">🔤 <span><b>Choose the beginning letter.</b><br>Select the letter that starts the picture word to continue.</span></div>'};
-    q('-help-btn')?.addEventListener('click', () => { cancelRecording(); emit('cancel'); q('-help-title').textContent = helpTitles[prefix] || 'Activity Help'; q('-help-content').innerHTML = helpContent[prefix] || ''; q('-help-modal').hidden = false; });
+    q('-help-btn')?.addEventListener('click', () => { cancelRecording(); emit('cancel', {speechHandledByControls:hasRestartRecovery}); q('-help-title').textContent = helpTitles[prefix] || 'Activity Help'; q('-help-content').innerHTML = helpContent[prefix] || ''; q('-help-modal').hidden = false; });
     startButton?.addEventListener('click', () => { activityStarted = true; root.hidden = false; root.setAttribute('aria-hidden', 'false'); setControlsEnabled(true); q('-debug-toggle')?.dispatchEvent(new Event('change')); setTimeout(refreshExpected, 0); });
     q('-help-close')?.addEventListener('click', () => { window.__session15SilentCancel = false; q('-help-modal').hidden = true; });
     q('-resume')?.addEventListener('click', () => { window.__session15SilentCancel = false; });

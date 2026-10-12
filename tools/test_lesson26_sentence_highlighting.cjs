@@ -160,7 +160,10 @@ const scripts=new Set(['basahin_button.js','prescribed_controls.js','prescribed_
    await speak(page,clip.full);
    await page.waitForFunction(()=>!document.getElementById('read-sentence'));
    await page.evaluate(()=>window.__prescribedLeaveAdapters['prescribed-l26a2'].saveCurrentProgress());
-   assert.deepEqual(saves.map(p=>p.action),['sentence_progress','sentence_progress','sentence_reading','state_sync']);
+   // Completing this item can automatically narrate the next sentence and
+   // acknowledge its playback before Leave saves the current state.
+   assert.deepEqual(saves.filter(p=>p.action!=='sentence_read').map(p=>p.action),['sentence_progress','sentence_progress','sentence_reading','state_sync']);
+   assert.ok(saves.filter(p=>p.action==='sentence_read').length<=1);
    assert.equal(getState().current_item,1,'Successful rereading must clear the failed previous-item save');
    assert.deepEqual(errors,[]);await page.close();
   }

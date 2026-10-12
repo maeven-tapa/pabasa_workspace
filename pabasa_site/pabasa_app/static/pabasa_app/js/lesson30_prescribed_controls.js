@@ -20,10 +20,41 @@
     const bindAudioTest = ({audio} = {}) => { const button = q('-test-toggle'); if (!button || button.dataset.bound === 'true') return; button.dataset.bound = 'true'; button.addEventListener('click', () => testStream ? stopTest() : startTest()); q('-device-select')?.addEventListener('change', () => { if (testStream) { stopTest(); startTest(); } }); q('-audio-test')?.addEventListener('click', () => { refreshDevices(); updatePermissionStatus(); }); q('-audio-close')?.addEventListener('click', stopTest); audio?.addEventListener('click', event => { if (event.target === audio) stopTest(); }); refreshDevices(); updatePermissionStatus(); };
     const bindDebug = () => { const toggle = q('-debug-toggle'), panel = q('-debug-panel'); if (!toggle || !panel || toggle.dataset.bound === 'true') return; toggle.dataset.bound = 'true'; let saved = false; try { saved = localStorage.getItem('pabasaShowSpeechDebugPanel') === 'true'; } catch (_) {} const apply = state => { debugState = {...debugState, ...state}; Object.entries(debugFields).forEach(([key, field]) => { const value = debugState[key]; if (field && value !== undefined && field.textContent !== String(value)) field.textContent = String(value); }); }; const render = () => { panel.hidden = !toggle.checked; panel.setAttribute('aria-hidden', String(!toggle.checked)); apply(debugState); }; toggle.checked = saved; toggle.addEventListener('change', () => { try { localStorage.setItem('pabasaShowSpeechDebugPanel', String(toggle.checked)); } catch (_) {} render(); }); window.addEventListener(`lesson30-${prefix}-debug`, event => apply(event.detail || {})); render(); };
     const readData = () => { const node = document.getElementById('prescribed-activity-data'); try { return node ? JSON.parse(node.textContent || '{}') : {}; } catch (_) { return {}; } };
-    const resetActivity = async () => { const data = readData(); const csrf = (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || ''; if (data.progress_url) await fetch(data.progress_url, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':csrf}, body:JSON.stringify({reset:true})}); window.location.reload(); };
-    const stopActivityResources = () => window.dispatchEvent(new Event('pagehide'));
+    const hasRestartRecovery = prefix === 'lesson30a1' || prefix === 'lesson30a3';
+    let restarting = false, pageLeaving = false, internalPagehide = false;
+    window.addEventListener('pagehide', () => {if (!internalPagehide) pageLeaving = true;});
+    const resetActivity = async () => {
+      const data = readData(), csrf = (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || '';
+      if (data.progress_url) {
+        const response = await fetch(data.progress_url, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':csrf}, body:JSON.stringify({reset:true})});
+        if (hasRestartRecovery) {
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok || result.success !== true) throw Error(result.error || 'Could not restart the activity.');
+        }
+      }
+      if (!hasRestartRecovery || !pageLeaving) window.location.reload();
+    };
+    // This legacy event also cancels activity resources during Pause. It is
+    // distinct from leaving the document while a restart request is pending.
+    const stopActivityResources = () => {internalPagehide = true; try {window.dispatchEvent(new Event('pagehide'));} finally {internalPagehide = false;}};
+    const restartActivity = async () => {
+      if (hasRestartRecovery && (restarting || pageLeaving)) return;
+      restarting = true;
+      stopActivityResources(); emit('restart'); stopTest();
+      try {
+        if (hasRestartRecovery) await window.__lesson30RestartAdapters?.[prefix]?.waitForPendingSaves();
+        if (hasRestartRecovery && pageLeaving) return;
+        await resetActivity();
+      } catch (error) {
+        if (!hasRestartRecovery) throw error;
+        if (pageLeaving) return;
+        emit('debug', {status:'Restart failed', error:error.message});
+        window.alert('Restart could not be confirmed. Reloading your saved progress.');
+        window.location.reload();
+      }
+    };
     const bindHelpCleanup = () => { const button = q('-help-btn'); if (!button || button.dataset.cleanupBound === 'true') return; button.dataset.cleanupBound = 'true'; button.addEventListener('click', () => emit('help')); };
-    const adapter = { pause() { emit('pause'); stopActivityResources(); }, resume() { emit('resume'); }, restart() { stopActivityResources(); emit('restart'); stopTest(); return resetActivity(); }, cleanup() { stopTest(); emit('cleanup'); stopActivityResources(); }, setMuted(value) { muted = Boolean(value); updateMic(); emit('mute', {muted}); }, bindAudioTest, bindDebug };
+    const adapter = { pause() { emit('pause'); stopActivityResources(); }, resume() { emit('resume'); }, restart:restartActivity, cleanup() { stopTest(); emit('cleanup'); stopActivityResources(); }, setMuted(value) { muted = Boolean(value); updateMic(); emit('mute', {muted}); }, bindAudioTest, bindDebug };
     const prepareActivityControls = () => {
       const helpTitle = q('-help-title');
       if (helpTitle) helpTitle.textContent = prefix === 'lesson30a1' ? 'Match It Help' : prefix === 'lesson30a2' ? 'Story Time Help' : 'Comprehension Check Help';

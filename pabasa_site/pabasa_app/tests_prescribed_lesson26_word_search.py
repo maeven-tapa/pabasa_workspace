@@ -492,7 +492,9 @@ class PrescribedLesson26WordSearchTests(TestCase):
         script = Path(settings.BASE_DIR, 'pabasa_app/static/pabasa_app/js/prescribed_match_it_lesson30_activity1.js').read_text(encoding='utf-8')
         self.assertIn("language:'English'", script)
         self.assertIn('id="listen"', script)
-        self.assertIn('function announce(message){window.setTimeout(()=>play(message).catch', script)
+        # Deferred feedback and its cancellation are exercised in the browser
+        # regression; the page must load the player used by this entrypoint.
+        self.assertContains(response, 'pabasa_app/js/prescribed_audio_player.js')
         self.assertIn('reset:true', script)
         self.assertNotIn('speechSynthesis', script)
         StudentActivityProgress.objects.create(

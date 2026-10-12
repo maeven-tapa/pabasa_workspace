@@ -14,7 +14,19 @@
   const headers=extra=>({'X-CSRFToken':csrf(),'X-Requested-With':'XMLHttpRequest',...extra});
   const setBusyButton=(id,busyState)=>document.getElementById(id)?.classList.toggle('is-busy',busyState);
   let s={phase:'intro',current_oral_word_index:0,unlocked_oral_words:[],stt_attempts:{},read_aloud_plays:{},matches:{},picture_attempts:{},skipped_picture_words:[],needs_reread:false,state_version:0,...(d.progress?.state||{})};
-  let busy=false,paused=false,muted=false,recordingAttemptActive=false,generation=0,stream=null,recorder=null,recordTimer=null,audio=null,audioUrl=null;
+  let busy=false,paused=false,muted=false,recordingAttemptActive=false,generation=0,stream=null,recorder=null,recordTimer=null,pendingSave=null;
+  const audioPlayer=window.PrescribedAudioPlayer.create();
+  let disposed=false;
+  // Cached history also retains the shared controls' page-leaving guard.
+  // Reload saved progress on every cached return, including ordinary navigation.
+  window.addEventListener('pageshow',event=>{if(event.persisted)window.location.reload()});
+  const pendingWrites=new Set();
+  window.__lesson30RestartAdapters ||= {};
+  window.__lesson30RestartAdapters.lesson30a1={async waitForPendingSaves(){
+    const results=await Promise.allSettled([...pendingWrites]);
+    const failure=results.find(result=>result.status==='rejected');
+    if(failure)throw failure.reason;
+  }};
   const debugState={status:'Ready',transcript:'No transcript yet.',expected:'—',normalized:'—',result:'—',mic:'Inactive · Unmuted',recorder:'inactive',vad:'waiting',error:'—',raw:'Waiting for speech...'};
   const emitDebug=detail=>{Object.assign(debugState,detail);Object.entries(debugState).forEach(([key,value])=>{const field=document.getElementById(`lesson30a1-debug-${key}`);if(field)field.textContent=String(value)});window.dispatchEvent(new CustomEvent('lesson30-lesson30a1-debug',{detail:{...debugState}}));};
   window.Lesson30ActivityDebug={getState:()=>({...debugState}),reset:()=>emitDebug({status:'Ready',transcript:'No transcript yet.',expected:'—',normalized:'—',result:'—',mic:`Inactive · ${muted?'Muted':'Unmuted'}`,recorder:'inactive',vad:'waiting',error:'—',raw:'Waiting for speech...'})};
@@ -32,12 +44,24 @@
   const syncListen=()=>{const button=document.getElementById('listen'),target=current();if(button)button.disabled=Number(s.stt_attempts?.[target]||0)<3};
 
   async function save(){
-    const r=await fetch(d.progress_url,{method:'POST',credentials:'same-origin',headers:headers({'Content-Type':'application/json'}),body:JSON.stringify({state:{...s,state_version:(Number(s.state_version)||0)+1}})});
-    const j=await jsonResponse(r);
-    if(!r.ok||!j.success)throw Error(j.error||'Progress could not be saved.');
-    s={...s,...j.progress.state};
-    return j;
+    const token=generation;
+    const task=(async()=>{
+      const r=await fetch(d.progress_url,{method:'POST',credentials:'same-origin',headers:headers({'Content-Type':'application/json'}),body:JSON.stringify({state:{...s,state_version:(Number(s.state_version)||0)+1}})});
+      const j=await jsonResponse(r);
+      if(!r.ok||!j.success)throw Error(j.error||'Progress could not be saved.');
+      s={...s,...j.progress.state}; return j;
+    })();
+    pendingSave=task;
+    pendingWrites.add(task);
+    try{return await task}finally{
+      pendingWrites.delete(task);
+      if(pendingSave===task){
+        pendingSave=null;
+        if(token!==generation){busy=false;if(!paused)render()}
+      }
+    }
   }
+
   async function reset(){
     const r=await fetch(d.progress_url,{method:'POST',credentials:'same-origin',headers:headers({'Content-Type':'application/json'}),body:JSON.stringify({reset:true})});
     const j=await jsonResponse(r);
@@ -54,8 +78,9 @@
     document.body.classList.add('l30a1-completion-active');
     app.innerHTML=`<section class="l30a1-completion-card" role="dialog" aria-modal="true"><h1>Activity complete! 🎉</h1><p>Great job! You have completed the activity.</p><a class="l30a1-completion-button" href="${esc(href)}">BACK TO MY LESSONS</a></section>`;
   }
-  function announce(message){window.setTimeout(()=>play(message).catch(()=>{}),0)}
+  function announce(message){const token=audioPlayer.generation;window.setTimeout(()=>{if(audioPlayer.isCurrent(token)&&!paused)play(message).catch(()=>{})},0)}
   function render(message='',kind=''){
+    if(disposed)return;
     document.getElementById('lesson30a1-stage')?.classList.toggle('matching-phase',s.phase==='matching');
     if(complete()){
       showCompletion();
@@ -72,30 +97,35 @@
     }
     app.innerHTML=`<div class="eyebrow">SESSION 14 · LESSON 30 · ACTIVITY 1</div><p class="instruction">Read the word aloud first. Then choose the matching picture.</p><div class="word">${esc(target)}</div><p class="status ${kind}">${esc(message||'Read the word aloud.')}</p><div class="actions"><button data-basahin-button data-basahin-language="English" class="button" id="read">Read</button><button class="button secondary" id="listen" ${Number(s.stt_attempts?.[target]||0)<3?'disabled':''}>🔊 Listen</button></div>${steps()}`;
     window.Basahin.bindActivity(app.querySelector('#read'), ()=>read(target));
-    app.querySelector('#listen')?.addEventListener('click',()=>play(target).then(()=>{render('Now read the word aloud.');announce('Now read the word aloud.')} ).catch(e=>render(e.message,'bad')));
+    app.querySelector('#listen')?.addEventListener('click',()=>play(target).then(played=>{if(played&&!paused){render('Now read the word aloud.');announce('Now read the word aloud.')}}).catch(e=>render(e.message,'bad')));
     emitDebug({status:paused?'Paused':'Ready',transcript:'No transcript yet.',expected:target,normalized:'—',result:'—',mic:`Inactive · ${muted?'Muted':'Unmuted'}`,recorder:'inactive',vad:'waiting',error:'—',raw:'Waiting for speech...'});
   }
   async function play(text){
-    if(busy||paused)return;
+    if(busy||pendingSave||paused||disposed||!text)return false;
+    const token=audioPlayer.generation;
     busy=true;
-    const buttons=[...app.querySelectorAll('button')],buttonStates=buttons.map(button=>({button,disabled:button.disabled})); buttons.forEach(button=>{button.disabled=true;button.classList.add('is-busy');});
+    const buttons=[...app.querySelectorAll('button')],states=buttons.map(button=>({button,disabled:button.disabled}));
+    buttons.forEach(button=>{button.disabled=true;button.classList.add('is-busy')});
     try{
-      const r=await fetch(d.read_aloud_url,{method:'POST',credentials:'same-origin',headers:headers({'Content-Type':'application/x-www-form-urlencoded'}),body:new URLSearchParams({target_text:text,language:'English',lesson_tts_key:'lesson-30-gawain-1'})});
-      const j=await jsonResponse(r);
-      if(!r.ok||!j.success||!j.audio_content)throw Error(j.error||'Audio is unavailable.');
-      const bytes=Uint8Array.from(atob(j.audio_content),c=>c.charCodeAt(0));
-      audioUrl=URL.createObjectURL(new Blob([bytes],{type:j.mime_type||'audio/mpeg'}));
-      audio=new Audio(audioUrl);
-      await new Promise((ok,bad)=>{audio.onended=ok;audio.onerror=()=>bad(Error('Audio playback failed.'));audio.play().catch(bad)});
-    }finally{
-      busy=false;
-      if(audioUrl){URL.revokeObjectURL(audioUrl);audioUrl=null}
-      audio=null;
-      buttonStates.forEach(({button,disabled})=>{if(button.isConnected)button.disabled=disabled;}); syncListen(); buttons.forEach(button=>{if(button.isConnected)button.classList.remove('is-busy');});
+      await audioPlayer.play(async signal=>{
+        const r=await fetch(d.read_aloud_url,{method:'POST',credentials:'same-origin',signal,headers:headers({'Content-Type':'application/x-www-form-urlencoded'}),body:new URLSearchParams({target_text:text,language:'English',lesson_tts_key:'lesson-30-gawain-1'})});
+        const j=await jsonResponse(r);
+        if(!r.ok||!j.success||!j.audio_content)throw Error(j.error||'Audio is unavailable.');
+        return {blob:new Blob([Uint8Array.from(atob(j.audio_content),c=>c.charCodeAt(0))],{type:j.mime_type||'audio/mpeg'})};
+      });
+      return true;
+    }catch(error){if(error?.name==='AbortError'||!audioPlayer.isCurrent(token))return false;throw error}
+    finally{
+      if(audioPlayer.isCurrent(token)){
+        busy=false;
+        states.forEach(({button,disabled})=>{if(button.isConnected){button.disabled=disabled;button.classList.remove('is-busy')}});
+        syncListen();
+      }
     }
   }
+
   async function read(target){
-    if(busy||paused||muted)return;
+    if(busy||pendingSave||paused||muted||disposed)return;
     busy=true;
     const attemptGeneration=generation;
     recordingAttemptActive=true;
@@ -110,52 +140,58 @@
       if(!ok){
         s.stt_attempts[target]=Math.min(3,Number(s.stt_attempts[target]||0)+1);
         await save();
+        if(attemptGeneration!==generation||paused){if(!paused)render();return}
         render(`I heard “${heard}”. Please try again.`,'bad');
         announce('Try again.');
         return;
       }
       s.unlocked_oral_words=[...new Set([...(s.unlocked_oral_words||[]),target])];s.current_oral_word_index=index();s.stt_attempts[target]=0;s.picture_attempts[target]=0;s.needs_reread=false;s.phase='matching';
       await save();
+      if(attemptGeneration!==generation||paused){if(!paused)render();return}
       render('Correct! Now choose the matching picture.','good');
       announce('Correct! Now choose the matching picture.');
-    }catch(e){ if (e?.name === 'AbortError') return;
+    }catch(e){ if (e?.name === 'AbortError'||attemptGeneration!==generation||paused) return;
       stop();
       if(e.message==='Recording cancelled.')return;
       emitDebug({status:'Error',mic:`Inactive · ${muted?'Muted':'Unmuted'}`,recorder:'inactive',vad:'waiting',error:e.message||'Recording failed.',raw:`Error: ${e.message||'Recording failed.'}`});
       s.stt_attempts[target]=Math.min(3,Number(s.stt_attempts[target]||0)+1);
       try{await save()}catch(_){}
       render(e.message||'I could not hear you. Try again.','bad');
-    }finally{recordingAttemptActive=false;busy=false;setBusyButton('read',false);if(listenButton?.isConnected){listenButton.disabled=Number(s.stt_attempts?.[target]||0)<3;listenButton.classList.remove('is-busy')}}
+    }finally{if(attemptGeneration===generation){recordingAttemptActive=false;busy=false;setBusyButton('read',false);if(listenButton?.isConnected){listenButton.disabled=Number(s.stt_attempts?.[target]||0)<3;listenButton.classList.remove('is-busy')}}}
   }
   async function choose(button){
-    if(busy)return;
+    if(busy||pendingSave||paused||disposed)return;
     const item=items.find(x=>x.id===button.dataset.id),target=current();
     if(!item)return;
+    const attemptGeneration=generation;
     busy=true;
     try{
       if(item.word!==target){
         const misses=Math.min(pictureAttemptLimit,Number(s.picture_attempts[target]||0)+1);s.picture_attempts[target]=misses;
-        if(misses>=pictureAttemptLimit){s.skipped_picture_words=[...new Set([...(s.skipped_picture_words||[]),target])];s.needs_reread=false;s.phase='oral_reading';await save();if(complete()){s.phase='completion';await finish();render();return}render("Let's move to the next word.",'bad');announce("Let's move to the next word.")}
-        else{await save();render('That is not the matching picture. Try again.','bad');announce('Try again.')}
+        if(misses>=pictureAttemptLimit){s.skipped_picture_words=[...new Set([...(s.skipped_picture_words||[]),target])];s.needs_reread=false;s.phase='oral_reading';await save();if(attemptGeneration!==generation||paused){if(!paused)render();return}if(complete()){s.phase='completion';await finish();render();return}render("Let's move to the next word.",'bad');announce("Let's move to the next word.")}
+        else{await save();if(attemptGeneration!==generation||paused){if(!paused)render();return}render('That is not the matching picture. Try again.','bad');announce('Try again.')}
         return;
       }
       s.matches[item.id]=target;s.picture_attempts[target]=0;s.needs_reread=false;s.current_oral_word_index=index()+1;s.phase='oral_reading';await save();
+      if(attemptGeneration!==generation||paused){if(!paused)render();return}
       if(index()===words.length){s.phase='completion';await finish();render();return}
       render('Correct! Read the next word.','good');announce('Correct! Read the next word.');
-    }catch(e){if(item.word===target)delete s.matches[item.id];render(e.message,'bad')}finally{busy=false}
+    }catch(e){if(item.word===target)delete s.matches[item.id];if(attemptGeneration===generation&&!paused)render(e.message,'bad')}finally{if(attemptGeneration===generation)busy=false}
   }
   async function finish(){
     if(!complete())return;
-    try{
+    const task=(async()=>{
       const r=await fetch(d.completion_url,{method:'POST',credentials:'same-origin',headers:headers({'Content-Type':'application/json'}),body:'{}'});
       const j=await jsonResponse(r);
       if(!r.ok||!j.success)throw Error(j.error||'Could not save completion.');
       d.progress.activity_completed=true;
-    }catch(e){console.error(e)}
+    })();
+    pendingWrites.add(task);
+    try{await task}catch(e){console.error(e)}finally{pendingWrites.delete(task)}
   }
   function stop(){ window.Basahin?.cancelAll(); if(recorder?.state==='recording'){try{recorder.stop()}catch(_){}}if(recordTimer)clearTimeout(recordTimer);recordTimer=null;recorder=null;stream?.getTracks().forEach(t=>t.stop());stream=null}
   function cancelSpeechAttempt(){ window.Basahin?.cancelAll(); generation++;if(recordTimer){clearTimeout(recordTimer);recordTimer=null}const activeRecorder=recorder;recorder=null;if(activeRecorder&&activeRecorder.state!=='inactive'){try{activeRecorder.stop()}catch(_){}}stop();recordingAttemptActive=false;busy=false;setBusyButton('read',false);document.getElementById('listen')?.classList.remove('is-busy');emitDebug({status:paused?'Paused':'Ready',recorder:'inactive'},'Speech attempt cancelled')}
-  function cancel(){cancelSpeechAttempt();audio?.pause();audio=null}
+  function cancel(){cancelSpeechAttempt();audioPlayer.cancel();busy=Boolean(pendingSave)}
   async function leave(e){e.preventDefault();if(busy)return;busy=true;try{await reset();window.location.reload()}catch(x){busy=false;alert(x.message)}}
 
   document.getElementById('lesson30a1-later').onclick=leave;
@@ -164,9 +200,11 @@
   document.getElementById('lesson30a1-help-btn')?.addEventListener('click',()=>{if(recordingAttemptActive)cancelSpeechAttempt()});
   window.addEventListener('lesson30-lesson30a1-help',()=>{if(recordingAttemptActive)cancelSpeechAttempt()});
   window.addEventListener('lesson30-lesson30a1-pause',()=>{paused=true;cancel();emitDebug({status:'Paused',recorder:'inactive',raw:'Activity paused.'})});
-  window.addEventListener('lesson30-lesson30a1-resume',()=>{paused=false;render()});
-  window.addEventListener('lesson30-lesson30a1-restart',cancel);
+  window.addEventListener('lesson30-lesson30a1-resume',()=>{if(disposed)return;paused=false;render()});
+  window.addEventListener('lesson30-lesson30a1-restart',()=>{disposed=true;cancel()});
   window.addEventListener('lesson30-lesson30a1-cleanup',cancel);
   window.addEventListener('lesson30-lesson30a1-mute',event=>{muted=Boolean(event.detail?.muted);stream?.getTracks().forEach(t=>{t.enabled=!muted});emitDebug({mic:`${stream?'Active':'Inactive'} · ${muted?'Muted':'Unmuted'}`})});
   render();
+  const pauseModal=document.getElementById('lesson30a1-pause-modal');
+  pauseModal?.addEventListener('click',event=>{if(event.target===pauseModal){paused=false;render()}});
 })();
