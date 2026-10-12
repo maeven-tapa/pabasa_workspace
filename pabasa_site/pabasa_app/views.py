@@ -65,7 +65,7 @@ OCR_ENGINE_UNAVAILABLE_MESSAGE = (
     'No OCR engine is currently configured. Image text extraction is temporarily unavailable.'
 )
 from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_items
-from .class_materials import ClassMaterialsProgress, listing_summary
+from .class_materials import ClassMaterialsProgress, listing_summary, supplementary_launch_url
 from .email_branding import email_logo_html
 from .static_assets import canonical_asset_name, original_asset_name
 from django.db import transaction
@@ -5873,6 +5873,9 @@ def _dashboard_context(request, nav_role=None, extra=None):
         context['sidebar_selected_avatar'] = STUDENT_AVATAR_BY_SLUG[avatar_slug]
         learning_context = _current_learning_context(user)
         context['student_learning_state'] = learning_context.get('state')
+        context['student_current_prescribed_activity'] = _current_prescribed_activity_for_dashboard(
+            user, learning_context,
+        ) if learning_context.get('state') == 'ARAL_ACTIVE' else None
         context['student_prescribed_visible'] = learning_context.get('state') == 'ARAL_ACTIVE'
         context['student_supplementary_visible'] = learning_context.get('state') == 'ARAL_ACTIVE'
         # Do not display a historical profile classification as the current
@@ -8162,6 +8165,49 @@ def _admin_prescribed_sessions():
             'launch_url': reverse('admin_prescribed_activity_preview', args=[key]),
         })
     return sessions
+
+
+def _current_prescribed_activity_for_dashboard(student, lifecycle):
+    """Use the workbook order and current-term unlock rules for one launch card."""
+    rows = {
+        row.activity_key: row
+        for row in _current_progress_queryset(student, lifecycle).filter(
+            activity_key__in=_prescribed_activity_order(),
+        )
+    }
+    unlocked = _unlocked_prescribed_activity_keys(student, lifecycle)
+    activities = {
+        activity['activity_key']: activity
+        for session in _admin_prescribed_sessions()
+        for activity in session['activities']
+    }
+    for key in _prescribed_activity_order():
+        row = rows.get(key)
+        if row and row.activity_completed:
+            continue
+        activity = activities.get(key)
+        if not activity or key not in unlocked:
+            return None
+        waiting_for_teacher = bool(
+            key == 'lesson-1-gawain-1'
+            and StudentActivityRecordingSubmission.objects.filter(
+                student=student, activity_key=key, status='submitted',
+            ).exists()
+        )
+        route_name = activity.get('route_name')
+        return {
+            'key': key,
+            'session': activity['session_number'],
+            'lesson': activity.get('lesson_number'),
+            'gawain': activity.get('display_gawain_number', activity.get('gawain_number')),
+            'title': activity.get('title') or '',
+            'started': bool(row),
+            'waiting_for_teacher': waiting_for_teacher,
+            'url': '' if waiting_for_teacher else reverse(route_name) if route_name else reverse(
+                'prescribed_activity_page', kwargs={'activity_key': key},
+            ),
+        }
+    return {'completed': True}
 
 
 def _admin_prescribed_activity(activity_key):
@@ -34823,6 +34869,10 @@ def get_class_materials(request):
                     'selected_set_name': content_json.get('activity_name') or '',
                     'student_access': bool(getattr(m, 'student_access', False)),
                 }
+                if is_requesting_student:
+                    launch_category = str(item['item_type'] or '').strip().lower()
+                    launch_category = {'words': 'word', 'vowels': 'vowel'}.get(launch_category, launch_category)
+                    item['launch_url'] = supplementary_launch_url(item, launch_category)
                 # Keep the general paragraph bucket unchanged, but provide a
                 # backend-classified source list for selectors that require
                 # actual Story Reading activities (not 5W question templates).

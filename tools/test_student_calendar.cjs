@@ -22,7 +22,10 @@ const {chromium} = require(process.env.PABASA_PLAYWRIGHT_PATH || 'playwright-cor
       await page.waitForFunction(()=>document.querySelector('#studentCalendarModal').dataset.testOpened==='true');
     };
     await open();
-    assert.equal(await modal.locator('#studentCalendarModalLabel').textContent(),'🗓️ Aking Kalendaryo');
+    assert.equal((await modal.locator('#studentCalendarModalLabel').textContent()).trim(),'Aking Kalendaryo');
+    assert.equal(await modal.locator('#studentCalendarModalLabel .bi-calendar3').count(),1);
+    assert.equal(await modal.locator('.student-calendar-mini-legend i.bi').count(),5);
+    assert.equal(await modal.locator('.student-calendar-date-grid').evaluate(node=>getComputedStyle(node).gridTemplateRows.split(' ').length),6);
     assert.equal(await modal.locator('.student-gantt-bar').count(),0);
     assert.equal(await date('2026-10-12').getAttribute('aria-current'),'date');
     assert.equal(await date('2026-10-12').getAttribute('aria-pressed'),'true');
@@ -69,6 +72,27 @@ const {chromium} = require(process.env.PABASA_PLAYWRIGHT_PATH || 'playwright-cor
     assert((await modal.locator('#studentCalendarExpandedMonth').textContent()).includes('Setyembre'));
     await modal.locator('[data-calendar-nav="today"]').click();
     assert.equal(await date('2026-10-12').getAttribute('aria-pressed'),'true');
+    const monthLayout=()=>modal.evaluate(element=>{
+      const rect=selector=>element.querySelector(selector).getBoundingClientRect();
+      const content=rect('.modal-content'),grid=rect('.student-calendar-date-grid');
+      const body=element.querySelector('.modal-body');
+      return {width:content.width,height:content.height,gridHeight:grid.height,
+        navTop:rect('.student-calendar-navigation').top,detailsTop:rect('.student-calendar-day-details').top,
+        bodyOverflow:body.scrollHeight-body.clientHeight};
+    });
+    const monthWeeks=[['Nobyembre',35],['Disyembre',35],['Enero',42],['Pebrero',35]];
+    let stableLayout;
+    for(const [month,days] of monthWeeks){
+      await modal.locator('[data-calendar-nav="next"]').click();
+      assert((await modal.locator('#studentCalendarExpandedMonth').textContent()).includes(month));
+      assert.equal(await modal.locator('[data-calendar-date]').count(),days);
+      const layout=await monthLayout();
+      assert(layout.bodyOverflow<=2,JSON.stringify(layout));
+      if(stableLayout)assert.deepEqual(layout,stableLayout,'Modal shifted in '+month);
+      stableLayout=layout;
+    }
+    assert.equal(/[\u{1F300}-\u{1FAFF}]/u.test(await modal.textContent()),false);
+    await modal.locator('[data-calendar-nav="today"]').click();
     await modal.screenshot({path:path.join(process.env.PABASA_CALENDAR_ARTIFACTS,'desktop-events.png')});
     await date('2026-10-12').focus();await page.keyboard.press('ArrowRight');
     assert.equal(await date('2026-10-13').getAttribute('aria-pressed'),'true');
@@ -103,6 +127,7 @@ const {chromium} = require(process.env.PABASA_PLAYWRIGHT_PATH || 'playwright-cor
     phone.on('pageerror',error=>errors.push(error.message));
     await phone.goto(base+process.env.PABASA_CALENDAR_URL);
     await phone.locator('#studentCalendarModal').evaluate(node=>{node.addEventListener('shown.bs.modal',()=>{node.dataset.testOpened='true';},{once:true});});
+    await phone.locator('[data-bs-target="#studentCalendarModal"]').waitFor({state:'visible'});
     await phone.locator('[data-bs-target="#studentCalendarModal"]').tap();
     await phone.waitForFunction(()=>document.querySelector('#studentCalendarModal').dataset.testOpened==='true');
     assert.equal(await phone.evaluate(()=>matchMedia('(hover: none)').matches),true);

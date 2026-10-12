@@ -8,10 +8,10 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Assessment, PrescribedActivityAccessSettings, School, StudentActivityProgress, User
+from .models import Assessment, PrescribedActivityAccessSettings, School, StudentActivityProgress, StudentActivityRecordingSubmission, User
 from .views import _unlocked_prescribed_activity_keys
 from .prescribed_test_fixtures import prescribed_term_fixture
-from .views import _current_learning_context, _current_progress_queryset
+from .views import _current_learning_context, _current_progress_queryset, _current_prescribed_activity_for_dashboard
 
 
 class PrescribedTermLifecycleTests(TestCase):
@@ -266,3 +266,38 @@ class PrescribedTermLifecycleTests(TestCase):
         unlocked = _unlocked_prescribed_activity_keys(self.student, term_two)
         self.assertIn('lesson-1-gawain-1', unlocked)
         self.assertNotIn('lesson-2-gawain-1', unlocked)
+
+    def test_dashboard_current_card_moves_to_next_unlocked_activity(self):
+        PrescribedActivityAccessSettings.objects.update_or_create(
+            pk=1, defaults={'unlock_all_activities': False},
+        )
+        calendar, _section, _enrollment, _result = self.scope()
+        lifecycle = _current_learning_context(self.student)
+        current = _current_prescribed_activity_for_dashboard(self.student, lifecycle)
+        self.assertEqual(current['key'], 'lesson-1-gawain-1')
+        self.assertEqual(current['url'], reverse('lesson_1_gawain_1_page'))
+        self.assertEqual((current['session'], current['lesson'], current['gawain']), (1, 1, 1))
+        self.assertEqual(self.client.get(current['url']).status_code, 200)
+
+        progress = StudentActivityProgress.objects.create(
+            student=self.student, school_calendar=calendar, term=lifecycle['term'],
+            activity_key='lesson-1-gawain-1', activity_completed=True,
+        )
+        current = _current_prescribed_activity_for_dashboard(self.student, lifecycle)
+        self.assertEqual(current['key'], 'lesson-2-gawain-1')
+        self.assertEqual(current['url'], reverse('salitang_magkatugma_page'))
+        self.assertEqual(self.client.get(current['url']).status_code, 200)
+        progress.activity_completed = False
+        progress.save(update_fields=['activity_completed', 'updated_at'])
+        self.assertEqual(_current_prescribed_activity_for_dashboard(self.student, lifecycle)['key'], 'lesson-1-gawain-1')
+
+    def test_dashboard_card_does_not_launch_teacher_pending_recording(self):
+        self.scope()
+        StudentActivityRecordingSubmission.objects.create(
+            student=self.student, activity_key='lesson-1-gawain-1', audio_file='pending.wav',
+        )
+        current = _current_prescribed_activity_for_dashboard(
+            self.student, _current_learning_context(self.student),
+        )
+        self.assertTrue(current['waiting_for_teacher'])
+        self.assertEqual(current['url'], '')

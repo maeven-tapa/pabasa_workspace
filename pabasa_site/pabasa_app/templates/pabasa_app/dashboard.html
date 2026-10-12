@@ -540,32 +540,28 @@
         margin-top: 0.1rem;
     }
 
-    /* One shared desktop grid keeps both columns and both card rows aligned. */
+    /* Independent columns let My Class use only the height its content needs. */
     .dashboard-main-layout {
         display: grid;
         grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-        grid-template-areas:
-            "classes calendar"
-            "journey achievements";
         gap: 1.25rem;
         margin-top: 1.25rem;
-        align-items: stretch;
+        align-items: start;
         position: relative;
         z-index: 1;
     }
 
     .dashboard-card-column {
-        display: contents;
+        display: grid;
+        align-content: start;
+        gap: 1.25rem;
+        min-width: 0;
     }
-
-    .my-classes-section { grid-area: classes; }
-    .student-calendar-card { grid-area: calendar; }
-    .my-achievements { grid-area: achievements; }
-    .my-reading-journey { grid-area: journey; }
 
     .my-classes-section {
         display: grid;
-        grid-template-rows: auto minmax(0, 1fr);
+        grid-template-rows: auto auto;
+        align-content: start;
         gap: 1rem;
         min-height: 0;
         background: rgba(255, 255, 255, 0.9);
@@ -2382,12 +2378,9 @@
         }
 
         .dashboard-main-layout {
-            grid-template-columns: 1fr;
-            grid-template-areas:
-                "classes"
-                "calendar"
-                "journey"
-                "achievements";
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
             gap: 1.25rem;
         }
 
@@ -2402,9 +2395,10 @@
 
         .dashboard-main-layout > *,
         .dashboard-card-column > * {
-            align-self: auto;
+            align-self: stretch;
             flex: none;
             height: auto;
+            width: 100%;
         }
 
         .my-classes-section {
@@ -2511,19 +2505,18 @@
         background: linear-gradient(135deg, #fffdf0 0%, #f5e7b7 100%);
     }
 
-    /* My Class follows the dashboard's existing gradient surface, with the
-       class facts and current activity arranged as paired panels. */
+    /* My Class keeps the dashboard surface and pairs class facts with activity. */
     .my-classes-section {
-        gap: 1rem;
-        padding: 1.2rem;
+        gap: 0.8rem;
+        padding: 1.1rem;
     }
 
     .my-classes-header {
         align-items: center;
         border-bottom: 0;
         display: flex;
-        gap: 0;
-        padding: 0 0 0.3rem;
+        gap: 0.4rem;
+        padding: 0 0 0.5rem;
     }
 
     .my-classes-title-copy {
@@ -2535,7 +2528,7 @@
     .my-classes-title-copy strong {
         color: #080f3e;
         font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: 1.08rem;
+        font-size: 1.15rem;
         font-weight: 900;
         line-height: 1.2;
     }
@@ -2549,7 +2542,7 @@
 
     .my-classes-section .class-list {
         container-type: inline-size;
-        gap: 1rem;
+        gap: 0.8rem;
     }
 
     .my-classes-section .class-list > .class-card {
@@ -2558,34 +2551,58 @@
         box-shadow: none;
         cursor: default;
         display: grid;
-        gap: 1rem;
-        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.6fr);
+        gap: 0.8rem;
+        grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.45fr);
         overflow: visible;
         padding: 0;
     }
 
     .my-classes-section .class-list > .class-card::before { display: none; }
     .my-classes-section .class-list > .class-card:hover { border-color: transparent; box-shadow: none; transform: none; }
-
     .class-card-summary {
         display: grid;
-        gap: 0.85rem;
+        align-content: start;
+        gap: 0.8rem;
         min-width: 0;
-        grid-template-rows: minmax(0, 1fr) auto;
+        grid-template-rows: auto auto;
     }
 
     .class-card-class-info,
     .class-card-reading-info {
         border: 1px solid rgba(63, 157, 207, 0.1);
-        border-radius: 18px;
+        border-radius: 16px;
     }
 
     .class-card-class-info {
         background: linear-gradient(160deg, rgba(231, 247, 255, 0.96), rgba(248, 252, 255, 0.94));
         display: grid;
-        gap: 0.8rem;
-        min-height: 11.5rem;
-        padding: 1.2rem;
+        gap: 0.75rem;
+        padding: 1rem;
+    }
+
+    .class-card-class-heading {
+        align-items: start;
+        display: flex;
+        gap: 0.65rem;
+        min-width: 0;
+    }
+
+    .class-card-class-icon {
+        align-items: center;
+        background: #d6edff;
+        border-radius: 12px;
+        color: #147ee5;
+        display: inline-flex;
+        flex: 0 0 2.5rem;
+        font-size: 1.2rem;
+        height: 2.5rem;
+        justify-content: center;
+    }
+
+    .class-card-class-title {
+        display: grid;
+        gap: 0.3rem;
+        min-width: 0;
     }
 
     .class-card-eyebrow {
@@ -2600,17 +2617,18 @@
 
     .class-card-summary h3 {
         color: #080f3e;
-        font-size: clamp(1.08rem, 1.6vw, 1.42rem);
-        line-height: 1.15;
-        max-width: 11rem;
+        font-size: clamp(1rem, 1.3vw, 1.22rem);
+        line-height: 1.18;
+        max-width: none;
         margin: 0;
     }
 
     .class-card-teacher {
         align-items: center;
-        align-self: end;
         display: flex;
-        gap: 0.7rem;
+        gap: 0.55rem;
+        border-top: 1px solid rgba(63, 157, 207, 0.16);
+        padding-top: 0.7rem;
     }
 
     .class-card-teacher-icon,
@@ -2620,11 +2638,11 @@
         border-radius: 50%;
         color: #1689ef;
         display: inline-flex;
-        flex: 0 0 3.25rem;
-        font-size: 1.35rem;
-        height: 3.25rem;
+        flex: 0 0 2.4rem;
+        font-size: 1.05rem;
+        height: 2.4rem;
         justify-content: center;
-        width: 3.25rem;
+        width: 2.4rem;
     }
 
     .class-card-teacher > span:last-child,
@@ -2647,8 +2665,9 @@
     .class-card-teacher strong {
         color: #080f3e;
         font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: 1rem;
+        font-size: 0.9rem;
         font-weight: 900;
+        line-height: 1.2;
         overflow-wrap: anywhere;
     }
 
@@ -2656,9 +2675,8 @@
         align-items: center;
         background: linear-gradient(145deg, rgba(225, 250, 246, 0.96), rgba(239, 252, 250, 0.94));
         display: flex;
-        gap: 0.75rem;
-        min-height: 7rem;
-        padding: 1rem 1.15rem;
+        gap: 0.65rem;
+        padding: 0.85rem 1rem;
     }
 
     .class-card-summary .reading-level-badge {
@@ -2666,144 +2684,70 @@
         border: 0;
         color: #087d75;
         font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: 0.92rem;
+        font-size: 0.84rem;
         font-weight: 900;
-        margin: 0.15rem 0 0;
-        padding: 0.45rem 0.75rem;
+        line-height: 1.2;
+        margin: 0.1rem 0 0;
+        padding: 0.35rem 0.6rem;
     }
 
     .class-card-activity {
+        display: grid;
         align-content: start;
-        background: rgba(255, 255, 255, 0.95);
-        border: 1px solid rgba(63, 157, 207, 0.1);
-        border-radius: 18px;
-        display: grid;
-        gap: 0.75rem;
+        gap: 0.5rem;
         min-width: 0;
-        padding: 1.25rem;
+        padding: 0;
     }
-
-    .class-card-activity-head {
-        align-items: flex-start;
-        display: flex;
-        gap: 0.75rem;
-        min-width: 0;
-    }
-
-    .class-card-activity-icon {
-        align-items: center;
-        background: linear-gradient(145deg, #e9f7ff, #dcedfb);
-        border-radius: 16px;
-        color: #147ee5;
-        display: inline-flex;
-        flex: 0 0 3.25rem;
-        font-size: 1.45rem;
-        height: 3.25rem;
-        justify-content: center;
-        width: 3.25rem;
-    }
-
-    .class-card-activity-copy {
-        display: grid;
-        flex: 1 1 auto;
-        gap: 0.1rem;
-        min-width: 0;
-    }
-
-    .class-card-activity-copy small {
-        color: #64748b;
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: 0.7rem;
-        font-weight: 900;
-        letter-spacing: 0.07em;
-        text-transform: uppercase;
-    }
-
-    .class-card-activity-copy strong { color: #080f3e; font-family: "Nunito", "Segoe UI", sans-serif; font-size: clamp(1rem, 1.6vw, 1.32rem); font-weight: 900; line-height: 1.15; }
-    .class-card-activity-copy > span { color: #65728d; font-family: "Quattrocento Sans", "Segoe UI", sans-serif; font-size: 0.92rem; font-weight: 700; }
-
-    .class-card-activity-state {
-        align-items: center;
-        background: #f4f6f8;
-        border-radius: 999px;
-        color: #64748b;
-        display: inline-flex;
-        flex: 0 0 auto;
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: 0.78rem;
-        font-weight: 900;
-        gap: 0.35rem;
-        padding: 0.5rem 0.75rem;
-        white-space: nowrap;
-    }
-
-    .class-card-activity-state i { font-size: 0.95rem; }
-    .class-card-progress-copy { color: #65728d; font-family: "Quattrocento Sans", "Segoe UI", sans-serif; font-size: 0.88rem; font-weight: 700; }
-
-    .my-classes-section .class-card-activity .aral-week-card {
-        align-items: center;
-        background: #eef7ff;
-        border-color: rgba(63, 157, 207, 0.1);
-        border-radius: 15px;
-        display: grid;
-        gap: 0.75rem;
-        grid-template-columns: auto minmax(0, 1fr);
-        margin: 0;
-        padding: 0.9rem;
-    }
-
-    .my-classes-section .class-card-activity .aral-week-card {
-        grid-template-columns: 1fr;
-        justify-items: center;
-        text-align: center;
-    }
-
-    .aral-week-icon {
-        align-items: center;
-        background: rgba(43, 163, 249, 0.12);
-        border-radius: 14px;
-        color: #176bba;
-        display: inline-flex;
-        font-size: 1.35rem;
-        height: 3rem;
-        justify-content: center;
-        width: 3rem;
-    }
-
-    .aral-week-copy { display: grid; gap: 0.15rem; min-width: 0; text-align: center; }
-    .aral-week-copy strong { color: #080f3e; font-family: "Nunito", "Segoe UI", sans-serif; font-size: 1rem; font-weight: 900; }
-    .aral-week-copy span { color: #65728d; font-family: "Quattrocento Sans", "Segoe UI", sans-serif; font-size: 0.83rem; line-height: 1.3; }
-    .my-classes-section .aral-week-card .class-card-actions { grid-column: 1 / -1; margin-top: 0; padding-top: 0.2rem; }
-
-    .class-card-activity .class-card-actions {
-        margin-top: 0.2rem;
-        padding-top: 0.65rem;
-    }
-
-    .class-card-activity > .class-card-actions {
-        align-self: end;
-        margin-top: auto;
-        padding-top: 0;
-    }
-
-    .class-card-activity .continue-learning-btn {
-        border-radius: 14px;
-        min-height: 2.85rem;
-    }
+    .class-learning-heading { color: #244a69; font: 900 0.86rem "Nunito", "Segoe UI", sans-serif; margin: 0 0 0.05rem; }
+    .class-learning-card { display: grid; gap: 0.38rem; min-width: 0; padding: 0.68rem 0.8rem; border: 1px solid #d5e8f7; border-radius: 15px; background: #eef7ff; }
+    .dashboard-main .class-learning-card-link { color: inherit; text-decoration: none; cursor: pointer; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+    .dashboard-main .class-learning-card-link:hover, .dashboard-main .class-learning-card-link:focus-visible { color: inherit; text-decoration: none; transform: translateY(-2px); border-color: #8cccf4; box-shadow: 0 7px 15px #1b72a61a; }
+    .dashboard-main .class-learning-card-link:focus-visible { outline: 3px solid #1685d9; outline-offset: 2px; }
+    .dashboard-main .class-learning-card-link:active { transform: translateY(0); }
+    .dashboard-main .is-supplementary.class-learning-card-link:hover, .dashboard-main .is-supplementary.class-learning-card-link:focus-visible { border-color: #79d3be; }
+    .class-learning-card.is-supplementary { border-color: #c8ebe2; background: #eaf9f4; }
+    .class-learning-top { display: grid; grid-template-columns: 2rem minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; min-width: 0; }
+    .class-learning-icon { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 10px; background: #d6edff; color: #147ee5; font-size: 1rem; }
+    .is-supplementary .class-learning-icon { background: #cff2e5; color: #087d75; }
+    .class-learning-title { min-width: 0; color: #153e62; font: 900 0.98rem/1.15 "Nunito", "Segoe UI", sans-serif; }
+    .class-learning-status { padding: 0.25rem 0.48rem; border-radius: 999px; background: #dceafb; color: #285f94; font: 900 0.66rem/1.1 "Nunito", "Segoe UI", sans-serif; white-space: nowrap; }
+    .is-supplementary .class-learning-status { background: #d4f1e6; color: #126f63; }
+    .class-learning-status.is-complete { background: #d8f3dc; color: #247046; }
+    .class-learning-status.is-pending { background: #f3f0e6; color: #74664b; }
+    .class-learning-meta { color: #526b82; font: 800 0.72rem/1.2 "Nunito", "Segoe UI", sans-serif; }
+    .class-learning-activity-title { min-width: 0; color: #153e62; font: 900 0.9rem/1.2 "Nunito", "Segoe UI", sans-serif; overflow-wrap: anywhere; }
+    .dashboard-main .class-learning-action { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; justify-self: start; min-height: 2rem; padding: 0.38rem 0.75rem; border: 0; border-radius: 9px; background: #1685d9; color: #fff; font: 900 0.76rem/1.15 "Nunito", "Segoe UI", sans-serif; text-align: center; text-decoration: none; transition: background .18s ease, transform .18s ease, box-shadow .18s ease; }
+    .dashboard-main .class-learning-action:hover, .dashboard-main .class-learning-action:focus-visible { background: #0d6cb3; color: #fff; box-shadow: 0 3px 9px #147ee52b; text-decoration: none; transform: translateY(-1px); }
+    .class-learning-action:active { transform: translateY(1px); }
+    .dashboard-main .is-supplementary .class-learning-action { background: #138a76; }
+    .dashboard-main .is-supplementary .class-learning-action:hover, .dashboard-main .is-supplementary .class-learning-action:focus-visible { background: #0c705f; box-shadow: 0 3px 9px #138a762b; }
+    .class-learning-note { padding: 0.68rem 0.8rem; border-radius: 13px; background: #fff8df; color: #725d24; font: 800 0.78rem/1.3 "Nunito", "Segoe UI", sans-serif; }
 
     body.dark-theme .my-classes-title-copy strong,
     body.dark-theme .class-card-summary h3,
     body.dark-theme .class-card-teacher strong,
-    body.dark-theme .class-card-activity-copy strong,
-    body.dark-theme .aral-week-copy strong { color: #f8fafc; }
+    body.dark-theme .class-learning-title,
+    body.dark-theme .class-learning-heading { color: #f8fafc; }
     body.dark-theme .my-classes-title-copy small { color: #b9c8d7; }
     body.dark-theme .class-card-class-info,
-    body.dark-theme .class-card-reading-info,
-    body.dark-theme .class-card-activity { background: rgba(15, 51, 74, 0.62); }
-    body.dark-theme .class-card-activity .aral-week-card { background: rgba(15, 51, 74, 0.46); }
+    body.dark-theme .class-card-reading-info { background: rgba(15, 51, 74, 0.62); }
+    body.dark-theme .class-learning-card { background: rgba(15, 51, 74, 0.62); }
+    body.dark-theme .class-learning-meta { color: #c3d8e8; }
+    body.dark-theme .class-learning-activity-title { color: #f8fafc; }
 
     /* Respond to the card's actual width, including sidebar and display scaling. */
     @container (max-width: 34rem) {
+        .class-card-class-heading { align-items: center; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); }
+        .class-card-class-title { display: contents; }
+        .class-card-class-title .class-card-eyebrow { grid-column: 2; }
+        .class-card-class-title h3 { grid-column: 1 / -1; }
+        .class-card-reading-info { display: grid; justify-items: start; }
+        .class-card-class-info,
+        .class-card-reading-info { padding: 0.8rem; }
+        .class-learning-top { gap: 0.35rem; }
+    }
+
+    @container (max-width: 23rem) {
         .my-classes-section .class-list > .class-card {
             grid-template-columns: minmax(0, 1fr);
         }
@@ -2815,10 +2759,8 @@
         min-width: 0;
     }
 
-    .class-card-activity-head { flex-wrap: wrap; }
-    .class-card-activity-copy { flex-basis: 8rem; overflow-wrap: anywhere; }
     .class-card-summary h3 { overflow-wrap: anywhere; }
-    .class-card-summary .reading-level-badge { white-space: normal; overflow-wrap: anywhere; }
+    .class-card-summary .reading-level-badge { white-space: normal; overflow-wrap: normal; word-break: normal; }
 
     /* Six badges stay balanced in two complete rows after the sidebar and
        display scaling apply. */
@@ -2826,34 +2768,33 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .my-classes-section .class-card-summary h3 {
-        font-size: 1.75rem !important;
-        line-height: 1.15;
-        width: 10rem;
-        max-width: 10rem;
+    .my-reading-journey[data-reading-journey] { grid-template-rows: max-content max-content max-content max-content; gap: .7rem; }
+    @media (min-width: 1200px) {
+        .dashboard-main-layout { align-items: stretch; }
+        .dashboard-card-column.left-column { grid-template-rows: auto minmax(0, 1fr); align-content: stretch; }
+        .my-reading-journey[data-reading-journey] { grid-template-rows: max-content max-content minmax(max-content, 1fr) max-content; align-content: stretch; }
     }
-
-    .my-reading-journey[data-reading-journey] { grid-template-rows: max-content max-content max-content; gap: .6rem; }
     .session-progress-title { justify-content: space-between; }
     .session-progress-toggle { margin-left: auto; border: 1px solid rgba(8, 118, 209, .25); border-radius: 999px; padding: .35rem .65rem; background: rgba(255, 255, 255, .72); color: #0876d1; font: 800 .72rem/1 "Nunito", sans-serif; white-space: nowrap; cursor: pointer; transition: background .2s, color .2s, border-color .2s; }
     .session-progress-toggle:hover, .session-progress-toggle:focus-visible { background: #0876d1; border-color: #0876d1; color: #fff; outline: none; }
     .session-progress-toggle .bi { margin-right: .25rem; }
     .session-progress-summary { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; min-height: 0; height: auto; margin: 0; padding: 0; align-self: start; color: #60728c; font-size: .82rem; font-weight: 800; }
     .session-progress-summary strong { color: #102b61; font-size: .95rem; }
-    .session-progress-visual { margin: 0 -.2rem; overflow: hidden; }
+    .session-progress-visual { margin: 0 -.2rem; overflow: hidden; align-self: stretch; }
+    .session-progress-visual:not([hidden]) { display: grid; place-items: center; }
     .session-progress-path { display: block; width: 100%; height: auto; min-height: 8.5rem; filter: drop-shadow(0 4px 5px rgba(64, 91, 126, .24)); }
     .session-progress-line { fill: none; stroke-linecap: round; stroke-linejoin: round; }
-    .session-progress-line-base { stroke: rgba(220, 239, 248, .8); stroke-width: 22; filter: drop-shadow(0 2px 3px rgba(44, 91, 125, .16)); }
-    .session-progress-line-fill { stroke: url(#session-progress-gradient); stroke-width: 15; stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 2px 3px rgba(0, 112, 190, .28)); transition: stroke-dashoffset .6s ease; }
+    .session-progress-line-base { stroke: rgba(220, 239, 248, .9); stroke-width: 25; filter: drop-shadow(0 2px 3px rgba(44, 91, 125, .16)); }
+    .session-progress-line-fill { stroke: url(#session-progress-gradient); stroke-width: 17; stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 2px 3px rgba(0, 112, 190, .28)); transition: stroke-dashoffset .6s ease; }
     .session-progress-line-gloss { stroke: rgba(255, 255, 255, .62); stroke-width: 3; pointer-events: none; }
     .session-progress-wave { fill: #67ddff; opacity: 0; pointer-events: none; filter: drop-shadow(0 0 4px rgba(103, 221, 255, .95)) drop-shadow(0 0 9px rgba(8, 118, 209, .7)); transition: opacity .25s ease; }
     .session-progress-wave.is-active { opacity: .78; }
     .session-progress-point { fill: #fff; stroke: #a9d2e8; stroke-width: 8; transition: fill .2s, stroke .2s; }
     .session-progress-point.is-partial { fill: #fff; stroke: #f2b632; }
     .session-progress-point.is-complete { fill: #e4f7e9; stroke: #43a85f; }
-    .session-progress-number { fill: #55708b; font: 800 18px Nunito, sans-serif; text-anchor: middle; }
+    .session-progress-number { fill: #55708b; font: 800 20px Nunito, sans-serif; text-anchor: middle; }
     .session-progress-number.is-complete { fill: #237a43; }
-    .session-progress-legend { display: flex; justify-content: center; gap: 1rem; margin-top: -.2rem; color: #60728c; font-size: .72rem; font-weight: 800; }
+    .session-progress-legend { display: flex; justify-content: center; gap: 1rem; margin-top: 0; color: #60728c; font-size: .72rem; font-weight: 800; }
     .session-progress-legend span { display: inline-flex; align-items: center; gap: .35rem; }
     .session-progress-legend i { width: .65rem; height: .65rem; border: 2px solid #aebdca; border-radius: 50%; background: #fff; }
     .session-progress-legend i.is-complete { border-color: #0879cf; background: #1fb6ff; }
@@ -2895,8 +2836,7 @@
         .student-studio-bird { max-width: 4.5rem; }
         .student-expanded-toolbar { grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
 
-        .class-card-activity { padding: 1rem; }
-        .class-card-activity-state { font-size: 0.7rem; padding: 0.42rem 0.6rem; }
+        .class-learning-card { padding: 0.7rem; }
     }
 
     /* Expanded student calendar only: the dashboard thumbnail and staff views
@@ -2911,14 +2851,15 @@
         overflow: hidden;
     }
     #studentCalendarModal .modal-dialog { width: min(1180px, calc(100% - 32px)); max-width: 1180px; margin: 16px auto; min-height: calc(100% - 32px); }
-    #studentCalendarModal .modal-content { max-height: calc(100dvh - 32px); border: 3px solid #fff; border-radius: 28px; box-shadow: 0 24px 70px #183e6333; background: #f7fcff; }
+    #studentCalendarModal .modal-content { height: 826px; max-height: calc(100dvh - 32px); border: 3px solid #fff; border-radius: 28px; box-shadow: 0 24px 70px #183e6333; background: #f7fcff; }
     #studentCalendarModal .modal-header { flex-shrink: 0; padding: 18px 24px; border: 0; background: linear-gradient(115deg, #e1f5f2, #ecf4ff 65%, #fff2d5); }
     #studentCalendarModal .student-calendar-expanded-head { flex-wrap: nowrap; gap: 12px; }
     #studentCalendarModal .student-calendar-expanded-meta { gap: 4px; }
     #studentCalendarModal .student-calendar-kicker { font-size: .75rem; font-weight: 900; color: var(--calendar-teal); }
     #studentCalendarModalLabel { font-family: "Coiny", "Nunito", sans-serif; color: var(--calendar-ink); font-size: clamp(1.4rem, 2.2vw, 2rem); line-height: 1.2; }
     #studentCalendarModal .student-calendar-close-btn { width: 44px; height: 44px; flex-shrink: 0; background: #fff; color: var(--calendar-ink); box-shadow: 0 3px 9px #183e6314; }
-    #studentCalendarModal .modal-body { min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 16px 22px 20px; background: #f7fcff; scrollbar-gutter: stable; }
+    #studentCalendarModal .modal-body { min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 16px 22px; background: #f7fcff; }
+    #studentCalendarModal .student-calendar-title-icon { display: inline-block; margin-right: 4px; color: var(--calendar-teal); font-size: .9em; vertical-align: -.08em; }
     #studentCalendarModal .student-calendar-navigation { display: grid; grid-template-columns: 46px minmax(0, 1fr) 46px auto; align-items: center; gap: 10px; margin-bottom: 16px; }
     #studentCalendarExpandedMonth { text-align: center; font-size: clamp(1.3rem, 2.2vw, 1.8rem); font-weight: 900; color: var(--calendar-ink); }
     #studentCalendarModal .student-calendar-arrow, #studentCalendarModal .student-calendar-today { min-height: 46px; border: 2px solid #c8e9e5; border-radius: 15px; background: #fff; color: var(--calendar-teal); font-weight: 900; font-size: 1.1rem; cursor: pointer; }
@@ -2927,6 +2868,7 @@
     #studentCalendarModal .student-calendar-month-panel { min-width: 0; }
     #studentCalendarModal [data-student-calendar-expanded] { display: block; }
     #studentCalendarModal .student-calendar-weekdays, #studentCalendarModal .student-calendar-date-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+    #studentCalendarModal .student-calendar-date-grid { grid-template-rows: repeat(6, 82px); }
     #studentCalendarModal .student-calendar-weekdays { margin-bottom: 6px; }
     #studentCalendarModal .student-calendar-weekdays span { padding: 7px 0; border-radius: 10px; background: #e9f3fb; color: #365d7a; font-size: .8rem; font-weight: 900; text-align: center; }
     #studentCalendarModal .student-calendar-date { display: flex; flex-direction: column; align-items: center; gap: 3px; height: 82px; min-width: 0; padding: 5px 3px; border: 2px solid #e1ebf2; border-radius: 16px; background: #fff; color: var(--calendar-ink); cursor: pointer; box-shadow: 0 2px 5px #183e6306; }
@@ -2941,21 +2883,23 @@
     #studentCalendarModal [data-calendar-kind="closing"] { --event-bg: #ffe7ea; --event-ink: #92424e; }
     #studentCalendarModal [data-calendar-kind="other"] { --event-bg: #e9f1f9; --event-ink: #365d7a; }
     #studentCalendarModal .student-calendar-day-event { display: flex; align-items: center; justify-content: center; gap: 3px; flex-shrink: 0; width: 100%; min-width: 0; padding: 3px 2px; border-radius: 9px; background: var(--event-bg); color: var(--event-ink); font-size: .68rem; font-weight: 900; line-height: 1.1; }
-    #studentCalendarModal .student-calendar-day-event-label { min-width: 0; white-space: nowrap; }
+    #studentCalendarModal .student-calendar-day-event-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #studentCalendarModal .student-calendar-day-event-icon, #studentCalendarModal .student-calendar-detail-icon, #studentCalendarModal .student-calendar-mini-legend i { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 1.1em; line-height: 1; }
     #studentCalendarModal .student-calendar-more { font-size: .7rem; font-weight: 900; color: #365d7a; line-height: 1.1; }
     #studentCalendarModal .student-calendar-selection-hint { display: flex; align-items: center; gap: 6px; color: #496c81; font-size: .8rem; margin: 12px 0 8px; }
     #studentCalendarModal .student-calendar-mini-legend { display: flex; flex-wrap: wrap; gap: 5px; }
-    #studentCalendarModal .student-calendar-mini-legend span { padding: 4px 7px; border-radius: 9px; background: var(--event-bg); color: var(--event-ink); font-size: .72rem; font-weight: 800; }
+    #studentCalendarModal .student-calendar-mini-legend span { display: inline-flex; align-items: center; gap: 4px; padding: 4px 7px; border-radius: 9px; background: var(--event-bg); color: var(--event-ink); font-size: .72rem; font-weight: 800; }
     #studentCalendarModal .student-calendar-day-details { min-width: 0; padding: 18px; border: 2px solid #dcebf6; border-radius: 22px; background: #fff; box-shadow: 0 6px 16px #183e6308; }
-    #studentCalendarModal .student-calendar-detail-badge { display: inline-grid; place-items: center; width: 42px; height: 42px; margin-bottom: 8px; background: #fff2cd; border-radius: 14px; font-size: 1.4rem; }
+    #studentCalendarModal .student-calendar-detail-badge { display: inline-grid; place-items: center; width: 42px; height: 42px; margin-bottom: 8px; background: #fff2cd; color: #825500; border-radius: 14px; font-size: 1.4rem; }
     #studentCalendarDetailsHeading { font-size: 1.15rem; line-height: 1.3; font-weight: 900; color: var(--calendar-ink); margin-bottom: 8px; }
     #studentCalendarSelectedDate { margin-bottom: 14px; color: var(--calendar-teal); font-size: .9rem; font-weight: 900; }
     #studentCalendarModal .student-calendar-detail-card { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 9px; padding: 12px 10px; border-radius: 14px; background: var(--event-bg); color: var(--event-ink); overflow-wrap: anywhere; }
     #studentCalendarModal .student-calendar-detail-card:last-child { margin-bottom: 0; }
-    #studentCalendarModal .student-calendar-detail-icon { font-size: 1.2rem; flex-shrink: 0; }
+    #studentCalendarModal .student-calendar-detail-icon { font-size: 1.2rem; }
     #studentCalendarModal .student-calendar-detail-card strong { display: block; font-size: .95rem; font-weight: 900; line-height: 1.35; }
     #studentCalendarModal .student-calendar-detail-card p { font-size: .85rem; line-height: 1.4; margin: 5px 0 0; }
     #studentCalendarModal .student-calendar-no-events { margin: 0; padding: 16px 10px; border-radius: 14px; background: #f3f8fc; color: #496c81; font-size: .95rem; line-height: 1.5; text-align: center; }
+    #studentCalendarModal .student-calendar-no-events i { display: inline-block; margin-bottom: 5px; font-size: 1.4rem; line-height: 1; }
     #studentCalendarModal button { transition: background-color 200ms, border-color 200ms, box-shadow 200ms, transform 200ms; }
     #studentCalendarModal button:focus-visible { outline: 3px solid #e0a323; outline-offset: 3px; }
     #studentCalendarModal button:active { transform: translateY(1px); }
@@ -2965,7 +2909,8 @@
     }
     @media (max-height: 800px) and (min-width: 768px) {
         #studentCalendarModal .modal-header { padding-top: 12px; padding-bottom: 12px; }
-        #studentCalendarModal .student-calendar-date { height: 76px; padding: 3px; gap: 2px; }
+        #studentCalendarModal .student-calendar-date-grid { grid-template-rows: repeat(6, 68px); }
+        #studentCalendarModal .student-calendar-date { height: 68px; padding: 3px; gap: 2px; }
         #studentCalendarModal .student-calendar-navigation { margin-bottom: 10px; }
     }
     @media (max-width: 991.98px) {
@@ -2982,12 +2927,16 @@
         #studentCalendarModal .student-calendar-today { grid-column: 1 / -1; justify-self: center; min-height: 36px; padding: 4px 18px; font-size: .9rem; }
         #studentCalendarModal .student-calendar-kicker { font-size: .65rem; }
         #studentCalendarModal .student-calendar-weekdays, #studentCalendarModal .student-calendar-date-grid { gap: 4px; }
+        #studentCalendarModal .student-calendar-date-grid { grid-template-rows: repeat(6, 76px); }
         #studentCalendarModal .student-calendar-weekdays span { padding: 5px 0; font-size: .65rem; }
         #studentCalendarModal .student-calendar-date { height: 76px; border-radius: 12px; padding: 4px 2px; gap: 2px; }
         #studentCalendarModal .student-calendar-date-number { width: 28px; height: 28px; font-size: 1.05rem; }
         #studentCalendarModal .student-calendar-day-event { font-size: .85rem; padding: 2px; }
         #studentCalendarModal .student-calendar-day-details { padding: 14px; }
         #studentCalendarModal .student-calendar-detail-badge { display: none; }
+    }
+    @media (max-width: 360px) {
+        #studentCalendarModal .student-calendar-weekdays, #studentCalendarModal .student-calendar-date-grid { gap: 2px; }
     }
     @media (prefers-reduced-motion: reduce) {
         #studentCalendarModal button { transition: none; }
@@ -3058,7 +3007,7 @@
         {% endcomment %}
     </div>
 
-    <!-- Shared grid aligns the four dashboard cards into two balanced rows. -->
+    <!-- Independent columns keep the My Class card compact without leaving a row gap. -->
     <div class="dashboard-main-layout" data-dashboard-main-layout style="display: none;">
         <div class="dashboard-card-column left-column">
             <!-- My Class -->
@@ -3069,12 +3018,45 @@
                 <div class="class-list" data-class-list aria-live="polite"></div>
             </div>
 
-            <!-- My Achievements -->
-            <div class="my-achievements" data-achievements>
-                <h3 class="section-title">
-                    <span>My Achievements</span>
+            <!-- Session Progress -->
+            <div class="my-reading-journey" data-reading-journey>
+                <h3 class="section-title session-progress-title">
+                    <span>My Session Journey</span>
+                    <button type="button" class="session-progress-toggle" data-session-progress-toggle aria-pressed="false" aria-controls="session-progress-chart">
+                        <i class="bi bi-bar-chart-fill" aria-hidden="true"></i><span data-session-progress-toggle-label>View by session</span>
+                    </button>
                 </h3>
-                <div class="achievements-grid" data-achievements-grid></div>
+                <div class="session-progress-summary">
+                    <span>Prescribed activity sessions</span>
+                    <strong><span data-session-completed-count>0</span> / 15 complete</strong>
+                </div>
+                <div class="session-progress-visual">
+                    <svg class="session-progress-path" viewBox="0 0 1000 325" role="img" aria-label="Progress across 15 prescribed activity sessions">
+                        <defs>
+                            <linearGradient id="session-progress-gradient" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stop-color="#67ddff"></stop>
+                                <stop offset="42%" stop-color="#19b7f2"></stop>
+                                <stop offset="100%" stop-color="#0876d1"></stop>
+                            </linearGradient>
+                        </defs>
+                        <path class="session-progress-line session-progress-line-base" d="M30 45 H900 Q960 45 960 103 Q960 162 900 162 H100 Q40 162 40 221 Q40 280 100 280 H900"></path>
+                        <path class="session-progress-line session-progress-line-fill" data-session-progress-fill d="M30 45 H900 Q960 45 960 103 Q960 162 900 162 H100 Q40 162 40 221 Q40 280 100 280 H900"></path>
+                        <circle class="session-progress-wave" data-session-progress-wave cx="30" cy="45" r="4.5" aria-hidden="true"></circle>
+                        <path class="session-progress-line session-progress-line-gloss" d="M30 45 H900 Q960 45 960 103 Q960 162 900 162 H100 Q40 162 40 221 Q40 280 100 280 H900"></path>
+                        <g data-session-progress-points></g>
+                        <g class="session-progress-flag" data-session-progress-flag aria-label="Current progress">
+                            <line x1="0" y1="0" x2="0" y2="-27"></line>
+                            <path d="M0 -27 L23 -21 L0 -15 Z"></path>
+                        </g>
+                    </svg>
+                </div>
+                <div id="session-progress-chart" class="session-progress-by-session" data-session-progress-chart hidden aria-label="Progress by session"></div>
+                <div class="session-progress-pagination" data-session-progress-pagination hidden>
+                    <button type="button" data-session-progress-prev aria-label="Previous sessions">‹</button>
+                    <span class="session-progress-page-label" data-session-progress-page-label>1–5 of 15</span>
+                    <button type="button" data-session-progress-next aria-label="Next sessions">›</button>
+                </div>
+                <div class="session-progress-legend"><span><i class="is-complete"></i>Complete</span><span><i class="is-ongoing"></i>Ongoing</span><span><i></i>Not complete</span></div>
             </div>
         </div>
 
@@ -3112,51 +3094,19 @@
                 </div>
             </article>
 
-            <!-- Session Progress -->
-            <div class="my-reading-journey" data-reading-journey>
-                <h3 class="section-title session-progress-title">
-                    <span>My Session Journey</span>
-                    <button type="button" class="session-progress-toggle" data-session-progress-toggle aria-pressed="false" aria-controls="session-progress-chart">
-                        <i class="bi bi-bar-chart-fill" aria-hidden="true"></i><span data-session-progress-toggle-label>View by session</span>
-                    </button>
+            <!-- My Achievements -->
+            <div class="my-achievements" data-achievements>
+                <h3 class="section-title">
+                    <span>My Achievements</span>
                 </h3>
-                <div class="session-progress-summary">
-                    <span>Prescribed activity sessions</span>
-                    <strong><span data-session-completed-count>0</span> / 15 complete</strong>
-                </div>
-                <div class="session-progress-visual">
-                    <svg class="session-progress-path" viewBox="0 0 1000 240" role="img" aria-label="Progress across 15 prescribed activity sessions">
-                        <defs>
-                            <linearGradient id="session-progress-gradient" x1="0" y1="0" x2="1" y2="0">
-                                <stop offset="0%" stop-color="#67ddff"></stop>
-                                <stop offset="42%" stop-color="#19b7f2"></stop>
-                                <stop offset="100%" stop-color="#0876d1"></stop>
-                            </linearGradient>
-                        </defs>
-                        <path class="session-progress-line session-progress-line-base" d="M30 40 H900 Q960 40 960 80 Q960 120 900 120 H100 Q40 120 40 160 Q40 200 100 200 H900"></path>
-                        <path class="session-progress-line session-progress-line-fill" data-session-progress-fill d="M30 40 H900 Q960 40 960 80 Q960 120 900 120 H100 Q40 120 40 160 Q40 200 100 200 H900"></path>
-                        <circle class="session-progress-wave" data-session-progress-wave cx="30" cy="40" r="4.5" aria-hidden="true"></circle>
-                        <path class="session-progress-line session-progress-line-gloss" d="M30 40 H900 Q960 40 960 80 Q960 120 900 120 H100 Q40 120 40 160 Q40 200 100 200 H900"></path>
-                        <g data-session-progress-points></g>
-                        <g class="session-progress-flag" data-session-progress-flag aria-label="Current progress">
-                            <line x1="0" y1="0" x2="0" y2="-27"></line>
-                            <path d="M0 -27 L23 -21 L0 -15 Z"></path>
-                        </g>
-                    </svg>
-                </div>
-                <div id="session-progress-chart" class="session-progress-by-session" data-session-progress-chart hidden aria-label="Progress by session"></div>
-                <div class="session-progress-pagination" data-session-progress-pagination hidden>
-                    <button type="button" data-session-progress-prev aria-label="Previous sessions">‹</button>
-                    <span class="session-progress-page-label" data-session-progress-page-label>1–5 of 15</span>
-                    <button type="button" data-session-progress-next aria-label="Next sessions">›</button>
-                </div>
-                <div class="session-progress-legend"><span><i class="is-complete"></i>Complete</span><span><i class="is-ongoing"></i>Ongoing</span><span><i></i>Not complete</span></div>
+                <div class="achievements-grid" data-achievements-grid></div>
             </div>
         </div>
     </div>
 </section>
 
 {{ student_session_progress|default:"[]"|json_script:"student-session-progress" }}
+{{ student_current_prescribed_activity|json_script:"student-current-prescribed-activity" }}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const dataNode = document.getElementById('student-session-progress');
@@ -3176,9 +3126,9 @@
         let sessions = [];
         try { sessions = JSON.parse(dataNode.textContent || '[]') || []; } catch (_) { sessions = []; }
         const coordinates = [
-            [100, 40], [300, 40], [500, 40], [700, 40], [900, 40],
-            [900, 120], [700, 120], [500, 120], [300, 120], [100, 120],
-            [100, 200], [300, 200], [500, 200], [700, 200], [900, 200],
+            [100, 45], [300, 45], [500, 45], [700, 45], [900, 45],
+            [900, 162], [700, 162], [500, 162], [300, 162], [100, 162],
+            [100, 280], [300, 280], [500, 280], [700, 280], [900, 280],
         ];
         const completedCount = sessions.filter(session => Number(session.total) > 0 && Number(session.completed) >= Number(session.total)).length;
         const currentSession = sessions.find(session => {
@@ -3298,7 +3248,7 @@
             const point = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             point.setAttribute('cx', x);
             point.setAttribute('cy', y);
-            point.setAttribute('r', '15');
+            point.setAttribute('r', '18');
             point.classList.add('session-progress-point');
             if (total > 0 && completed >= total) point.classList.add('is-complete');
             else if (completed > 0) point.classList.add('is-partial');
@@ -3308,7 +3258,7 @@
             pointsGroup.appendChild(point);
             const number = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             number.setAttribute('x', x);
-            number.setAttribute('y', y + 6);
+            number.setAttribute('y', y + 7);
             number.classList.add('session-progress-number');
             if (total > 0 && completed >= total) number.classList.add('is-complete');
             number.textContent = session.session;
@@ -3342,7 +3292,7 @@
                 <div class="student-calendar-expanded-head">
                     <div class="student-calendar-expanded-meta">
                         <span class="student-calendar-kicker">PABASA · Bawat araw, may bagong saya!</span>
-                        <h2 class="mb-0" id="studentCalendarModalLabel"><span aria-hidden="true">🗓️</span> Aking Kalendaryo</h2>
+                        <h2 class="mb-0" id="studentCalendarModalLabel"><i class="bi bi-calendar3 student-calendar-title-icon" aria-hidden="true"></i> Aking Kalendaryo</h2>
                     </div>
                     <button type="button" class="student-calendar-close-btn" data-bs-dismiss="modal" aria-label="Isara ang kalendaryo"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
                 </div>
@@ -3359,15 +3309,15 @@
                         <div class="student-calendar-expanded-calendar" data-student-calendar-expanded></div>
                         <p class="student-calendar-selection-hint"><i class="bi bi-hand-index-thumb" aria-hidden="true"></i> Pindutin ang araw para makita ang mga gawain.</p>
                         <div class="student-calendar-mini-legend" aria-label="Mga uri ng gawain">
-                            <span data-calendar-kind="assessment">📖 Pagsusulit</span>
-                            <span data-calendar-kind="aral">📚 ARAL</span>
-                            <span data-calendar-kind="holiday">🎉 Holiday</span>
-                            <span data-calendar-kind="opening">🌟 Opening Block</span>
-                            <span data-calendar-kind="closing">🔒 Closing Block</span>
+                            <span data-calendar-kind="assessment"><i class="bi bi-journal-check" aria-hidden="true"></i> Pagsusulit</span>
+                            <span data-calendar-kind="aral"><i class="bi bi-book" aria-hidden="true"></i> ARAL</span>
+                            <span data-calendar-kind="holiday"><i class="bi bi-stars" aria-hidden="true"></i> Holiday</span>
+                            <span data-calendar-kind="opening"><i class="bi bi-sun" aria-hidden="true"></i> Opening Block</span>
+                            <span data-calendar-kind="closing"><i class="bi bi-lock" aria-hidden="true"></i> Closing Block</span>
                         </div>
                     </section>
                     <section class="student-calendar-day-details" aria-labelledby="studentCalendarDetailsHeading" aria-live="polite" aria-atomic="true">
-                        <span class="student-calendar-detail-badge" aria-hidden="true">✨</span>
+                        <span class="student-calendar-detail-badge" aria-hidden="true"><i class="bi bi-calendar-event"></i></span>
                         <h3 id="studentCalendarDetailsHeading">Mga Gawain sa Araw na Ito</h3>
                         <p id="studentCalendarSelectedDate"></p>
                         <div data-student-calendar-details></div>
@@ -3436,6 +3386,7 @@
     window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
     window.PABASA_DASHBOARD_GREETING_NAME = "{{ dashboard_greeting_name|default:'Student'|escapejs }}";
     window.PABASA_STUDENT_READING_LEVEL = "{{ student_reading_level|default:'Pending'|escapejs }}";
+    window.PABASA_STUDENT_LEARNING_STATE = "{{ student_learning_state|default:'CRLA_PENDING'|escapejs }}";
     window.PABASA_STUDENT_CALENDAR_EVENTS = {{ student_calendar_events_json|default:"[]"|safe }};
 </script>
 
@@ -3744,12 +3695,12 @@
         // the server's values. Expand ranges with the original weekday rule.
         const expandedEventStyle = (event) => {
             const type = event.event_type;
-            if (['pre_assessment', 'midline_assessment', 'post_assessment', 'examination'].includes(type)) return {kind: 'assessment', icon: '📖', label: 'Pagsusulit', priority: 0};
-            if (type === 'holiday') return {kind: 'holiday', icon: '🎉', label: 'Holiday', priority: 1};
-            if (['school_closing', 'end_of_classes'].includes(type)) return {kind: 'closing', icon: '🔒', label: 'Pagtatapos', priority: 2};
-            if (['school_opening', 'start_of_classes'].includes(type)) return {kind: 'opening', icon: '🌟', label: 'Simula', priority: 3};
-            if (['aral_1', 'aral_2', 'aral_schedule'].includes(type)) return {kind: 'aral', icon: '📚', label: 'ARAL', priority: 4};
-            return {kind: 'other', icon: '🗓️', label: 'Gawain', priority: 5};
+            if (['pre_assessment', 'midline_assessment', 'post_assessment', 'examination'].includes(type)) return {kind: 'assessment', icon: 'bi-journal-check', label: 'Pagsusulit', priority: 0};
+            if (type === 'holiday') return {kind: 'holiday', icon: 'bi-stars', label: 'Holiday', priority: 1};
+            if (['school_closing', 'end_of_classes'].includes(type)) return {kind: 'closing', icon: 'bi-lock', label: 'Pagtatapos', priority: 2};
+            if (['school_opening', 'start_of_classes'].includes(type)) return {kind: 'opening', icon: 'bi-sun', label: 'Simula', priority: 3};
+            if (['aral_1', 'aral_2', 'aral_schedule'].includes(type)) return {kind: 'aral', icon: 'bi-book', label: 'ARAL', priority: 4};
+            return {kind: 'other', icon: 'bi-calendar3', label: 'Gawain', priority: 5};
         };
         const expandedEventsForDay = (day) => studentCalendarEvents.filter((event) => {
             const start = parseIsoDate(event.start_date || event.start);
@@ -3764,9 +3715,9 @@
             const events = expandedEventsForDay(selectedCalendarDate);
             details.innerHTML = events.length ? events.map(event => {
                 const style = expandedEventStyle(event);
-                return '<article class="student-calendar-detail-card" data-calendar-kind="'+style.kind+'"><span class="student-calendar-detail-icon" aria-hidden="true">'+style.icon+'</span><div><strong>'+escapeHtml(event.title || style.label)+'</strong>'
+                return '<article class="student-calendar-detail-card" data-calendar-kind="'+style.kind+'"><i class="bi '+style.icon+' student-calendar-detail-icon" aria-hidden="true"></i><div><strong>'+escapeHtml(event.title || style.label)+'</strong>'
                     +(event.description ? '<p>'+escapeHtml(event.description)+'</p>' : '')+'</div></article>';
-            }).join('') : '<p class="student-calendar-no-events"><span aria-hidden="true">🌈</span><br>Walang nakatakdang gawain sa araw na ito!</p>';
+            }).join('') : '<p class="student-calendar-no-events"><i class="bi bi-calendar-x" aria-hidden="true"></i><br>Walang nakatakdang gawain sa araw na ito!</p>';
         };
         const renderExpandedCalendar = (date) => {
             if (!studentCalendarExpanded) return;
@@ -3786,7 +3737,7 @@
                 const dateLabel = new Intl.DateTimeFormat('fil-PH', {month: 'long', day: 'numeric', year: 'numeric'}).format(day);
                 const accessibleLabel = dateLabel+(today ? ', ngayon' : '')+', '+(events.length ? events.length+' nakatakdang gawain: '+events.map(event => event.title || expandedEventStyle(event).label).join('; ') : 'walang nakatakdang gawain');
                 html += '<button type="button" class="student-calendar-date '+(day.getMonth() !== date.getMonth() ? 'is-adjacent ' : '')+(today ? 'is-today ' : '')+(selected ? 'is-selected' : '')+'" data-calendar-date="'+iso+'" tabindex="'+(selected ? '0' : '-1')+'" aria-pressed="'+selected+'"'+(today ? ' aria-current="date"' : '')+' aria-label="'+escapeHtml(accessibleLabel).replace(/"/g, '&quot;')+'"><span class="student-calendar-date-number">'+day.getDate()+'</span>';
-                if (primary) html += '<span class="student-calendar-day-event" data-calendar-kind="'+style.kind+'" aria-hidden="true"><span>'+style.icon+'</span><span class="student-calendar-day-event-label">'+style.label+'</span></span>';
+                if (primary) html += '<span class="student-calendar-day-event" data-calendar-kind="'+style.kind+'" aria-hidden="true"><i class="bi '+style.icon+' student-calendar-day-event-icon"></i><span class="student-calendar-day-event-label">'+style.label+'</span></span>';
                 if (events.length > 1) html += '<span class="student-calendar-more" aria-hidden="true">+'+(events.length - 1)+' pa</span>';
                 html += '</button>';
             }
@@ -4137,7 +4088,7 @@
 
             // Show layout when classes exist
             const isJoined = getSavedCodes().length > 0;
-            mainLayout.style.display = isJoined ? 'grid' : 'none';
+            mainLayout.style.display = isJoined ? '' : 'none';
         };
 
         // Fetch class details from database API instead of localStorage
@@ -4169,6 +4120,17 @@
             }
         };
 
+
+        const renderLearningCard = ({kind, icon, title, status, meta, activityTitle, href, action}) => {
+            const stateClass = status === 'Tapos na' ? ' is-complete' : status === 'Naghihintay' ? ' is-pending' : '';
+            const tag = href ? 'a' : 'section';
+            return `<${tag} class="class-learning-card${kind === 'supplementary' ? ' is-supplementary' : ''}${href ? ' class-learning-card-link' : ''}"${href ? ` href="${escapeHtml(href)}"` : ` aria-label="${title}"`}>
+                <div class="class-learning-top"><span class="class-learning-icon" aria-hidden="true"><i class="bi ${icon}"></i></span><strong class="class-learning-title">${title}</strong><span class="class-learning-status${stateClass}">${status}</span></div>
+                ${meta ? `<span class="class-learning-meta">${escapeHtml(meta)}</span>` : ''}
+                <strong class="class-learning-activity-title">${escapeHtml(activityTitle)}</strong>
+                ${href ? `<span class="class-learning-action"><span>${action}</span><i class="bi bi-arrow-right-circle-fill" aria-hidden="true"></i></span>` : ''}
+            </${tag}>`;
+        };
 
         const renderClassCards = async (codes) => {
             const renderClassCardsStart = performance.now();
@@ -4272,13 +4234,57 @@
                 })
                 .filter(Boolean);
 
+            const learningState = window.PABASA_STUDENT_LEARNING_STATE;
+            let currentPrescribed = null;
+            try { currentPrescribed = JSON.parse(document.getElementById('student-current-prescribed-activity')?.textContent || 'null'); } catch (_) {}
+            const supplementaryBySection = new Map();
+            if (learningState === 'ARAL_ACTIVE' && window.PabasaMaterials?.load) {
+                await Promise.all(validClasses.filter(classData => !classData.removedByTeacher).map(async classData => {
+                    const sectionId = String(classData.section_id || classData.id || '');
+                    try {
+                        const payload = await window.PabasaMaterials.load(sectionId, {view: 'summary'});
+                        const unique = new Map();
+                        Object.values(payload.materials || {}).flat().forEach(material => {
+                            if (material?.record_kind === 'material') {
+                                unique.set(String(material.raw_id || material.id), material);
+                            }
+                        });
+                        supplementaryBySection.set(sectionId, [...unique.values()]);
+                    } catch (error) {
+                        console.error('Unable to load supplementary activities:', error);
+                        supplementaryBySection.set(sectionId, null);
+                    }
+                }));
+            }
+
             if (validClasses.length !== codes.length) {
                 saveCodes(validClasses.map((classData) => String(classData.section_id || classData.id || '')).filter(Boolean));
             }
 
             showJoinedLearningContext(validClasses);
 
-            classList.innerHTML = validClasses.map((classData) => `
+            classList.innerHTML = validClasses.map((classData) => {
+                const sectionId = String(classData.section_id || classData.id || '');
+                const activeAral = learningState === 'ARAL_ACTIVE' && classData.officialCrlaCompleted && classData.aralEligible && !classData.removedByTeacher;
+                const supplementary = supplementaryBySection.get(sectionId);
+                const orderedSupplementary = Array.isArray(supplementary) ? [...supplementary].sort((a, b) => {
+                    const week = item => Number.parseInt(item.assigned_week, 10) || Number.MAX_SAFE_INTEGER;
+                    return week(a) - week(b) || String(b.created_at || '').localeCompare(String(a.created_at || ''));
+                }) : [];
+                const nextSupplementary = orderedSupplementary.find(item => !item.student_has_completed && item.student_access && item.launch_url)
+                    || orderedSupplementary.find(item => !item.student_has_completed)
+                    || orderedSupplementary.at(-1);
+                const supplementaryAvailable = Boolean(nextSupplementary && !nextSupplementary.student_has_completed && nextSupplementary.student_access && nextSupplementary.launch_url);
+                const pendingDetail = learningState === 'CRLA_PENDING' ? 'Tapusin muna ang pagsusuri sa pagbasa.' : 'Hindi pa bukas ang mga gawain sa term na ito.';
+                const prescribedMeta = currentPrescribed && !currentPrescribed.completed
+                    ? `Session ${currentPrescribed.session} · Lesson ${currentPrescribed.lesson} · Gawain ${currentPrescribed.gawain}` : '';
+                const prescribedCard = activeAral
+                    ? renderLearningCard({kind: 'prescribed', icon: 'bi-book', title: 'Aking Aralin', status: currentPrescribed?.completed ? 'Tapos na' : currentPrescribed?.waiting_for_teacher ? 'Naghihintay' : currentPrescribed?.url ? currentPrescribed.started ? 'May progreso' : 'Handa na' : 'Wala pa', meta: prescribedMeta, activityTitle: currentPrescribed?.completed ? 'Natapos mo na ang mga aralin sa term na ito.' : currentPrescribed?.title || 'Wala pang mabubuksang aralin.', href: currentPrescribed?.url || '', action: currentPrescribed?.started ? 'Ipagpatuloy ang Aralin' : 'Simulan ang Aralin'})
+                    : renderLearningCard({kind: 'prescribed', icon: 'bi-book', title: 'Aking Aralin', status: 'Naghihintay', activityTitle: pendingDetail});
+                const supplementaryCard = activeAral
+                    ? renderLearningCard({kind: 'supplementary', icon: 'bi-pencil-square', title: 'Dagdag Pagsasanay', status: nextSupplementary?.student_has_completed ? 'Tapos na' : supplementaryAvailable ? Number(nextSupplementary.attempt_count) > 0 ? 'May progreso' : 'Handa na' : nextSupplementary ? 'Naghihintay' : 'Wala pa', meta: nextSupplementary?.assigned_week_display || '', activityTitle: nextSupplementary?.title || (supplementary === null || supplementary === undefined ? 'Subukan muli mamaya.' : 'Wala pang nakatalagang pagsasanay.'), href: supplementaryAvailable ? nextSupplementary.launch_url : '', action: Number(nextSupplementary?.attempt_count) > 0 ? 'Ipagpatuloy ang Pagsasanay' : 'Simulan ang Pagsasanay'})
+                    : renderLearningCard({kind: 'supplementary', icon: 'bi-pencil-square', title: 'Dagdag Pagsasanay', status: 'Naghihintay', activityTitle: pendingDetail});
+                return `
                 <article class="class-card${(classData.progress || 0) < 100 && (classData.practiceCount || classData.assessmentCount) ? ' is-ready' : ''}${classData.currentLesson ? ' has-current-lesson' : ''}" data-class-card data-completed-crla="${classData.officialCrlaCompleted ? 'true' : 'false'}" data-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-class-card-code="${escapeHtml(classData.code)}">
                     <div class="class-card-bg-icon">
                         <i class="bi ${
@@ -4289,41 +4295,26 @@
                     </div>
                     <div class="class-card-summary">
                         <div class="class-card-class-info">
-                            <span class="class-card-eyebrow">Class</span>
-                            <h3>${escapeHtml(classData.name || "Reading Class")}</h3>
+                            <div class="class-card-class-heading">
+                                <span class="class-card-class-icon" aria-hidden="true"><i class="bi bi-easel2-fill"></i></span>
+                                <div class="class-card-class-title">
+                                    <span class="class-card-eyebrow">Class</span>
+                                    <h3>${escapeHtml(classData.name || "Reading Class")}</h3>
+                                </div>
+                            </div>
                             <div class="class-card-teacher">
                                 <span class="class-card-teacher-icon" aria-hidden="true"><i class="bi bi-person-fill"></i></span>
                                 <span><small>Teacher</small><strong>${escapeHtml(classData.teacher || classData.teacher_name || classData.teacherName || "Your teacher")}</strong></span>
                             </div>
                         </div>
                         <div class="class-card-reading-info">
-                            <span class="class-card-reading-icon" aria-hidden="true"><i class="bi bi-bar-chart-fill"></i></span>
+                            <span class="class-card-reading-icon" aria-hidden="true"><i class="bi bi-book-half"></i></span>
                             <span><small>Reading Level</small><span class="reading-level-badge" data-reading-level>${escapeHtml(window.PABASA_STUDENT_READING_LEVEL || 'Pending')}</span></span>
                         </div>
                     </div>
                     <div class="class-card-activity">
-                        ${classData.assessmentWeekEnabled ? `
-                        <div class="alert alert-warning py-2 px-3 mb-2 small" role="status">
-                            <i class="bi bi-clipboard2-check me-1"></i><strong>Assessment Week</strong> is ON. Your teacher will make the assessment available when ready.
-                        </div>
-                        ` : ''}
-                        ${classData.officialCrlaCompleted && classData.aralEligible && classData.currentAralWeek ? `
-                        <div class="class-card-activity-head">
-                            <span class="class-card-activity-icon" aria-hidden="true"><i class="bi bi-book-fill"></i></span>
-                            <span class="class-card-activity-copy"><small>Current Activity</small><strong>ARAL Reading Practice</strong><span>Week ${escapeHtml(classData.currentAralWeek)}</span></span>
-                            <span class="class-card-activity-state"><i class="bi bi-circle"></i>${classData.aralWeekTotal > 0 && classData.aralWeekCompleted >= classData.aralWeekTotal ? 'Completed' : classData.aralWeekCompleted > 0 ? 'In Progress' : 'Not Started'}</span>
-                        </div>
-                        <div class="class-card-progress-copy">${classData.aralWeekCompleted} of ${classData.aralWeekTotal} completed</div>
-                        <div class="aral-week-card" data-aral-week-card>
-                            <span class="aral-week-icon" aria-hidden="true"><i class="bi bi-file-earmark-text"></i></span>
-                            <span class="aral-week-copy"><strong>Week ${escapeHtml(classData.currentAralWeek)}</strong><span>${classData.aralWeekTotal === 0 ? 'No activity available yet.' : classData.aralWeekCompleted >= classData.aralWeekTotal ? 'Week completed!' : classData.aralWeekCompleted > 0 ? 'Keep going!' : 'Your activities are ready!'}</span></span>
-                            <div class="class-card-actions">
-                                <button class="continue-learning-btn" type="button" data-open-aral-week data-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-aral-week="${escapeHtml(classData.currentAralWeek)}">
-                                    <span>${classData.aralWeekTotal > 0 && classData.aralWeekCompleted >= classData.aralWeekTotal ? 'Review This Week' : classData.aralWeekCompleted > 0 ? "Continue This Week's Activities" : "Start This Week's Activities"}</span>
-                                </button>
-                            </div>
-                        </div>
-                        ` : ''}
+                        <h4 class="class-learning-heading">Mga Gawain Ko</h4>
+                        ${learningState === 'GRADE_LEVEL' ? `<div class="class-learning-note" role="status"><i class="bi bi-mortarboard-fill me-1" aria-hidden="true"></i> Mahusay! Nasa Grade Level ka na. Wala kang ARAL na kailangang gawin ngayon.</div>` : classData.removedByTeacher ? '' : prescribedCard + supplementaryCard}
                         ${classData.removedByTeacher ? `
                             <div class="mt-3 alert alert-warning d-flex justify-content-between align-items-center" role="alert">
                                 <div>
@@ -4335,14 +4326,11 @@
                                 </div>
                             </div>
                         ` : ''}
-                        ${!classData.officialCrlaCompleted ? `<div class="class-card-actions">
-                            <button class="continue-learning-btn" type="button" data-continue-learning data-section-id="${escapeHtml(classData.section_id || classData.id || '')}" data-class-code="${escapeHtml(classData.code)}">
-                                <span>${classData.assessmentWeekEnabled ? 'Open Assessment' : 'Continue Learning'}</span>
-                            </button>
-                        </div>` : ''}
+                        ${learningState === 'CRLA_PENDING' && !classData.removedByTeacher ? `<button class="class-learning-action" type="button" data-continue-learning data-section-id="${escapeHtml(sectionId)}" data-class-code="${escapeHtml(classData.code)}"><span>${classData.assessmentWeekEnabled ? 'Buksan ang Pagsusuri' : 'Ipagpatuloy ang Pagsusuri'}</span><i class="bi bi-arrow-right-circle-fill" aria-hidden="true"></i></button>` : ''}
                     </div>
                 </article>
-            `).join("");
+            `;
+            }).join("");
 
             // Attach handlers for Remove buttons on classes removed by their teacher
             classList.querySelectorAll('.remove-deleted-class-btn').forEach(function(btn) {
@@ -4581,19 +4569,6 @@
                 return;
             }
 
-            const aralWeekButton = event.target.closest("[data-open-aral-week]");
-            if (aralWeekButton) {
-                event.stopPropagation();
-                const sectionId = aralWeekButton.dataset.sectionId;
-                const week = aralWeekButton.dataset.aralWeek;
-                if (sectionId && week) {
-                    // The assessment hub owns the established ARAL week-folder
-                    // UI.  Supplying week selects and opens that exact folder.
-                    window.location.href = `{% url 'assessment' %}?section_id=${encodeURIComponent(sectionId)}&week=${encodeURIComponent(week)}`;
-                }
-                return;
-            }
-
             const continueButton = event.target.closest("[data-continue-learning]");
             if (continueButton) {
                 event.stopPropagation();
@@ -4604,8 +4579,8 @@
                 return;
             }
 
-            // Class details are informational. Navigation is intentionally
-            // limited to the explicit action buttons above.
+            // Class details are informational; the learning cards use their
+            // own native links and do not need a second click handler.
             if (event.target.closest("[data-class-card]")) {
                 return;
             }

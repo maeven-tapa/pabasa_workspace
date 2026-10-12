@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.core.files.uploadedfile import SimpleUploadedFile
 
+from .class_materials import supplementary_launch_url
 from .models import Assessment, CalendarEvent, Material, SchoolCalendar, Section, StoryReadingProgress, StoryResponseSubmission, SupplementaryMaterialPublication, SystemTimeOverride, User
 from .prescribed_test_fixtures import prescribed_term_fixture
 from .system_clock import invalidate_override_cache, now as system_now
@@ -15,6 +16,23 @@ from .views import _current_learning_context, _current_supplementary_scope, _sup
 
 
 class SupplementaryTermLifecycleTests(TestCase):
+    def test_dashboard_launch_url_uses_reader_route_and_respects_access(self):
+        item = {
+            'id': 'material-6', 'section_id': 4, 'title': 'Letter game',
+            'item_type': 'word', 'student_access': True,
+            'content_json': {'template_title': 'Letter Sound Matching'},
+        }
+        self.assertEqual(
+            supplementary_launch_url(item, 'word'),
+            f"{reverse('letter_sound_matching_page')}?id=material-6&section_id=4",
+        )
+        item['student_access'] = False
+        self.assertEqual(supplementary_launch_url(item, 'word'), '')
+        item['student_access'] = True
+        item['content_json'] = {'activity_type': 'story_response'}
+        item['story_response_submitted'] = True
+        self.assertEqual(supplementary_launch_url(item, 'paragraph'), '')
+
     def setUp(self):
         self.today = timezone.localdate()
         from .models import School

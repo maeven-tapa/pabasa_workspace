@@ -1,9 +1,12 @@
 """Request-local data for class listings; never caches one student's progress globally."""
 
 from collections import defaultdict
+import re
+from urllib.parse import urlencode
 
 from django.db.models import F, Window
 from django.db.models.functions import RowNumber
+from django.urls import reverse
 
 from .models import Assessment, Enrollment, StoryResponseSubmission
 
@@ -26,6 +29,76 @@ def listing_summary(item, *, kind):
             key: value for key, value in content.items() if key in SUMMARY_CONTENT_KEYS
         }
     return compact
+
+
+def supplementary_launch_url(item, category):
+    """Resolve the same existing reader destinations used by assessment cards."""
+    if not item.get('student_access'):
+        return ''
+    content = item.get('content_json') or {}
+    if not isinstance(content, dict):
+        content = {}
+    if content.get('activity_type') == 'story_response' and item.get('story_response_submitted') and not item.get('student_has_completed'):
+        return ''
+    material_id = str(item.get('id') or '')
+    section_id = str(item.get('section_id') or '')
+    if not material_id or not section_id:
+        return ''
+    markers = [item.get('title'), item.get('template_title'), item.get('template_type'),
+               content.get('template_title'), content.get('template_lesson'),
+               content.get('template_type'), content.get('activity_type')]
+    normalized = {
+        re.sub(r'[^a-z0-9]+', '_', str(value or '').strip().lower()).strip('_')
+        for value in markers
+    }
+    source_type = str(item.get('source_type') or '').lower()
+    activity_key = str(content.get('activity_key') or '')
+    slug = str(content.get('activity_slug') or '')
+    route = None
+    params = {'id': material_id, 'section_id': section_id}
+    if activity_key in {'word_meaning_match', 'fluency_reading'}:
+        route = ('aral_template_activity_page', {'activity_slug': activity_key.replace('_', '-')})
+    elif (source_type == 'template' and item.get('assessment_kind', 'regular') == 'regular'
+          and ('sentence_reading' in normalized or 'sentence_reading_practice' in normalized)):
+        route = ('sentence_bot_page', None)
+    elif 'phrase_reading' in normalized or 'phrase_reading_practice' in normalized:
+        route = ('phrase_reading_page', None)
+    elif content.get('activity_type') == 'story_response':
+        route = ('story_response_page', None)
+    elif content.get('template_title') == "5W's Story Questions":
+        route = ('story_call_page', None)
+        params['id'] = str(content.get('sourceMaterialId') or '')
+        if not params['id']:
+            return ''
+    elif 'story_reading' in normalized:
+        route = ('story_reading_page', None)
+        params['return_to'] = 'reading_assessment'
+    elif 'clap_count_syllables' in normalized:
+        route = ('clap_count_syllables_page', None)
+    elif 'sound_detective' in normalized:
+        route = ('sound_detective_page', None)
+    elif 'letter_sound_matching' in normalized:
+        route = ('letter_sound_matching_page', None)
+    elif slug == 'letter-sound-correspondence':
+        route = ('letter_sound_correspondence_page', None)
+    elif slug == 'word-decoding':
+        route = ('word_decoding_page', None)
+    elif 'syllable_blending' in normalized or 'blend_the_syllables' in normalized:
+        route = ('syllable_blending_page', None)
+    elif 'picture_word_matching' in normalized:
+        route = ('picture_word_matching_page', None)
+    else:
+        route_names = {'word': 'reading_word_page', 'sentence': 'reading_sentence_page',
+                       'paragraph': 'reading_para_page', 'vowel': 'reading_vowel_page'}
+        route_name = route_names.get(category)
+        if not route_name:
+            return ''
+        route = (route_name, None)
+        params.update(test=item.get('title') or '', content=item.get('content') or '',
+                      item_type=item.get('item_type') or category,
+                      language=item.get('language') or '')
+    route_name, kwargs = route
+    return f"{reverse(route_name, kwargs=kwargs)}?{urlencode(params)}"
 
 
 class ClassMaterialsProgress:
