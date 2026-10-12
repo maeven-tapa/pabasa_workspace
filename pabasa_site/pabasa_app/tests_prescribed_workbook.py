@@ -1499,6 +1499,80 @@ class TeacherSession89IntegrationTests(TestCase):
         session.update({'user_id': user.pk, 'user_role': user.role, 'email': user.email})
         session.save()
 
+    def _create_legacy_progress(self, activity_key):
+        progress = StudentActivityProgress.objects.create(
+            student=self.student,
+            activity_key=activity_key,
+            current_index=4,
+            completed_items=4,
+            correct_items=4,
+            total_items=5,
+            state={'revision': 77, 'completed_words': [4]},
+        )
+        # Emulate a legacy row that is not scoped to the student's active term.
+        StudentActivityProgress.objects.filter(pk=progress.pk).update(school_calendar=None, term=None)
+        return progress
+
+    def test_teacher_preview_can_use_legacy_progress_fallback(self):
+        key = 'aral-l23-g7-q-word-reading'
+        self._create_legacy_progress(key)
+        self.student.school_calendar = None
+        self.student.save(update_fields=['school_calendar', 'updated_at'])
+        self.set_session(self.teacher)
+
+        with patch('pabasa_app.views._current_learning_context', return_value={}):
+            response = self.client.get(
+                reverse('prescribed_activity_page', kwargs={'activity_key': key}),
+                {'preview': '1', 'student_id': self.student.pk},
+            )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.context['workbook_payload']
+        self.assertTrue(payload['preview'])
+        self.assertEqual(payload['state']['revision'], 77)
+        self.assertEqual(payload['state']['completed_words'], [4])
+
+    @patch('pabasa_app.views._student_can_open_prescribed_activity', return_value=True)
+    def test_student_access_does_not_restore_legacy_progress_from_another_term(self, _open):
+        key = 'aral-l23-g7-q-word-reading'
+        self._create_legacy_progress(key)
+        self.set_session(self.student)
+
+        response = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': key}))
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.context['workbook_payload']
+        self.assertFalse(payload['preview'])
+        self.assertNotEqual(payload['state'].get('revision'), 77)
+        self.assertNotIn(4, payload['state'].get('completed_words', []))
+
+    def test_teacher_preview_requires_authorization_and_is_view_only(self):
+        outsider = User.objects.create(
+            custom_id='TR-OUTSIDER-PREVIEW', role='teacher', first_name='Other', last_name='Teacher',
+            email='other-preview@example.com', password_hash='test', sex='N/A', birth_month=1,
+            birth_day=1, birth_year=1990, school_record=self.student.school_record,
+        )
+        self.set_session(outsider)
+        denied = self.client.get(
+            reverse('prescribed_activity_page', kwargs={'activity_key': 'aral-l23-g7-q-word-reading'}),
+            {'preview': '1', 'student_id': self.student.pk},
+        )
+        self.assertEqual(denied.status_code, 403)
+
+        self.set_session(self.teacher)
+        preview = self.client.get(
+            reverse('prescribed_activity_page', kwargs={'activity_key': 'aral-l23-g7-q-word-reading'}),
+            {'preview': '1', 'student_id': self.student.pk},
+        )
+        self.assertEqual(preview.status_code, 200, preview.content)
+        self.assertTrue(preview.context['workbook_payload']['preview'])
+        invalid_review = self.client.post(
+            reverse('teacher_prescribed_review_action'),
+            json.dumps({'student_id': self.student.pk, 'activity_key': 'aral-l23-g7-q-word-reading', 'action': 'complete'}),
+            content_type='application/json',
+        )
+        self.assertEqual(invalid_review.status_code, 400)
+
     def test_teacher_session8_progress_is_read_only_and_activity_scoped(self):
         self.set_session(self.teacher)
         page = self.client.get(reverse('teacher_prescribed_review_page'))

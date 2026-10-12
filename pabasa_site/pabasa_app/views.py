@@ -14803,7 +14803,7 @@ def prescribed_activity_page(request, activity_key):
                 return redirect('assessment')
         lifecycle = _current_learning_context(student) if student else None
         progress = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first() if student and lifecycle.get('term') in (1, 2, 3) else None
-        if student and not progress:
+        if student and (preview or admin_preview) and not progress:
             progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).order_by('-updated_at', '-id').first()
         state = progress.state if progress and isinstance(progress.state, dict) else (
             initial_l22_g2_state() if activity_key == 'aral-l22-g2-c-word-reading' else
