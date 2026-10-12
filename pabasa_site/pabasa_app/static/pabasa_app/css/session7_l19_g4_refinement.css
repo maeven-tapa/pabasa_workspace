@@ -343,3 +343,63 @@
  .session7-l19-g4 .slot, .session7-l19-g4 .tile { width:clamp(44px,11vw,58px) !important; height:clamp(50px,12vw,64px) !important; }
  .session7-l19-g4 .step-progress-label { font-size:.82rem; }
 }
+
+/* The shared Session 6–7 shell loads after this file. Keep this activity's
+   letter board and its actions within the laptop-height card. */
+@media (min-width: 821px) {
+  body.session67-activity.session7-l19-g4 .page {
+    padding: 12px 0 !important;
+  }
+
+  body.session67-activity.session7-l19-g4 .back {
+    min-height: 56px !important;
+  }
+
+  body.session67-activity.session7-l19-g4 .card {
+    margin-top: 12px !important;
+    padding: 14px clamp(22px, 4vw, 48px) !important;
+    overflow: auto !important;
+  }
+
+  body.session67-activity.session7-l19-g4 .eyebrow {
+    margin-bottom: 5px !important;
+    padding: 6px 20px !important;
+  }
+
+  body.session67-activity.session7-l19-g4 .instruction {
+    margin: 5px auto !important;
+  }
+
+  body.session67-activity.session7-l19-g4 .progress-row .track {
+    margin: 5px 0 7px !important;
+  }
+
+  body.session67-activity.session7-l19-g4 .picture {
+    width: min(400px, 100%) !important;
+    height: clamp(145px, 25dvh, 220px) !important;
+    margin: 7px auto !important;
+  }
+
+  body.session67-activity.session7-l19-g4 .board {
+    margin-top: 7px;
+    padding: 10px 14px;
+  }
+
+  body.session67-activity.session7-l19-g4 .board .slots {
+    margin-bottom: 6px !important;
+  }
+
+  body.session67-activity.session7-l19-g4 .slot,
+  body.session67-activity.session7-l19-g4 .tile {
+    width: clamp(48px, 6vw, 60px) !important;
+    height: clamp(52px, 7vh, 62px) !important;
+  }
+
+  body.session67-activity.session7-l19-g4 .letter-actions {
+    margin-top: 8px;
+  }
+
+  body.session67-activity.session7-l19-g4 .letter-actions .button {
+    min-height: 48px !important;
+  }
+}
