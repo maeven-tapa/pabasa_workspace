@@ -6,7 +6,7 @@
     const refinement = document.createElement('link');
     refinement.id = 'lesson29-activity3-refinement';
     refinement.rel = 'stylesheet';
-    refinement.href = '/static/pabasa_app/css/lesson29_activity3_refinement.css?v=lesson29-a3-ui-20';
+    refinement.href = '/static/pabasa_app/css/lesson29_activity3_refinement.css?v=lesson29-a3-ui-21';
     document.head.appendChild(refinement);
   }
   const data = JSON.parse(node.textContent || '{}'), total = data.items?.length || 0;
@@ -30,7 +30,7 @@
     const controls = tracing ? `<div class="board"><span class="trace-model" aria-hidden="true">${esc(item.letter)}</span><canvas id="trace-board" aria-label="Trace ${esc(item.letter)}"></canvas></div><p class="trace-count" id="trace-count" aria-live="polite">0 of 2 letters complete</p><div class="actions"><button class="button secondary" id="clear" type="button">Clear</button><button class="button" id="submit" type="button" disabled>Done tracing</button></div>` : recorded ? `<p class="status good">Your recording was saved.</p><div class="actions"><button class="button secondary" id="retry" type="button">Retry</button><button class="button" id="proceed" type="button">Submit</button></div>` : `<p class="status ${kind}" id="status">${esc(message || `Say the sound /${item.sound}/.`)}</p><div class="actions"><button data-basahin-button data-basahin-language="English" class="button" id="record" type="button">Record my sound</button><button class="button secondary" id="listen" type="button">🔊 Listen</button></div>`;
     const decisionPrompt = recorded ? '<p class="retry-proceed-prompt">Do you want to retry or proceed to the letter tracing?</p>' : '';
     const traceAttempt = Math.min(3, (state.traces?.length || 0) % 3 + 1);
-    app.innerHTML = `<div class="eyebrow">SESSION 13 · LESSON 29 · ACTIVITY 3</div><h1 class="title">Trace &amp; Say</h1><p class="instruction">${tracing ? 'Trace both letters.' : 'Read the letter sound aloud first.'}</p>${decisionPrompt}<p class="item-label">Letter ${state.current_item + 1} of ${total}${tracing ? ` · Trace ${traceAttempt} of 3` : ''}</p><div class="letter">${esc(item.letter)}</div>${controls}<p class="status ${tracing ? kind : ''}">${tracing ? esc(message || 'Write both letters, then tap Done tracing.') : ''}</p>${progress()}`;
+    app.innerHTML = `<div class="eyebrow">SESSION 13 · LESSON 29 · ACTIVITY 3</div><p class="instruction">${tracing ? 'Trace both letters.' : 'Read the letter sound aloud first.'}</p>${decisionPrompt}<p class="item-label">Letter ${state.current_item + 1} of ${total}${tracing ? ` · Trace ${traceAttempt} of 3` : ''}</p><div class="letter">${esc(item.letter)}</div>${controls}<p class="status ${tracing ? kind : ''}">${tracing ? esc(message || 'Write both letters, then tap Done tracing.') : ''}</p>${progress()}`;
     if (tracing) { if (!strokes.length && state.draft_item === state.current_item) strokes = state.draft_strokes.map(stroke => stroke.map(point => ({...point}))); setupCanvas(); }
     else if (recorded) { app.querySelector('#retry').onclick = retryRecording; app.querySelector('#proceed').onclick = proceedToTracing; playFile(retryPromptAudio); }
     else { window.Basahin.bindActivity(app.querySelector('#record'), record); app.querySelector('#listen').onclick = () => speak(item.sound); }

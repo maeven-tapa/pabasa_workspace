@@ -16,6 +16,7 @@ html body #app{width:min(100%,950px);max-height:100%}
 html body .eyebrow{margin:-8px auto 12px;padding:10px 30px;font-size:clamp(.85rem,1.4vw,1.15rem);letter-spacing:.02em}
 html body .title{font-size:clamp(2.05rem,3.8vw,3.35rem)}
 html body .instruction{margin:10px auto;font-size:clamp(1rem,1.5vw,1.25rem)}
+html body .instruction{color:var(--ink);font-size:clamp(1.45rem,2.3vw,2rem);line-height:1.35;font-weight:900}
 html body .retry-proceed-prompt{max-width:700px;margin:12px auto 14px;color:var(--ink)!important;font-size:clamp(1.15rem,1.95vw,1.55rem);font-weight:900;line-height:1.35;text-shadow:0 1px 0 #fff}
 html body .stage.is-tracing .board{position:relative;background:linear-gradient(#2b83bd,#2b83bd) 0 15%/100% 3px no-repeat,linear-gradient(#df5b62,#df5b62) 0 50%/100% 3px no-repeat,linear-gradient(#2b83bd,#2b83bd) 0 85%/100% 3px no-repeat,#fffffff0}
 html body .stage.is-tracing .trace-model{position:absolute;z-index:1;top:50%;left:50%;transform:translate(-50%,-50%);font-size:clamp(6.5rem,20vh,10rem);font-weight:900;line-height:.72;color:#398ac533;pointer-events:none}
