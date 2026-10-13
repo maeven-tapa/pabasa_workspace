@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django import forms
+from .account_defaults import default_student_password_hash
 from .models import (
 	User,
 	Section,
@@ -16,16 +18,57 @@ from .models import (
 )
 
 
+def _student_default_password_enabled():
+	from .models import OtpDebugSettings
+	return OtpDebugSettings.objects.filter(pk=1, disable_otp=True).exists()
+
+
 def all_model_fields(model):
 	return [f.name for f in model._meta.fields]
 
 
+class UserAdminForm(forms.ModelForm):
+	class Meta:
+		model = User
+		fields = '__all__'
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		if self.instance._state.adding:
+			self.fields['password_hash'].required = False
+
+	def clean(self):
+		data = super().clean()
+		if self.instance._state.adding:
+			debug_student = data.get('role') == 'student' and _student_default_password_enabled()
+			if not debug_student and not data.get('password_hash'):
+				self.add_error('password_hash', 'A password hash is required for this account.')
+			if data.get('role') == 'student' and not debug_student and not data.get('email'):
+				self.add_error('email', 'Email is required while OTP verification is enabled.')
+		return data
+
+
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
+	form = UserAdminForm
 	list_display = all_model_fields(User)
 	list_filter = ("role", "account_status", "is_archived", "sex", "created_at")
 	search_fields = ("custom_id", "first_name", "last_name", "email")
 	ordering = ("last_name", "first_name")
+
+	def save_model(self, request, obj, form, change):
+		if not change:
+			from .views import generate_custom_id, _generate_principal_custom_id
+			if obj.role == 'student' and _student_default_password_enabled():
+				obj.password_hash = default_student_password_hash()
+			if obj.role == 'principal':
+				obj.must_change_password = True
+			if not obj.custom_id:
+				if obj.role == 'principal':
+					obj.custom_id = _generate_principal_custom_id(obj.school_record.name if obj.school_record_id else (obj.school or 'School'))
+				else:
+					obj.custom_id = generate_custom_id(obj.role, obj.grade_level)
+		super().save_model(request, obj, form, change)
 
 
 # TeacherProfile and StudentProfile models not found in current models.py;

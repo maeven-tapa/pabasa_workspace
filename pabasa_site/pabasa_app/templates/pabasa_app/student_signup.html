@@ -237,6 +237,19 @@
         width: 100%;
     }
 
+    .signup-step > #studentChosenPasswordPanel,
+    .signup-step > #studentDebugPasswordPanel {
+        grid-column: 1 / -1;
+        min-width: 0;
+        width: 100%;
+        margin: 0;
+    }
+
+    #studentChosenPasswordPanel[hidden],
+    #studentDebugPasswordPanel[hidden] {
+        display: none !important;
+    }
+
     .signup-step > [class*="col-"] {
         width: 100%;
         max-width: 100%;
@@ -1189,6 +1202,7 @@
                     <p class="small" data-signup-login>Already have an account? <a href="{% url 'auth' %}">Login</a></p>
                 </div>
                 <form id="studentSignupForm" method="post" class="student-signup-form">
+                    <input type="hidden" name="signup_otp_disabled" value="{{ otp_debug_disabled|yesno:'true,false' }}">
                     {% csrf_token %}
                     <div class="col-12 signup-error-row">
                         <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
@@ -1260,8 +1274,9 @@
                     </div>
                     <div class="signup-step" data-signup-step="1">
                     <div class="col-md-6">
-                        <label class="form-label">Email address</label>
-                        <input class="form-control" type="email" name="email" placeholder="you@example.com" required>
+                        <label class="form-label" data-signup-email-label>Email address{% if otp_debug_disabled %} (optional){% endif %}</label>
+                        <input class="form-control" type="email" name="email" placeholder="you@example.com" {% if not otp_debug_disabled %}required{% endif %}>
+                        <p class="small text-muted mt-1 mb-0" data-signup-email-help>{% if otp_debug_disabled %}Leave blank to register without email. An email is needed for password recovery.{% else %}An email is required for OTP verification and password recovery.{% endif %}</p>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Contact number</label>
@@ -1282,6 +1297,7 @@
                     </div>
                     </div>
                     <div class="signup-step" data-signup-step="2">
+                        <div id="studentChosenPasswordPanel" class="row g-3" {% if otp_debug_disabled %}hidden{% endif %}>
                     <div class="col-md-6">
                         <label class="form-label">Password</label>
                         <div class="password-field">
@@ -1307,6 +1323,17 @@
                             </ul>
                         </div>
                     </div>
+                        </div>
+                        <div id="studentDebugPasswordPanel" {% if not otp_debug_disabled %}hidden{% endif %}>
+                        <div class="col-12">
+                            <div class="password-helper">
+                                <h2 class="h6">Your initial password</h2>
+                                <p class="mb-2">New student accounts start with this password:</p>
+                                <code class="fs-4" data-default-account-password>{{ default_account_password }}</code>
+                                <p class="small mt-2 mb-0">Use it with your generated PABASA ID to log in. You can change your password in Settings.</p>
+                            </div>
+                        </div>
+                        </div>
                     </div>
                     <div class="signup-step" data-signup-step="3">
                         <div class="col-12">
@@ -1320,7 +1347,7 @@
                                     <h3>1. Data We Collect</h3>
                                     <ul>
                                     <li><strong>Full Name</strong> — Displayed on your profile and used in reading assessment reports and account identification.</li>
-                                    <li><strong>Email Address</strong> — Used for account registration, login, verification, password recovery, and important account notifications.</li>
+                                    <li><strong>Email Address (optional)</strong> — If supplied, used for account registration, login, verification, password recovery, and important account notifications.</li>
                                     <li><strong>Password</strong> — Securely hashed before storage and never stored or displayed in plain text.</li>
                                     <li><strong>Contact Number</strong> — Used for account verification and important account-related notifications, when applicable.</li>
                                     <li><strong>School Information</strong> — Includes your school name and other relevant institutional details to associate your account with your educational institution and manage access within the platform.</li>
@@ -1381,9 +1408,9 @@
                     </div>
                 </form>
 
-                <div id="studentOtpLoading" class="account-loading-state d-none" aria-live="polite" aria-label="Sending OTP">
+                <div id="studentOtpLoading" class="account-loading-state d-none" aria-live="polite" aria-label="Submitting registration">
                     <div class="account-loading-spinner" role="status" aria-label="Loading"></div>
-                    <div class="account-loading-text">Sending OTP</div>
+                    <div class="account-loading-text">Submitting registration</div>
                 </div>
 
                 <div id="studentOtpStage" class="card mt-4 d-none">
@@ -1421,6 +1448,7 @@
                     <div class="registration-success__icon" aria-hidden="true"><i class="bi bi-check-lg"></i></div>
                     <h2 class="h4">Account Created Successfully!</h2>
                     <p>Your PABASA account is ready. Keep your PABASA ID for future logins.</p>
+                    <p data-student-default-password-note hidden>Your initial password is {{ default_account_password }}.</p>
                     <span class="small fw-bold text-uppercase">Generated PABASA ID</span>
                     <code data-pabasa-id-output></code>
                     <a class="btn btn-primary w-100 mt-3" href="{% url 'dashboard' %}" data-new-student-continue>Continue</a>
@@ -1467,18 +1495,24 @@
         const submitButton = form.querySelector("button[type='submit']");
         const nextStepBtn = document.getElementById("nextStepBtn");
         const backStepBtn = document.getElementById("backStepBtn");
+        let signupOtpDisabled = {{ otp_debug_disabled|yesno:"true,false" }};
         const formActions = form.querySelector(".form-actions");
         const steps = Array.from(form.querySelectorAll("[data-signup-step]")).sort((a, b) => Number(a.dataset.signupStep) - Number(b.dataset.signupStep));
         const stepStatus = document.querySelector("[data-step-status]");
         const signupTitle = document.querySelector("[data-signup-title]");
         const signupLogin = document.querySelector("[data-signup-login]");
-        const stepLabels = ["Personal", "School", "Password", "Privacy"];
-        let currentStep = 0;
-        const errorMessage = form.querySelector("#errorMessage");
         const passwordInput = form.elements.password;
         const confirmPasswordInput = form.elements.confirm_password;
         const passwordMatchError = form.querySelector("[data-password-match-error]");
         const passwordToggles = form.querySelectorAll("[data-password-toggle]");
+        const passwordRules = {
+            length: form.querySelector("[data-rule='length']"),
+            uppercase: form.querySelector("[data-rule='uppercase']"),
+            number: form.querySelector("[data-rule='number']"),
+        };
+        const stepLabels = ["Personal", "School", "Account", "Privacy"];
+        let currentStep = 0;
+        const errorMessage = form.querySelector("#errorMessage");
         const privacyConsentCheckbox = form.querySelector('input[name="privacy_consent"]');
         const sectionSelect = form.querySelector('#studentSection');
         const fixedStudentGradeLevel = 'Grade 2';
@@ -1561,11 +1595,6 @@
         }
         loadSections();
         
-        const passwordRules = {
-            length: form.querySelector("[data-rule='length']"),
-            uppercase: form.querySelector("[data-rule='uppercase']"),
-            number: form.querySelector("[data-rule='number']"),
-        };
 
         const setStep = (stepIndex) => {
             currentStep = Math.max(0, Math.min(stepIndex, steps.length - 1));
@@ -1626,14 +1655,14 @@
 
         const updateValidation = () => {
             const passwordState = getPasswordState();
-            const passwordIsValid = Object.values(passwordState).every(Boolean);
+            const passwordIsValid = signupOtpDisabled || Object.values(passwordState).every(Boolean);
 
             Object.entries(passwordState).forEach(([rule, isValid]) => {
                 passwordRules[rule].classList.toggle("is-valid", isValid);
             });
 
-            const hasConfirmValue = confirmPasswordInput.value.length > 0;
-            const isPasswordMatch = passwordsMatch();
+            const hasConfirmValue = !signupOtpDisabled && confirmPasswordInput.value.length > 0;
+            const isPasswordMatch = signupOtpDisabled || passwordsMatch();
             passwordMatchError.classList.toggle("is-visible", hasConfirmValue && !isPasswordMatch);
             
             confirmPasswordInput.setCustomValidity(!hasConfirmValue || isPasswordMatch ? "" : "Passwords must match.");
@@ -1679,8 +1708,8 @@
             const email = duplicateInputs.email.value.trim();
             const contact = duplicateInputs.contact.value.trim();
             duplicateState.pending = Boolean(email || contact);
-            if (!email && !contact) { duplicateState.email = duplicateState.contact = null; return true; }
             const requestId = ++duplicateState.requestId;
+            if (!email && !contact) { duplicateState.email = duplicateState.contact = null; updateValidation(); return true; }
             if (email) setDuplicateStatus('email', 'checking', 'Checking email address…'); else setDuplicateStatus('email', '');
             if (contact) setDuplicateStatus('contact', 'checking', 'Checking contact number…'); else setDuplicateStatus('contact', '');
             try {
@@ -1717,6 +1746,38 @@
             setStep(currentStep - 1);
         });
 
+        function applySignupPolicy(disabled) {
+            signupOtpDisabled = Boolean(disabled);
+            form.elements.signup_otp_disabled.value = String(signupOtpDisabled);
+            form.elements.email.required = !signupOtpDisabled;
+            form.querySelector('[data-signup-email-label]').textContent = signupOtpDisabled ? 'Email address (optional)' : 'Email address';
+            form.querySelector('[data-signup-email-help]').textContent = signupOtpDisabled ? 'Leave blank to register without email. An email is needed for password recovery.' : 'An email is required for OTP verification and password recovery.';
+            document.getElementById('studentChosenPasswordPanel').hidden = signupOtpDisabled;
+            document.getElementById('studentDebugPasswordPanel').hidden = !signupOtpDisabled;
+            for (const input of [passwordInput, confirmPasswordInput]) {
+                input.disabled = signupOtpDisabled;
+                input.required = !signupOtpDisabled;
+                if (signupOtpDisabled) input.setCustomValidity('');
+            }
+            stepLabels[2] = signupOtpDisabled ? 'Account' : 'Password';
+            updateValidation();
+        }
+
+        function showRegistrationComplete(data) {
+            result.querySelector("[data-student-default-password-note]").hidden = !data.otp_disabled;
+            otpLoading.classList.add("d-none");
+            signupCard.classList.remove("is-otp-loading", "is-otp-active");
+            pabasaIdOutput.textContent = data.custom_id;
+            result.classList.add("is-visible");
+            signupCard.classList.add("is-registration-complete");
+            if (stepStatus) stepStatus.textContent = "Complete";
+            result.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            const continueBtn = result.querySelector(".btn");
+            continueBtn.href = "{% url 'auth' %}";
+            continueBtn.textContent = "Go to Login";
+            otpStage.classList.add("d-none");
+        }
+
         form.addEventListener("submit", async (event) => {
             event.preventDefault();
             nameInputs.forEach(capitalizeFirstCharacter);
@@ -1750,18 +1811,26 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    otpLoading.classList.add("d-none");
-                    signupCard.classList.remove("is-otp-loading");
-                    signupCard.classList.add("is-otp-active");
-                    otpEmailSpan.textContent = data.email;
-                    otpStage.classList.remove("d-none");
-                    otpErrorMessage.classList.add("d-none");
-                    otpForm.reset();
-                    otpStage.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                    if (data.otp_disabled) {
+                        showRegistrationComplete(data);
+                    } else {
+                        otpLoading.classList.add("d-none");
+                        signupCard.classList.remove("is-otp-loading");
+                        signupCard.classList.add("is-otp-active");
+                        otpEmailSpan.textContent = data.email;
+                        otpStage.classList.remove("d-none");
+                        otpErrorMessage.classList.add("d-none");
+                        otpForm.reset();
+                        otpStage.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                    }
                 } else {
                     otpLoading.classList.add("d-none");
                     signupCard.classList.remove("is-otp-loading");
                     form.classList.remove("d-none");
+                    if (data.policy_changed) {
+                        applySignupPolicy(data.signup_otp_disabled);
+                        setStep(1);
+                    }
                     const duplicateMessage = data.error || '';
                     const duplicateKind = /email/i.test(duplicateMessage) ? 'email' : (/contact/i.test(duplicateMessage) ? 'contact' : '');
                     if (duplicateKind) {
@@ -1801,15 +1870,7 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    pabasaIdOutput.textContent = data.custom_id;
-                    result.classList.add("is-visible");
-                    signupCard.classList.add("is-registration-complete");
-                    if (stepStatus) stepStatus.textContent = "Complete";
-                    result.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                    const continueBtn = result.querySelector(".btn");
-                    continueBtn.href = "{% url 'auth' %}";
-                    continueBtn.textContent = "Go to Login";
-                    otpStage.classList.add("d-none");
+                    showRegistrationComplete(data);
                 } else {
                     otpErrorMessage.textContent = data.error || 'OTP verification failed. Please try again.';
                     otpErrorMessage.classList.remove("d-none");
@@ -1836,10 +1897,14 @@
                 });
                 const data = await response.json();
                 if (data.success) {
-                    otpErrorMessage.textContent = data.message;
-                    otpErrorMessage.classList.remove("d-none");
-                    otpErrorMessage.classList.remove("alert-danger");
-                    otpErrorMessage.classList.add("alert-success");
+                    if (data.otp_disabled) {
+                        showRegistrationComplete(data);
+                    } else {
+                        otpErrorMessage.textContent = data.message;
+                        otpErrorMessage.classList.remove("d-none");
+                        otpErrorMessage.classList.remove("alert-danger");
+                        otpErrorMessage.classList.add("alert-success");
+                    }
                 } else {
                     otpErrorMessage.textContent = data.error || 'Unable to resend OTP.';
                     otpErrorMessage.classList.remove("d-none");
@@ -1861,6 +1926,7 @@
             showSignupForm();
         });
 
+        applySignupPolicy(signupOtpDisabled);
         setStep(0);
     })();
 </script>

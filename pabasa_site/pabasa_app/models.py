@@ -71,7 +71,7 @@ class User(models.Model):
     birth_month = models.PositiveSmallIntegerField()
     birth_day = models.PositiveSmallIntegerField()
     birth_year = models.PositiveSmallIntegerField()
-    email = models.EmailField(unique=True)
+    email = models.EmailField(unique=True, blank=True, null=True)
     contact_no = models.CharField(max_length=20, blank=True, null=True)
     password_hash = models.CharField(max_length=255)
     must_change_password = models.BooleanField(default=False)
@@ -135,6 +135,12 @@ class User(models.Model):
 
     def set_password(self, raw_password):
         self.password_hash = make_password(raw_password)
+
+    def save(self, *args, **kwargs):
+        # NULL lets multiple accounts omit a unique email address.
+        if not self.email:
+            self.email = None
+        return super().save(*args, **kwargs)
 
     def check_password(self, raw_password):
         return check_password(raw_password, self.password_hash)
@@ -2376,6 +2382,16 @@ class PracticeDebugSettings(models.Model):
     """System-wide practice access override, disabled by default."""
     id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
     unlock_all = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        return super().save(*args, **kwargs)
+
+
+class OtpDebugSettings(models.Model):
+    """Administrator-only OTP bypass for debugging; verification stays on by default."""
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    disable_otp = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         self.pk = 1

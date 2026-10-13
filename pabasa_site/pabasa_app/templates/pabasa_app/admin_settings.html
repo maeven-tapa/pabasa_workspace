@@ -2,6 +2,10 @@
 
 {% block content %}
 <style>
+    .admin-setting-row.otp-debug-toggle {
+        align-items: center;
+        flex-direction: row;
+    }
     @media (max-width: 991.98px) {
         .admin-content:has(.admin-settings-shell) {
             display: flex;
@@ -86,6 +90,32 @@
             <div class="admin-settings-card-header"><div class="d-flex align-items-start gap-3"><span class="admin-settings-card-icon" aria-hidden="true"><i class="bi {% if prescribed_unlock_all_enabled %}bi-unlock{% else %}bi-lock{% endif %}"></i></span><div><h3 id="prescribedAccessHeading">Prescribed Activity Access</h3><p>{% if prescribed_unlock_all_enabled %}When on, learners unlock all activities all at once.{% else %}When off, learners unlock the next activity by completing the current one.{% endif %}</p></div></div></div>
             <div><h4 class="h6 mb-2">{% if prescribed_unlock_all_enabled %}All activities unlocked{% else %}Sequential access enabled{% endif %}</h4><p class="mb-0 text-muted">{% if prescribed_unlock_all_enabled %}Students can open every prescribed activity now.{% else %}The next activity opens only after the previous one is complete.{% endif %}</p></div>
             <div class="admin-settings-actions"><button class="btn {% if prescribed_unlock_all_enabled %}btn-warning{% else %}btn-outline-primary{% endif %}" type="submit"><i class="bi {% if prescribed_unlock_all_enabled %}bi-unlock-fill{% else %}bi-lock-fill{% endif %}" aria-hidden="true"></i> {% if prescribed_unlock_all_enabled %}Lock All Activities{% else %}Unlock All Activities{% endif %}</button></div>
+        </form>
+    </section>
+
+    <section class="admin-settings-card" aria-labelledby="otpDebugHeading">
+        <form method="post" class="d-grid gap-3">
+            {% csrf_token %}
+            <input type="hidden" name="settings_action" value="save_otp_debug">
+            <div class="admin-settings-card-header">
+                <span class="admin-settings-card-icon" aria-hidden="true"><i class="bi bi-bug"></i></span>
+                <div>
+                    <h3 id="otpDebugHeading">OTP Debug</h3>
+                    <p>Skip OTP emails and verification for teacher signup, student signup, and password resets. Use only for debugging.</p>
+                </div>
+            </div>
+            <label class="admin-setting-row otp-debug-toggle" for="disableOtp">
+                <span>Disable OTP</span>
+                <span class="form-check form-switch m-0 ps-0">
+                    <input class="form-check-input" type="checkbox" role="switch" id="disableOtp" name="disable_otp" aria-describedby="otpDebugStatus" {% if otp_debug_disabled %}checked{% endif %}>
+                </span>
+            </label>
+            <p id="otpDebugStatus" class="small {% if otp_debug_disabled %}text-danger{% else %}text-muted{% endif %} mb-0">
+                {% if otp_debug_disabled %}OTP is disabled. Anyone who knows an account's email can reset its password while this switch is on.{% else %}OTP verification is enabled. Turning this on allows password resets without proving ownership of the email address.{% endif %}
+            </p>
+            <div class="admin-settings-actions">
+                <button class="btn btn-warning" type="submit">Save OTP Debug Setting</button>
+            </div>
         </form>
     </section>
 

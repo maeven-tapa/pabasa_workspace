@@ -62,7 +62,7 @@
             </div>
             <div class="col-12 col-md-6">
                 <label class="form-label fw-bold" for="email">Email</label>
-                <input class="form-control" id="email" type="email" name="email" value="{{ managed_user.email }}" required>
+                <input class="form-control" id="email" type="email" name="email" value="{{ managed_user.email|default_if_none:'' }}">
             </div>
             <div class="col-12 col-md-6">
                 <label class="form-label fw-bold" for="contactNo">Contact number</label>
@@ -72,7 +72,7 @@
         {% else %}
         <div class="row g-3">
             <div class="col-12 col-md-6"><label class="form-label fw-bold" for="username">Username</label><input class="form-control bg-light" id="username" type="text" name="custom_id" value="{{ managed_user.custom_id }}" readonly aria-readonly="true"></div>
-            <div class="col-12 col-md-6"><label class="form-label fw-bold" for="email">Email</label><input class="form-control" id="email" type="email" name="email" value="{{ managed_user.email }}" required></div>
+            <div class="col-12 col-md-6"><label class="form-label fw-bold" for="email">Email</label><input class="form-control" id="email" type="email" name="email" value="{{ managed_user.email|default_if_none:'' }}"></div>
         </div>
         <div class="row g-3 mt-0">
             <div class="col-12 col-sm-6 col-lg-3"><label class="form-label fw-bold" for="firstName">First name</label><input class="form-control" id="firstName" type="text" name="first_name" value="{{ managed_user.first_name }}" required></div>
@@ -163,7 +163,7 @@
         <input type="hidden" name="last_name" value="{{ managed_user.last_name }}">
         <input type="hidden" name="suffix" value="{{ managed_user.suffix }}">
         <input type="hidden" name="custom_id" value="{{ managed_user.custom_id }}">
-        <input type="hidden" name="email" value="{{ managed_user.email }}">
+        <input type="hidden" name="email" value="{{ managed_user.email|default_if_none:'' }}">
         <input type="hidden" name="grade_level" value="{{ warning_destination_grade_level }}">
         <input type="hidden" name="section" value="{{ pending_destination_section_id }}">
         <input type="hidden" name="replace_teacher" value="1">

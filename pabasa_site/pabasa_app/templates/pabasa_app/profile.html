@@ -2317,7 +2317,7 @@
                                 {% endif %}
                                 <div class="full">
                                     <label class="form-label" for="email">Email Address</label>
-                                    <input class="form-control" id="email" name="email" type="email" value="{{ email }}" data-account-details-field disabled>
+                                    <input class="form-control" id="email" name="email" type="email" value="{{ email|default_if_none:'' }}" data-account-details-field disabled>
                                 </div>
                             </div>
                             {% if nav_role != 'teacher' %}

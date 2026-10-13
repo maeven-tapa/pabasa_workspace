@@ -74,7 +74,8 @@ import traceback
 from .models import User, School, Section, Enrollment, AccountStatusHistory, Assessment, AssessmentRequest, Material, MaterialStudentAssignment, SupplementaryMaterialPublication, SupplementaryStudentAssignment, Practice, Note, Notification, ActivityLog, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent, StoryReadingProgress, StoryResponseSubmission, SystemTimeOverride, ClassCrlaFinalization, StudentActivityProgress, StudentActivityRecordingSubmission, PrescribedReadingAttempt, PrescribedReadingValidationLabel, PrescribedActivityAccessSettings
 from .audio_fluency import AudioAnalysisError, extract_audio_features
 from .system_clock import invalidate_override_cache, now as system_now, real_now, today as system_today
-from .models import PracticeDebugSettings
+from .models import PracticeDebugSettings, OtpDebugSettings
+from .account_defaults import DEFAULT_NEW_STUDENT_PASSWORD, default_student_password_hash
 from .section_configuration import ensure_salawag_grade_two_sections
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
@@ -4465,6 +4466,11 @@ def generate_custom_id(role, grade_level=None):
 
     return f"{prefix}-{count:04d}"
 
+def _otp_debug_disabled():
+    # Read on each request so turning debugging off immediately restores OTP.
+    return OtpDebugSettings.objects.filter(pk=1, disable_otp=True).exists()
+
+
 def generate_otp(length=6):
     return ''.join(random.choice('0123456789') for _ in range(length))
 
@@ -4570,7 +4576,7 @@ def _store_pending_teacher_signup(request, data):
     _set_pending_data(request, 'pending_teacher_signup_otp_created', time.time())
     return otp
 
-def _store_pending_student_signup(request, data):
+def _store_pending_student_signup(request, data, *, otp_disabled=False):
     """Store student signup form data and OTP in session"""
     otp = generate_otp()
     _set_pending_data(request, 'pending_student_signup', {
@@ -4583,7 +4589,7 @@ def _store_pending_student_signup(request, data):
         'birth_month': int(data.get('birth_month', 0)),
         'birth_day': int(data.get('birth_day', 0)),
         'birth_year': int(data.get('birth_year', 0)),
-        'password_hash': make_password(data.get('password')),
+        'password_hash': default_student_password_hash() if otp_disabled else make_password(data.get('password')),
         'contact_no': data.get('contact_no', ''),
         'lrn': data.get('lrn', '').strip(),
         'grade_level': data.get('grade_level', ''),
@@ -4746,6 +4752,9 @@ def _email_paragraphs(text):
 def _send_pabasa_email(subject, text_message, recipients, *, heading=None, eyebrow='PABASA update',
                        action_url=None, action_label='Open PABASA', fail_silently=False):
     """Send standard PABASA messages in the same visual shell as OTP emails."""
+    recipients = [recipient for recipient in recipients if recipient]
+    if not recipients:
+        return
     safe_heading = escape(heading or subject)
     safe_eyebrow = escape(eyebrow)
     safe_action_url = escape(action_url or '')
@@ -4797,6 +4806,8 @@ def send_teacher_signup_otp_email(request, email, otp, first_name):
     )
 
 def send_teacher_confirmation_email(request, user, teacher_code):
+    if not user.email:
+        return
     auth_url = request.build_absolute_uri(reverse('auth'))
     subject = "Your PABASA Teacher Account is Ready"
     message = (
@@ -4841,6 +4852,8 @@ def send_student_signup_otp_email(request, email, otp, first_name):
     )
 
 def send_student_confirmation_email(request, user):
+    if not user.email:
+        return
     auth_url = request.build_absolute_uri(reverse('auth'))
     subject = "Your PABASA Student Account is Ready"
     message = (
@@ -4869,7 +4882,7 @@ def _store_pending_password_reset(request, email):
 
 def _clear_pending_password_reset(request):
     """Clear password reset data from session"""
-    _clear_pending_data(request, 'pending_password_reset', 'pending_password_reset_otp', 'pending_password_reset_otp_created', 'password_reset_verified', 'password_reset_email')
+    _clear_pending_data(request, 'pending_password_reset', 'pending_password_reset_otp', 'pending_password_reset_otp_created', 'password_reset_verified', 'password_reset_email', 'password_reset_otp_bypassed')
 
 
 def send_password_reset_otp_email(request, email, otp, first_name):
@@ -4934,6 +4947,8 @@ def request_password_reset(request):
         })
 
     _store_pending_password_reset(request, user.email)
+    if _otp_debug_disabled():
+        return _complete_password_reset_verification(request, user.email, otp_bypassed=True)
     send_password_reset_otp_email(request, user.email, request.session['pending_password_reset_otp'], user.first_name)
     return redirect(f"{reverse('forgot_password_otp')}?email={user.email}")
 
@@ -4943,8 +4958,9 @@ def request_password_reset(request):
 def verify_forgot_password_otp(request):
     email = request.POST.get('email', '').strip()
     otp = request.POST.get('otp', '').strip()
+    otp_disabled = _otp_debug_disabled()
 
-    if not email or not otp:
+    if not email or (not otp and not otp_disabled):
         return render(request, 'pabasa_app/forgot_password_otp.html', {
             'error': 'Email and OTP are required.',
             'email': email
@@ -4968,14 +4984,22 @@ def verify_forgot_password_otp(request):
             'email': email
         })
 
-    if otp != expected_otp:
+    if otp != expected_otp and not otp_disabled:
         return render(request, 'pabasa_app/forgot_password_otp.html', {
             'error': 'Invalid OTP. Please try again.',
             'email': email
         })
 
+    return _complete_password_reset_verification(request, email, otp_bypassed=otp_disabled)
+
+
+def _complete_password_reset_verification(request, email, *, otp_bypassed=False):
     request.session['password_reset_verified'] = True
     request.session['password_reset_email'] = email
+    if otp_bypassed:
+        request.session['password_reset_otp_bypassed'] = True
+    else:
+        request.session.pop('password_reset_otp_bypassed', None)
     request.session.modified = True
     return redirect(f"{reverse('forgot_password_reset')}?email={email}")
 
@@ -4986,6 +5010,9 @@ def resend_password_reset_otp(request):
     pending = request.session.get('pending_password_reset')
     if not pending:
         return redirect('forgot_password')
+
+    if _otp_debug_disabled():
+        return _complete_password_reset_verification(request, pending['email'], otp_bypassed=True)
 
     otp = generate_otp()
     request.session['pending_password_reset_otp'] = otp
@@ -5002,6 +5029,9 @@ def resend_password_reset_otp(request):
 @csrf_protect
 @require_http_methods(["GET"])
 def forgot_password_reset(request):
+    if request.session.get('password_reset_otp_bypassed') and not _otp_debug_disabled():
+        _clear_pending_password_reset(request)
+        return redirect('forgot_password')
     email = request.GET.get('email', '')
     if not email:
         email = request.session.get('password_reset_email', '')
@@ -5017,6 +5047,9 @@ def forgot_password_reset(request):
 @csrf_protect
 @require_http_methods(["POST"])
 def reset_password(request):
+    if request.session.get('password_reset_otp_bypassed') and not _otp_debug_disabled():
+        _clear_pending_password_reset(request)
+        return redirect('forgot_password')
     email = request.POST.get('email', '').strip()
     password = request.POST.get('password', '')
     confirm_password = request.POST.get('confirm_password', '')
@@ -5060,10 +5093,16 @@ def register_teacher(request):
     """Register a new teacher"""
     try:
         data = request.POST
+        otp_disabled = _otp_debug_disabled()
+        policy_changed = _signup_policy_changed_response(data, otp_disabled)
+        if policy_changed:
+            return policy_changed
         
         # Validate required fields
-        required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password',
+        required_fields = ['first_name', 'last_name', 'password', 'confirm_password',
                          'sex', 'birth_month', 'birth_day', 'birth_year', 'section']
+        if not otp_disabled:
+            required_fields.append('email')
         
         for field in required_fields:
             if not data.get(field):
@@ -5084,14 +5123,20 @@ def register_teacher(request):
         if canonical_section.has_active_teacher():
             return JsonResponse({'success': False, 'error': 'This section already has an assigned teacher. Please contact an administrator.'}, status=409)
         
-        # Validate password match
         if data.get('password') != data.get('confirm_password'):
             return JsonResponse({'success': False, 'error': 'Passwords do not match'}, status=400)
-        
+
         email = _normalize_registration_value(data.get('email'))
+        if not otp_disabled and not email:
+            return JsonResponse({'success': False, 'error': 'Email is required for OTP verification.'}, status=400)
+        if email:
+            try:
+                validate_email(email)
+            except ValidationError:
+                return JsonResponse({'success': False, 'error': 'Enter a valid email address.'}, status=400)
         contact_no = _normalize_registration_value(data.get('contact_no'))
         # Check if email already exists
-        if User.objects.filter(email__iexact=email).exists():
+        if email and User.objects.filter(email__iexact=email).exists():
             return JsonResponse({'success': False, 'error': 'This email address is already registered.'}, status=400)
         if contact_no and User.objects.filter(contact_no=contact_no).exists():
             return JsonResponse({'success': False, 'error': 'This contact number is already registered.'}, status=400)
@@ -5102,6 +5147,8 @@ def register_teacher(request):
         signup_data['email'] = email
         signup_data['grade_level'] = canonical_section.grade_level
         otp = _store_pending_teacher_signup(request, signup_data)
+        if otp_disabled:
+            return _complete_teacher_signup(request, request.session['pending_teacher_signup'], otp_disabled=True)
         try:
             send_teacher_signup_otp_email(request, email, otp, first_name)
         except Exception:
@@ -5124,6 +5171,10 @@ def register_student(request):
     """Register a new student"""
     try:
         data = request.POST
+        otp_disabled = _otp_debug_disabled()
+        policy_changed = _signup_policy_changed_response(data, otp_disabled)
+        if policy_changed:
+            return policy_changed
         raw_email = _normalize_registration_value(data.get('email'))
         raw_lrn = _normalize_registration_value(data.get('lrn'))
         logger.debug(
@@ -5134,8 +5185,10 @@ def register_student(request):
         )
         
         # Validate required fields
-        required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password', 'lrn', 'section',
+        required_fields = ['first_name', 'last_name', 'lrn', 'section',
                          'sex', 'birth_month', 'birth_day', 'birth_year']
+        if not otp_disabled:
+            required_fields.extend(['email', 'password', 'confirm_password'])
         
         for field in required_fields:
             if not data.get(field):
@@ -5154,9 +5207,18 @@ def register_student(request):
         if signup_error:
             return JsonResponse({'success': False, 'error': signup_error}, status=400)
         
-        # Validate password match
-        if data.get('password') != data.get('confirm_password'):
-            return JsonResponse({'success': False, 'error': 'Passwords do not match'}, status=400)
+        if not otp_disabled:
+            if not raw_email:
+                return JsonResponse({'success': False, 'error': 'Email is required for OTP verification.'}, status=400)
+            if data.get('password') != data.get('confirm_password'):
+                return JsonResponse({'success': False, 'error': 'Passwords do not match'}, status=400)
+            if len(data.get('password', '')) < 8:
+                return JsonResponse({'success': False, 'error': 'Password must be at least 8 characters.'}, status=400)
+        if raw_email:
+            try:
+                validate_email(raw_email)
+            except ValidationError:
+                return JsonResponse({'success': False, 'error': 'Enter a valid email address.'}, status=400)
 
         lrn = raw_lrn
         if not re.fullmatch(r'\d{12}', lrn):
@@ -5169,7 +5231,7 @@ def register_student(request):
         # Check if email already exists
         email_matches = list(User.objects.filter(email__iexact=raw_email).values('id', 'custom_id', 'email', 'is_archived'))
         logger.debug("STUDENT REGISTRATION DUPLICATE CHECK email=%s matches=%s", raw_email, email_matches)
-        if User.objects.filter(email__iexact=raw_email, is_archived=False).exists():
+        if raw_email and User.objects.filter(email__iexact=raw_email, is_archived=False).exists():
             return JsonResponse({'success': False, 'error': 'This email address is already registered.'}, status=400)
         contact_no = _normalize_registration_value(data.get('contact_no'))
         if contact_no and User.objects.filter(contact_no=contact_no).exists():
@@ -5181,7 +5243,9 @@ def register_student(request):
         signup_data['first_name'] = first_name
         signup_data['email'] = raw_email
         signup_data['grade_level'] = NEW_USER_GRADE_LEVEL
-        otp = _store_pending_student_signup(request, signup_data)
+        otp = _store_pending_student_signup(request, signup_data, otp_disabled=otp_disabled)
+        if otp_disabled:
+            return _complete_student_signup(request, request.session['pending_student_signup'], otp_disabled=True)
         logger.debug("STUDENT REGISTRATION PENDING CREATED session_keys=%s", sorted(list(request.session.keys())))
         try:
             send_student_signup_otp_email(request, raw_email, otp, first_name)
@@ -5200,6 +5264,19 @@ def register_student(request):
         return JsonResponse({'success': False, 'error': 'Unable to start registration right now. Please try again.'}, status=400)
 
 
+def _signup_policy_changed_response(data, otp_disabled):
+    """Reject stale forms without trusting the client's choice of signup policy."""
+    posted_policy = data.get('signup_otp_disabled')
+    if posted_policy is not None and posted_policy != str(otp_disabled).lower():
+        return JsonResponse({
+            'success': False,
+            'policy_changed': True,
+            'signup_otp_disabled': otp_disabled,
+            'error': 'Signup requirements changed. Please review the form and submit again.',
+        }, status=409)
+    return None
+
+
 @require_http_methods(["GET"])
 def check_signup_duplicates(request):
     email = _normalize_registration_value(request.GET.get('email'))
@@ -5214,7 +5291,8 @@ def check_signup_duplicates(request):
 def verify_teacher_otp(request):
     try:
         otp = request.POST.get('otp', '').strip()
-        if not otp:
+        otp_disabled = _otp_debug_disabled()
+        if not otp and not otp_disabled:
             return JsonResponse({'success': False, 'error': 'OTP is required'}, status=400)
 
 
@@ -5229,15 +5307,24 @@ def verify_teacher_otp(request):
             _clear_pending_teacher_signup(request)
             return JsonResponse({'success': False, 'error': 'OTP expired. Please request a new code.'}, status=400)
 
-        if otp != expected_otp:
+        if otp != expected_otp and not otp_disabled:
             return JsonResponse({'success': False, 'error': 'Invalid OTP. Please try again.'}, status=400)
 
+        return _complete_teacher_signup(request, pending, otp_disabled=otp_disabled)
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+def _complete_teacher_signup(request, pending, *, otp_disabled=False):
+    """Keep the same account and class workflow with or without OTP verification."""
+    try:
         birth_date_error = _signup_birth_date_error(pending, 'teacher')
         if birth_date_error:
             _clear_pending_teacher_signup(request)
             return JsonResponse({'success': False, 'error': birth_date_error}, status=400)
 
-        if User.objects.filter(email=pending['email']).exists():
+        if pending.get('email') and User.objects.filter(email=pending['email']).exists():
             _clear_pending_teacher_signup(request)
             return JsonResponse({'success': False, 'error': 'Email already registered'}, status=400)
         pending_contact = _normalize_registration_value(pending.get('contact_no'))
@@ -5291,7 +5378,8 @@ def verify_teacher_otp(request):
 
         teacher_code = custom_id
 
-        send_teacher_confirmation_email(request, user, custom_id)
+        if user.email:
+            send_teacher_confirmation_email(request, user, custom_id)
         _notify_admins(
             'New teacher account',
             f'{user.first_name} {user.last_name} created a teacher account.',
@@ -5313,7 +5401,8 @@ def verify_teacher_otp(request):
             'success': True,
             'message': 'Teacher registered successfully',
             'custom_id': custom_id,
-            'teacher_code': custom_id
+            'teacher_code': custom_id,
+            **({'otp_disabled': True} if otp_disabled else {}),
         })
 
     except Exception as e:
@@ -5326,6 +5415,9 @@ def resend_teacher_signup_otp(request):
         pending = request.session.get('pending_teacher_signup')
         if not pending:
             return JsonResponse({'success': False, 'error': 'No pending signup found. Please start registration again.'}, status=400)
+
+        if _otp_debug_disabled():
+            return _complete_teacher_signup(request, pending, otp_disabled=True)
 
         otp = generate_otp()
         request.session['pending_teacher_signup_otp'] = otp
@@ -5348,9 +5440,10 @@ def resend_teacher_signup_otp(request):
 def verify_student_otp(request):
     try:
         otp = request.POST.get('otp', '').strip()
+        otp_disabled = _otp_debug_disabled()
         logger.debug("VERIFY STUDENT OTP DATA keys=%s", sorted(list(request.POST.keys())))
         logger.debug("VERIFY STUDENT OTP SESSION KEYS=%s", sorted(list(request.session.keys())))
-        if not otp:
+        if not otp and not otp_disabled:
             return JsonResponse({'success': False, 'error': 'OTP is required'}, status=400)
 
         pending = request.session.get('pending_student_signup')
@@ -5370,9 +5463,18 @@ def verify_student_otp(request):
             _clear_pending_student_signup(request)
             return JsonResponse({'success': False, 'error': 'OTP expired. Please request a new code.'}, status=400)
 
-        if otp != expected_otp:
+        if otp != expected_otp and not otp_disabled:
             return JsonResponse({'success': False, 'error': 'Invalid OTP. Please try again.'}, status=400)
 
+        return _complete_student_signup(request, pending, otp_disabled=otp_disabled)
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+def _complete_student_signup(request, pending, *, otp_disabled=False):
+    """Keep the same validation, account creation, enrollment, and notifications."""
+    try:
         birth_date_error = _signup_birth_date_error(pending, 'student')
         if birth_date_error:
             _clear_pending_student_signup(request)
@@ -5390,7 +5492,7 @@ def verify_student_otp(request):
             pending.get('section', ''),
         )
 
-        if User.objects.filter(email__iexact=pending_email, is_archived=False).exists():
+        if pending_email and User.objects.filter(email__iexact=pending_email, is_archived=False).exists():
             _clear_pending_student_signup(request)
             return JsonResponse({'success': False, 'error': 'This email address is already registered.'}, status=400)
 
@@ -5434,7 +5536,7 @@ def verify_student_otp(request):
                         birth_month=pending['birth_month'],
                         birth_day=pending['birth_day'],
                         birth_year=pending['birth_year'],
-                        password_hash=pending['password_hash'],
+                        password_hash=default_student_password_hash() if otp_disabled else pending['password_hash'],
                         contact_no=pending.get('contact_no', ''),
                         school=school.name,
                         school_record=school,
@@ -5464,7 +5566,8 @@ def verify_student_otp(request):
             user.delete()
             return JsonResponse({'success': False, 'error': 'Unable to enroll the student in the selected class.'}, status=400)
         try:
-            send_student_confirmation_email(request, user)
+            if user.email:
+                send_student_confirmation_email(request, user)
         except Exception:
             logger.exception("VERIFY STUDENT OTP confirmation email failed for user_id=%s", user.id)
         try:
@@ -5482,7 +5585,8 @@ def verify_student_otp(request):
         return JsonResponse({
             'success': True,
             'message': 'Student registered successfully',
-            'custom_id': custom_id
+            'custom_id': custom_id,
+            **({'otp_disabled': True} if otp_disabled else {}),
         })
 
     except Exception as e:
@@ -5496,6 +5600,9 @@ def resend_student_signup_otp(request):
         pending = request.session.get('pending_student_signup')
         if not pending:
             return JsonResponse({'success': False, 'error': 'No pending signup found. Please start registration again.'}, status=400)
+
+        if _otp_debug_disabled():
+            return _complete_student_signup(request, pending, otp_disabled=True)
 
         otp = generate_otp()
         request.session['pending_student_signup_otp'] = otp
@@ -6108,7 +6215,7 @@ def auth(request):
     return render(request, 'pabasa_app/auth.html')
 
 def forgot_password(request):
-    return render(request, 'pabasa_app/forgot_password.html')
+    return render(request, 'pabasa_app/forgot_password.html', {'otp_debug_disabled': _otp_debug_disabled()})
 
 def forgot_password_otp(request):
     email = request.GET.get('email', '')
@@ -6134,12 +6241,15 @@ def privacy(request):
 
 def teacher_signup(request):
     return render(request, 'pabasa_app/teacher_signup.html', {
+        'otp_debug_disabled': _otp_debug_disabled(),
         'signup_grades': _section_selection_context('teacher')[0],
         'teacher_max_birth_year': timezone.localdate().year - 18,
     })
 
 def student_signup(request):
     return render(request, 'pabasa_app/student_signup.html', {
+        'otp_debug_disabled': _otp_debug_disabled(),
+        'default_account_password': DEFAULT_NEW_STUDENT_PASSWORD,
         'signup_grades': _section_selection_context('student')[0],
         'student_max_birth_year': 2019,
     })
@@ -6876,7 +6986,7 @@ def _create_principal_account(request, school, first_name, middle_initial, last_
         raise ValueError('A Principal can only be created for an active School.')
     if _active_principal_for_school(school):
         raise ValueError('This School already has an active Principal.')
-    if User.objects.filter(email__iexact=email).exists():
+    if email and User.objects.filter(email__iexact=email).exists():
         raise ValueError('An account with this email address already exists.')
 
     custom_id = _generate_principal_custom_id(school.name)
@@ -12007,6 +12117,23 @@ def admin_settings(request):
             access.save(update_fields=['unlock_all_activities', 'updated_at'])
             context['settings_success'] = 'All prescribed activities are unlocked.' if access.unlock_all_activities else 'Sequential prescribed activity access is enabled.'
 
+        elif action == 'save_otp_debug':
+            if user.role != 'admin' or user.is_archived:
+                return redirect('auth')
+            disable_otp = request.POST.get('disable_otp') == 'on'
+            OtpDebugSettings.objects.update_or_create(pk=1, defaults={'disable_otp': disable_otp})
+            _log_activity(
+                'otp_debug',
+                'OTP debug bypass enabled' if disable_otp else 'OTP debug bypass disabled',
+                'OTP disabled for signups and password resets.' if disable_otp else 'OTP verification restored.',
+                actor=user,
+                metadata={'disable_otp': disable_otp},
+            )
+            context['settings_success'] = (
+                'OTP disabled for debugging. Signups and password resets skip OTP verification.'
+                if disable_otp else 'OTP verification is enabled for signups and password resets.'
+            )
+
         elif action == 'save_system_time_debug':
             debug_enabled = request.POST.get('system_time_debug_enabled') == 'on'
             override, _ = SystemTimeOverride.objects.get_or_create(pk=1)
@@ -12055,6 +12182,7 @@ def admin_settings(request):
     system_time = timezone.localtime(system_now())
     system_time_override = SystemTimeOverride.objects.filter(pk=1).first()
     context['prescribed_unlock_all_enabled'] = _prescribed_access_settings().unlock_all_activities
+    context['otp_debug_disabled'] = _otp_debug_disabled()
     context['notification_settings'] = notification_settings
     context['system_time_iso'] = system_time.isoformat()
     context['system_time_zone'] = timezone.get_current_timezone_name()
@@ -31199,7 +31327,7 @@ def profile(request):
                 if not first_name or not last_name:
                     return JsonResponse({'success': False, 'error': 'First name and last name are required'})
                 
-                if not email:
+                if not email and user.email:
                     return JsonResponse({'success': False, 'error': 'Email is required'})
                 
                 # Check if email is already used by another user
