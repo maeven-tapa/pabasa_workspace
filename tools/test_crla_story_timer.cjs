@@ -28,7 +28,7 @@ function reader(overrides = {}) {
     storyReadingTimerProgress: {style: {}}, storyReadingTimeUpOverlay: {classList: {remove() {}}},
     stopReading: async () => { completions++; },
     liveSessionPaused: false, liveSessionEnded: false, liveSessionEndRedirecting: false, isFinalizingReading: false,
-    isSendingChunk: false, pendingAudioChunk: null,
+    isSendingChunk: false, pendingAudioChunk: null, crlaLiveSpeech: null, crlaSpeechFailure: false,
     currentIndex: 0, currentSyllableIndex: 0, itemResultVersion: 0, items: ['Si Ana ay masaya.'],
     getCurrentDisplayText: () => 'Si Ana ay masaya.', isAdvancingItem: false,
     isRecording: true, isMuted: false, currentStoryState: 'story_reading', currentAssessmentBranch: 'story',
@@ -158,6 +158,21 @@ test('queued audio and teacher pause do not briefly restart the story clock', ()
   r.tick(5000);
   assert.equal(c.storyReadingElapsedMs(), 3000);
   c.liveSessionPaused = false;
+  c.syncStoryReadingTimerProcessing();
+  r.tick(1000);
+  assert.equal(c.storyReadingElapsedMs(), 4000);
+});
+
+test('a failed live final flush pauses the story clock until microphone recovery', () => {
+  const r = reader(), c = r.context;
+  c.startStoryReadingTimer();
+  r.tick(3000);
+  c.crlaSpeechFailure = true;
+  c.syncStoryReadingTimerProcessing();
+  r.tick(200000);
+  assert.equal(c.storyReadingElapsedMs(), 3000);
+  assert.equal(r.completions(), 0);
+  c.crlaSpeechFailure = false;
   c.syncStoryReadingTimerProcessing();
   r.tick(1000);
   assert.equal(c.storyReadingElapsedMs(), 4000);

@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 from openpyxl import load_workbook
 import uuid
@@ -29,6 +29,114 @@ def test_section_create(**kwargs):
         suffix = uuid.uuid4().hex.upper()
         school = School.objects.create(name=f"Fixture School {suffix}", code=f"FIXTURE-{suffix}")
     return Section.objects.create(school=school, **kwargs)
+
+
+class CrlaMetricPayloadTests(SimpleTestCase):
+    def test_completion_payload_keeps_explicit_story_metrics_when_nested_fields_are_empty(self):
+        for missing in (None, ""):
+            with self.subTest(missing=missing):
+                payload = build_assessment_score_payload({
+                    "assessment_type": "paragraph", "story_total_words": 96,
+                    "words_read": 72, "miscues": 24, "duration_seconds": 125,
+                    "wpm": 34.56,
+                    "crla_score_data": {
+                        "task1_score": 8, "task2_type": "Task 2H / Sentences",
+                        "sentences_read": 3, "story_number": 1,
+                        "comprehension_correct": 3,
+                        **{key: missing for key in (
+                            "story_total_words", "words_read", "miscues",
+                            "duration_seconds", "wpm",
+                        )},
+                    },
+                })
+                for field, expected in {
+                    "story_total_words": 96, "words_read": 72, "miscues": 24,
+                    "duration_seconds": 125, "wpm": 34.56,
+                    "passage_accuracy_percent": 75,
+                }.items():
+                    self.assertEqual(payload["crla_score_data"][field], expected)
+
+    def test_nested_zero_story_metrics_take_precedence_over_outer_values(self):
+        payload = build_assessment_score_payload({
+            "assessment_type": "paragraph", "story_total_words": 96,
+            "words_read": 72, "miscues": 24, "duration_seconds": 125, "wpm": 34.56,
+            "crla_score_data": {
+                "task1_score": 8, "task2_type": "Task 2H / Sentences",
+                "sentences_read": 3, "story_number": 1, "story_total_words": 96,
+                "words_read": 0, "miscues": 96, "duration_seconds": 0,
+                "wpm": 0, "comprehension_correct": 0,
+            },
+        })
+        for field in ("words_read", "duration_seconds", "wpm", "passage_accuracy_percent"):
+            self.assertEqual(payload["crla_score_data"][field], 0)
+
+    def test_completed_story_metrics_use_aliases_before_scoped_fallback(self):
+        student = SimpleNamespace(
+            lrn="", first_name="Metrics", middle_initial="", last_name="Test", suffix="",
+            sex="", preference={"reading_assessment_state": {"crla_result_states": {"1": {
+                "stage": "completed", "story_number": 1,
+                "selected_story": "Ang Pagong at ang Kuneho", "story_total_words": 96,
+                "words_read": 72, "duration_seconds": 125, "wpm": 34.56,
+            }}}},
+        )
+        attempt = SimpleNamespace(
+            material_id=1, completed_at=None, started_at=None, created_at=None,
+            crla_score_data={
+                "story_number": 1, "words_read": None, "total_words_read": 0,
+                "story_total_words": None, "total_story_words": 96,
+                "duration_seconds": 0, "wpm": 0,
+                "passage_accuracy_percent": 0, "comprehension_correct": 0,
+            },
+        )
+        values = _student_values(student, attempt, {}, None)
+        self.assertEqual(values["total_words_read"], 0)
+        self.assertEqual(values["correct_words_percentage"], 0)
+        self.assertEqual(values["words_per_minute"], 0)
+        self.assertEqual((values["reading_minutes"], values["reading_seconds"]), (0, 0))
+
+    def test_missing_metrics_never_fall_back_to_another_story_or_material(self):
+        for material_id, story_number in ((1, 2), (2, 1)):
+            with self.subTest(material_id=material_id, story_number=story_number):
+                student = SimpleNamespace(
+                    lrn="", first_name="Scoped", middle_initial="", last_name="Test", suffix="",
+                    sex="", preference={"reading_assessment_state": {"crla_result_states": {"1": {
+                        "stage": "completed", "story_number": 1,
+                        "selected_story": "Ang Pagong at ang Kuneho", "story_total_words": 96,
+                        "words_read": 72, "duration_seconds": 125, "wpm": 34.56,
+                    }}}},
+                )
+                attempt = SimpleNamespace(
+                    material_id=material_id, completed_at=None, started_at=None, created_at=None,
+                    crla_score_data={
+                        "story_number": story_number, "passage_accuracy_percent": 75,
+                        "comprehension_correct": 3,
+                    },
+                )
+                values = _student_values(student, attempt, {}, None)
+                self.assertIsNone(values["total_words_read"])
+                self.assertIsNone(values["words_per_minute"])
+                self.assertIsNone(values["reading_minutes"])
+
+    def test_completed_result_recovers_words_from_partial_same_story_state(self):
+        student = SimpleNamespace(
+            lrn="", first_name="Partial", middle_initial="", last_name="Test", suffix="",
+            sex="", preference={"reading_assessment_state": {"crla_result_states": {"1": {
+                "stage": "story_comprehension", "story_number": 1,
+                "story_total_words": 96, "words_read": 72,
+            }}}},
+        )
+        attempt = SimpleNamespace(
+            material_id=1, completed_at=None, started_at=None, created_at=None,
+            crla_score_data={
+                "story_number": 1, "words_read": None, "duration_seconds": 125,
+                "passage_accuracy_percent": 75, "comprehension_correct": 3,
+            },
+        )
+        values = _student_values(student, attempt, {}, None)
+        self.assertEqual(values["total_words_read"], 72)
+        self.assertEqual((values["reading_minutes"], values["reading_seconds"]), (2, 5))
+        student.preference["reading_assessment_state"]["crla_result_states"]["1"]["stage"] = "transition_to_story"
+        self.assertIsNone(_student_values(student, attempt, {}, None)["total_words_read"])
 
 
 class CrlaExportResultTests(TestCase):
@@ -833,3 +941,64 @@ class CrlaExportResultTests(TestCase):
                 self.assertEqual((sheet["N11"].value, sheet["O11"].value), (2, 5))
                 self.assertEqual(sheet["M11"].value, 72)
                 self.assertTrue(str(sheet["Q11"].value).startswith("="))
+
+    def test_export_recovers_empty_completed_story_metrics_for_every_phase(self):
+        phases = (
+            ("bosy", "pretest", "bosy_crla_pretest"),
+            ("midline", "midtest", "midline_crla_midtest"),
+            ("eosy", "posttest", "eosy_crla_posttest"),
+        )
+        for index, (period, phase, key) in enumerate(phases, start=1):
+            with self.subTest(phase=phase):
+                teacher = self.make_user(f"METRIC-T-{index}", "teacher", "Metric", "Teacher")
+                student = self.make_user(f"METRIC-S-{index}", "student", "Metric", "Student")
+                section = test_section_create(
+                    class_code=f"METRIC-C-{index}", class_name=f"Metrics {phase}", teacher=teacher,
+                    students=[{"student_id": student.id, "is_active": True}],
+                )
+                root = Assessment.objects.create(
+                    teacher=teacher, section=section, title=f"Metrics {phase}", code=f"METRIC-A-{index}",
+                    assessment_type="paragraph", status="published", is_system_owned=True,
+                    system_assessment_key=key, system_assessment_period=period, system_assessment_phase=phase,
+                )
+                material = Material.objects.create(
+                    assessment=root, section=section, teacher=teacher, code=f"METRIC-M-{index}",
+                    item_type="paragraph", type="assessment", assessment_kind="crla",
+                    is_official_reading=True, is_system_owned=True,
+                    system_assessment_key=f"{key}-METRICS", system_assessment_period=period, system_assessment_phase=phase,
+                )
+                student.preference = {"reading_assessment_state": {"crla_result_states": {
+                    str(material.id): {
+                        "material_id": str(material.id), "stage": "completed", "story_number": 1,
+                        "selected_story": "Ang Pagong at ang Kuneho", "story_total_words": 96,
+                        "words_read": 72, "miscues": 24, "duration_seconds": 125,
+                        "wpm": 34.56, "story_read_percent": 75, "comprehension_correct": 3,
+                    },
+                }}}
+                student.save(update_fields=["preference", "updated_at"])
+                result = Assessment.objects.create(
+                    teacher=teacher, section=section, material=material, source_assessment=root,
+                    student=student, title="Partial metrics result", code=f"METRIC-R-{index}",
+                    assessment_type="paragraph", status="published", attempt_status="completed",
+                    completed_at=timezone.now(), crla_classification="Transitioning Reader", crla_score_data={
+                        "task1_score": 8, "task2_type": "Task 2H / Sentences", "task2_score": 7,
+                        "story_number": 1, "story_total_words": None, "words_read": None,
+                        "miscues": "", "duration_seconds": 125, "wpm": None,
+                        "passage_accuracy_percent": 75, "comprehension_correct": 3,
+                    },
+                )
+                original_scores = dict(result.crla_score_data)
+                workbook = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)
+                sheet = workbook["G2 MT Reading Scoresheet"]
+                self.assertEqual(sheet["K11"].value, 1)
+                self.assertEqual(sheet["L11"].value, 24)
+                self.assertEqual(sheet["M11"].value, 72)
+                self.assertEqual((sheet["N11"].value, sheet["O11"].value), (2, 5))
+                self.assertEqual(sheet["R11"].value, 3)
+                for column in ("P", "Q"):
+                    self.assertTrue(sheet[f"{column}11"].value.startswith("="))
+                values = _student_values(student, result, {}, root)
+                self.assertEqual(values["words_per_minute"], 34.56)
+                self.assertEqual(values["correct_words_percentage"], 0.75)
+                result.refresh_from_db()
+                self.assertEqual(result.crla_score_data, original_scores)

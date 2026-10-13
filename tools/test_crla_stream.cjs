@@ -127,7 +127,7 @@ async function readerTest() {
     const context = vm.createContext({
         window: {CrlaSpeechStream: Stream, AudioWorkletNode: true, WebSocket: true, SpeechDebug: {format: data => data.transcript}},
         document: {getElementById: () => preview},
-        crlaStreamStarting: false, stoppingSpeechRecognition: false, isRecording: true, isMuted: false,
+        crlaStreamStarting: false, stoppingSpeechRecognition: false, isRecording: true, isMuted: false, isFinalizingReading: false,
         crlaLiveSpeech: null, crlaLiveContext: null, crlaStreamingUnavailable: false, crlaSpeechFailure: false,
         isOfficialAssessmentLaunch: true, isCrla: true, mode: 'word', officialAssessmentId: '12',
         customMaterialData: null, isTemplateActivity: false,
@@ -152,6 +152,8 @@ async function readerTest() {
         },
     });
     vm.runInContext(extracted, context);
+    vm.runInContext(source.slice(source.indexOf('        function finishCurrentAudioChunk(force = false)'),
+        source.indexOf('        async function flushCurrentSpeechChunk(')), context);
     await vm.runInContext('startCrlaLiveSpeech()', context);
     assert.equal(stream.options.fields.material_id, '12');
     stream.options.onInterim('ba');
@@ -162,6 +164,16 @@ async function readerTest() {
     assert.equal(preview.hidden, true);
     await stream.options.onFinal({final_token: 'signed2'});
     assert.equal(scoring, 2, 'cursor changes within the same item remain eligible');
+    const completedStream = stream;
+    for (const flag of ['isAdvancingItem', 'isFinalizingReading']) {
+        context[flag] = true;
+        context.crlaLiveContext = null;
+        context.finishCurrentAudioChunk();
+        await context.startCrlaLiveSpeech();
+        assert.equal(stream, completedStream, flag + ' must prevent reconnecting the speech stream');
+        assert.equal(completedStream.active, true, flag + ' must preserve the original stream for final flush');
+        context[flag] = false;
+    }
     context.currentIndex = 1;
     await stream.options.onFinal({final_token: 'stale'});
     assert.equal(calls, 2, 'finals from the previous item never reach scoring');

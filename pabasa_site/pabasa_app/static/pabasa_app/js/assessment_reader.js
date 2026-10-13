@@ -1583,7 +1583,7 @@
 
         function syncStoryReadingTimerProcessing() {
             if (storyReadingTimerStartedAt === null) return;
-            const shouldPause = Boolean((!crlaLiveSpeech && isSendingChunk) || pendingAudioChunk || liveSessionPaused
+            const shouldPause = Boolean((!crlaLiveSpeech && isSendingChunk) || pendingAudioChunk || crlaSpeechFailure || liveSessionPaused
                 || liveSessionEnded || liveSessionEndRedirecting || isFinalizingReading);
             if (shouldPause && storyReadingTimerPausedAt === null) {
                 storyReadingTimerPausedAt = Date.now();
@@ -2464,14 +2464,20 @@
                 ? currentPageIndex >= getCurrentPageCount() - 1
                 : currentIndex >= items.length - 1 && currentPageIndex >= getCurrentPageCount() - 1;
             if (!isCrla || (!isStoryReading && !isStandardReading)) return false;
-            if (isAdvancingItem) return true;
+            if (isAdvancingItem || isFinalizingReading || crlaLiveSpeech?.flushing) return true;
             if (crlaLiveSpeech) {
+                if (nextBtn) nextBtn.disabled = true;
                 const context = currentSpeechContext();
                 try { await flushCurrentSpeechChunk(); }
                 catch (error) {
                     setSpeechStatus("Speech result is still unresolved.", error.message);
                     return true;
-                } finally { stoppingSpeechRecognition = false; }
+                } finally {
+                    stoppingSpeechRecognition = false;
+                    syncStoryReadingTimerProcessing();
+                    updateAssessmentNavigationButtons();
+                    updateSpeechProcessingControls();
+                }
                 if (!sameCrlaStreamItem(context) || itemLocked[currentIndex]) return true;
             }
 
@@ -2489,9 +2495,7 @@
 
             if (isStoryReading) {
                 await persistSkippedStorySegment();
-                isRecording = false;
-                stopSpeechRecognition();
-                await stopReading({ allowIdleStoryCompletion: true });
+                await stopReading({ allowIdleStoryCompletion: true, allowCompletedStorySegment: true });
             } else if (!isOnFinalRenderedItem) {
                 await updateStudentEndState({ crla_question_index: currentIndex + 1 });
                 transitionToItem(currentIndex + 1, "Next item loaded.", "Keep reading clearly.");
@@ -3846,7 +3850,9 @@
         }
 
         async function startCrlaLiveSpeech() {
-            if (crlaStreamStarting || stoppingSpeechRecognition || !isRecording || isMuted) return;
+            // Completion owns the current connection until its final audio is drained.
+            if (crlaStreamStarting || stoppingSpeechRecognition || !isRecording || isMuted
+                || isAdvancingItem || isFinalizingReading) return;
             if (crlaLiveSpeech?.active && sameCrlaStreamItem(crlaLiveContext)) return;
             crlaLiveSpeech?.stop();
             crlaStreamStarting = true;
@@ -4014,6 +4020,7 @@
         function finishCurrentAudioChunk(force = false) {
             if (canStreamCrla()) {
                 if (!force && !stoppingSpeechRecognition && !crlaStreamStarting && !crlaSpeechFailure
+                    && !isAdvancingItem && !isFinalizingReading
                     && (!crlaLiveSpeech?.active || !sameCrlaStreamItem(crlaLiveContext))) startCrlaLiveSpeech();
                 return;
             }
@@ -4038,7 +4045,7 @@
                 stoppingSpeechRecognition = true;
                 const stream = crlaLiveSpeech;
                 try { await stream.finish(); }
-                catch (error) { crlaSpeechFailure = true; throw error; }
+                catch (error) { stream.stop(); crlaSpeechFailure = true; throw error; }
                 finally { if (crlaLiveSpeech === stream) crlaLiveSpeech = null; }
                 return;
             }
@@ -4219,12 +4226,12 @@
                 || currentStoryState === "story_reading"
             );
             if (prevBtn) {
-                prevBtn.disabled = speechResponsePending || (isReviewMode
+                prevBtn.disabled = isAdvancingItem || isFinalizingReading || speechResponsePending || (isReviewMode
                     ? !(hasPreviousPage || hasPreviousItem)
                     : (!isRecording || !(hasPreviousPage || hasPreviousItem)));
             }
             if (nextBtn) {
-                nextBtn.disabled = (isOfficialCrlaStoryReading
+                nextBtn.disabled = isAdvancingItem || isFinalizingReading || (isOfficialCrlaStoryReading
                     ? isStorySkipBusy
                     : speechResponsePending) || (isReviewMode
                     ? (onLastItem && isLastPage)
@@ -7631,8 +7638,8 @@
                 && currentStoryState === "story_reading"
                 && currentSelectedStory
             )) return;
-            clearStoryReadingTimer();
             isFinalizingReading = true;
+            syncStoryReadingTimerProcessing();
             try {
                 clearSentenceItemTimer();
                 // CRLA Official Assessment: Cleanup auto-advance timer
@@ -7654,6 +7661,7 @@
                     return;
                 }
                 if (liveSessionEnded || liveSessionEndRedirecting) return;
+                clearStoryReadingTimer();
                 isRecording = false;
                 stopSpeechRecognition();
                 if (currentStoryState === "story_reading" && currentSelectedStory) {
@@ -7694,6 +7702,16 @@
                 showCompletion(isAssistMode || reachedLastItem);
             } finally {
                 isFinalizingReading = false;
+                if (currentStoryState === "story_reading" && currentSelectedStory
+                    && !liveSessionEnded && !liveSessionEndRedirecting) {
+                    // A failed final flush must leave reading retryable. Keep
+                    // its captured evidence and elapsed timer for microphone recovery.
+                    isAdvancingItem = false;
+                    stoppingSpeechRecognition = false;
+                    syncStoryReadingTimerProcessing();
+                    updateAssessmentNavigationButtons();
+                    updateSpeechProcessingControls();
+                }
             }
         };
 

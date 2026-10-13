@@ -402,8 +402,35 @@ def _student_values(student, attempt, state, assessment):
     has_story_reading = _story_reading_evidence(story_state)
     has_completed_part2 = _completed_part2_score_data(score_data, story_state)
     # Prefer the immutable final attempt for a completed Part 2.  State is
-    # retained as a compatibility fallback for older completed attempts.
-    part2_source = {**story_state, **score_data} if has_completed_part2 else story_state
+    # retained as a compatibility fallback only for recorded work on the same
+    # story. Normalized result payloads include None for unrecorded fields;
+    # those must not erase valid scoped state (and zero must still win).
+    part2_source = dict(story_state) if has_story_reading else {}
+    if has_completed_part2:
+        result_story = _story_number(score_data, {})
+        saved_story = _story_number(story_state, {})
+        # The final result establishes completion even if its scoped recovery
+        # state has only some metrics. Require a matching story and a reading
+        # stage before filling any gaps from that state.
+        matching_story_state = (
+            saved_story is not None
+            and result_story in (None, saved_story)
+            and str(story_state.get("stage") or "").strip().lower() in {
+                "story_reading", "story_comprehension", "learner_experience", "completed",
+            }
+        )
+        part2_source = dict(story_state) if matching_story_state else {}
+        fallback = dict(part2_source)
+        part2_source.update({key: value for key, value in score_data.items() if value not in (None, "")})
+        # Resolve aliases within the final result before consulting state, so
+        # a final total_words_read=0 takes precedence over an old words_read.
+        for keys in (
+            ("words_read", "total_words_read"),
+            ("story_total_words", "total_story_words"),
+            ("passage_accuracy_percent", "story_read_percent"),
+            ("comprehension_correct", "correct_answers"),
+        ):
+            part2_source[keys[0]] = _scoped_score(score_data, fallback, *keys)
     has_part2 = has_completed_part2 or has_story_reading
     duration = _bounded_integer(part2_source.get("duration_seconds"), 0, 24 * 60 * 60) if has_part2 else None
     story_number = _story_number(part2_source, story_state) if has_part2 else None

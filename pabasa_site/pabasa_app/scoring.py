@@ -465,7 +465,9 @@ def build_assessment_score_payload(data: Dict[str, Any]) -> Dict[str, Any]:
     crla_input = dict(payload) if isinstance(payload, dict) else {}
     crla_input.update(data)
     if isinstance(crla_score_data, dict):
-        crla_input.update(crla_score_data)
+        # A partial nested payload must not erase explicit metrics supplied
+        # alongside it. Keep recorded zeroes authoritative.
+        crla_input.update({key: value for key, value in crla_score_data.items() if value not in (None, "")})
     is_crla_attempt = bool(crla_score_data)
     crla_score_data = normalize_crla_score_data(crla_input) if is_crla_attempt else {}
     if is_crla_attempt:
@@ -611,7 +613,9 @@ def build_assessment_score_payload(data: Dict[str, Any]) -> Dict[str, Any]:
     final_score = overall_raw_score
     if assessment_type == "paragraph":
         total_story_words = crla_score_data.get("story_total_words") or data.get("total_story_words", payload.get("total_story_words", target_word_count))
-        words_read = crla_score_data.get("words_read") or data.get("words_read", payload.get("words_read", correct_words + incorrect_words))
+        words_read = crla_score_data.get("words_read")
+        if words_read is None:
+            words_read = data.get("words_read", payload.get("words_read", correct_words + incorrect_words))
         miscues = crla_score_data.get("miscues") if crla_score_data.get("miscues") is not None else data.get("miscues", payload.get("miscues", incorrect_words))
         comprehension = crla_score_data.get("comprehension_correct")
         if comprehension is None:
