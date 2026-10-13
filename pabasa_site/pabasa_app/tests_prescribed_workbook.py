@@ -586,6 +586,21 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertEqual(state['reading_attempts'], 0)
         self.assertEqual(state['last_feedback'], 'Tama!')
 
+    def test_lesson22_gawain1_com_accepts_observed_comb_only_for_the_exact_target(self):
+        key = 'aral-l22-g1-c-syllable-builder'
+        match = lambda expected, transcript, activity_key=key: l22_c_pronunciation_match(
+            expected, 'computer', transcript, 'hard', activity_key,
+        )
+
+        for transcript in ('com', 'kom', 'computer', 'comb', 'Comb.', 'COMB.'):
+            with self.subTest(transcript=transcript):
+                self.assertTrue(match('com', transcript))
+        for transcript in ('come', 'calm', 'um', 'comb comb', 'unrelated'):
+            with self.subTest(transcript=transcript):
+                self.assertFalse(match('com', transcript))
+        self.assertFalse(match('ca', 'comb'))
+        self.assertFalse(match('com', 'comb', 'aral-l22-g2-c-word-reading'))
+
     def test_lesson22_gawain1_complete_18_cell_strict_acceptance_matrix(self):
         key = 'aral-l22-g1-c-syllable-builder'
         cells = (
@@ -593,7 +608,7 @@ class WorkbookStateTests(SimpleTestCase):
             ('ce', 'Cebu', 'soft', ('ce', 'se', 'cebu'), 'see'),
             ('ca', 'Cagayan', 'hard', ('ca', 'ka', 'cagayan'), 'kay'),
             ('bu', 'Cebu', 'soft', ('bu', 'boo'), 'bow'),
-            ('com', 'computer', 'hard', ('com', 'kom', 'computer'), 'come'),
+            ('com', 'computer', 'hard', ('com', 'kom', 'computer', 'comb'), 'come'),
             ('pu', 'computer', 'hard', ('pu', 'pooh', 'poo'), 'pew'),
             ('ga', 'Cagayan', 'hard', ('ga',), 'go'),
             ('tus', 'cactus', 'hard', ('tus', 'tuss'), 'toast'),
@@ -1324,7 +1339,7 @@ class PrescribedWorkbookFlowTests(TestCase):
         )
         self.assertEqual(response.status_code, 200, response.content)
         state = response.json()['state']
-        approved_transcripts = {'pu': 'Poo.', 'tus': 'Tuss.', 'bi': 'B.', 'net': 'Nett.', 'te': 'T.', 'les': 'less'}
+        approved_transcripts = {'com': 'Comb.', 'pu': 'Poo.', 'tus': 'Tuss.', 'bi': 'B.', 'net': 'Nett.', 'te': 'T.', 'les': 'less'}
 
         def approved_alias_response(request):
             expected = request.POST['l22_c_syllable']

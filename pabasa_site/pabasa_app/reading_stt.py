@@ -246,6 +246,9 @@ L22_G1_BU_STT_ALIASES = {'bu', 'boo'}
 # Gawain 1 reading gate. They must not affect another activity or pantig.
 L22_G1_SCOPED_SYLLABLE_ALIASES = {
     'bu': L22_G1_BU_STT_ALIASES,
+    # Observed Chirp 3 (en-PH) whole-token transcription of isolated /com/.
+    # This remains limited to the exact G1 activity and displayed pantig.
+    'com': {'com', 'kom', 'comb'},
     'pu': {'pu', 'pooh', 'poo'},
     'tus': {'tus', 'tuss'},
     'bi': {'bi', 'bee', 'be', 'b'},
