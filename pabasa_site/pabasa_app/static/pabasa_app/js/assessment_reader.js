@@ -3928,12 +3928,14 @@
             } catch (error) {
                 stream.stop();
                 if (crlaLiveSpeech !== stream || stoppingSpeechRecognition || !isRecording) return;
-                if ([400, 401, 403].includes(error.status)) {
+                if ([400, 401].includes(error.status)) {
                     crlaSpeechFailure = true;
                     stopSpeechRecognition();
                     setSpeechStatus('Speech is unavailable.', error.message);
                     return;
                 }
+                // A refused stream can use the existing authorized clip path.
+                // Release stream ownership so recorder flushing works normally.
                 // Check buffered startup audio using the original clip path
                 // before resuming fallback capture; never discard the first word.
                 crlaLiveSpeech = null;
@@ -4737,6 +4739,7 @@
             formData.append("language", currentMaterialLanguage || "");
             if (isOfficialAssessmentLaunch && isCrla) {
                 formData.append("official_crla_assessment", "1");
+                formData.append("official_assessment_id", String(officialAssessmentId));
             }
             if (currentAssessmentBranch === "rhymes") formData.append("crla_rhymes", "1");
             if (isOfficialAssessmentLaunch && isCrla && mode === "paragraph" && currentStoryState === "story_reading") {
@@ -5935,6 +5938,12 @@
             pendingAudioChunk = null;
             isAdvancingItem = false;
             itemResultVersion += 1;
+            // Clip fallback must capture the newly displayed CRLA context now,
+            // rather than discard its first words with the previous item's clip.
+            if (isOfficialAssessmentLaunch && isCrla && isRecording && !isMuted
+                && !stoppingSpeechRecognition && mediaRecorder?.state === "recording") {
+                finishCurrentAudioChunk(true);
+            }
             const label = getCurrentSectionLabel();
             if (counter) {
                 const pageLabel = getCurrentPageLabel();

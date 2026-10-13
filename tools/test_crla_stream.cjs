@@ -182,6 +182,14 @@ async function readerTest() {
     assert.equal(fallback, 1);
     assert.equal(recovered, 1, 'startup audio is evaluated before fallback recording resumes');
     assert.equal(context.crlaStreamingUnavailable, true);
+
+    Stream.prototype.start = async function () { throw Object.assign(new Error('assessment access changed'), {status: 403}); };
+    context.crlaStreamingUnavailable = false;
+    context.crlaSpeechFailure = false;
+    await vm.runInContext('startCrlaLiveSpeech()', context);
+    assert.equal(context.crlaStreamingUnavailable, true, 'a refused live ticket switches to clip capture');
+    assert.equal(fallback, 2, 'clip capture continues after a refused live ticket');
+    assert.equal(context.crlaLiveSpeech, null, 'clip fallback must release the stopped stream so flush drains the recorder');
 }
 
 (async () => {

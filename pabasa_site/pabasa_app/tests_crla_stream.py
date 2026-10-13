@@ -7,6 +7,7 @@ from django.conf import settings
 from django.contrib.sessions.backends.db import SessionStore
 from django.core import signing
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.http import JsonResponse
 from django.test import RequestFactory, SimpleTestCase, override_settings
 
 from . import crla_stream, views
@@ -84,6 +85,20 @@ class CrlaStreamingTests(SimpleTestCase):
     def test_foreign_session_cannot_use_signed_final(self):
         other = SessionStore(session_key='b' * 32)
         self.assertEqual(crla_stream.crla_stream_evaluate(self.request({'final_token': self.final(session=other)})).status_code, 403)
+
+    def test_clip_fallback_cannot_bypass_revoked_assessment_access(self):
+        request = self.factory.post('/api/reading/transcribe/', {
+            **self.fields,
+            'audio': SimpleUploadedFile('synthetic.webm', b'synthetic audio', content_type='audio/webm'),
+        })
+        request.session = self.session
+        rejected = JsonResponse({'success': False, 'error': 'Assessment access revoked.'}, status=403)
+        with patch.object(views, '_enforce_student_access_for_request', return_value=rejected) as guard, \
+                patch.object(views, 'transcribe_audio_bytes_with_model') as provider:
+            response = views._reading_transcribe_response(request)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(guard.call_args.args[0].POST['official_assessment_id'], '12')
+        provider.assert_not_called()
 
     def test_unsigned_browser_transcript_cannot_be_scored(self):
         self.assertEqual(crla_stream.crla_stream_evaluate(self.request({'final_token': 'forged', 'transcript': 'bata'})).status_code, 403)

@@ -33,6 +33,7 @@ function reader(overrides = {}) {
     getCurrentDisplayText: () => 'Si Ana ay masaya.', isAdvancingItem: false,
     isRecording: true, isMuted: false, currentStoryState: 'story_reading', currentAssessmentBranch: 'story',
     mode: 'paragraph', isOfficialAssessmentLaunch: true, isCrla: true, sentenceDebugEnabled: false,
+    officialAssessmentId: '1',
     currentMaterialLanguage: 'Filipino', currentSttLanguageCode: 'fil-PH', syllableStitchingContext: '',
     updateAssessmentNavigationButtons() {}, updateSpeechProcessingControls() {},
     resetSyllableStitching() {}, getCsrfToken: () => 'test', stopSpeechRecognition() {}, setSpeechStatus() {},
