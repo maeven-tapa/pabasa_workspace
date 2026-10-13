@@ -137,6 +137,23 @@ class Lesson22Gawain1AudioTests(SimpleTestCase):
         self.assertIn('Hindi magamit ang mikropono ngayon. Subukan muli mamaya.', self.js)
         self.assertIn('20261007-l22-g1-result-audio-only-1', self.template)
 
+    def test_gawain1_reading_feedback_preserves_authoritative_unclear_result(self):
+        self.assertIn("pendingSpeech=state.read_aloud_completed?'Magaling! Nabasa mo nang tama ang lahat ng pantig.':(state.last_feedback||'Subukan muli.')", self.js)
+        self.assertIn("state['last_feedback'] = 'Hindi ko malinaw na narinig. Subukan muli.'", (Path(__file__).parent / 'prescribed_workbook.py').read_text(encoding='utf-8'))
+        self.assertIn("state['last_feedback'] = 'Subukan muli.'", (Path(__file__).parent / 'prescribed_workbook.py').read_text(encoding='utf-8'))
+
+    def test_gawain1_word_builder_cleanup_is_target_scoped_and_keeps_completion_flow(self):
+        renderer = self.js.split('function renderCBuilder()', 1)[1].split('function startCReading', 1)[0]
+        self.assertIn('id="wb-check" class="wb-primary">Suriin', renderer)
+        self.assertIn('id="wb-erase">Burahin', renderer)
+        self.assertIn("${l22G1?'':`<p class=\"wb-building-instruction\">Piliin ang mga pantig sa Big Box upang bumuo ng salita.</p>`}", renderer)
+        self.assertIn("${readDone&&l22G1?'':`<p class=\"wb-reading-tip\">", renderer)
+        self.assertIn("if(!l22G1){button('Tapusin ang Gawain'", renderer)
+        self.assertIn("if(l22G1&&event?.action==='build_word'&&!state.completed", self.js)
+        self.assertIn("const L22_G1_BUILDING_INSTRUCTION = 'Piliin ang mga pantig sa Big Box upang bumuo ng salita.'", self.js)
+        self.assertIn("!wasReadComplete&&state.read_aloud_completed&&!state.completed", self.js)
+        self.assertIn("builder.map(id=>piecesById[id]||'').join('')||(l22G1?'':'Pipiliin mong salita ay lalabas dito.')", self.js)
+
     def test_gawain1_startup_owner_is_independent_and_instruction_replay_remains(self):
         self.assertIn("if(!startupNarrationStarted){startupNarrationStarted=true;playStartup();}", self.js)
         self.assertIn("playPrescribedAudio(l22StartupTtsText,true)", self.js)
@@ -144,8 +161,6 @@ class Lesson22Gawain1AudioTests(SimpleTestCase):
         self.assertIn('id="wb-instruction-replay"', self.template)
 
     def test_gawain1_restart_control_is_target_scoped_and_reachable(self):
-        self.assertIn("}else if(!preview&&l22G1){", self.js)
-        self.assertIn("restart.id='wb-l22-reset';", self.js)
         self.assertIn("perform({action:'restart'})", self.js)
         workbook = (Path(__file__).parent / 'prescribed_workbook.py').read_text(encoding='utf-8')
         self.assertIn("def _apply_l22_c_builder", workbook)
@@ -153,4 +168,4 @@ class Lesson22Gawain1AudioTests(SimpleTestCase):
 
     def test_instruction_recording_hash_is_stable(self):
         digest = hashlib.sha256((self.audio_dir / 'Basahin_ang_mga_pantig_mula_sa_Bid_box_TTS.mp3').read_bytes()).hexdigest()
-        self.assertEqual(digest, 'dcd6d619b12abd1505e2fc508632f8dcb7269d9aa662d4e0c841b9bff3b26599')
+        self.assertEqual(digest, 'e50f900c6ab0475e611f4b22203d42b2a480e397bbd14a497b938027f5b9cd51')

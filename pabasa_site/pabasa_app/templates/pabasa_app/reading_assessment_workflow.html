@@ -123,26 +123,18 @@
     .assessment-waiting-loader {
         width: 156px;
         height: 156px;
-        border: 14px solid rgba(31, 111, 139, 0.12);
-        border-top-color: #3f8eea;
-        border-right-color: #72b9d2;
-        border-radius: 50%;
-        display: grid;
-        place-items: center;
-        animation: assessment-waiting-spin 1.5s linear infinite;
-        box-shadow: 0 12px 28px rgba(31, 111, 139, 0.10);
+        position: relative;
     }
 
-    .assessment-waiting-loader-icon {
-        width: 92px;
-        height: 92px;
-        border-radius: 50%;
-        display: grid;
-        place-items: center;
-        background: #fff;
-        color: #1871b7;
-        font-size: 3rem;
-        animation: assessment-waiting-counter-spin 1.5s linear infinite;
+    .assessment-waiting-loader img {
+        /* The asset includes 34px of transparent padding for its shadow. */
+        position: absolute;
+        top: -34px;
+        left: -34px;
+        width: 224px;
+        height: 224px;
+        max-width: none;
+        display: block;
     }
 
     .assessment-waiting-info {
@@ -164,19 +156,6 @@
         font-size: 1.35rem;
         line-height: 1.2;
         flex: 0 0 auto;
-    }
-
-    @keyframes assessment-waiting-spin {
-        to { transform: rotate(360deg); }
-    }
-
-    @keyframes assessment-waiting-counter-spin {
-        to { transform: rotate(-360deg); }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .assessment-waiting-loader,
-        .assessment-waiting-loader-icon { animation: none; }
     }
 
     .assessment-not-taken-message {
@@ -343,7 +322,10 @@
                 {% if assessment_week_enabled %}
                     <span class="workflow-pill">ASSESSMENT WEEK ON</span>
                     <div class="assessment-waiting-loader" role="status" aria-label="Preparing your assessment">
-                        <span class="assessment-waiting-loader-icon" aria-hidden="true"><i class="bi bi-book-half"></i></span>
+                        <picture>
+                            <source media="(prefers-reduced-motion: reduce)" srcset="{% static 'pabasa_app/animations/assessment-waiting-spinner-still.png' %}">
+                            <img src="{% static 'pabasa_app/animations/assessment-waiting-spinner.gif' %}" width="224" height="224" alt="">
+                        </picture>
                     </div>
                     <div class="workflow-copy assessment-waiting-copy">
                         <p class="workflow-subtitle">{{ workflow_subtitle }}</p>

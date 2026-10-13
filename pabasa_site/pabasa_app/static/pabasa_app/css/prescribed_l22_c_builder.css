@@ -484,3 +484,12 @@ body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active>.wb-reading-p
 @media(prefers-reduced-motion:reduce){body.wb-l22-g1-page.wb-l22-g1-instruction #wb-content.wb-l22-g1-active.wb-l22-g1-fade-out>.wb-bigbox,body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active>.wb-reading-panel{transition:none!important}}
 /* Reading and building feedback remains available to assistive technology while mapped audio carries it. */
 .wb-l22-g1-page .wb-phase-status,.wb-l22-g1-page .wb-builder-feedback,.wb-l22-g1-page .wb-audio-only-result{position:absolute!important;width:1px!important;height:1px!important;min-height:0!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+
+/* Lesson 22 Gawain 1: keep the active word-building controls together. */
+.wb-l22-g1-page .wb-word-panel .wb-tools{display:flex;align-items:stretch;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+.wb-l22-g1-page .wb-word-panel .wb-tools button{flex:1 1 180px;min-width:0;min-height:48px;padding:10px 16px;border-radius:999px;font:inherit;font-weight:900}
+.wb-l22-g1-page .wb-word-panel .wb-tools #wb-check{background:var(--l22-ref-teal,#277f82);border:2px solid var(--l22-ref-teal,#277f82);color:#fff}
+.wb-l22-g1-page .wb-word-panel .wb-tools #wb-erase{background:#fff;border:2px solid #94d9d6;color:var(--l22-ref-teal-dark,#23666b)}
+.wb-l22-g1-page .wb-word-panel .wb-tools #wb-retry{flex-basis:100%;display:none}
+.wb-l22-g1-page .wb-word-panel .wb-tools #wb-retry:not([hidden]){display:block}
+@media(max-width:520px){.wb-l22-g1-page .wb-word-panel .wb-tools{gap:8px}.wb-l22-g1-page .wb-word-panel .wb-tools button{flex-basis:calc(50% - 4px);padding-inline:10px;font-size:.9rem}}
