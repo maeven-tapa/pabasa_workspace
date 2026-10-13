@@ -200,6 +200,11 @@ GOOGLE_STT_CHIRP2_LOCATION = os.environ.get('GOOGLE_STT_CHIRP2_LOCATION', 'us-ce
 GOOGLE_STT_MODEL = 'chirp_3'
 CRLA_STREAMING_ENABLED = os.environ.get('CRLA_STREAMING_ENABLED', 'true').lower() == 'true'
 GOOGLE_STT_CREDENTIALS_FILE = BASE_DIR / 'google-stt-service-account.json'
+# CRLA narration only. Keep this secret on the server, never in browser scripts.
+ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY', '').strip()
+ELEVENLABS_API_KEYS = tuple(dict.fromkeys(
+    os.environ.get('ELEVENLABS_API_KEYS', '').replace(',', ' ').split()
+))
 # Knowlez STT key, injected by Cloud Run. Keep the existing secret name.
 AZURE_SPEECH_KEY = os.environ.get('AZURE_SPEECH_KEY', '').strip()
 PABASA_OVERRIDE_SECURITY_CODE = os.environ.get('PABASA_OVERRIDE_SECURITY_CODE', '')

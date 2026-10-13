@@ -7756,40 +7756,12 @@
             button?.classList.add("is-playing");
             if (button) button.innerHTML = '<i class="bi bi-hourglass-split"></i> Loading';
 
-            // Official CRLA Words uses the reviewed local recordings. Keep this
-            // lookup narrowly scoped so regular assessments, sentences,
-            // passages, and template activities retain their existing API TTS.
-            const localCrlaWordUrl = getLocalCrlaWordAudioUrl(text);
-            const localCrlaSentenceUrl = getLocalCrlaSentenceAudioUrl(text);
-            const localCrlaStoryUrl = getLocalCrlaStoryAudioUrl();
-            const localCrlaComprehensionUrl = getLocalCrlaComprehensionAudioUrl(button);
-            const localCrlaUrl = localCrlaWordUrl || localCrlaSentenceUrl || localCrlaStoryUrl || localCrlaComprehensionUrl;
-            if (localCrlaUrl) {
-                try {
-                    readAloudAudio = new Audio(localCrlaUrl);
-                    readAloudAudio.preload = "auto";
-                    readAloudAudio.onended = stopReadAloud;
-                    readAloudAudio.onerror = () => {
-                        setSpeechStatus("Read aloud had trouble.", "The local word audio is unavailable.");
-                        stopReadAloud();
-                    };
-                    if (button) button.innerHTML = '<i class="bi bi-stop-fill"></i> Stop Audio';
-                    button?.classList.add("is-playing");
-                    button?.removeAttribute("disabled");
-                    await readAloudAudio.play();
-                } catch (error) {
-                    if (controller.signal.aborted || readAloudController !== controller) return;
-                    console.warn("PABASA: Local CRLA word audio failed", error);
-                    setSpeechStatus("Read aloud had trouble.", "The local word audio is unavailable.");
-                    stopReadAloud();
-                } finally {
-                    if (readAloudController === controller) isReadAloudLoading = false;
-                }
-                return;
-            }
-
             const formData = new FormData();
-            formData.append("target_text", text);
+            // Rhymes narrate the active word; the other CRLA stages narrate
+            // their displayed text using the same server-configured voice.
+            const narrationText = isCrla && currentAssessmentBranch === "rhymes"
+                ? getActiveCrlaRhymeWord(text) : text;
+            formData.append("target_text", narrationText);
             formData.append("mode", mode);
             formData.append("language", currentMaterialLanguage || "");
             formData.append("tts_profile", isCrla ? "crla" : "assessment");
@@ -7816,7 +7788,10 @@
                 readAloudAudioUrl = URL.createObjectURL(audioBlob);
                 readAloudAudio = new Audio(readAloudAudioUrl);
                 readAloudAudio.onended = stopReadAloud;
-                readAloudAudio.onerror = stopReadAloud;
+                readAloudAudio.onerror = () => {
+                    setSpeechStatus("Read aloud had trouble.", "Audio playback failed. Please try again.");
+                    stopReadAloud();
+                };
                 if (button) button.innerHTML = '<i class="bi bi-stop-fill"></i> Stop Audio';
                 button?.classList.add("is-playing");
                 button?.removeAttribute("disabled");
@@ -7829,92 +7804,6 @@
             } finally {
                 if (readAloudController === controller) isReadAloudLoading = false;
             }
-        }
-
-        function getLocalCrlaWordAudioUrl(text) {
-            if (!isCrla || mode !== "word") return "";
-            const isCrlaRhymes = currentAssessmentBranch === "rhymes";
-            const activeText = isCrlaRhymes
-                ? getActiveCrlaRhymeWord(text)
-                : String(text || "").trim();
-            const word = activeText.toLocaleLowerCase("fil-PH");
-            const localWords = new Set([
-                "binti", "pito", "tubig", "pagod", "kanta",
-                "regalo", "butiki", "halaman", "malapot", "gagamba",
-                "hito", "bisig", "hagod", "pinta", "suklay", "saklay",
-                "buhay", "bahay", "ngiti", "panalo", "salapi", "marimba",
-            ]);
-            if (!localWords.has(word)) return "";
-            const folder = isCrlaRhymes ? "rhymes" : "words";
-            return `/static/pabasa_app/crla/${folder}/${encodeURIComponent(word[0].toLocaleUpperCase("fil-PH") + word.slice(1))}.mp3`;
-        }
-
-        function getLocalCrlaSentenceAudioUrl(text) {
-            if (!isCrla || mode !== "sentence" || currentAssessmentBranch !== "sentences") return "";
-            const sentence = String(text || "").trim().replace(/\s+/g, " ").toLocaleLowerCase("fil-PH");
-            const files = {
-                "naglalaba si tatay sa palanggana.": "naglalaba_si_tatay_sa_palanggana.mp3",
-                "magpapalit ako ng kamiseta mamaya.": "magpapalit_ako_ng_kamiseta_mamaya.mp3",
-                "nilinis nila ang agiw rito.": "nilinis_nila_ang_agiw_rito.mp3",
-                "bumili kami ng bagong suklay.": "bumili_kami_ng_bagong_suklay.mp3",
-            };
-            const file = files[sentence];
-            return file ? `/static/pabasa_app/crla/sentence/${file}` : "";
-        }
-
-        function getLocalCrlaStoryAudioUrl() {
-            if (!isCrla || mode !== "paragraph" || currentStoryState !== "story_reading") return "";
-            const title = String(currentSelectedStory?.title || "").trim().toLocaleLowerCase("fil-PH");
-            const storyAudioConfig = {
-                "ang pagong at ang kuneho": {
-                    folder: "ang%20pagong%20at%20ang%20kuneho",
-                    filePrefix: "ang_pagong_at_ang_kuneho_segment_",
-                    segmentCount: 8,
-                },
-                // The seeded official title is "Isang Kakaibang Araw";
-                // accept the user-facing shortened title as well.
-                "isang kakaibang araw": {
-                    folder: "ang%20kakaibang%20araw",
-                    filePrefix: "ang_kakaibang_araw_segment_",
-                    segmentCount: 4,
-                },
-                "ang kakaibang araw": {
-                    folder: "ang%20kakaibang%20araw",
-                    filePrefix: "ang_kakaibang_araw_segment_",
-                    segmentCount: 4,
-                },
-            }[title];
-            if (!storyAudioConfig) return "";
-            const segmentIndex = Math.max(0, Number(currentPageIndex) || 0) + 1;
-            if (segmentIndex > storyAudioConfig.segmentCount) return "";
-            const segment = String(segmentIndex).padStart(2, "0");
-            return `/static/pabasa_app/crla/${storyAudioConfig.folder}/${storyAudioConfig.filePrefix}${segment}.mp3`;
-        }
-
-        function getLocalCrlaComprehensionAudioUrl(button) {
-            if (!isCrla || button !== crlaQuestionReadAloudBtn) return "";
-            const title = String(currentSelectedStory?.title || "").trim().toLocaleLowerCase("fil-PH");
-            const config = {
-                "ang pagong at ang kuneho": {
-                    folder: "crla%20comprehension_%20ang%20pagong%20at%20ang%20kuneho",
-                    filePrefix: "ang_pagong_at_ang_kuneho_question_",
-                },
-                // The seeded official title is "Isang Kakaibang Araw";
-                // accept the user-facing shortened title as well.
-                "isang kakaibang araw": {
-                    folder: "crla%20comprehension%20_%20ang%20kakaibang%20araw",
-                    filePrefix: "ang_kakaibang_araw_question_",
-                },
-                "ang kakaibang araw": {
-                    folder: "crla%20comprehension%20_%20ang%20kakaibang%20araw",
-                    filePrefix: "ang_kakaibang_araw_question_",
-                },
-            }[title];
-            if (!config) return "";
-            const questionNumber = Number(currentStoryQuestionIndex) + 1;
-            if (questionNumber < 1 || questionNumber > 6) return "";
-            const number = String(questionNumber).padStart(2, "0");
-            return `/static/pabasa_app/crla/${config.folder}/${config.filePrefix}${number}.mp3`;
         }
 
         function getActiveCrlaRhymeWord(displayText) {

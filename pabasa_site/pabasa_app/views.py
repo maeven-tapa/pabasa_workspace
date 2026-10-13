@@ -84,7 +84,6 @@ from .lesson27_reading import analyze_verse_reading
 from .lesson26_reading import analyze_sentence_continuation
 from .prescribed_sentence_reading import ACTIVITY_KEYS as SENTENCE_CONTINUATION_KEYS, continue_sentence
 from .reading_stt import (
-    CRLA_TTS_VOICES,
     stt_word_metadata,
     ReadingMatcher,
     align_story_transcript,
@@ -105,6 +104,7 @@ from .reading_stt import (
     l22_c_pronunciation_match,
     word_numbers_in_transcript,
 )
+from .elevenlabs_tts import CRLA_TTS_MODEL_ID, CRLA_TTS_VOICE_ID
 
 # Common short-word substitutions returned by speech-to-text for the English
 # prescribed lessons. These are recognition allowances only; they never alter
@@ -26006,7 +26006,8 @@ def reading_read_aloud_api(request):
                        }
                        else {'voice_gender': 'MALE'} if tts_profile == 'correspondence'
                        else {'speaking_rate': 0.80, 'prosody_rate': '82%'} if tts_profile == 'hunt'
-                       else {'tts_profile': 'crla', 'voice_gender': 'FEMALE'} if tts_profile == 'crla'
+                       else {'tts_profile': 'crla', 'elevenlabs_api_key':
+                             settings.ELEVENLABS_API_KEYS or settings.ELEVENLABS_API_KEY} if tts_profile == 'crla'
                        else {'speaking_rate': 1.0, 'prosody_rate': '100%'} if tts_profile == 'assessment'
                        else {})
         audio_content = synthesize_read_aloud_audio(
@@ -26018,7 +26019,7 @@ def reading_read_aloud_api(request):
         )
         uses_crla_voice = tts_options.get('tts_profile') == 'crla'
         tts_language = ('fil-PH' if language_code == 'fil-PH' else 'en-US') if uses_crla_voice else language_code
-        voice_name = CRLA_TTS_VOICES[tts_language] if uses_crla_voice else ('fil-PH-Wavenet-A' if language_code == 'fil-PH' else '')
+        voice_name = CRLA_TTS_VOICE_ID if uses_crla_voice else ('fil-PH-Wavenet-A' if language_code == 'fil-PH' else '')
         return JsonResponse({
             'success': True,
             'audio_content': audio_content,
@@ -26026,6 +26027,8 @@ def reading_read_aloud_api(request):
             'language_code': language_code,
             'tts_language': tts_language,
             'voice_name': voice_name,
+            **({'tts_provider': 'elevenlabs', 'voice_id': CRLA_TTS_VOICE_ID,
+                'model_id': CRLA_TTS_MODEL_ID} if uses_crla_voice else {}),
         })
     except Exception as exc:
         logger.exception('Read aloud synthesis failed')
