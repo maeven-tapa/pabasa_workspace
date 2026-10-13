@@ -24,11 +24,13 @@ function reader(overrides = {}) {
     Date: class extends Date { static now() { return now; } },
     window: {setTimeout: (fn, delay) => schedule(fn, delay), clearTimeout: id => timers.delete(id),
       setInterval: (fn, delay) => schedule(fn, delay, true), clearInterval: id => timers.delete(id)},
-    storyReadingTimer: {setAttribute: (key, value) => { attributes[key] = value; }},
+    storyReadingTimer: {setAttribute: (key, value) => { attributes[key] = value; },
+      getBoundingClientRect: () => ({width: 700, height: 270}), querySelectorAll: () => []},
     storyReadingTimerProgress: {style: {}}, storyReadingTimeUpOverlay: {classList: {remove() {}}},
     stopReading: async () => { completions++; },
     liveSessionPaused: false, liveSessionEnded: false, liveSessionEndRedirecting: false, isFinalizingReading: false,
     isSendingChunk: false, pendingAudioChunk: null, crlaLiveSpeech: null, crlaSpeechFailure: false,
+    readAloudController: null,
     currentIndex: 0, currentSyllableIndex: 0, itemResultVersion: 0, items: ['Si Ana ay masaya.'],
     getCurrentDisplayText: () => 'Si Ana ay masaya.', isAdvancingItem: false,
     isRecording: true, isMuted: false, currentStoryState: 'story_reading', currentAssessmentBranch: 'story',
@@ -66,6 +68,46 @@ function reader(overrides = {}) {
 }
 async function settle() { for (let turn = 0; turn < 12; turn++) await Promise.resolve(); }
 const success = () => ({ok: true, status: 200, text: async () => JSON.stringify({success: true, language_code: 'fil-PH'})});
+
+test('read aloud freezes the visual and deadline, then resumes without charging narration time', () => {
+  const r = reader(), c = r.context;
+  c.startStoryReadingTimer();
+  r.tick(178999);
+  c.readAloudController = new AbortController();
+  c.syncStoryReadingTimerProcessing();
+  const frozen = r.visual();
+  r.tick(200000);
+  assert.equal(r.visual(), frozen);
+  assert.equal(c.storyReadingElapsedMs(), 178999);
+  assert.equal(r.completions(), 0);
+  c.readAloudController = null;
+  c.syncStoryReadingTimerProcessing();
+  r.tick(1);
+  assert.equal(r.completions(), 1);
+});
+
+test('stopping narration leaves the timer paused while speech processing or teacher pause remains', () => {
+  const r = reader(), c = r.context;
+  c.startStoryReadingTimer();
+  r.tick(1000);
+  c.readAloudController = new AbortController();
+  c.syncStoryReadingTimerProcessing();
+  r.tick(5000);
+  c.isSendingChunk = true;
+  c.readAloudController = null;
+  c.syncStoryReadingTimerProcessing();
+  r.tick(5000);
+  assert.equal(c.storyReadingElapsedMs(), 1000);
+  c.isSendingChunk = false;
+  c.liveSessionPaused = true;
+  c.syncStoryReadingTimerProcessing();
+  r.tick(5000);
+  assert.equal(c.storyReadingElapsedMs(), 1000);
+  c.liveSessionPaused = false;
+  c.syncStoryReadingTimerProcessing();
+  r.tick(1000);
+  assert.equal(c.storyReadingElapsedMs(), 2000);
+});
 
 test('story timer freezes its exact visual and actual deadline throughout processing, then resumes', () => {
   const r = reader(), c = r.context;

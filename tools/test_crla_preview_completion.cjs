@@ -278,7 +278,9 @@ async function fitsScreen(page, label) {
           }
           await page.waitForFunction(() => !document.getElementById('crlaQuestionPanel').classList.contains('d-none'));
           if (viewport.width <= 1024) await fitsScreen(page, 'Comprehension at ' + viewport.width);
-          if (scenario === 'no_questions') assert.ok(await page.locator('#crlaQuestionCounter').textContent().then(text => text.includes('No comprehension')));
+          assert.equal(await page.locator('#crlaQuestionPanel .story-question-kicker, #crlaQuestionCounter, .crla-progress-legend:visible').count(), 0);
+          assert.equal(await page.locator('#counter').textContent(), scenario === 'no_questions'
+            ? 'No comprehension questions' : 'Story Comprehension 1/1');
           if (scenario === 'answered_score_failure') {
             await page.evaluate(() => window.__readerTest.completeCRLASpokenAttempt('Ana', 0));
           } else await page.locator('#crlaQuestionNextBtn').click();

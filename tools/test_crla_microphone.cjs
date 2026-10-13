@@ -17,6 +17,22 @@ const script = source.replace('        loadItems();', `
         window.__micTest = {startReading, stopSpeechRecognition, transitionToItem, currentSpeechContext,
             openMicTestDialog, closeMicTestDialog, runMicPlaybackTest,
             flushCurrentSpeechChunk,
+            startSpeechRecognition,
+            useLiveFixture() {
+                stopSpeechRecognition();
+                crlaStreamingUnavailable = false;
+                window.__liveStarts = [];
+                window.CrlaSpeechStream = class {
+                    constructor(options) { this.options = options; }
+                    async start(stream) {
+                        this.stream = stream; this.active = true;
+                        window.__liveStarts.push(this.options.fields);
+                    }
+                    stop() { this.active = false; }
+                    async finish() { this.stop(); }
+                };
+                return startSpeechRecognition();
+            },
             resumeCapture() { stoppingSpeechRecognition = false; startSpeechChunkRecorder(); },
             state: () => ({isRecording, recognitionActive, hasHeardSinceLastChunk,
                 streamAttached: Boolean(crlaLiveSpeech), recorder: mediaRecorder?.state,
@@ -185,14 +201,62 @@ fs.writeFileSync(wavPath, wav);
                 await page.evaluate(() => __micTest.transitionToItem(1));
                 assert.equal((await page.evaluate(() => __micTest.state())).currentIndex, 1);
             }
+            if (branch === 'sentences') {
+                assert.equal(await page.locator('#sentenceItemCountdown').getAttribute('aria-hidden'), 'false');
+                const countdownState = await page.evaluate(() => __micTest.state());
+                assert.equal(countdownState.recorder, undefined, 'countdown releases the recorder');
+                assert.equal(countdownState.recognitionActive, false, 'countdown stops speech capture');
+                assert.equal(countdownState.tracks, undefined, 'countdown releases microphone tracks');
+                const uploadsBeforeCountdown = uploads.length;
+                await page.evaluate(() => __micTest.resumeCapture());
+                await page.waitForTimeout(2200);
+                assert.equal((await page.evaluate(() => __micTest.state())).recorder, undefined,
+                    'capture cannot restart while the countdown modal is visible');
+                assert.equal(uploads.length, uploadsBeforeCountdown, 'countdown audio is never submitted');
+            }
             await page.waitForFunction(before => __micTest.state().recorderStartedAt > before,
-                beforeTransition, {timeout: 1500});
+                beforeTransition, {timeout: branch === 'sentences' ? 6000 : 1500});
             await captureAndFlush();
             await page.evaluate(() => __micTest.openMicTestDialog());
             await page.click('#micTestCloseBtn');
             await page.waitForFunction(() => __micTest.state().recorder === 'recording');
             await captureAndFlush();
             assert.equal(ticketCount, 1, 'fallback persists across recording restarts');
+            if (branch === 'sentences') {
+                await page.evaluate(() => __micTest.useLiveFixture());
+                await page.waitForFunction(() => __micTest.state().streamAttached);
+                await page.evaluate(() => __micTest.transitionToItem(0));
+                assert.equal((await page.evaluate(() => __micTest.state())).streamAttached, false,
+                    'countdown also stops live speech capture');
+                await page.evaluate(() => __micTest.startSpeechRecognition());
+                await page.waitForTimeout(2200);
+                assert.equal(await page.evaluate(() => __liveStarts.length), 1,
+                    'live speech cannot restart inside the modal');
+                await page.waitForFunction(() => __liveStarts.length === 2);
+                assert.deepEqual(await page.evaluate(() => __liveStarts.map(fields =>
+                    ({text: fields.target_text, language: fields.language}))), [
+                    {text: official.sentences[1], language: 'Filipino'},
+                    {text: official.sentences[0], language: 'Filipino'},
+                ], 'resume preserves the provider fields and the new sentence context');
+                // Hold a real microphone permission/device acquisition over
+                // the next transition. Its late tracks must be discarded.
+                await page.evaluate(() => {
+                    __micTest.stopSpeechRecognition();
+                    const nativeMic = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+                    navigator.mediaDevices.getUserMedia = async constraints => {
+                        const stream = await nativeMic(constraints);
+                        window.__lateStream = stream;
+                        await new Promise(resolve => { window.__releaseLateMic = resolve; });
+                        return stream;
+                    };
+                    __micTest.startSpeechRecognition();
+                });
+                await page.waitForFunction(() => Boolean(window.__releaseLateMic));
+                await page.evaluate(() => { __micTest.transitionToItem(1); __releaseLateMic(); });
+                await page.waitForFunction(() => __lateStream.getTracks().every(track => track.readyState === 'ended'));
+                assert.equal((await page.evaluate(() => __micTest.state())).recognitionActive, false);
+                console.log('PASS sentence countdown: live capture stops, same language/context resumes, late microphone tracks are released');
+            }
             assert.deepEqual(errors, []);
             console.log(`PASS ${branch}: mic sample ${sampleBytes} bytes; 403 fallback, non-silent uploaded audio, flush, transition and mic-check resume (${uploads.length} uploads)`);
             await page.evaluate(() => __micTest.stopSpeechRecognition());

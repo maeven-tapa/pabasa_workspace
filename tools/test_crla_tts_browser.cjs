@@ -12,6 +12,10 @@ const start = source.indexOf('        async function readAssessmentTextAloud(');
 const end = source.indexOf('        btnToggleMic?.addEventListener(', start);
 assert.ok(start >= 0 && end > start);
 const functions = source.slice(start, end);
+const timerState = source.slice(source.indexOf('let storyReadingTimerId = null;'),
+  source.indexOf('let liveServerTimeOffsetMs'));
+const timerFunctions = source.slice(source.indexOf('function clearStoryReadingTimer()'),
+  source.indexOf('function startStoryReadingCountdown()'));
 const audio = fs.readFileSync(path.join(root,
   'pabasa_site/pabasa_app/static/pabasa_app/crla/words/Pito.mp3')).toString('base64');
 const origin = 'http://localhost:9876';
@@ -48,6 +52,13 @@ const origin = 'http://localhost:9876';
       let readAloudAudio = null, readAloudAudioUrl = '', isReadAloudLoading = false;
       let readAloudController = null, readAloudButton = null, readAloudButtonHtml = '';
       let pendingSpeech = false, nextText = 'Pito';
+      let liveSessionPaused = false, liveSessionEnded = false, liveSessionEndRedirecting = false;
+      let isFinalizingReading = false, isSendingChunk = false, pendingAudioChunk = null;
+      let crlaSpeechFailure = false, crlaLiveSpeech = null;
+      const storyReadingTimer = null, storyReadingTimerProgress = {style: {}};
+      const storyReadingTimeUpOverlay = null, stopReading = () => {};
+      ${timerState}
+      ${timerFunctions}
       const readingWord = document.getElementById('word');
       const isSpeechResponsePending = () => pendingSpeech;
       const getCsrfToken = () => 'local-test-csrf';
@@ -56,8 +67,13 @@ const origin = 'http://localhost:9876';
       document.getElementById('read').onclick = () => readAssessmentTextAloud(nextText, document.getElementById('read'));
       window.fixture = {
         set(options) { stopReadAloud(); ({mode, currentAssessmentBranch, nextText, isCrla, pendingSpeech} =
-          {mode: 'word', currentAssessmentBranch: 'words', nextText: 'Pito', isCrla: true, pendingSpeech: false, ...options}); },
+          {mode: 'word', currentAssessmentBranch: 'words', nextText: 'Pito', isCrla: true, pendingSpeech: false, ...options});
+          clearStoryReadingTimer();
+          if (currentAssessmentBranch === 'story_reading') startStoryReadingTimer();
+        },
         stop: stopReadAloud,
+        timer: () => ({elapsed: storyReadingElapsedMs(), paused: storyReadingTimerPausedAt !== null,
+          visual: storyReadingTimerProgress.style.strokeDashoffset}),
         state: () => ({loading: isReadAloudLoading, playing: Boolean(readAloudAudio && !readAloudAudio.paused), url: readAloudAudioUrl})
       };`});
 
@@ -88,12 +104,38 @@ const origin = 'http://localhost:9876';
     await page.waitForFunction(() => !window.fixture.state().playing && !window.fixture.state().url);
     assert.equal(await page.locator('#read').innerText(), 'Read Aloud');
 
+    // The actual story timer freezes during both provider loading and audio,
+    // resumes at natural end/manual stop, and is released on provider errors.
+    await page.evaluate(() => window.fixture.set({mode: 'paragraph', currentAssessmentBranch: 'story_reading'}));
+    responseMode = 'hold';
+    await page.locator('#read').click();
+    await page.waitForFunction(() => window.fixture.state().loading);
+    const frozen = await page.evaluate(() => window.fixture.timer());
+    assert.equal(frozen.paused, true);
+    await page.waitForTimeout(300);
+    assert.deepEqual(await page.evaluate(() => window.fixture.timer()), frozen);
+    await heldRoute.fulfill({json: {success: true, audio_content: audio, mime_type: 'audio/mpeg'}});
+    await page.waitForFunction(() => window.fixture.state().playing);
+    await page.waitForTimeout(300);
+    assert.deepEqual(await page.evaluate(() => window.fixture.timer()), frozen);
+    await page.waitForFunction(() => !window.fixture.state().playing && !window.fixture.state().url);
+    assert.equal((await page.evaluate(() => window.fixture.timer())).paused, false);
+    await page.waitForTimeout(100);
+    assert.ok((await page.evaluate(() => window.fixture.timer())).elapsed > frozen.elapsed);
+    responseMode = 'audio';
+    await page.locator('#read').click();
+    await page.waitForFunction(() => window.fixture.state().playing);
+    assert.equal((await page.evaluate(() => window.fixture.timer())).paused, true);
+    await page.locator('#read').click();
+    assert.equal((await page.evaluate(() => window.fixture.timer())).paused, false);
+
     responseMode = 'error';
     await page.locator('#read').click();
     await page.waitForFunction(() => document.getElementById('status').textContent.includes('ElevenLabs TTS HTTP 429'));
     assert.equal(await page.locator('#read').isEnabled(), true);
     assert.equal(await page.locator('#read').innerText(), 'Read Aloud');
     assert.equal(await page.evaluate(() => window.fixture.state().url), '');
+    assert.equal((await page.evaluate(() => window.fixture.timer())).paused, false);
 
     // A stopped request cannot start playback when its response arrives late.
     responseMode = 'hold';
@@ -102,6 +144,7 @@ const origin = 'http://localhost:9876';
     await page.waitForFunction(() => document.getElementById('read').disabled);
     assert.ok(heldRoute);
     await page.evaluate(() => window.fixture.stop());
+    assert.equal((await page.evaluate(() => window.fixture.timer())).paused, false);
     await heldRoute.fulfill({json: {success: true, audio_content: audio, mime_type: 'audio/mpeg'}}).catch(() => {});
     assert.deepEqual(await page.evaluate(() => window.fixture.state()), {loading: false, playing: false, url: ''});
 
@@ -118,7 +161,7 @@ const origin = 'http://localhost:9876';
     await page.evaluate(() => window.fixture.stop());
     assert.deepEqual(unexpected, []);
     assert.deepEqual(errors, []);
-    console.log('CRLA browser TTS passed: 5 stages, real audio playback, stop/end, errors, cancellation, speech lock, regular profile.');
+    console.log('CRLA browser TTS passed: 5 stages, real playback, story timer pause/resume, stop/end, errors, cancellation, speech lock, regular profile.');
     await context.close();
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -71,7 +71,6 @@
         const storyQuestionCompletion = document.getElementById("storyQuestionCompletion");
         const crlaQuestionPanel = document.getElementById("crlaQuestionPanel");
         const crlaQuestionTitle = document.getElementById("crlaQuestionTitle");
-        const crlaQuestionCounter = document.getElementById("crlaQuestionCounter");
         const crlaQuestionText = document.getElementById("crlaQuestionText");
         const crlaAnswerInput = document.getElementById("crlaAnswerInput");
         const crlaAnswerFeedback = document.getElementById("crlaAnswerFeedback");
@@ -356,6 +355,7 @@
         let itemScores = [];
         let autoAdvanceTimer = null;
         let sentenceItemTimer = null;
+        let speechRecognitionVersion = 0;
         let sentenceCountdownTimer = null;
         let sentenceCountdownItemIndex = null;
         const sentenceItemLimitMs = 25000;
@@ -1518,6 +1518,20 @@
             storyReadingTimer?.setAttribute("data-paused", "false");
         }
 
+        function updateStoryReadingTimerGeometry() {
+            if (!storyReadingTimer) return;
+            const { width, height } = storyReadingTimer.getBoundingClientRect();
+            if (width <= 6 || height <= 6) return;
+            // Keep path coordinates in CSS pixels. Non-scaling strokes with a
+            // stretched viewBox otherwise use the wrong perimeter for dashes.
+            const right = width - 3, bottom = height - 3;
+            const radius = Math.min(27, (width - 6) / 2, (height - 6) / 2);
+            const mid = width / 2;
+            const path = `M${mid} 3H${right - radius}A${radius} ${radius} 0 0 1 ${right} ${3 + radius}V${bottom - radius}A${radius} ${radius} 0 0 1 ${right - radius} ${bottom}H${3 + radius}A${radius} ${radius} 0 0 1 3 ${bottom - radius}V${3 + radius}A${radius} ${radius} 0 0 1 ${3 + radius} 3H${mid}`;
+            storyReadingTimer.setAttribute("viewBox", `0 0 ${width} ${height}`);
+            storyReadingTimer.querySelectorAll("path").forEach(element => element.setAttribute("d", path));
+        }
+
         function resetStoryReadingTimerUi() {
             clearStoryReadingTimer();
             storyReadingTimerExpired = false;
@@ -1584,7 +1598,7 @@
         function syncStoryReadingTimerProcessing() {
             if (storyReadingTimerStartedAt === null) return;
             const shouldPause = Boolean((!crlaLiveSpeech && isSendingChunk) || pendingAudioChunk || crlaSpeechFailure || liveSessionPaused
-                || liveSessionEnded || liveSessionEndRedirecting || isFinalizingReading);
+                || liveSessionEnded || liveSessionEndRedirecting || isFinalizingReading || readAloudController);
             if (shouldPause && storyReadingTimerPausedAt === null) {
                 storyReadingTimerPausedAt = Date.now();
                 if (storyReadingTimerExpiryId) window.clearTimeout(storyReadingTimerExpiryId);
@@ -1598,6 +1612,7 @@
         }
 
         function startStoryReadingTimer(startedAt = Date.now()) {
+            updateStoryReadingTimerGeometry();
             clearStoryReadingTimer();
             storyReadingTimerExpired = false;
             storyReadingTimerStartedAt = startedAt;
@@ -1777,8 +1792,8 @@
             const question = currentStoryQuestions[currentStoryQuestionIndex] || {};
             if (crlaQuestionTitle) crlaQuestionTitle.textContent = currentSelectedStory?.title || "Reading Comprehension";
             if (crlaQuestionText) crlaQuestionText.textContent = question.question || "No comprehension question is available for this story.";
-            if (crlaQuestionCounter) crlaQuestionCounter.textContent = currentStoryQuestions.length
-                ? `Question ${currentStoryQuestionIndex + 1} of ${currentStoryQuestions.length}`
+            if (counter) counter.textContent = currentStoryQuestions.length
+                ? `Story Comprehension ${currentStoryQuestionIndex + 1}/${currentStoryQuestions.length}`
                 : "No comprehension questions";
             if (crlaAnswerInput) {
                 crlaAnswerInput.textContent = currentStoryAnswers[currentStoryQuestionIndex] || "Your spoken answer will appear here.";
@@ -3852,7 +3867,7 @@
         async function startCrlaLiveSpeech() {
             // Completion owns the current connection until its final audio is drained.
             if (crlaStreamStarting || stoppingSpeechRecognition || !isRecording || isMuted
-                || isAdvancingItem || isFinalizingReading) return;
+                || isAdvancingItem || isFinalizingReading || sentenceCountdownTimer) return;
             if (crlaLiveSpeech?.active && sameCrlaStreamItem(crlaLiveContext)) return;
             crlaLiveSpeech?.stop();
             crlaStreamStarting = true;
@@ -3949,30 +3964,43 @@
         }
 
         async function startSpeechRecognition() {
-            if (isReviewMode || isMuted || recognitionActive) return;
+            if (isReviewMode || isMuted || recognitionActive || sentenceCountdownTimer
+                || liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) return;
             if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
                 setSpeechStatus("Speech recording is unavailable in this browser.", "Use a current Chrome or Edge browser for live Google Speech checking.");
                 return;
             }
+            const captureVersion = ++speechRecognitionVersion;
             try {
-                mediaStream = await navigator.mediaDevices.getUserMedia(microphoneConstraints());
+                const stream = await navigator.mediaDevices.getUserMedia(microphoneConstraints());
+                // Permission/device acquisition may finish after a countdown,
+                // item change, mute, or teacher pause has stopped this attempt.
+                if (captureVersion !== speechRecognitionVersion || !isRecording || isMuted
+                    || sentenceCountdownTimer || liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) {
+                    stream.getTracks().forEach(track => track.stop());
+                    return;
+                }
+                mediaStream = stream;
                 startAudioMeter(mediaStream);
                 stoppingSpeechRecognition = false;
                 crlaSpeechFailure = false;
                 if (canStreamCrla()) await startCrlaLiveSpeech();
                 else startSpeechChunkRecorder();
+                if (captureVersion !== speechRecognitionVersion) return;
                 speechChunkTimer = window.setInterval(finishCurrentAudioChunk, 250);
                 recognitionActive = Boolean(mediaStream);
                 resetRawMicInput("Waiting for speech...");
                 if (!crlaLiveSpeech) setSpeechStatus("Listening with Google Speech...", "Read the text on screen. Correct syllables will highlight as they are confirmed.", true);
             } catch (error) {
+                if (captureVersion !== speechRecognitionVersion) return;
                 console.warn("PABASA: Microphone unavailable", error);
                 setSpeechStatus("Microphone access was not allowed.", "Please allow microphone access and try again.");
             }
         }
 
         function startSpeechChunkRecorder() {
-            if (!mediaStream || stoppingSpeechRecognition || isMuted || !isRecording || isAdvancingItem) return;
+            if (!mediaStream || stoppingSpeechRecognition || isMuted || !isRecording || isAdvancingItem
+                || sentenceCountdownTimer) return;
             if (canStreamCrla()) { startCrlaLiveSpeech(); return; }
             const recorderContext = currentSpeechContext();
             const mimeType = pickAudioMimeType();
@@ -4061,6 +4089,7 @@
         }
 
         function stopSpeechRecognition() {
+            speechRecognitionVersion += 1;
             stoppingSpeechRecognition = true;
             crlaLiveSpeech?.stop();
             crlaLiveSpeech = null;
@@ -5858,7 +5887,9 @@
                 track.setAttribute("aria-valuenow", String(finished));
                 track.setAttribute("aria-valuetext", `${finished} finished, ${current} current, ${total - finished - current} remaining`);
             }
-            document.querySelectorAll(".crla-progress-legend").forEach(legend => { legend.hidden = false; });
+            document.querySelectorAll(".crla-progress-legend").forEach(legend => {
+                legend.hidden = currentAssessmentUiMode === "story" && currentStoryState === "story_comprehension";
+            });
         }
 
         let crlaReadingFitFrame = null;
@@ -6052,10 +6083,16 @@
                 remaining -= 1;
                 if (remaining <= 0) {
                     clearOfficialSentenceItemCountdown();
+                    if (isRecording && !isMuted && !liveSessionPaused && !liveSessionEnded && !liveSessionEndRedirecting) {
+                        startSpeechRecognition();
+                        startSentenceItemTimer();
+                    }
                     return;
                 }
                 if (sentenceItemCountdownNumber) sentenceItemCountdownNumber.textContent = String(remaining);
             }, 1000);
+            clearSentenceItemTimer();
+            stopSpeechRecognition();
         }
 
         function transitionToItem(nextIndex, statusMessage = "", detail = "") {
@@ -6160,7 +6197,8 @@
 
         function startSentenceItemTimer() {
             clearSentenceItemTimer();
-            if (!isOfficialAssessmentLaunch || mode !== "sentence" || !isRecording || itemLocked[currentIndex]) return;
+            if (!isOfficialAssessmentLaunch || mode !== "sentence" || !isRecording || itemLocked[currentIndex]
+                || sentenceCountdownTimer) return;
             sentenceItemTimer = window.setTimeout(advanceSentenceAfterTimeout, sentenceItemLimitMs);
         }
 
@@ -7728,6 +7766,9 @@
         btnStopReading?.addEventListener("click", stopReading);
         storyReadingInstructionButton?.addEventListener("click", startStoryReadingCountdown);
         storyReadingTimeUpButton?.addEventListener("click", () => storyReadingTimeUpOverlay?.classList.add("d-none"));
+        if (storyReadingTimer && window.ResizeObserver) {
+            new window.ResizeObserver(updateStoryReadingTimerGeometry).observe(storyReadingTimer);
+        }
 
         if (!isReviewMode && items.length && currentAssessmentUiMode !== "story") {
             startAssessmentTimer();
@@ -7752,6 +7793,7 @@
             readAloudButton = button;
             readAloudButtonHtml = button?.innerHTML || "";
             isReadAloudLoading = true;
+            syncStoryReadingTimerProcessing();
             button?.setAttribute("disabled", "disabled");
             button?.classList.add("is-playing");
             if (button) button.innerHTML = '<i class="bi bi-hourglass-split"></i> Loading';
@@ -7831,6 +7873,7 @@
             if (readAloudButton) readAloudButton.innerHTML = readAloudButtonHtml;
             readAloudButton = null;
             readAloudButtonHtml = "";
+            syncStoryReadingTimerProcessing();
         }
 
         function revokeReadAloudUrl() {

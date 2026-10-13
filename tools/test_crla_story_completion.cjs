@@ -209,6 +209,12 @@ async function scenario(browser, sample, name) {
         assert.equal(completed.saved.miscues, miscues);
         assert.equal(completed.saved.story_number, sample.story_number);
         assert.equal(completed.questions, 6);
+        assert.equal(await page.locator('#counter').textContent(), 'Story Comprehension 1/6');
+        assert.equal(await page.locator('#crlaQuestionPanel .story-question-kicker, #crlaQuestionCounter, .crla-progress-legend:visible').count(), 0);
+        for (let question = 2; question <= 6; question++) {
+            await page.locator('#crlaQuestionNextBtn').click();
+            assert.equal(await page.locator('#counter').textContent(), `Story Comprehension ${question}/6`);
+        }
         assert.equal(completed.recording, false);
         assert.equal(completed.allTracksStopped, true);
         assert.equal(completed.sockets, failure ? 2 : 1, 'Completion must not open a replacement speech connection');
