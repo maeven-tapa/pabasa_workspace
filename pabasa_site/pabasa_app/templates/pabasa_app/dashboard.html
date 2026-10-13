@@ -4304,7 +4304,7 @@
                             </div>
                             <div class="class-card-teacher">
                                 <span class="class-card-teacher-icon" aria-hidden="true"><i class="bi bi-person-fill"></i></span>
-                                <span><small>Teacher</small><strong>${escapeHtml(classData.teacher || classData.teacher_name || classData.teacherName || "Your teacher")}</strong></span>
+                                <span><small>Teacher</small><strong>${escapeHtml(String(classData.teacher_name || '').trim() || '-')}</strong></span>
                             </div>
                         </div>
                         <div class="class-card-reading-info">

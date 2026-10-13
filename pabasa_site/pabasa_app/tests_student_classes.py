@@ -79,6 +79,23 @@ class StudentClassesTests(TestCase):
         self.assertIsNone(item['teacher_id'])
         self.assertEqual(item['teacher_name'], '')
 
+    def test_teacher_name_follows_current_section_assignment(self):
+        enrollment = Enrollment.objects.get(student=self.students[0], section=self.section)
+        self.assertEqual(self.classes()[0]['teacher_name'], 'Fixture User')
+
+        self.section.teacher = None
+        self.section.save(update_fields=['teacher'])
+        self.assertEqual(enrollment.assigned_teacher_id, self.teacher.id)
+        self.assertEqual(self.classes()[0]['teacher_name'], '')
+
+        new_teacher = self.user('LIST-NEW-TEACHER', role='teacher')
+        new_teacher.first_name = 'New'
+        new_teacher.last_name = 'Teacher'
+        new_teacher.save(update_fields=['first_name', 'last_name'])
+        self.section.teacher = new_teacher
+        self.section.save(update_fields=['teacher'])
+        self.assertEqual(self.classes()[0]['teacher_name'], 'New Teacher')
+
     def test_query_count_does_not_grow_with_unrelated_sections(self):
         with CaptureQueriesContext(connection) as before:
             original = self.classes()
