@@ -34,7 +34,7 @@ class CrlaTeacherVoiceTests(SimpleTestCase):
 
     @patch('pabasa_app.reading_stt._post_google_tts')
     @patch('pabasa_app.elevenlabs_tts.urllib.request.urlopen')
-    def test_crla_uses_alice_language_delivery_tags_and_pacing(self, urlopen, google):
+    def test_crla_uses_alice_v4_language_delivery_tags_and_settings(self, urlopen, google):
         self.assertEqual(CRLA_TTS_VOICE_ID, 'Xb7hH8MSUJpSbSDYk0k2')
         urlopen.return_value = self.audio_response()
         for language, expected in (('fil-PH', 'fil'), ('tl-PH', 'fil'), ('en-PH', 'en')):
@@ -56,8 +56,8 @@ class CrlaTeacherVoiceTests(SimpleTestCase):
                     '[filipino teacher accent][slow][Cheerful and Encouraging] '
                     'Si Bibo ay bata. Ano ang ginagawa niya?')
                 self.assertEqual(payload['language_code'], expected)
-                self.assertEqual(payload['model_id'], 'eleven_v3')
-                self.assertEqual(payload['voice_settings']['speed'], 0.92)
+                self.assertEqual(payload['model_id'], 'eleven_v4')
+                self.assertEqual(payload['voice_settings'], {'stability': 0.5, 'similarity_boost': 0.75})
                 self.assertEqual(base64.b64decode(result), b'ID3-test-audio')
         google.assert_not_called()
 
@@ -304,7 +304,7 @@ class CrlaReadAloudApiTests(SimpleTestCase):
                     self.assertEqual(data['voice_name'], CRLA_TTS_VOICE_ID)
                     self.assertEqual(data['voice_id'], CRLA_TTS_VOICE_ID)
                     self.assertEqual(data['tts_provider'], 'elevenlabs')
-                    self.assertEqual(data['model_id'], 'eleven_v3')
+                    self.assertEqual(data['model_id'], 'eleven_v4')
                     self.assertNotIn('test-elevenlabs-key', response.content.decode())
                     synthesize.assert_called_with(text, ANY, ANY, credentials_file=ANY,
                         tts_profile='crla', elevenlabs_api_key='test-elevenlabs-key')

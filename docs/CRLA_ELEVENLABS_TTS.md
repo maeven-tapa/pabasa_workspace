@@ -20,7 +20,7 @@ Use ElevenLabs keys with text-to-speech permission and
 access to this voice. Never add the real key to source control or browser code.
 No additional Python dependency or database migration is needed.
 
-The backend uses `eleven_v3`, explicitly selects `fil` for Filipino/Tagalog or
+The backend uses `eleven_v4`, explicitly selects `fil` for Filipino/Tagalog or
 `en` for English, and prefixes every CRLA narration with the requested delivery tags:
 
 ```text
@@ -29,8 +29,11 @@ The backend uses `eleven_v3`, explicitly selects `fil` for Filipino/Tagalog or
 
 Tags are added only to the provider's synthesis text; the displayed reading text
 and assessment scoring targets remain unchanged. The provider interprets the tags
-as delivery hints. It requests MP3 at 44.1 kHz / 128 kbps. A single speed setting
-of `0.92` preserves the previous modest slowdown. It returns base64 audio using
+as delivery hints. It requests MP3 at 44.1 kHz / 128 kbps, with stability `0.5`
+and similarity `0.75`, matching the supplied settings screenshot. Pacing uses
+the `[slow]` delivery tag; v4 supports stability and similarity voice settings,
+so no separate speed setting is sent. Audio effects are left unset.
+It returns base64 audio using
 the existing browser playback flow. Responses identify `tts_provider`, `voice_id`,
 and `model_id`. Missing credentials, provider errors, empty audio, and invalid
 responses fail visibly without switching voices or affecting assessment scores.
@@ -61,6 +64,8 @@ and [provider error codes](https://elevenlabs.io/docs/help-center/technical/api-
 Provider references: [Create speech](https://elevenlabs.io/docs/api-reference/text-to-speech/convert)
 and [model language support](https://elevenlabs.io/docs/overview/models).
 See also [audio tag guidance](https://elevenlabs.io/docs/overview/capabilities/text-to-speech/best-practices).
+The [v3/v4 audio tag guide](https://elevenlabs.io/docs/help-center/product/core-capabilities/text-to-speech/how-do-audio-tags-work-with-eleven-v3-and-v4)
+documents the `eleven_v4` model for the Create speech API.
 Alice is a default voice: ElevenLabs currently states default voices retire on
 December 31, 2026, and access depends on the account's eligibility. See the
 [default voice notice](https://elevenlabs.io/docs/help-center/product/voices/my-voices/how-do-i-access-eleven-labs-default-voices).
