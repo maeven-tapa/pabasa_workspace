@@ -2954,6 +2954,12 @@ body { overflow-x: hidden; }
     min-height: 0 !important;
 }
 
+@media (min-width: 992px) {
+    .about-hero-section .modern-hero > .col-lg-5 .card {
+        transform: translateX(-25px);
+    }
+}
+
 @media (min-width: 992px) and (max-height: 820px) {
     .about-hero-section .modern-hero > .col-lg-7 {
         padding: 1.25rem 1.75rem;
