@@ -53,7 +53,8 @@ class CrlaTeacherVoiceTests(SimpleTestCase):
                 self.assertLessEqual(urlopen.call_args.kwargs['timeout'], 20)
                 payload = json.loads(request.data)
                 self.assertEqual(payload['text'],
-                    '[filipino teacher accent][slow][Cheerful and Encouraging] '
+                    '[Native Filipino accent] [Philippine English pronunciation] '
+                    '[Cheerful Filipino teacher][Slow, natural pace] '
                     'Si Bibo ay bata. Ano ang ginagawa niya?')
                 self.assertEqual(payload['language_code'], expected)
                 self.assertEqual(payload['model_id'], 'eleven_v4')
@@ -271,7 +272,8 @@ class CrlaReadAloudApiTests(SimpleTestCase):
         self.assertEqual(base64.b64decode(data['audio_content']), b'ID3-test-audio')
         self.assertEqual(provider.call_args.args[0].get_header('Xi-api-key'), 'test-elevenlabs-key')
         self.assertEqual(json.loads(provider.call_args.args[0].data)['text'],
-            '[filipino teacher accent][slow][Cheerful and Encouraging] Si Bibo ay bata.')
+            '[Native Filipino accent] [Philippine English pronunciation] '
+            '[Cheerful Filipino teacher][Slow, natural pace] Si Bibo ay bata.')
         self.assertEqual(data['voice_id'], CRLA_TTS_VOICE_ID)
 
     @override_settings(ELEVENLABS_API_KEYS=('private-first', 'private-second'))

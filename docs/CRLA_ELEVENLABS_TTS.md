@@ -24,14 +24,14 @@ The backend uses `eleven_v4`, explicitly selects `fil` for Filipino/Tagalog or
 `en` for English, and prefixes every CRLA narration with the requested delivery tags:
 
 ```text
-[filipino teacher accent][slow][Cheerful and Encouraging]
+[Native Filipino accent] [Philippine English pronunciation] [Cheerful Filipino teacher][Slow, natural pace]
 ```
 
 Tags are added only to the provider's synthesis text; the displayed reading text
 and assessment scoring targets remain unchanged. The provider interprets the tags
 as delivery hints. It requests MP3 at 44.1 kHz / 128 kbps, with stability `0.5`
 and similarity `0.75`, matching the supplied settings screenshot. Pacing uses
-the `[slow]` delivery tag; v4 supports stability and similarity voice settings,
+the `[Slow, natural pace]` delivery tag; v4 supports stability and similarity voice settings,
 so no separate speed setting is sent. Audio effects are left unset.
 It returns base64 audio using
 the existing browser playback flow. Responses identify `tts_provider`, `voice_id`,

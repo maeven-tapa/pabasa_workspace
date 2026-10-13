@@ -12,7 +12,10 @@ from django.core.cache import cache
 
 CRLA_TTS_VOICE_ID = "Xb7hH8MSUJpSbSDYk0k2"  # Alice
 CRLA_TTS_MODEL_ID = "eleven_v4"
-CRLA_TTS_DELIVERY_TAGS = "[filipino teacher accent][slow][Cheerful and Encouraging]"
+CRLA_TTS_DELIVERY_TAGS = (
+    "[Native Filipino accent] [Philippine English pronunciation] "
+    "[Cheerful Filipino teacher][Slow, natural pace]"
+)
 TTS_REQUEST_BUDGET_SECONDS = 60
 TTS_ATTEMPT_TIMEOUT_SECONDS = 20
 
