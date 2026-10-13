@@ -1,7 +1,7 @@
 # CRLA read aloud with ElevenLabs
 
 CRLA words, active rhyme words, sentences, story segments, and comprehension
-questions use ElevenLabs voice `4RLeKvASM0Zt73Htf5GF`. The reader sends
+questions use ElevenLabs Alice voice `Xb7hH8MSUJpSbSDYk0k2`. The reader sends
 `tts_profile=crla` to the existing authenticated, CSRF-protected read-aloud
 endpoint. Existing CRLA MP3 assets are retained, but no longer override this voice.
 Other assessment and practice profiles retain their existing audio providers.
@@ -21,7 +21,15 @@ access to this voice. Never add the real key to source control or browser code.
 No additional Python dependency or database migration is needed.
 
 The backend uses `eleven_v3`, explicitly selects `fil` for Filipino/Tagalog or
-`en` for English, and requests MP3 at 44.1 kHz / 128 kbps. A single speed setting
+`en` for English, and prefixes every CRLA narration with the requested delivery tags:
+
+```text
+[filipino teacher accent][slow][Cheerful and Encouraging]
+```
+
+Tags are added only to the provider's synthesis text; the displayed reading text
+and assessment scoring targets remain unchanged. The provider interprets the tags
+as delivery hints. It requests MP3 at 44.1 kHz / 128 kbps. A single speed setting
 of `0.92` preserves the previous modest slowdown. It returns base64 audio using
 the existing browser playback flow. Responses identify `tts_provider`, `voice_id`,
 and `model_id`. Missing credentials, provider errors, empty audio, and invalid
@@ -52,6 +60,10 @@ and [provider error codes](https://elevenlabs.io/docs/help-center/technical/api-
 
 Provider references: [Create speech](https://elevenlabs.io/docs/api-reference/text-to-speech/convert)
 and [model language support](https://elevenlabs.io/docs/overview/models).
+See also [audio tag guidance](https://elevenlabs.io/docs/overview/capabilities/text-to-speech/best-practices).
+Alice is a default voice: ElevenLabs currently states default voices retire on
+December 31, 2026, and access depends on the account's eligibility. See the
+[default voice notice](https://elevenlabs.io/docs/help-center/product/voices/my-voices/how-do-i-access-eleven-labs-default-voices).
 
 Local verification (Python 3.13):
 

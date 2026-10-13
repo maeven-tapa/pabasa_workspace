@@ -10,8 +10,9 @@ import urllib.request
 from django.core.cache import cache
 
 
-CRLA_TTS_VOICE_ID = "4RLeKvASM0Zt73Htf5GF"
+CRLA_TTS_VOICE_ID = "Xb7hH8MSUJpSbSDYk0k2"  # Alice
 CRLA_TTS_MODEL_ID = "eleven_v3"
+CRLA_TTS_DELIVERY_TAGS = "[filipino teacher accent][slow][Cheerful and Encouraging]"
 TTS_REQUEST_BUDGET_SECONDS = 60
 TTS_ATTEMPT_TIMEOUT_SECONDS = 20
 
@@ -111,7 +112,7 @@ def synthesize_crla_read_aloud_audio(text, api_key, language_code="en-US"):
     else:
         raise RuntimeError("CRLA read aloud supports Filipino and English only.")
     payload = {
-        "text": clean_text,
+        "text": f"{CRLA_TTS_DELIVERY_TAGS} {clean_text}",
         "model_id": CRLA_TTS_MODEL_ID,
         "language_code": language,
         "voice_settings": {"speed": 0.92, "stability": 0.5, "similarity_boost": 0.75},

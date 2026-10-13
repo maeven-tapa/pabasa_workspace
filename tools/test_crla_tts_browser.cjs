@@ -36,7 +36,7 @@ const origin = 'http://localhost:9876';
         if (responseMode === 'error') return route.fulfill({status: 502,
           json: {success: false, error: 'ElevenLabs TTS HTTP 429: Please try again later.'}});
         return route.fulfill({json: {success: true, audio_content: audio, mime_type: 'audio/mpeg',
-          tts_provider: 'elevenlabs', voice_id: '4RLeKvASM0Zt73Htf5GF'}});
+          tts_provider: 'elevenlabs', voice_id: 'Xb7hH8MSUJpSbSDYk0k2'}});
       }
       if (url.pathname !== '/favicon.ico') unexpected.push(url.pathname);
       return route.fulfill({body: ''});
