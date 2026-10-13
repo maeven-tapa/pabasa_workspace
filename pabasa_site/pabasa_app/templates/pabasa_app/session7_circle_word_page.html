@@ -119,14 +119,15 @@
       const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
       const attemptKey = (item, word) => `${item}:${word}`;
       let state = Object.assign({phase:'intro',current_item_index:0,current_oral_word_index:0,orally_completed_words:{},stt_attempt_counts:{},read_aloud_play_counts:{},selected_answers:{},completed_correct_answers:[],state_version:0}, d.progress?.state || {});
-      let busy = false, requestId = 0, speechController = null, stream = null, modelAudio = null, narrationAudio = null, narrationDone = null, narrationId = 0, narrationBusy = false, feedbackReady = true, introInstructionPlayed = false, introVisible = true;
+      let busy = false, requestId = 0, attemptId = 0, speechController = null, stream = null, modelAudio = null, narrationAudio = null, narrationDone = null, narrationId = 0, narrationBusy = false, feedbackReady = true, introInstructionPlayed = false, introVisible = true;
+      const pendingSaves = new Set();
       const current = () => Math.max(0, Number(state.current_item_index) || 0);
       const total = items.length;
       const orallyDone = index => state.orally_completed_words?.[String(index)] || [];
       const activeWord = () => items[current()]?.choices?.[orallyDone(current()).length] || '';
       const stopTracks = () => { stream?.getTracks().forEach(track => track.stop()); stream = null; };
       const cancelSpeech = () => {
-        requestId++;
+        requestId++; attemptId++;
         speechController?.abort(); speechController = null;
         window.Basahin?.cancelAll?.();
         stopTracks();
@@ -184,12 +185,16 @@
       };
       async function save(extra = {}) {
         const mine = ++requestId;
-        const response = await fetch(d.progress_url, {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({state:{...state,state_version:(Number(state.state_version)||0)+1},...extra})});
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok || !result.success) throw Error(result.error || 'Hindi na-save ang progreso. Subukan muli.');
-        if (mine !== requestId) return null;
-        state = result.progress.state;
-        return result;
+        const pending = fetch(d.progress_url, {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({state:{...state,state_version:(Number(state.state_version)||0)+1},...extra})});
+        pendingSaves.add(pending);
+        try {
+          const response = await pending;
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok || !result.success) throw Error(result.error || 'Hindi na-save ang progreso. Subukan muli.');
+          if (mine !== requestId) return null;
+          state = result.progress.state;
+          return result;
+        } finally { pendingSaves.delete(pending); }
       }
       function render(message = '', kind = '') {
         publishExpected();
@@ -255,7 +260,8 @@
       }
       async function read(index, wordIndex, word, button) {
         if (busy || narrationBusy) return;
-        busy = true; const mine = ++requestId; updateControls();
+        busy = true; const mine = ++attemptId; updateControls();
+        let stateBeforeAcceptedRead = null;
         try {
           if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) throw Error('Hindi available ang mikropono.');
           debugState({mic:'Requesting permission',recorder:'Inactive',error:'None'});
@@ -263,37 +269,41 @@
           debugState({mic:'Active',recorder:'Recording'});
           const blob = await window.Basahin.capture({button,stream,onRecorder:()=>{}});
           debugState({recorder:'Processing',vad:'Processing'}); stopTracks(); debugState({mic:'Stopped'});
-          if (mine !== requestId) return;
+          if (mine !== attemptId) return;
           const form = new FormData(); form.append('audio',blob,'session7-lesson19-gawain3.webm');window.Basahin.attachStreamResult?.(form,blob); form.append('target_text',word); form.append('language','Filipino'); form.append('mode','reading');
           window.__session7L19G3ExpectedText = String(form.get('target_text'));
           const expectedField = document.getElementById('prescribed-s7-l19-g3-debug-expected'); if (expectedField) expectedField.textContent = window.__session7L19G3ExpectedText;
           speechController = new AbortController();
           const response = await fetch(d.transcribe_url,{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:form,signal:speechController.signal});
           const result = await response.json().catch(() => ({}));
-          if (mine !== requestId) return;
+          if (mine !== attemptId) return;
           if (!response.ok || !result.success || typeof result.complete !== 'boolean') throw Object.assign(Error(result.error || 'Invalid speech response.'),{speechResult:result});
           if (result.complete === false) throw Object.assign(Error(result.error || 'Hindi pa. Subukan muli.'),{speechResult:result});
+          stateBeforeAcceptedRead = structuredClone(state);
           state.orally_completed_words[String(index)] = [...orallyDone(index),wordIndex];
           state.current_oral_word_index = wordIndex + 1;
           state.stt_attempt_counts[attemptKey(index,wordIndex)] = 0;
           state.read_aloud_play_counts[attemptKey(index,wordIndex)] = 0;
           state.phase = wordIndex === 2 ? 'word_selection' : 'oral_reading';
-          await save(); render('Tama ang pagbasa!','good');
+          if (!await save() || mine !== attemptId) return;
+          stateBeforeAcceptedRead = null;
+          render('Tama ang pagbasa!','good');
           const nextWord = activeWord();
           const nextPrompt = nextWord ? localAudio.highlight[String(nextWord).toLocaleLowerCase('fil-PH')] : localAudio.selectionPrompt;
           await playSequence([localAudio.readingSuccess,nextPrompt]);
         } catch (error) {
-          if (mine === requestId) {
+          if (mine === attemptId) {
+            if (stateBeforeAcceptedRead) state = stateBeforeAcceptedRead;
             const key = attemptKey(index,wordIndex);
             debugState({mic:error.name === 'NotAllowedError' ? 'Permission denied' : (stream ? 'Stopped' : 'Unavailable'),recorder:'Error',error:error.message || 'Speech error'});
             if (!window.Basahin.isCaptureError(error)) state.stt_attempt_counts[key] = Math.min(3,(state.stt_attempt_counts[key]||0)+1);
-            try { await save(); } catch (_) {}
+            try { if (!await save() || mine !== attemptId) return; } catch (_) {}
             const listenFirst = (state.stt_attempt_counts[key]||0) >= 3;
             render(listenFirst ? 'Pakinggan muna ang salita.' : (error.message||'Hindi nakuha ang boses. Subukan muli.'),'bad');
             await playMapped(localAudio.retry);
             if (listenFirst) await playMapped(localAudio.listenPrompt);
           }
-        } finally { if (mine === requestId) { speechController = null; stopTracks(); debugState({mic:'Stopped',recorder:'Inactive'}); busy = false; updateControls(); } }
+        } finally { if (mine === attemptId) { speechController = null; stopTracks(); debugState({mic:'Stopped',recorder:'Inactive'}); busy = false; updateControls(); } }
       }
       async function listen(index,wordIndex,word,button) {
         if (busy || narrationBusy) return;
@@ -350,6 +360,7 @@
       window.addEventListener('pagehide', () => { cancelSpeech(); stopNarration(); stopAudio(modelAudio); });
       render();
       window.__session7LeaveAdapter = {saveCurrentProgress:() => save(),cleanup:() => { cancelSpeech(); stopNarration(); stopAudio(modelAudio); }};
+      window.__session7L19G3Restart = {cancel:cancelSpeech,waitForPendingSaves:() => Promise.allSettled([...pendingSaves])};
     })();
   </script>
   {% include 'pabasa_app/session8_11_prescribed_controls.html' with prefix='prescribed-s7-l19-g3' help_text='Basahin muna ang tatlong salita, pagkatapos piliin ang salitang tumutukoy sa larawan.' %}

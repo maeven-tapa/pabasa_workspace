@@ -129,3 +129,35 @@ class PrescribedLesson19Gawain2RestartTests(TestCase):
         self.assertFalse(saved.activity_completed)
         self.assertEqual(saved.current_index, 0)
         self.assertEqual(saved.completed_items, 0)
+
+    def test_restart_clears_error_and_completed_state_and_survives_reload(self):
+        from .prescribed_activity_catalog import prescribed_activity
+
+        answers = [item['answer'] for item in prescribed_activity(self.key)['items']]
+        for phase in ['oral_reading', 'completion']:
+            with self.subTest(phase=phase):
+                StudentActivityProgress.objects.update_or_create(
+                    student=self.student, activity_key=self.key,
+                    defaults={
+                        'activity_completed': phase == 'completion',
+                        'current_index': 5, 'completed_items': 10, 'correct_items': 10,
+                        'state': {
+                            'phase': phase, 'current_item_index': 5,
+                            'completed_oral_reads': list(range(5)),
+                            'written_answers': answers, 'stt_attempts': {'0': 3},
+                            'tts_plays': {'0': 2}, 'state_version': 9,
+                        },
+                    },
+                )
+                response = self.post({'reset': True})
+                self.assertEqual(response.status_code, 200)
+                saved = StudentActivityProgress.objects.get(student=self.student, activity_key=self.key)
+                self.assertEqual(saved.state['phase'], 'intro')
+                self.assertEqual(saved.state['current_item_index'], 0)
+                self.assertEqual(saved.state['written_answers'], [])
+                self.assertTrue(all(value == 0 for value in saved.state['stt_attempts'].values()))
+                self.assertTrue(all(value == 0 for value in saved.state['tts_plays'].values()))
+                self.assertFalse(saved.activity_completed)
+                page = self.client.get(reverse('prescribed_activity_page', kwargs={'activity_key': self.key}))
+                self.assertEqual(page.status_code, 200)
+                self.assertEqual(page.context['prescribed_activity_data']['progress']['state']['phase'], 'intro')

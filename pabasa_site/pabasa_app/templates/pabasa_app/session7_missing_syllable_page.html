@@ -114,6 +114,7 @@ async function save(extra={}){const mine=++request,r=await fetch(d.progress_url,
 if(!r.ok||!j.success)throw Error(j.error||'Hindi na-save ang progress. Subukan muli.');
 if(mine!==request)return null;s=j.progress.state;
 return j}
+window.__session7L19G2Restart={waitForPendingSaves:()=>activitySaveQueue};
 const saveUnqueued=save;let activitySaveQueue=Promise.resolve();save=(...args)=>{const pending=activitySaveQueue.then(()=>saveUnqueued(...args));activitySaveQueue=pending.then(()=>undefined,()=>undefined);return pending};
 function render(message='',kind='',options={})
 {try{
@@ -153,6 +154,7 @@ try{const r=await fetch(d.completion_url,{method:'POST',credentials:'same-origin
 if(!r.ok||!j.success)throw Error(j.error||'Hindi na-save ang pagtatapos.');d.progress.activity_completed=true;
 render()}catch(e){s.phase='feedback';render(e.message,'bad');
 const retry=document.createElement('button');retry.className='button';retry.textContent='SUBUKANG MULI';retry.onclick=finish;app.querySelector('.status')?.after(retry)}finally{busy=false}}addEventListener('pagehide',stop);
+const cancelAttempt=()=>{request++;narrationRequest++;window.Basahin?.cancelAll?.();stop();busy=false;render()};addEventListener('session7-prescribed-cancel',cancelAttempt);addEventListener('prescribed-session-paused',cancelAttempt);
 render();window.__session7LeaveAdapter={saveCurrentProgress:()=>save(),cleanup:()=>{request++;stop()}}})();</script>{% include 'pabasa_app/session8_11_prescribed_controls.html' with prefix='prescribed-s7-l19-g2' help_text='Basahin ang salita, pagkatapos isulat ang nawawalang pantig. Maaari kang mag-pause o magbukas ng Audio Settings anumang oras.' %}<style>
 body.session67-activity .page{display:grid!important;place-items:center!important;width:min(1320px,100%)!important;height:100dvh!important;margin:auto!important;padding:82px clamp(14px,4vw,38px) 18px!important;overflow:visible!important}
 body.session67-activity .back{position:absolute!important;top:18px!important;left:clamp(14px,4vw,38px)!important;width:auto!important;min-width:54px!important;min-height:48px!important;padding:8px 16px!important;font-size:.95rem!important}

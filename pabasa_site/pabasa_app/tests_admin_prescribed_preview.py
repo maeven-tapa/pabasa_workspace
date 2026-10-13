@@ -2,11 +2,12 @@ import json
 from unittest.mock import patch
 
 from django.http import HttpResponse
-from django.test import RequestFactory, SimpleTestCase
+from django.test import RequestFactory, SimpleTestCase, TestCase
 
 from . import views
 from .prescribed_activity_catalog import active_prescribed_activities
 from .prescribed_workbook import apply_event, get_activity, initial_s9_a1_state
+from .models import User
 
 
 class AdminPrescribedPreviewTests(SimpleTestCase):
@@ -54,3 +55,19 @@ class AdminPrescribedPreviewTests(SimpleTestCase):
         request = self.factory.post('/event/', '{}', content_type='application/json')
         request.session = {'user_id': 48, 'user_role': 'student'}
         self.assertEqual(views.admin_prescribed_workbook_event(request, 'aral-s9-a1-family-drawing').status_code, 302)
+
+
+class Session6Gawain6AdminPreviewTests(TestCase):
+    def test_admin_screen_uses_the_same_shared_basahin_button_as_students(self):
+        admin = User.objects.create(custom_id='G6-PREVIEW-ADMIN', role='admin', first_name='Preview',
+                                    last_name='Admin', middle_initial='', suffix='', sex='female',
+                                    birth_month=1, birth_day=1, birth_year=1990,
+                                    email='g6-preview-admin@example.com', password_hash='hashed')
+        request = RequestFactory().get('/admin/prescribed/lesson-17-18-gawain-6/screen/')
+        request.session = {'user_id': admin.id, 'user_role': 'admin'}
+        response = views.admin_prescribed_activity_screen(request, 'lesson-17-18-gawain-6')
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertIn('data-basahin-button', html)
+        self.assertIn('window.Basahin.bindActivity', html)
+        self.assertIn('admin_prescribed_preview.js', html)

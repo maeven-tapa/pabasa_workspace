@@ -235,47 +235,5 @@
     })();
   </script>
   {% include "pabasa_app/includes/session6_prescribed_controls.html" %}
-  <script>
-  (() => {
-    'use strict';
-    const data = JSON.parse(document.getElementById('prescribed-activity-data')?.textContent || '{}');
-    if (data.activity_key !== 'lesson-17-18-gawain-8' || data.progress?.activity_completed) return;
-    const modalId = 'session6-start-lesson-17-18-gawain-8';
-    if (document.getElementById(modalId)) return;
-    const state = data.progress?.state || {};
-    const saved = Number(data.progress?.completed_items) > 0 || Number(data.progress?.correct_items) > 0 ||
-      Number(state.current_group_index) > 0 || Number(state.current_oral_word_index) > 0 ||
-      state.phase === 'written_selection' || state.phase === 'correct_feedback' || state.phase === 'completion' ||
-      Object.values(state.oral_completed || {}).some(words => Array.isArray(words) && words.length > 0) ||
-      Object.keys(state.completed_answers || {}).length > 0;
-    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-    const modal = document.createElement('div');
-    modal.className = 'lesson-start-backdrop lesson-13-start-backdrop';
-    modal.id = modalId;
-    modal.setAttribute('role', 'dialog');
-    modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-labelledby', `${modalId}-title`);
-    modal.innerHTML = `<div class="lesson-start-modal lesson-13-start-modal"><p class="lesson-start-label lesson-13-start-label">${saved ? 'MAY NA-SAVE KANG PROGRESO!' : 'SESSION 6 · LESSON 17 AT 18 · GAWAIN 8'}</p><h2 class="lesson-start-title lesson-13-start-title" id="${modalId}-title">${saved ? 'May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?' : escapeHtml(data.title)}</h2><div class="lesson-start-actions lesson-13-start-actions"><button type="button" data-g8-start>${saved ? 'IPAGPATULOY' : 'SIMULAN'}</button><button type="button" data-g8-later>${saved ? 'SIMULAN ULIT' : 'MAMAYA NA LANG'}</button></div></div>`;
-    const close = () => {
-      window.__session6IntroReady = true;
-      window.__session6IntroModalOpen = false;
-      modal.remove();
-      document.body.classList.remove('lesson-start-open');
-      window.dispatchEvent(new Event('lesson-start-ready'));
-      window.dispatchEvent(new Event('session6-prescribed-resume'));
-    };
-    modal.querySelector('[data-g8-start]').onclick = close;
-    modal.querySelector('[data-g8-later]').onclick = async () => {
-      if (!saved) { window.location.href = '{% url "assessment" %}'; return; }
-      const response = await fetch(data.progress_url, {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':((document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || '')},body:JSON.stringify({reset:true})});
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok || !result.success) throw Error(result.error || 'Hindi na-reset ang gawain.');
-      window.location.reload();
-    };
-    document.body.prepend(modal);
-    document.body.classList.add('lesson-start-open');
-    modal.querySelector('[data-g8-start]').focus();
-  })();
-  </script>
 </body>
 </html>

@@ -103,7 +103,7 @@
     async function sayInitial(){
       if(initialNarrationStarted||data.progress?.activity_completed)return;
       initialNarrationStarted=true;
-      const start=app.querySelector('#start');if(start)start.disabled=true;
+      const start=app.querySelector('#start');
       try{
         if(state.phase==='intro')await playFiles(['intro_basahin_isulat_ngalan_larawan_tts.mp3']);
         else if(state.phase==='oral_reading')await sayItemPrompt();
@@ -120,7 +120,7 @@
       }
       if(showActivityIntro||state.phase==='intro'){
         const sample=items[0];
-        app.innerHTML=`${heading()}<p class="instruction">Tingnan ang larawan. Basahin ang ngalan nito. Pagkatapos, isulat ang salita.</p><div class="image-stage intro-image"><img src="${esc(sample?.image_url||'')}" alt="${esc(sample?.alt_text||'Larawan ng pana')}"></div><div class="steps" aria-label="Tingnan, Basahin, Isulat"><span>Tingnan</span><b>→</b><span>Basahin</span><b>→</b><span>Isulat</span></div><button class="button" id="start" type="button" disabled>SIMULAN</button><p class="status ${kind}">${esc(message)}</p>`;
+        app.innerHTML=`${heading()}<p class="instruction">Tingnan ang larawan. Basahin ang ngalan nito. Pagkatapos, isulat ang salita.</p><div class="image-stage intro-image"><img src="${esc(sample?.image_url||'')}" alt="${esc(sample?.alt_text||'Larawan ng pana')}"></div><div class="steps" aria-label="Tingnan, Basahin, Isulat"><span>Tingnan</span><b>→</b><span>Basahin</span><b>→</b><span>Isulat</span></div><button class="button" id="start" type="button">SIMULAN</button><p class="status ${kind}">${esc(message)}</p>`;
         app.querySelector('#start').onclick=async()=>{
           if(busy)return;busy=true;started=true;showActivityIntro=false;
           try{if(state.phase==='intro')state.phase='oral_reading';await save();render();if(state.phase==='oral_reading')await sayItemPrompt();else if(state.phase==='written_answer')await playFiles(['tama_pagbasa_isulat_salita_tts.mp3'])}
@@ -150,8 +150,30 @@
         if(attempts>=3)app.querySelector('#listen').onclick=()=>listen(index);
         return;
       }
-      app.innerHTML=`${heading()}<p class="hint">Larawan ${index+1} sa ${items.length}</p>${progressMarkup()}${photo}<input id="answer" class="answer" autocomplete="off" inputmode="text" aria-label="Isulat ang salita" placeholder="Isulat dito"><button class="button check" id="check" type="button" disabled>SURIIN</button><p id="status" class="status ${kind}">${esc(message)}</p>`;
-      const input=app.querySelector('#answer'),check=app.querySelector('#check');input.oninput=()=>{check.disabled=!input.value.trim()};check.onclick=()=>answer(input.value);
+      app.innerHTML=`${heading()}<p class="hint">Larawan ${index+1} sa ${items.length}</p>${progressMarkup()}${photo}<input id="answer" class="answer" autocomplete="off" inputmode="text" aria-label="Isulat ang salita" placeholder="Isulat dito"><div class="action-row"><button class="button check" id="check" type="button" disabled>SURIIN</button><button class="button gold" id="listen-word" type="button">Pakinggan</button></div><p id="status" class="status ${kind}">${esc(message)}</p>`;
+      const input=app.querySelector('#answer'),check=app.querySelector('#check');input.oninput=()=>{check.disabled=!input.value.trim()};check.onclick=()=>answer(input.value);app.querySelector('#listen-word').onclick=()=>listenWrittenWord(index);
+    }
+    async function listenWrittenWord(index){
+      if(busy||state.phase!=='written_answer')return;
+      busy=true;stopAudio();const mine=++request;
+      const controls=[...app.querySelectorAll('#answer,#check,#listen-word')];
+      controls.forEach(control=>control.disabled=true);
+      const status=app.querySelector('#status');status.textContent='Pinakikinggan ang salita…';
+      try{
+        const word=items[index]?.answer;
+        if(!word)throw Error('Walang audio para sa salitang ito.');
+        const audio=new Audio(root+encodeURIComponent(word)+'_tts.mp3');activePlayer=audio;
+        await new Promise((resolve,reject)=>{
+          let settled=false;
+          const done=error=>{if(settled)return;settled=true;clearTimeout(timer);audio.onended=audio.onerror=audio.onpause=null;if(activePlayer===audio)activePlayer=null;error?reject(error):resolve();};
+          const timer=setTimeout(()=>{done(Error('Hindi ma-load ang audio. Subukan muli.'));audio.pause();},15000);
+          audio.onended=()=>done();audio.onerror=()=>done(Error('Hindi available ang audio. Subukan muli.'));
+          audio.onpause=()=>done(Error('Nahinto ang audio. Pakinggan muli kung kailangan.'));
+          Promise.resolve(audio.play()).catch(()=>done(Error('Hindi ma-play ang audio. Subukan muli.')));
+        });
+        if(mine===request){status.textContent='Isulat ang salita at suriin ang sagot.';status.className='status';}
+      }catch(error){if(mine===request){status.textContent=error.message;status.className='status bad';}}
+      finally{if(mine===request){busy=false;controls.forEach(control=>control.disabled=false);const check=app.querySelector('#check');if(check)check.disabled=!app.querySelector('#answer')?.value.trim();}}
     }
     async function read(index){
       if(busy)return;busy=true;stopAudio();const mine=++request,button=app.querySelector('#oral');
@@ -185,7 +207,7 @@
     }
     addEventListener('lesson-start-ready',()=>{if(!initialNarrationStarted)void sayInitial()});
     addEventListener('session6-prescribed-resume',()=>{if(!initialNarrationStarted)void sayInitial()});
-    addEventListener('session6-prescribed-cancel',()=>{request++;stopMic();stopAudio();busy=false});
+    addEventListener('session6-prescribed-cancel',()=>{request++;stopMic();stopAudio();busy=false;render()});
     addEventListener('pagehide',()=>{stopMic();stopAudio()});
     render();
   if(data.activity_key==='lesson-17-18-gawain-9')window.__session6LeaveAdapter={saveCurrentProgress:()=>save()};

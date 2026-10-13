@@ -80,7 +80,7 @@ class BasahinReadingVerdictTests(SimpleTestCase):
         self.assertFalse(self.transcribe('kutsara', 'chocolate', prescribed_activity_key=key)['complete'])
 
     def test_gawain_5_riles_accepts_reported_speech_spellings(self):
-        for heard in ('rieles', 'reless', 'reles', 'reeles'):
+        for heard in ('rieles', 'reless', 'reles', 'reeles', 'realist', 'real price'):
             with self.subTest(heard=heard):
                 result = self.transcribe(
                     'riles', heard, prescribed_activity_key='lesson-17-18-gawain-5',
@@ -91,9 +91,11 @@ class BasahinReadingVerdictTests(SimpleTestCase):
 
     def test_gawain_5_riles_allowance_is_scoped_to_the_word_and_activity(self):
         key = 'lesson-17-18-gawain-5'
-        self.assertFalse(self.transcribe('riles', 'rieles')['complete'])
-        self.assertFalse(self.transcribe('riles', 'rieles', prescribed_activity_key='another-activity')['complete'])
-        self.assertFalse(self.transcribe('puso', 'rieles', prescribed_activity_key=key)['complete'])
+        for heard in ('rieles', 'realist', 'real price'):
+            with self.subTest(heard=heard):
+                self.assertFalse(self.transcribe('riles', heard)['complete'])
+                self.assertFalse(self.transcribe('riles', heard, prescribed_activity_key='another-activity')['complete'])
+                self.assertFalse(self.transcribe('puso', heard, prescribed_activity_key=key)['complete'])
         self.assertFalse(self.transcribe('riles', 'ang rieles', prescribed_activity_key=key)['complete'])
         self.assertFalse(self.transcribe('riles', 'railes', prescribed_activity_key=key)['complete'])
 

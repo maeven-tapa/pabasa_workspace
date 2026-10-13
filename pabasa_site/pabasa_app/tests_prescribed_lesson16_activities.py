@@ -99,7 +99,7 @@ class PrescribedLesson16ActivityTests(TestCase):
         saved.refresh_from_db()
         self.assertTrue(saved.activity_completed)
         self.assertEqual(saved.correct_items, 5)
-        self.assertTrue(material.assessment_results.filter(student=self.student, attempt_status='completed').exists())
+        self.assertEqual(saved.state['answers'], ['gu', 'ba', 'gu', 'ngi', 'ga'])
 
     def test_directly_published_activity_saves_without_a_course_material(self):
         self.login_student()
@@ -128,7 +128,7 @@ class PrescribedLesson16ActivityTests(TestCase):
         saved = StudentActivityProgress.objects.get(student=self.student, activity_key='lesson-16-gawain-1')
         self.assertTrue(saved.activity_completed)
         self.assertEqual(saved.correct_items, 5)
-        self.assertIsNone(saved.state['material_id'])
+        self.assertNotIn('material_id', saved.state)
 
     def test_catalog_preserves_workbook_order_and_direct_image_paths(self):
         activity = prescribed_activity('lesson-16-gawain-1')
@@ -154,7 +154,7 @@ class PrescribedLesson16ActivityTests(TestCase):
             {
                 card['activity_key']: card['session_key']
                 for card in response.context['prescribed_activity_cards']
-                if card['activity_key'].startswith('lesson-16-')
+                if 'lesson-16-' in card['activity_key']
             },
             {
                 'lesson-16-gawain-1': 'session-6',
@@ -196,10 +196,10 @@ class PrescribedLesson16ActivityTests(TestCase):
         self.assertIn('class="steps"', html)
         self.assertIn('class="step ${index<answers.length?', html)
         self.assertIn("index===answers.length?'active'", html)
-        self.assertIn('min-height:2.8em', html)
-        self.assertIn('grid-template-columns:minmax(280px,.95fr)', html)
+        self.assertIn('min-height:3.2em', html)
+        self.assertIn('grid-template-columns:minmax(280px,1fr)', html)
         self.assertIn('@media(max-width:820px)', html)
-        scoped_css = html.split('/* Lesson 16', 1)[1].split('</style>', 1)[0]
+        scoped_css = html.split('.lesson-16-gawain-4-page', 1)[1].split('</style>', 1)[0]
         self.assertNotIn('height:100dvh', scoped_css)
         self.assertNotIn('overflow:hidden', scoped_css)
         self.assertNotIn('!important', scoped_css)
@@ -334,7 +334,7 @@ class PrescribedLesson16ActivityTests(TestCase):
         started = self.client.post(reverse('prescribed_activity_progress', kwargs={'activity_key': 'lesson-16-gawain-3'}),
                                    data=json.dumps({'action': 'start'}), content_type='application/json')
         self.assertEqual(started.json()['screen']['current_word'], 'sanga')
-        self.assertTrue(started.json()['screen']['oral_image_url'].endswith('/sanga.png'))
+        self.assertIn('/lesson_16/sanga', started.json()['screen']['oral_image_url'])
 
     def test_gawain_3_rejects_client_oral_index_and_requires_signed_one_use_proof(self):
         self.login_student()

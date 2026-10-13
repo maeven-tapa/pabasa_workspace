@@ -1,7 +1,8 @@
 import json
 import uuid
+from pathlib import Path
 
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
@@ -52,3 +53,28 @@ class PrescribedLesson19Gawain4RestartTests(TestCase):
         self.assertFalse(saved.activity_completed)
         self.assertEqual(saved.current_index, 0)
         self.assertEqual(saved.completed_items, 0)
+
+    def test_pause_menu_restart_action_returns_activity_to_intro(self):
+        progressed = self.post({
+            'state': {'phase': 'oral_reading', 'completed_oral_reads': [0], 'state_version': 1},
+        })
+        self.assertEqual(progressed.status_code, 200)
+
+        restarted = self.post({'action': 'restart'})
+
+        self.assertEqual(restarted.status_code, 200)
+        payload = restarted.json()['progress']
+        self.assertFalse(payload['activity_completed'])
+        self.assertEqual(payload['completed_items'], 0)
+        self.assertEqual(payload['state']['phase'], 'intro')
+        self.assertEqual(payload['state']['current_item_index'], 0)
+
+
+class PrescribedLesson19Gawain4ClientControlsTests(SimpleTestCase):
+    def test_restart_modal_resets_without_a_native_confirmation_warning(self):
+        source = Path(__file__).with_name('static').joinpath(
+            'pabasa_app', 'js', 'session7_intro_modal.js'
+        ).read_text(encoding='utf-8')
+
+        self.assertNotIn('window.confirm(', source)
+        self.assertIn('window.location.replace(`${window.location.pathname}?restart=${Date.now()}`)', source)

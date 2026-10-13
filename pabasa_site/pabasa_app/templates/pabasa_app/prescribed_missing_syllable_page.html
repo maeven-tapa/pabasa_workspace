@@ -258,7 +258,7 @@
         }
         return;
       }
-      const prompt = `<span class="blank"${isLesson16Gawain1 ? ' aria-hidden="true"' : ''}>${isLesson16Gawain1 ? '' : '_'.repeat(Number(item.blank_length) || 2)}</span><span class="stem">${escape(item.stem)}</span>`;
+      const prompt = `<span class="blank"${isLesson16Gawain1 ? ' aria-hidden="true"' : ''}>${(isLesson16Gawain1 || isLesson16Gawain2) ? '' : '_'.repeat(Number(item.blank_length) || 2)}</span><span class="stem">${escape(item.stem)}</span>`;
       const control = data.interaction === 'choice'
         ? `<div class="choices">${(item.choices || []).map(choice => `<button class="choice" type="button" data-answer="${escape(choice)}">${escape(choice)}</button>`).join('')}</div>`
         : `<form id="writeForm" class="write-form"><input id="answerInput" maxlength="12" autocomplete="off" autocapitalize="none" aria-label="${isLesson16Gawain2 ? 'Isulat ang pantig' : 'Nawawalang pantig'}" placeholder="Isulat ang pantig" required><button class="button" type="submit">Isumite</button></form>`;

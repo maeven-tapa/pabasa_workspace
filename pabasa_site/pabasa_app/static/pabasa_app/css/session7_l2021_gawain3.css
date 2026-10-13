@@ -14,3 +14,5 @@ body.session67-activity .s7g3-page{height:100dvh;min-height:0;padding:16px clamp
 body.session67-activity .s7g3-page .s7g3-back{position:absolute!important;top:10px;left:clamp(16px,4vw,42px);width:280px;min-height:62px}
 body.session67-activity .s7g3-page .s7g3-card{height:min(690px,calc(100dvh - 118px));max-height:calc(100dvh - 118px)}
 @media(max-width:700px){body.session67-activity{height:auto;overflow:auto}body.session67-activity .s7g3-page{height:auto;min-height:100dvh;padding:80px 12px 18px}body.session67-activity .s7g3-page .s7g3-back{top:8px;left:12px;width:230px;min-height:52px}body.session67-activity .s7g3-page .s7g3-card{height:auto;max-height:none;min-height:calc(100dvh - 98px);overflow:visible}}
+
+.s7g3-stage > .s7g3-picture-frame{margin-top:clamp(18px,3vh,30px);}

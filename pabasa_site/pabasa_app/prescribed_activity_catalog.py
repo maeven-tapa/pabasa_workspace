@@ -871,7 +871,7 @@ PRESCRIBED_ACTIVITIES = {
     },
     'lesson-17-18-gawain-5': {
         'activity_key': 'lesson-17-18-gawain-5', 'session_key': 'session-6', 'session_number': 6,
-        'lesson_number': '17 at 18', 'gawain_number': 5, 'title': 'Lesson 17 at 18: Gawain 5',
+        'lesson_number': '17 at 18', 'gawain_number': 1, 'title': 'Lesson 17 at 18: Gawain 1',
         'description': 'Ikabit ang bawat larawan sa tamang simulang pantig.',
         'instruction': 'Ikabit ng linya mula sa mga larawan sa kaliwa papunta sa simulang pantig na nasa kanan.',
         'competencies': ['Phonics', 'Phonological Awareness', 'Vocabulary'], 'interaction': 'picture_syllable_match', 'total_items': 5,

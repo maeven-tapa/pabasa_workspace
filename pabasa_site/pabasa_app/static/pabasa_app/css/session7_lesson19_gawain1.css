@@ -202,3 +202,5 @@ body.session7-g1-page .done .button.secondary { border: 2px solid #94d9d6; backg
   body.session7-g1-page .button { min-height: 48px; margin-top: 7px; }
   body.session7-g1-page .intro-example { height: min(120px, 21vh); margin-top: 7px; }
 }
+
+body.session7-g1-page .choice{font-size:clamp(1.45rem,2.6vw,1.75rem) !important;}

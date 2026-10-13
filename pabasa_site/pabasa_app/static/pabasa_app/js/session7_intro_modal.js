@@ -214,7 +214,6 @@
       window.location.href = '/dashboard/assessment/';
       return;
     }
-    if (lesson19Gawain4 && !window.confirm('Sigurado ka bang gusto mong magsimula ulit? Mare-reset ang na-save mong progreso.')) return;
     button.disabled = true;
     try {
       const csrf = () => ((document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] || '');
@@ -230,7 +229,11 @@
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result.success) throw new Error(result.error || 'Hindi na-reset ang gawain.');
-      window.location.reload();
+      if (lesson19Gawain4) {
+        window.location.replace(`${window.location.pathname}?restart=${Date.now()}`);
+      } else {
+        window.location.reload();
+      }
     } catch (error) {
       console.error('Session 7 progress reset failed', error);
       button.disabled = false;

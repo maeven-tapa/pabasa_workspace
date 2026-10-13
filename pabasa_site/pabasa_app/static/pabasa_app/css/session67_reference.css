@@ -140,3 +140,51 @@ body.session67-activity .card {
     border-radius: 30px !important;
   }
 }
+
+/* The visible back link and tool geometry are shared only by Sessions 6/7. */
+body.session67-activity.session67-activity .back, body.session67-activity.session67-activity .l16g3-back {
+  position: fixed !important; top: 16px !important; left: 18px !important;
+  z-index: 9; display: inline-flex !important; align-items: center; justify-content: center;
+  width: 280px !important; min-height: 60px !important; margin: 0 !important;
+  padding: 10px 18px !important; border-radius: 999px; background: #fff;
+  color: #183e63 !important; font: 900 1.05rem/1.2 Nunito,"Segoe UI",sans-serif !important;
+  text-align: center; text-decoration: none; box-shadow: 0 8px 17px #145ca744;
+}
+body.session67-activity.session67-activity .back::before, body.session67-activity.session67-activity .back::after { content: none !important; }
+body.session67-activity.session67-activity .s6-controls, body.session67-activity.session67-activity .prescribed-session-tools {
+  top: 16px !important; right: 18px !important; gap: 10px !important;
+}
+body.session67-activity.session67-activity .s6-tool, body.session67-activity.session67-activity .prescribed-session-tool {
+  width: 60px !important; height: 60px !important; border-radius: 18px !important;
+  font-size: 1.6rem !important;
+}
+body.session67-activity [id$="-help-btn"] { order: 0; }
+body.session67-activity [id$="-audio-settings-btn"] { order: 1; }
+body.session67-activity [id$="-mic-toggle"] { order: 2; }
+body.lesson-16-gawain2-page .blank {
+  display: inline-block; width: 2.8em; min-width: 2.8em; height: 1em;
+  border-bottom: 3px solid currentColor; letter-spacing: normal;
+}
+@media(max-width:680px) {
+  body.session67-activity.session67-activity .back, body.session67-activity.session67-activity .l16g3-back {
+    top: 12px !important; left: 10px !important; width: calc(100vw - 180px) !important;
+    min-height: 48px !important; padding: 7px 10px !important; font-size: .8rem !important;
+  }
+  body.session67-activity.session67-activity .s6-controls, body.session67-activity.session67-activity .prescribed-session-tools {
+    top: 12px !important; right: 10px !important; gap: 6px !important;
+  }
+  body.session67-activity.session67-activity .s6-tool, body.session67-activity.session67-activity .prescribed-session-tool {
+    width: 46px !important; height: 46px !important; border-radius: 14px !important;
+    font-size: 1.25rem !important;
+  }
+}
+
+body.session67-activity.session67-activity .session67-list-link{display:block;margin:20px auto 0;text-align:center;color:#183e63;font-weight:900;}
+
+body.session67-activity.session67-activity [data-basahin-button]{
+ display:inline-flex !important;align-items:center !important;justify-content:center !important;
+ width:min(320px,100%) !important;min-width:0 !important;min-height:60px !important;
+ margin:12px auto !important;padding:12px 24px !important;border-radius:999px !important;
+ font:900 1.2rem/1.2 Fredoka,Nunito,"Segoe UI",sans-serif !important;
+}
+@media(max-width:680px){body.session67-activity.session67-activity [data-basahin-button]{min-height:56px !important;font-size:1.1rem !important;}}

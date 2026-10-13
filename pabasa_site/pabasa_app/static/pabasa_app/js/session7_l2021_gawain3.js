@@ -90,7 +90,7 @@
     const expected = `<span class="s7g3-sr" data-expected-text="${escapeHtml(item.word)}">${escapeHtml(item.word)}</span>`;
     if (state.phase === 'oral_reading') {
       const recovery = (state.stt_attempts[indexKey(index)] || 0) >= 3;
-      app.innerHTML = `<div class="s7g3-layout">${header()}<div class="s7g3-stage">${expected}<p class="s7g3-cue">Larawan ${index + 1} sa ${total}</p><div class="s7g3-picture-frame"><img class="s7g3-picture" src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.alt_text)}"></div>${recovery ? '<p class="s7g3-cue">Pakinggan muna ang salita.</p>' : ''}<button data-basahin-button class="s7g3-primary${recovery ? ' s7g3-primary--gold' : ''}" id="s7g3-oral" type="button">${recovery ? 'Pakinggan' : window.BasahinButton?.LABEL || 'Basahin'}</button><p class="s7g3-status s7g3-status--${kind}" role="status">${escapeHtml(message)}</p></div></div>`;
+      app.innerHTML = `<div class="s7g3-layout">${header()}<div class="s7g3-stage">${expected}<div class="s7g3-picture-frame"><img class="s7g3-picture" src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.alt_text)}"></div>${recovery ? '<p class="s7g3-cue">Pakinggan muna ang salita.</p>' : ''}<button data-basahin-button class="s7g3-primary${recovery ? ' s7g3-primary--gold' : ''}" id="s7g3-oral" type="button">${recovery ? 'Pakinggan' : window.BasahinButton?.LABEL || 'Basahin'}</button><p class="s7g3-status s7g3-status--${kind}" role="status">${escapeHtml(message)}</p></div></div>`;
       const button = app.querySelector('#s7g3-oral');
       if (recovery) button.addEventListener('click', () => listen(index, item));
       else window.Basahin?.bindActivity?.(button, () => read(index, item));

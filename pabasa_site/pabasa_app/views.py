@@ -14539,7 +14539,7 @@ def _normalized_odd_word_state(activity, raw_state):
     phase = ('completion' if raw.get('phase') == 'completion' else
              ('correct_feedback' if feedback_group is not None else
               ('written_selection' if group < total and oral == 3 else
-               ('intro' if raw.get('phase') == 'intro' and not completed and not oral else 'oral_reading'))))
+               ('intro' if (raw.get('phase') == 'intro' or (not raw and activity['activity_key'] == 'lesson-17-18-gawain-8')) and not completed and not oral else 'oral_reading'))))
     return {'phase': phase, 'current_group_index': group, 'current_oral_word_index': oral,
             'oral_completed': oral_done, 'stt_attempts': attempts, 'read_aloud_plays': plays,
             'selected_answer': raw.get('selected_answer') if isinstance(raw.get('selected_answer'), dict) else {},
@@ -18456,7 +18456,10 @@ def prescribed_activity_progress(request, activity_key):
         try:
             data = json.loads(request.body or '{}')
             existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
-            if data.get('reset') is True:
+            # The start modal sends ``reset: true`` while the shared pause
+            # menu identifies a restart with ``action: restart``.  Treat both
+            # as the explicit request to return this activity to its intro.
+            if data.get('reset') is True or data.get('action') == 'restart':
                 # Restart must be handled before stale-state protection so
                 # the control button always returns to the activity intro.
                 state = _normalized_session7_letter_ordering_state(activity, {'phase': 'intro'})
@@ -25463,13 +25466,16 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
             matching_transcript = 'tsokolate'
         # Chirp 3 may spell the Filipino pronunciation of "riles" this way.
         # Keep the provider transcript unchanged for the speech debug panel.
+        # "Real price" is the two-token rendering observed in the Session 6
+        # panel; it is allowed only for this isolated word-reading prompt.
         if (
             request.POST.get('prescribed_activity_key') == 'lesson-17-18-gawain-5'
             and language_code.lower() == 'fil-ph'
             and mode == 'reading'
             and ReadingMatcher.normalize_word(target_text) == 'riles'
             and ReadingMatcher.normalize_words(transcript) in (
-                ['rieles'], ['reless'], ['reles'], ['reeles'],
+                ['rieles'], ['reless'], ['reles'], ['reeles'], ['realist'],
+                ['real', 'price'],
             )
         ):
             matching_transcript = 'riles'

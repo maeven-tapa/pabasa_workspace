@@ -9,9 +9,12 @@
     let generation = 0;
     let currentPlayer = null;
     let currentController = null;
+    let finishCurrent = null;
 
     const cancel = () => {
       generation += 1;
+      finishCurrent?.(false);
+      finishCurrent = null;
       currentController?.abort();
       currentController = null;
       if (currentPlayer) {
@@ -38,20 +41,24 @@
           currentPlayer = player;
           return new Promise(resolve => {
             let settled = false;
-            const finish = () => {
+            const finish = (success = false) => {
               if (settled) return;
               settled = true;
+              clearTimeout(timeout);
+              if (finishCurrent === finish) finishCurrent = null;
               player.onended = null;
               player.onerror = null;
               player.onpause = null;
               if (currentPlayer === player) currentPlayer = null;
               if (currentController === controller) currentController = null;
-              resolve(leaseGeneration === generation);
+              resolve(success && leaseGeneration === generation);
             };
-            player.onended = finish;
-            player.onerror = finish;
-            player.onpause = finish;
-            Promise.resolve(player.play()).catch(finish);
+            const timeout = setTimeout(() => { finish(false); player.pause(); }, 30000);
+            finishCurrent = finish;
+            player.onended = () => finish(true);
+            player.onerror = () => finish(false);
+            player.onpause = () => finish(false);
+            Promise.resolve(player.play()).catch(() => finish(false));
           });
         },
       };
@@ -199,6 +206,7 @@
   backdrop.innerHTML = `<div class="lesson-start-modal lesson-13-start-modal">
     <p class="lesson-start-label lesson-13-start-label">${hasSavedProgress ? 'MAY NA-SAVE KANG PROGRESO!' : escapeHtml(label)}</p>
     <h2 class="lesson-start-title lesson-13-start-title" id="${backdrop.id}-title">${hasSavedProgress ? 'May nasimulan ka nang gawain. Gusto mo bang ipagpatuloy ang iyong nasimulan?' : key === 'lesson-17-18-gawain-7' ? 'Basahin nang malakas ang limang salita. Pagkatapos, itapat ang bawat larawan sa ngalan nito.' : escapeHtml(title)}</h2>
+    ${key==='lesson-17-18-gawain-8'?`<p class="instruction">${escapeHtml(data.instruction)}</p>`:''}
     <div class="lesson-start-actions lesson-13-start-actions">
       <button type="button" data-session6-start>${hasSavedProgress ? 'IPAGPATULOY' : key === 'lesson-17-18-gawain-7' ? 'TINGNAN ANG GAWAIN' : 'SIMULAN'}</button>
       <button type="button" data-session6-later>${hasSavedProgress ? 'SIMULAN ULIT' : 'MAMAYA NA LANG'}</button>
