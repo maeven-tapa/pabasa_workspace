@@ -149,6 +149,7 @@ async function fitsScreen(page, label) {
           return route.fulfill({contentType: 'application/json', body: '{}'});
         });
         page.on('domcontentloaded', async () => {
+          if (!new URL(page.url()).pathname.startsWith('/dashboard/assessment/reading_ui/')) return;
           try {
             await page.evaluate(() => {
               window.__firstPaintTheme = {
