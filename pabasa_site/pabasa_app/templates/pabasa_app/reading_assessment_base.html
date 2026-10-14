@@ -3018,8 +3018,44 @@
         }
 
         #crlaQuestionPanel .story-question-nav {
-            grid-template-columns: repeat(3, minmax(0, 210px));
+            grid-template-columns: repeat(2, minmax(0, 210px));
             justify-content: center;
+        }
+
+        #crlaQuestionNextBtn:not(:disabled) {
+            background: #facc15 !important;
+            color: #422006 !important;
+            border: 2px solid #ca8a04 !important;
+            box-shadow: 0 4px 0 #a16207;
+        }
+
+        #crlaQuestionStartReadingBtn.is-answer-ready:not(:disabled) {
+            background: #15803d !important;
+            color: #fff !important;
+            border: 2px solid #86efac !important;
+            box-shadow: 0 0 0 5px rgba(34, 197, 94, .3),
+                0 0 24px rgba(34, 197, 94, .55), 0 6px 0 #166534;
+            animation: crla-answer-pulse 1.6s ease-in-out infinite;
+            transform-origin: center;
+        }
+        #crlaQuestionStartReadingBtn:disabled,
+        #crlaQuestionNextBtn:disabled {
+            background: #d1d5db !important;
+            color: #4b5563 !important;
+            border: 2px solid #9ca3af !important;
+            opacity: 1 !important;
+            box-shadow: none !important;
+            animation: none !important;
+            transform: none !important;
+            filter: none !important;
+            cursor: not-allowed !important;
+        }
+        @keyframes crla-answer-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.06); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #crlaQuestionStartReadingBtn.is-answer-ready:not(:disabled) { animation: none; }
         }
 
         @media (max-width: 680px) {
@@ -4156,6 +4192,160 @@
     body.is-crla-reader :is(.forest-world, .treasure-world, .space-world, .library-world, .zoo-world, .ocean-world) {
         display: none !important;
     }
+    /* Comprehension owns the available screen; passage sizing must not reserve
+       empty rows or push its answer controls below the viewport. */
+    html:has(#crlaQuestionPanel:not(.d-none)),
+    body:has(#crlaQuestionPanel:not(.d-none)) {
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+        overscroll-behavior: none;
+    }
+    body:has(#crlaQuestionPanel:not(.d-none)) .reader-shell {
+        height: 100dvh;
+        min-height: 0;
+        grid-template-rows: auto minmax(0, 1fr);
+        padding: clamp(8px, 1.5dvh, 20px);
+        gap: clamp(6px, 1.2dvh, 14px);
+    }
+    body:has(#crlaQuestionPanel:not(.d-none)) .reader-stage {
+        min-width: 0;
+        min-height: 0;
+        align-items: stretch;
+    }
+    body:has(#crlaQuestionPanel:not(.d-none)) .reader-top .header-actions button {
+        transition: background-color .2s, border-color .2s, box-shadow .2s;
+    }
+    body:has(#crlaQuestionPanel:not(.d-none)) .reader-shell > .reader-stage > .reader-card {
+        height: 100%;
+        min-height: 0 !important;
+        grid-template-rows: minmax(0, 1fr);
+        padding: clamp(10px, 2dvh, 24px);
+        gap: 0;
+    }
+    body:has(#crlaQuestionPanel:not(.d-none)) .reader-card :is(.read-helper, .word-stage, .reader-footer, .speech-panel) {
+        display: none !important;
+    }
+    body:has(#crlaQuestionPanel:not(.d-none)) .reader-card::before {
+        inset: 8px;
+    }
+    #crlaQuestionPanel:not(.d-none) {
+        height: 100%;
+        min-height: 0;
+        min-width: 0;
+        gap: 0;
+    }
+    body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-shell {
+        height: 100%;
+        min-height: 0;
+        min-width: 0;
+        grid-template-rows: auto auto minmax(0, auto) auto;
+        align-content: center;
+        gap: clamp(6px, 1.8dvh, 18px);
+    }
+    body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-titlebar h2 {
+        font-size: clamp(1.1rem, min(3vw, 4dvh), 2rem);
+    }
+    body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel :is(.story-question-card, .story-answer-card) {
+        min-height: 0;
+        min-width: 0;
+        padding: clamp(6px, 1.8dvh, 16px);
+        gap: clamp(3px, .8dvh, 8px);
+    }
+    body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-card {
+        grid-template-rows: auto minmax(0, 1fr);
+    }
+    body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-body {
+        min-height: 0;
+        font-size: clamp(1rem, min(2.5vw, 3.5dvh), 1.7rem);
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+        overflow: auto;
+        max-height: 100%;
+    }
+    body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-answer-card {
+        grid-template-rows: auto minmax(0, 1fr) auto;
+    }
+    body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-answer-text {
+        min-height: 0;
+        max-height: min(18dvh, 160px);
+        overflow: auto;
+        overscroll-behavior: contain;
+        padding: clamp(5px, 1.2dvh, 12px);
+        font-size: clamp(.9rem, 2.2dvh, 1rem);
+        line-height: 1.35;
+    }
+    body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-answer-feedback {
+        font-size: clamp(.75rem, 2dvh, .9rem);
+        line-height: 1.3;
+    }
+    body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-nav {
+        grid-template-columns: repeat(2, minmax(0, 210px)) !important;
+        justify-content: center;
+        gap: clamp(10px, 2vw, 20px);
+        padding: 8px 10px 12px;
+    }
+    body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-nav .btn {
+        grid-column: auto;
+        grid-row: auto;
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        padding: .45rem .6rem;
+        font-size: clamp(.85rem, 2.2dvh, 1rem);
+    }
+    @media (max-height: 500px) {
+        body:has(#crlaQuestionPanel:not(.d-none)) .reader-top {
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center;
+            padding: .35rem .5rem;
+            gap: .5rem;
+        }
+        body:has(#crlaQuestionPanel:not(.d-none)) .reader-top .eyebrow { display: none; }
+        body:has(#crlaQuestionPanel:not(.d-none)) .reader-top .test-meta { font-size: .75rem; }
+        body:has(#crlaQuestionPanel:not(.d-none)) .reader-top .reader-title { gap: .4rem; }
+        body:has(#crlaQuestionPanel:not(.d-none)) .reader-top .level-mark { width: 48px; height: 32px; }
+        body:has(#crlaQuestionPanel:not(.d-none)) .reader-progress-card { width: min(54vw, 340px); }
+        body:has(#crlaQuestionPanel:not(.d-none)) .progress-head { gap: 4px; }
+        body:has(#crlaQuestionPanel:not(.d-none)) .counter { font-size: .65rem; padding: .2rem .4rem; }
+        body:has(#crlaQuestionPanel:not(.d-none)) .header-actions { gap: 3px; }
+        body:has(#crlaQuestionPanel:not(.d-none)) .header-actions button {
+            width: 32px; height: 32px; min-width: 32px; min-height: 32px; flex-basis: 32px;
+        }
+        body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-shell { gap: 4px; }
+        body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-progress { display: none; }
+        body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel :is(.story-question-card, .story-answer-card) {
+            padding: 4px 8px; gap: 2px;
+        }
+        body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel :is(.story-question-label, .story-answer-label) {
+            font-size: .65rem; line-height: 1.2;
+        }
+        body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-answer-text { padding: 4px 6px; }
+        body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-nav { padding-block: 5px 10px; }
+    }
+    @media (max-height: 400px) and (min-width: 520px) {
+        body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-shell {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-rows: auto minmax(0, 1fr) auto;
+            gap: 6px 10px;
+        }
+        body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel :is(.story-question-head, .story-question-nav) {
+            grid-column: 1 / -1;
+        }
+        body:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel :is(.story-question-card, .story-answer-card) {
+            height: 100%;
+        }
+    }
+    @media (max-width: 380px) {
+        body:has(#crlaQuestionPanel:not(.d-none)) .reader-top .progress-head { gap: 4px; }
+        body:has(#crlaQuestionPanel:not(.d-none)) .reader-top .counter { font-size: .65rem; padding: .2rem .4rem; }
+        body:has(#crlaQuestionPanel:not(.d-none)) .reader-top .header-actions { gap: 3px; }
+        body:has(#crlaQuestionPanel:not(.d-none)) .reader-top .header-actions button {
+            width: 28px; height: 28px; min-width: 28px; min-height: 28px; flex-basis: 28px;
+        }
+        body:has(#crlaQuestionPanel:not(.d-none)) .reader-progress-card { width: 100%; }
+    }
+
     .sentence-countdown-overlay {
         display: none;
         position: fixed;
@@ -4364,7 +4554,7 @@
                         </div>
                         <div class="story-question-card"><p class="story-question-label">Question</p><div class="story-question-body" id="crlaQuestionText"></div></div>
                         <div class="story-answer-card" aria-live="polite" aria-atomic="true"><p class="story-answer-label">Your spoken answer</p><div class="story-answer-text is-empty" id="crlaAnswerInput">Your spoken answer will appear here.</div><p class="story-answer-feedback d-none" id="crlaAnswerFeedback" role="status"></p></div>
-                        <div class="story-question-nav"><button class="btn btn-outline-secondary" id="crlaQuestionBackBtn" type="button">← Back</button><button class="btn story-question-finish-reading-btn story-call-mic" id="crlaQuestionStartReadingBtn" type="button">🎙 Start Reading</button><button class="btn story-question-read-aloud-btn" id="crlaQuestionReadAloudBtn" type="button">🔊 Read Aloud</button><button class="btn btn-primary" id="crlaQuestionNextBtn" type="button">Next →</button></div>
+                        <div class="story-question-nav"><button class="btn story-question-finish-reading-btn story-call-mic" id="crlaQuestionStartReadingBtn" type="button" aria-label="Sumagot" title="Sumagot" disabled>🎙 Sumagot</button><button class="btn btn-primary" id="crlaQuestionNextBtn" type="button" aria-label="Susunod" title="Susunod" disabled>Susunod <i class="bi bi-arrow-right" aria-hidden="true"></i></button></div>
                         <div class="story-completion-card d-none" id="crlaQuestionCompletion"><div class="story-results-mark" aria-hidden="true">A</div><div class="story-results-kicker">CRLA Results</div><div class="story-results-heading"><h3>🎉 You did it!</h3><p>Great work finishing your comprehension questions.</p></div><button class="btn btn-primary story-results-action" id="crlaQuestionFinishBtn" type="button">Back to Assessment <span aria-hidden="true">→</span></button></div>
                     </div>
                 </section>{% endif %}

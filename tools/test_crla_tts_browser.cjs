@@ -12,6 +12,8 @@ const start = source.indexOf('        async function readAssessmentTextAloud(');
 const end = source.indexOf('        btnToggleMic?.addEventListener(', start);
 assert.ok(start >= 0 && end > start);
 const functions = source.slice(start, end);
+const comprehensionAudioState = source.slice(source.indexOf('        let crlaQuestionNarrating = false;'),
+  source.indexOf('        function syncCRLAQuestionButtons()'));
 const timerState = source.slice(source.indexOf('let storyReadingTimerId = null;'),
   source.indexOf('let liveServerTimeOffsetMs'));
 const timerFunctions = source.slice(source.indexOf('function clearStoryReadingTimer()'),
@@ -51,6 +53,8 @@ const origin = 'http://localhost:9876';
       let currentAssessmentBranch = 'words', currentMaterialLanguage = 'Filipino';
       let readAloudAudio = null, readAloudAudioUrl = '', isReadAloudLoading = false;
       let readAloudController = null, readAloudButton = null, readAloudButtonHtml = '';
+      ${comprehensionAudioState}
+      const crlaQuestionStartReadingBtn = null;
       let pendingSpeech = false, nextText = 'Pito';
       let liveSessionPaused = false, liveSessionEnded = false, liveSessionEndRedirecting = false;
       let isFinalizingReading = false, isSendingChunk = false, pendingAudioChunk = null;

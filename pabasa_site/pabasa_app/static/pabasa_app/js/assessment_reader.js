@@ -75,8 +75,6 @@
         const crlaAnswerInput = document.getElementById("crlaAnswerInput");
         const crlaAnswerFeedback = document.getElementById("crlaAnswerFeedback");
         const crlaQuestionStartReadingBtn = document.getElementById("crlaQuestionStartReadingBtn");
-        const crlaQuestionReadAloudBtn = document.getElementById("crlaQuestionReadAloudBtn");
-        const crlaQuestionBackBtn = document.getElementById("crlaQuestionBackBtn");
         const crlaQuestionNextBtn = document.getElementById("crlaQuestionNextBtn");
         const crlaQuestionCompletion = document.getElementById("crlaQuestionCompletion");
         const crlaQuestionFinishBtn = document.getElementById("crlaQuestionFinishBtn");
@@ -1465,6 +1463,7 @@
         }
 
         function hideStoryPanels() {
+            if (crlaQuestionNarrating) stopReadAloud();
             storySelectionPanel?.classList.add("d-none");
             storyQuestionPanel?.classList.add("d-none");
             crlaQuestionPanel?.classList.add("d-none");
@@ -1787,6 +1786,70 @@
             return persisted;
         }
 
+        let crlaQuestionNarrating = false;
+        let crlaQuestionNarrationVersion = 0;
+        let crlaQuestionNarrationTimer = null;
+        let crlaQuestionNarrationNeedsResume = false;
+        let crlaQuestionPulseReady = false;
+        let crlaQuestionTransitioning = false;
+
+        function syncCRLAQuestionButtons() {
+            const blocked = crlaQuestionNarrating || crlaQuestionTransitioning || crlaSpokenAttemptProcessing
+                || liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting;
+            if (crlaQuestionStartReadingBtn) {
+                crlaQuestionStartReadingBtn.disabled = blocked || crlaSpeechAttemptActive;
+                crlaQuestionStartReadingBtn.classList.toggle("is-answer-ready",
+                    crlaQuestionPulseReady && !crlaQuestionStartReadingBtn.disabled
+                    && currentStoryState === "story_comprehension");
+            }
+            // Next retains its existing Skip behavior while recording.
+            if (crlaQuestionNextBtn) crlaQuestionNextBtn.disabled = blocked;
+        }
+
+        function narrateCRLAQuestion() {
+            if (liveSessionPaused) {
+                crlaQuestionNarrationNeedsResume = true;
+                syncCRLAQuestionButtons();
+                return;
+            }
+            const questionIndex = currentStoryQuestionIndex;
+            let version = crlaQuestionNarrationVersion;
+            crlaQuestionNarrating = true;
+            syncCRLAQuestionButtons();
+            const finish = (failed = false) => {
+                if (version !== crlaQuestionNarrationVersion || currentStoryQuestionIndex !== questionIndex) return;
+                stopReadAloud();
+                if (currentStoryState !== "story_comprehension") return;
+                if (failed && crlaAnswerFeedback) {
+                    crlaAnswerFeedback.textContent = "Hindi ma-play ang tanong. Maaari ka pa ring sumagot o magpatuloy.";
+                    crlaAnswerFeedback.classList.remove("d-none");
+                }
+                crlaQuestionPulseReady = true;
+                syncCRLAQuestionButtons();
+            };
+            const watchPlayback = (timeout) => {
+                if (version !== crlaQuestionNarrationVersion) return;
+                window.clearTimeout(crlaQuestionNarrationTimer);
+                crlaQuestionNarrationTimer = window.setTimeout(() => finish(true), timeout);
+            };
+            readAssessmentTextAloud(crlaQuestionText?.textContent, null, {
+                requireElevenLabs: true,
+                onStart() {
+                    version = crlaQuestionNarrationVersion;
+                    crlaQuestionNarrating = true;
+                    syncCRLAQuestionButtons();
+                    // The existing provider can spend up to 60 seconds synthesizing.
+                    watchPlayback(65000);
+                },
+                onPlayback(audio) {
+                    audio.ontimeupdate = () => watchPlayback(20000);
+                    watchPlayback(20000);
+                },
+                onEnded: () => finish(),
+                onError: () => finish(true),
+            });
+        }
+
         function renderCRLAQuestion() {
             stopReadAloud();
             const question = currentStoryQuestions[currentStoryQuestionIndex] || {};
@@ -1800,23 +1863,16 @@
                 crlaAnswerInput.classList.toggle("is-empty", !currentStoryAnswers[currentStoryQuestionIndex]);
             }
             if (crlaAnswerFeedback) crlaAnswerFeedback.classList.add("d-none");
-            if (crlaQuestionBackBtn) crlaQuestionBackBtn.disabled = currentStoryQuestionIndex === 0;
             if (crlaQuestionStartReadingBtn) {
-                crlaQuestionStartReadingBtn.disabled = false;
                 crlaQuestionStartReadingBtn.classList.remove("is-recording");
-                crlaQuestionStartReadingBtn.textContent = "🎙 Start Reading";
-            }
-            // Next doubles as Skip for official CRLA comprehension.  It must
-            // remain available even before the learner records an answer.
-            if (crlaQuestionNextBtn) {
-                crlaQuestionNextBtn.disabled = false;
-                crlaQuestionNextBtn.textContent = currentStoryQuestions.length ? "Next" : "Continue";
+                crlaQuestionStartReadingBtn.textContent = "🎙 Sumagot";
             }
             crlaQuestionStartReadingBtn?.classList.toggle("d-none", !currentStoryQuestions.length);
-            crlaQuestionReadAloudBtn?.classList.toggle("d-none", !currentStoryQuestions.length);
             const progress = document.getElementById("crlaQuestionProgressFill");
             if (progress) progress.style.width = `${((currentStoryQuestionIndex + 1) / Math.max(1, currentStoryQuestions.length)) * 100}%`;
             syncCrlaProgress();
+            if (currentStoryQuestions.length) narrateCRLAQuestion();
+            else syncCRLAQuestionButtons();
         }
 
         let crlaSpeechRecognition = null;
@@ -1849,6 +1905,7 @@
                 await finishCRLAComprehension();
             } finally {
                 crlaSpokenAttemptProcessing = false;
+                syncCRLAQuestionButtons();
             }
         }
 
@@ -1990,7 +2047,9 @@
         });
 
         function startCRLASpokenAttempt() {
-            if (crlaSpeechAttemptActive || !currentStoryQuestions.length) return;
+            if (crlaQuestionNarrating || crlaQuestionTransitioning || crlaSpokenAttemptProcessing
+                || liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting
+                || crlaSpeechAttemptActive || !currentStoryQuestions.length) return;
             stopReadAloud();
             const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!Recognition) {
@@ -2024,7 +2083,6 @@
             };
             if (crlaAnswerFeedback) { crlaAnswerFeedback.textContent = "Listening… Speak your answer once."; crlaAnswerFeedback.classList.remove("d-none"); }
             crlaQuestionStartReadingBtn.disabled = true;
-            crlaQuestionBackBtn.disabled = true;
             crlaQuestionStartReadingBtn.classList.add("is-recording");
             crlaQuestionStartReadingBtn.textContent = "Listening…";
             try { crlaSpeechRecognition.start(); } catch (error) { crlaSpeechRecognition.onerror(error); }
@@ -7225,6 +7283,11 @@
         }
 
         function showLiveSessionPaused() {
+            if (crlaQuestionNarrating) {
+                stopReadAloud();
+                crlaQuestionNarrationNeedsResume = true;
+            }
+            if (currentStoryState === "story_comprehension") syncCRLAQuestionButtons();
             syncStoryReadingTimerProcessing();
             if (pauseOverlay) pauseOverlay.classList.remove('d-none');
             if (pauseMenu) pauseMenu.classList.remove('d-none');
@@ -7249,6 +7312,10 @@
         }
 
         function hideLiveSessionPaused() {
+            if (currentStoryState === "story_comprehension") {
+                if (crlaQuestionNarrationNeedsResume) renderCRLAQuestion();
+                else syncCRLAQuestionButtons();
+            }
             if (pauseOverlay) pauseOverlay.classList.add('d-none');
             if (pauseMenu) pauseMenu.classList.add('d-none');
             // Keep pause control hidden for live assessments (students shouldn't control resume)
@@ -7780,16 +7847,23 @@
             await readAssessmentTextAloud(getCurrentDisplayText() || items[currentIndex], btnReadAloud);
         }
 
-        async function readAssessmentTextAloud(text, button) {
-            if (!text || isSpeechResponsePending()) return;
+        async function readAssessmentTextAloud(text, button, options = {}) {
+            if (!text || isSpeechResponsePending()) { options.onError?.(); return; }
             if (readAloudButton === button && (isReadAloudLoading || (readAloudAudio && !readAloudAudio.paused))) {
                 stopReadAloud();
                 return;
             }
             stopReadAloud();
+            options.onStart?.();
             if (isCrla) window.speechSynthesis?.cancel();
             const controller = new AbortController();
             readAloudController = controller;
+            const finishPlayback = (failed = false) => {
+                if (controller.signal.aborted || readAloudController !== controller) return;
+                const callback = failed ? options.onError : options.onEnded;
+                if (callback) callback();
+                else stopReadAloud();
+            };
             readAloudButton = button;
             readAloudButtonHtml = button?.innerHTML || "";
             isReadAloudLoading = true;
@@ -7825,24 +7899,29 @@
                 if (!response.ok || !data.success) {
                     throw new Error(data.error || "Read aloud failed.");
                 }
+                if (options.requireElevenLabs && data.tts_provider !== "elevenlabs") {
+                    throw new Error("ElevenLabs question narration is unavailable.");
+                }
                 revokeReadAloudUrl();
                 const audioBlob = base64ToBlob(data.audio_content, data.mime_type || "audio/mpeg");
                 readAloudAudioUrl = URL.createObjectURL(audioBlob);
                 readAloudAudio = new Audio(readAloudAudioUrl);
-                readAloudAudio.onended = stopReadAloud;
+                readAloudAudio.onended = () => finishPlayback();
                 readAloudAudio.onerror = () => {
+                    if (controller.signal.aborted || readAloudController !== controller) return;
                     setSpeechStatus("Read aloud had trouble.", "Audio playback failed. Please try again.");
-                    stopReadAloud();
+                    finishPlayback(true);
                 };
                 if (button) button.innerHTML = '<i class="bi bi-stop-fill"></i> Stop Audio';
                 button?.classList.add("is-playing");
                 button?.removeAttribute("disabled");
+                options.onPlayback?.(readAloudAudio);
                 await readAloudAudio.play();
             } catch (error) {
                 if (controller.signal.aborted || readAloudController !== controller) return;
                 console.warn("PABASA: Read aloud failed", error);
                 setSpeechStatus("Read aloud had trouble.", error.message || "Please try again.");
-                stopReadAloud();
+                finishPlayback(true);
             } finally {
                 if (readAloudController === controller) isReadAloudLoading = false;
             }
@@ -7860,6 +7939,13 @@
         }
 
         function stopReadAloud() {
+            crlaQuestionNarrationVersion += 1;
+            crlaQuestionNarrating = false;
+            crlaQuestionNarrationNeedsResume = false;
+            crlaQuestionPulseReady = false;
+            window.clearTimeout(crlaQuestionNarrationTimer);
+            crlaQuestionNarrationTimer = null;
+            crlaQuestionStartReadingBtn?.classList.remove("is-answer-ready");
             readAloudController?.abort();
             readAloudController = null;
             isReadAloudLoading = false;
@@ -8259,38 +8345,44 @@
             goBackToAssessments();
         });
 
-        crlaQuestionBackBtn?.addEventListener("click", () => {
-            if (currentStoryQuestionIndex > 0) { currentStoryQuestionIndex -= 1; renderCRLAQuestion(); }
-            persistCRLAComprehensionState();
-        });
         crlaQuestionStartReadingBtn?.addEventListener("click", startCRLASpokenAttempt);
         crlaQuestionNextBtn?.addEventListener("click", async () => {
-            if (!currentStoryQuestions.length) {
+            if (crlaQuestionNarrating || crlaQuestionTransitioning || crlaSpokenAttemptProcessing
+                || liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) return;
+            crlaQuestionTransitioning = true;
+            crlaQuestionPulseReady = false;
+            syncCRLAQuestionButtons();
+            try {
+                if (!currentStoryQuestions.length) {
+                    await finishCRLAComprehension();
+                    return;
+                }
+                const questionIndex = currentStoryQuestionIndex;
+                if (currentStoryResults[questionIndex] === null) {
+                    // Stop an in-progress recording before skipping so a delayed
+                    // recognition callback cannot replace the skipped result.
+                    crlaSpeechAttemptActive = false;
+                    try { crlaSpeechRecognition?.abort(); } catch (error) {}
+                    crlaSpeechRecognition = null;
+                    // Leave the unanswered result null. Only the cursor moves.
+                }
+                if (questionIndex < currentStoryQuestions.length - 1) {
+                    currentStoryQuestionIndex += 1;
+                    renderCRLAQuestion();
+                    await persistCRLAComprehensionState();
+                    return;
+                }
                 await finishCRLAComprehension();
-                return;
+            } finally {
+                crlaQuestionTransitioning = false;
+                syncCRLAQuestionButtons();
             }
-            const questionIndex = currentStoryQuestionIndex;
-            // A captured answer is already being graded and will advance
-            // automatically through completeCRLASpokenAttempt.
-            if (crlaSpokenAttemptProcessing) return;
-            if (currentStoryResults[questionIndex] === null) {
-                // Stop an in-progress recording before skipping so a delayed
-                // recognition callback cannot replace the skipped result.
-                crlaSpeechAttemptActive = false;
-                try { crlaSpeechRecognition?.abort(); } catch (error) {}
-                crlaSpeechRecognition = null;
-                // Leave the unanswered result null. Only the cursor moves.
-            }
-            if (questionIndex < currentStoryQuestions.length - 1) {
-                currentStoryQuestionIndex += 1;
-                renderCRLAQuestion();
-                await persistCRLAComprehensionState();
-                return;
-            }
-            await finishCRLAComprehension();
         });
-        crlaQuestionReadAloudBtn?.addEventListener("click", () => {
-            readAssessmentTextAloud(crlaQuestionText?.textContent, crlaQuestionReadAloudBtn);
+        window.addEventListener("pagehide", () => {
+            if (crlaQuestionNarrating) stopReadAloud();
+        });
+        window.addEventListener("pageshow", (event) => {
+            if (event.persisted && currentStoryState === "story_comprehension") renderCRLAQuestion();
         });
         crlaQuestionFinishBtn?.addEventListener("click", () => goBackToAssessments());
 
