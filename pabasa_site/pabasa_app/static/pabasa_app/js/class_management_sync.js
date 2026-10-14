@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let changed = reconcile(body, 'tr[data-student-id]', students, 'row_html');
         changed = reconcile(cards, '.student-card[data-student-id]', students, 'card_html') || changed;
         body.querySelectorAll('tr:not([data-student-id]):not(#studentNoResults)').forEach(node => node.remove());
-        cards.querySelectorAll('.student-card:not([data-student-id])').forEach(node => node.remove());
+        cards.querySelectorAll('.student-card:not([data-student-id]):not(#studentCardsNoResults)').forEach(node => node.remove());
         if (!students.size) {
             body.insertAdjacentHTML('beforeend', '<tr data-enrollment-empty><td colspan="6" class="text-center py-4 text-muted">No students have joined yet.</td></tr>');
             cards.insertAdjacentHTML('beforeend', '<div class="student-card text-muted" data-enrollment-empty>No students have joined yet.</div>');

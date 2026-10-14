@@ -3,8 +3,7 @@
 
 {% block extra_head %}
 <style>
-    .student-sync-status { flex-basis: 100%; min-height: 1.25rem; line-height: 1.25rem; font-size: .78rem; color: #826542; }
-    @media (max-width: 720px) { .student-sync-status { min-height: 2.5rem; } }
+    .student-sync-status { line-height: 1.25rem; font-size: .78rem; color: #826542; }
     #studentSyncRetry { border: 0; background: transparent; color: inherit; text-decoration: underline; padding: 0; }
     :root {
         --page-spacing-xs: 8px;
@@ -27,7 +26,7 @@
 
     body,
     body.dashboard-body {
-        min-height: 100vh;
+        min-height: 100dvh;
         background: linear-gradient(180deg, #f7fbfe 0%, #eef5f8 100%);
         position: relative;
         z-index: 0;
@@ -37,25 +36,54 @@
         background-image: none;
     }
 
-    .dashboard-content-wrap {
-        padding: clamp(0.9rem, 2vw, 1.25rem);
-        max-width: 1180px;
+    /* Bound the flex chain to the dashboard viewport, including display scaling. */
+    .dashboard-app-shell {
+        height: var(--dashboard-normalized-viewport-height, 100dvh);
+        min-height: 0;
+    }
+
+    .dashboard-app-shell .dashboard-main {
+        height: 100%;
+        min-height: 0;
+        min-width: 0;
+    }
+
+    .dashboard-main > .dashboard-page-wrap {
+        display: flex;
+        flex: 1 1 0;
+        flex-direction: column;
+        min-height: 0;
+        min-width: 0;
+        width: 100%;
+        margin: 0;
+        padding: var(--dash-ui-pad-y) var(--dash-ui-pad-x);
+    }
+
+    .dashboard-main .dashboard-content-wrap {
+        display: flex;
+        flex: 1 1 0;
+        padding: var(--dash-ui-pad-y) 0 0;
+        min-height: 0;
+        min-width: 0;
+        max-width: none;
         width: 100%;
     }
 
     .page-shell {
-        align-content: safe center;
-        display: grid;
-        gap: 1rem;
-        justify-items: stretch;
-        min-height: calc(var(--dashboard-normalized-viewport-height) - var(--dashboard-normalized-content-offset));
+        display: flex;
+        flex: 1 1 0;
+        flex-direction: column;
+        min-height: 0;
+        min-width: 0;
         width: 100%;
     }
 
-    .page-shell > * { justify-self: center; max-width: 100%; width: 100%; }
+    .page-shell > * { max-width: 100%; width: 100%; }
 
     @media (max-width: 991.98px) {
-        .page-shell { align-content: start; min-height: auto; }
+        /* Display normalization applies zoom only to the desktop shell. */
+        .dashboard-app-shell { height: 100dvh; }
+        .dashboard-page-wrap > .mobile-dashboard-topbar { flex: 0 0 62px; }
     }
 
     .class-switcher-wrap {
@@ -237,12 +265,17 @@
     }
 
     .page-body {
-        display: grid;
+        display: flex;
+        flex: 1 1 0;
+        flex-direction: column;
+        min-height: 0;
+        min-width: 0;
         gap: 1rem;
     }
 
     .finalization-status-card {
         display: grid;
+        flex: 0 0 auto;
         gap: 0.5rem;
         padding: 0.8rem 1rem 0.75rem;
         border: 1px solid rgba(100, 116, 139, 0.18);
@@ -338,13 +371,17 @@
     }
 
     .section-information-students {
-        margin-top: 0.85rem;
-        padding: 0.9rem 0 0;
-        border-top: 1px solid rgba(100, 116, 139, 0.18);
+        display: flex;
+        flex: 1 1 0;
+        flex-direction: column;
+        min-height: 0;
+        min-width: 0;
+        margin-top: 0;
+        padding: 0;
     }
 
     .section-information-card > .section-information-divider {
-        margin-top: 1rem;
+        margin: 1rem 0 0.25rem;
         border: 0;
         border-top: 1px solid rgba(100, 116, 139, 0.2);
     }
@@ -353,9 +390,22 @@
         margin-top: 0;
     }
 
-    .section-information-card {
+    .card.section-information-card {
+        display: flex;
+        flex: 1 1 0;
+        flex-direction: column;
+        min-height: 0;
+        min-width: 0;
         width: 100%;
         margin-inline: auto;
+        padding: 1.25rem;
+    }
+
+    .section-information-card > .section-information-summary-form,
+    .section-information-card > .section-information-divider,
+    .section-information-students > .student-enrollment-header,
+    .section-information-students > .student-table-controls {
+        flex: 0 0 auto;
     }
 
     @media (max-width: 576px) {
@@ -375,22 +425,12 @@
         padding: 1.1rem;
     }
 
-    .card-header {
+    .student-enrollment-header {
         display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 0.85rem;
-        margin-bottom: 1rem;
+        align-items: center;
+        gap: 0.625rem;
+        padding: 0.75rem 0;
         flex-wrap: wrap;
-    }
-
-    .card > .card-header:first-child {
-        background: #fff;
-    }
-
-    .card > .card-header .section-heading h2,
-    .card > .card-header .card-title {
-        background: transparent;
     }
 
     .card-title {
@@ -505,8 +545,8 @@
     .section-title-group {
         display: flex;
         align-items: center;
-        gap: 0.7rem;
-        flex-wrap: wrap;
+        gap: 0.625rem;
+        flex-wrap: nowrap;
     }
 
     .section-heading {
@@ -577,14 +617,18 @@
     }
 
     .student-pagination {
-        display: none;
+        display: flex;
+        flex: 0 0 auto;
+        min-height: 34px;
         align-items: center;
-        justify-content: center;
+        justify-content: safe center;
         gap: 0.35rem;
         margin: 0.85rem 0 0.15rem;
+        overflow-x: auto;
     }
 
     .student-pagination button {
+        flex: 0 0 auto;
         min-width: 34px;
         min-height: 34px;
         padding: 0.3rem 0.55rem;
@@ -615,7 +659,11 @@
     }
 
     .section-information-students .table-frame {
+        flex: 1 1 0;
         min-height: 0;
+        min-width: 0;
+        overflow: auto;
+        scrollbar-gutter: stable;
         border: 0;
         border-top: 1px solid rgba(100, 116, 139, 0.16);
         border-bottom: 1px solid rgba(100, 116, 139, 0.16);
@@ -820,6 +868,8 @@
         grid-template-columns: 1fr;
         gap: 0.75rem;
     }
+
+    .student-cards > [hidden] { display: none; }
 
     .student-card {
         display: grid;
@@ -1223,11 +1273,6 @@
             padding: 0.8rem;
         }
 
-        .card-header {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
         .card-actions {
             width: 100%;
         }
@@ -1258,6 +1303,19 @@
         .student-search-row {
             grid-template-columns: 1fr;
         }
+    }
+
+    @media (max-height: 600px) {
+        .dashboard-main > .dashboard-page-wrap { padding-block: 0.5rem; }
+        .dashboard-main .dashboard-content-wrap { padding-top: 0.5rem; }
+        .card.section-information-card { padding: 0.65rem; }
+        .section-information-card > .section-information-divider { margin: 0.4rem 0 0; }
+        .section-information-students { margin-top: 0; padding-top: 0.4rem; }
+        .student-enrollment-header {
+            padding: 0.25rem 0 0.75rem;
+        }
+        .student-table-controls { margin-bottom: 0.35rem; }
+        .student-pagination { margin-top: 0.4rem; }
     }
 </style>
 {% endblock %}
@@ -1290,14 +1348,14 @@
             <hr class="section-information-divider">
 
         <section class="section-information-students" data-section-id="{{ section.id }}" data-sync-url="{% url 'get_teacher_students_api' %}" data-roster-version="{{ roster_version }}" data-calendar-scope="{{ section_calendar.scope }}">
-            <div class="card-header">
+            <div class="student-enrollment-header">
                 <div class="section-title-group">
                     <div class="section-heading">
                         <h2>Enrolled Students</h2>
                     </div>
                     <span class="student-count" id="enrolledStudentCount">{{ students_table|length }} enrolled</span>
-                    <span class="student-sync-status" role="status" aria-live="polite"><span id="studentSyncError"></span> <button type="button" id="studentSyncRetry" hidden>Retry</button></span>
                 </div>
+                <span class="student-sync-status" role="status" aria-live="polite"><span id="studentSyncError"></span> <button type="button" id="studentSyncRetry" hidden>Retry</button></span>
             </div>
 
             <div class="student-table-controls" aria-label="Student list controls">
@@ -1337,17 +1395,17 @@
                         <tr class="student-no-results" id="studentNoResults"><td colspan="6" class="text-center py-4 text-muted">No students found.</td></tr>
                     </tbody>
                 </table>
+                <div class="student-cards" aria-label="Enrolled students list">
+                    {% for student in students_table %}
+                    {% include "pabasa_app/partials/_class_student_card.html" %}
+                    {% empty %}
+                    <div class="student-card text-muted">No students have joined yet.</div>
+                    {% endfor %}
+                    <div class="student-card text-muted" id="studentCardsNoResults" hidden>No students found.</div>
+                </div>
             </div>
 
             <nav class="student-pagination" id="studentPagination" aria-label="Enrolled students pages"></nav>
-
-            <div class="student-cards" aria-label="Enrolled students list">
-                {% for student in students_table %}
-                {% include "pabasa_app/partials/_class_student_card.html" %}
-                {% empty %}
-                <div class="student-card text-muted">No students have joined yet.</div>
-                {% endfor %}
-            </div>
         </section>
         </section>
     </main>
@@ -1649,6 +1707,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const directionButton = document.getElementById('studentSortDirection');
     const tableBody = document.querySelector('.student-table tbody');
     const noResults = document.getElementById('studentNoResults');
+    const cardsNoResults = document.getElementById('studentCardsNoResults');
     const pagination = document.getElementById('studentPagination');
     let rows = Array.from(document.querySelectorAll('.student-table tbody tr[data-search]'));
     let cards = Array.from(document.querySelectorAll('.student-cards .student-card[data-search]'));
@@ -1677,6 +1736,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const pageCards = matchingCards.slice((currentPage - 1) * pageSize, currentPage * pageSize);
         cards.forEach(card => { card.hidden = !pageCards.includes(card); });
         if (noResults) noResults.style.display = visible.length || !rows.length ? 'none' : 'table-row';
+        if (cardsNoResults) cardsNoResults.hidden = Boolean(visible.length || !rows.length);
         if (pagination) {
             pagination.innerHTML = '';
             pagination.style.display = 'flex';
@@ -1714,7 +1774,7 @@ document.addEventListener('DOMContentLoaded', function () {
     refreshStudents();
 });
 </script>
-<script src="{% static 'pabasa_app/js/class_management_sync.js' %}?v=calendar-roster-2"></script>
+<script src="{% static 'pabasa_app/js/class_management_sync.js' %}?v=calendar-roster-3"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 });
