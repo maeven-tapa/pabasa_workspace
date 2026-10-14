@@ -19,7 +19,8 @@ print(json.dumps({'specs': list(OFFICIAL_CRLA_CONTENT.values()), 'html': render_
   DJANGO_ENV: 'development', PYTHONIOENCODING: 'utf-8'}});
 assert.equal(rendered.status, 0, rendered.stderr);
 const fixture = JSON.parse(rendered.stdout);
-const html = fixture.html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '').replace(/<link\b[^>]*>/g, '');
+const html = fixture.html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '')
+  .replace(/<link\b[^>]*>/g, tag => /href=["']\/static\//.test(tag) ? tag : '');
 const staticRoot = path.join(root, 'pabasa_site/pabasa_app/static/pabasa_app');
 // Mock the provider response with valid audio bytes; production must use TTS,
 // and must never request any repository MP3 as a narration fallback.
@@ -147,6 +148,8 @@ async function fitsViewport(page, label) {
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const layout = await page.evaluate(() => {
     const root = document.documentElement;
+    const stage = document.querySelector('.reader-stage');
+    const stageTop = stage.getBoundingClientRect().top;
     const visible = ['.reader-top', '#counter', '#assessmentHelpBtn', '#btnToggleMic', '#btnTestMic', '#pauseBtn',
       '#crlaQuestionTitle', '#crlaQuestionText', '#crlaAnswerInput',
       '#crlaAnswerFeedback', '#crlaQuestionStartReadingBtn', '#crlaQuestionNextBtn'];
@@ -161,15 +164,21 @@ async function fitsViewport(page, label) {
         return {selector, visible: getComputedStyle(el).display !== 'none',
           left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom,
           width: rect.width, height: rect.height, clipped: (selector === '#crlaQuestionText'
-            || (selector === '#crlaAnswerInput' && el.classList.contains('is-empty')))
-            && (el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1)};
+            || selector === '#crlaAnswerInput')
+            && (el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1),
+          inHeader: Boolean(el.closest('.reader-top')),
+          reachable: rect.top + stage.scrollTop >= stageTop - 1
+            && rect.bottom + stage.scrollTop <= stageTop + stage.scrollHeight + 1};
       })};
   });
   assert.ok(layout.pageWidth <= layout.width + 1 && layout.pageHeight <= layout.height + 1,
     label + ' page overflow: ' + JSON.stringify(layout));
   for (const el of layout.elements.filter(el => el.visible)) {
-    assert.ok(el.width > 0 && el.height > 0 && el.left >= -1 && el.top >= -1
-      && el.right <= layout.width + 1 && el.bottom <= layout.height + 1 && !el.clipped,
+    // The header stays in view; smaller screens and long answers may scroll
+    // inside the main assessment area without clipping their text.
+    assert.ok(el.width > 0 && el.height > 0 && el.left >= -1
+      && el.right <= layout.width + 1 && !el.clipped
+      && (el.inHeader ? el.top >= -1 && el.bottom <= layout.height + 1 : el.reachable),
       label + ' hidden or clipped content: ' + JSON.stringify(layout));
   }
 }
@@ -198,6 +207,12 @@ async function close(h) {
       assert.equal(await page.locator('#crlaQuestionReadAloudBtn').count(), 0);
       assert.equal(await page.locator(start).getAttribute('aria-label'), 'Sumagot');
       assert.equal(await page.locator(next).getAttribute('aria-label'), 'Susunod');
+      assert.equal(await page.locator('#crlaAnswerInput').count(), 1, 'Retain the transcript target');
+      assert.equal(await page.locator('#crlaAnswerInput').isVisible(), false, 'Transcript stays non-visible');
+      assert.equal(await page.locator('#crlaQuestionPanel .story-answer-card, #crlaQuestionPanel .story-answer-label, .comprehension-audio-art').count(), 0,
+        'The spoken-answer card and decorations are removed');
+      assert.equal(await page.locator('#crlaAnswerFeedback').evaluate(el => el.parentElement.className), 'story-question-shell',
+        'Status messages remain outside the removed card');
       for (let i = 0; i < 6; i++) {
         await page.waitForFunction(n => audit.audio.length === n, i + 1);
         await locked(page);
@@ -223,12 +238,14 @@ async function close(h) {
         if (process.env.CRLA_PREVIEW_DIR && spec === fixture.specs[0] && i === 0)
           await page.screenshot({path: path.join(process.env.CRLA_PREVIEW_DIR, `comprehension-ready-story-${storyNumber}.png`)});
         // A pulsing button intentionally moves; click its visible center.
+        await page.locator(start).evaluate(el => el.scrollIntoView({block: 'nearest'}));
         const bounds = await page.locator(start).boundingBox();
         await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
         assert.equal(await page.locator(start).evaluate(el => el.classList.contains('is-answer-ready')), false);
         assert.equal(await page.locator(start).isDisabled(), true);
         assert.equal(await page.evaluate(() => audit.recognition.at(-1).lang), 'fil-PH');
         await page.evaluate(() => audit.recognition.at(-1).answer('Sagot'));
+        assert.equal(await page.locator('#crlaAnswerInput').isVisible(), false, 'Recognized text does not reappear');
       }
       await page.waitForFunction(() => __comprehensionTest.state().stage === 'learner_experience');
       assert.deepEqual(await page.evaluate(() => __comprehensionTest.state().results), Array(6).fill(true));
@@ -247,6 +264,15 @@ async function close(h) {
       for (const [width, height] of [[1900, 936], [1366, 600], [1024, 768], [768, 1024],
         [390, 844], [320, 568], [320, 480], [844, 390], [667, 375], [568, 320]]) {
         await responsive.page.setViewportSize({width, height});
+        const typography = await responsive.page.evaluate(() => ({
+          title: parseFloat(getComputedStyle(document.getElementById('crlaQuestionTitle')).fontSize),
+          question: parseFloat(getComputedStyle(document.getElementById('crlaQuestionText')).fontSize),
+        }));
+        assert(typography.question > typography.title, 'Question is larger than the story title');
+        if (width >= 992) {
+          assert(typography.title >= 30 && typography.title <= 34, 'Desktop title size');
+          assert(typography.question >= 38 && typography.question <= 44, 'Desktop question size');
+        }
         for (let index = 0; index < 6; index++) {
           if (index) {
             await responsive.page.evaluate(() => audit.audio.at(-1).end());

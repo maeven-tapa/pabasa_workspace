@@ -10,4 +10,35 @@
 {% block content_class %}content-paragraph{% endblock %}
 {% block watermark %}para{% endblock %}
 {% block initial_text %}Loading materials...{% endblock %}
+{% block comprehension_styles %}
+<link rel="stylesheet" href="{% static 'pabasa_app/css/crla_story_comprehension.css' %}?v=20261014-2">
+{% endblock %}
+{% block crla_story_book %}
+<svg class="comprehension-book" viewBox="0 0 112 112" aria-hidden="true" focusable="false">
+    <defs>
+        <linearGradient id="comprehensionBookCover" x2="0" y2="1">
+            <stop stop-color="#3996f5"/><stop offset="1" stop-color="#1251b6"/>
+        </linearGradient>
+    </defs>
+    <circle cx="56" cy="56" r="55" fill="#eff7ff"/>
+    <path d="M18 56Q36 49 56 59Q76 49 94 56V91Q76 87 56 98Q36 87 18 91Z" fill="#13499c"/>
+    <path d="M19 53Q36 46 56 57Q76 46 93 53V87Q75 83 56 94Q37 83 19 87Z" fill="url(#comprehensionBookCover)"/>
+    <path d="M24 48Q40 45 56 56V87Q41 77 24 80Z" fill="#fffdf5" stroke="#d8e2ec" stroke-width="2"/>
+    <path d="M88 48Q72 45 56 56V87Q71 77 88 80Z" fill="#fffdf5" stroke="#d8e2ec" stroke-width="2"/>
+    <path d="M56 56V88" fill="none" stroke="#acc7df" stroke-width="2"/>
+    <g fill="none" stroke="#bbc5ce" stroke-width="3" stroke-linecap="round">
+        <path d="M31 59Q40 59 48 64M31 67Q40 67 48 72M31 75Q39 75 47 79"/>
+        <path d="M64 64Q72 59 81 59M64 72Q72 67 81 67M65 79Q73 75 81 75"/>
+    </g>
+    <path d="M56 10L59 19L68 22L59 26L56 35L52 26L43 22L52 19Z" fill="#ffcf3c"/>
+    <path d="M32 26L34 32L40 35L34 37L32 44L29 37L23 35L29 32Z" fill="#2677e9"/>
+    <path d="M79 30L81 35L87 37L81 40L79 46L76 40L70 37L76 35Z" fill="#b7a67a"/>
+    <path d="M29 50L31 54L36 55L32 58L33 63L29 60L25 63L26 58L22 55L27 54Z" fill="#ffd447"/>
+</svg>
+{% endblock %}
+{% block crla_answer_area %}
+{# Keep the reader's transcript target for processing and persistence, without a visible answer card. #}
+<div class="story-answer-text is-empty d-none" id="crlaAnswerInput" hidden aria-hidden="true">Your spoken answer will appear here.</div>
+<p class="story-answer-feedback d-none" id="crlaAnswerFeedback" role="status" aria-live="polite"></p>
+{% endblock %}
 {% block script %}{% include "pabasa_app/speech_debug_script.html" %}<script src="{% static 'pabasa_app/js/assessment_reader.js' %}?v={% now 'U' %}"></script>{% endblock %}

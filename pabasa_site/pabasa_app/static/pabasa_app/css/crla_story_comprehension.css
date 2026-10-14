@@ -1,0 +1,140 @@
+/* Only the paragraph reader's active CRLA comprehension card uses this design.
+   The upper header, other reading stages, and shared button state styles stay
+   under the existing reader stylesheet's control. */
+.reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) > .reader-stage {
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    align-items: start;
+}
+
+body .reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) > .reader-stage > .reader-card {
+    width: min(1240px, 100%);
+    height: auto;
+    min-height: 100% !important;
+    grid-template-rows: auto;
+    align-content: center;
+    padding: clamp(24px, 4dvh, 44px) clamp(22px, 5vw, 80px);
+}
+
+.reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel {
+    height: auto;
+    min-width: 0;
+}
+
+.reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-shell {
+    width: min(100%, 1000px);
+    max-width: none;
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    align-content: center;
+    gap: clamp(24px, 3.5dvh, 32px);
+}
+
+.reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-head {
+    gap: 24px;
+}
+
+.reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-titlebar {
+    display: block;
+}
+
+.reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-titlebar h2 {
+    color: #10345e;
+    font-size: clamp(1.375rem, 3vw, 2.125rem);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) .comprehension-book {
+    display: block;
+    width: clamp(72px, 11dvh, 112px);
+    height: auto;
+    margin-inline: auto;
+}
+
+/* Retain the dynamic inner progress element; the existing header carries the
+   visible progress indicator, as in the approved design. */
+.reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-progress {
+    display: none;
+}
+
+.reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-card {
+    width: 100%;
+    height: auto;
+    grid-template-rows: auto;
+    padding: clamp(18px, 2.5dvh, 24px);
+    gap: 12px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, #fffdf6, #fffefb);
+    border-color: #dae7ec;
+    box-shadow: 0 12px 28px rgba(16, 52, 94, .07);
+}
+
+.reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-label {
+    color: #758d50;
+    font-size: .85rem;
+    letter-spacing: .05em;
+}
+
+.reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-body {
+    max-width: 100%;
+    max-height: none;
+    overflow: visible;
+    color: #10345e;
+    font-size: clamp(1.65rem, 3.8vw, 2.75rem);
+    font-weight: 900;
+    line-height: 1.3;
+}
+
+.reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-answer-feedback {
+    font-size: .9rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    text-align: center;
+}
+
+.reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-nav {
+    width: min(100%, 580px);
+    grid-column: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: clamp(14px, 2vw, 24px);
+    padding: 0 10px 12px;
+}
+
+.reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-nav .btn {
+    grid-column: auto;
+    grid-row: auto;
+    min-height: 54px;
+    font-size: clamp(1rem, 1.5vw, 1.25rem);
+    padding: .65rem 1rem;
+}
+
+@media (max-height: 800px) {
+    body .reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) > .reader-stage > .reader-card {
+        padding-block: 18px;
+    }
+
+    .reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) .comprehension-book {
+        width: clamp(64px, 8dvh, 80px);
+    }
+
+    .reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-card {
+        padding-block: 16px;
+    }
+}
+
+@media (max-width: 600px) {
+    body .reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) > .reader-stage > .reader-card {
+        padding: 24px 20px;
+    }
+
+    .reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-card {
+        padding: 16px 12px;
+    }
+
+    .reader-paragraph:has(#crlaQuestionPanel:not(.d-none)) #crlaQuestionPanel .story-question-nav {
+        padding-inline: 4px;
+    }
+}

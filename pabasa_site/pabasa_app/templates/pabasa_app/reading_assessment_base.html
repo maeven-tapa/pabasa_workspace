@@ -4386,6 +4386,7 @@
         font-weight: 900;
     }
 </style>
+{% block comprehension_styles %}{% endblock %}
 </head>
 <body{% if crla_official_assessment_data.assessment_kind == 'crla' %} class="is-crla-reader{% if is_admin_preview %} is-admin-crla-preview{% endif %}"{% endif %} data-student-theme="{{ student_theme_slug|default:'sky' }}">
     <script>
@@ -4549,11 +4550,12 @@
                 {% if crla_official_assessment_id %}<section class="story-question-panel crla-question-panel d-none" id="crlaQuestionPanel" aria-live="polite" aria-atomic="true">
                     <div class="story-question-shell">
                         <div class="story-question-head">
+                            {% block crla_story_book %}{% endblock %}
                             <div class="story-question-titlebar"><h2 class="story-question-title" id="crlaQuestionTitle">Reading Comprehension</h2></div>
                             <div class="story-question-progress" aria-hidden="true"><div class="story-question-progress-track"><div class="story-question-progress-fill" id="crlaQuestionProgressFill"></div></div></div>
                         </div>
                         <div class="story-question-card"><p class="story-question-label">Question</p><div class="story-question-body" id="crlaQuestionText"></div></div>
-                        <div class="story-answer-card" aria-live="polite" aria-atomic="true"><p class="story-answer-label">Your spoken answer</p><div class="story-answer-text is-empty" id="crlaAnswerInput">Your spoken answer will appear here.</div><p class="story-answer-feedback d-none" id="crlaAnswerFeedback" role="status"></p></div>
+                        {% block crla_answer_area %}<div class="story-answer-card" aria-live="polite" aria-atomic="true"><p class="story-answer-label">Your spoken answer</p><div class="story-answer-text is-empty" id="crlaAnswerInput">Your spoken answer will appear here.</div><p class="story-answer-feedback d-none" id="crlaAnswerFeedback" role="status"></p></div>{% endblock %}
                         <div class="story-question-nav"><button class="btn story-question-finish-reading-btn story-call-mic" id="crlaQuestionStartReadingBtn" type="button" aria-label="Sumagot" title="Sumagot" disabled>🎙 Sumagot</button><button class="btn btn-primary" id="crlaQuestionNextBtn" type="button" aria-label="Susunod" title="Susunod" disabled>Susunod <i class="bi bi-arrow-right" aria-hidden="true"></i></button></div>
                         <div class="story-completion-card d-none" id="crlaQuestionCompletion"><div class="story-results-mark" aria-hidden="true">A</div><div class="story-results-kicker">CRLA Results</div><div class="story-results-heading"><h3>🎉 You did it!</h3><p>Great work finishing your comprehension questions.</p></div><button class="btn btn-primary story-results-action" id="crlaQuestionFinishBtn" type="button">Back to Assessment <span aria-hidden="true">→</span></button></div>
                     </div>
