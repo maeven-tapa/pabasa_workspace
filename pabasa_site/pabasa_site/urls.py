@@ -19,6 +19,8 @@ from django.urls import path, include
 from django.conf import settings
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
+handler500 = 'pabasa_site.errors.server_error'
+
 urlpatterns = [
     path('', include('pabasa_app.urls')),
     path('admin/', admin.site.urls),

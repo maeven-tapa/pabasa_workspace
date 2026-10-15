@@ -23,6 +23,12 @@ def database_config(env, base_dir, *, production=False):
         missing.append('INSTANCE_CONNECTION_NAME or DB_HOST')
     if missing:
         raise ImproperlyConfigured('Missing PostgreSQL configuration: ' + ', '.join(missing))
+    try:
+        pool_size = int(env.get('DB_POOL_MAX_SIZE', '6'))
+    except (TypeError, ValueError):
+        raise ImproperlyConfigured('DB_POOL_MAX_SIZE must be an integer between 1 and 32.') from None
+    if not 1 <= pool_size <= 32:
+        raise ImproperlyConfigured('DB_POOL_MAX_SIZE must be an integer between 1 and 32.')
     return {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': env['DB_NAME'],
@@ -30,9 +36,18 @@ def database_config(env, base_dir, *, production=False):
         'PASSWORD': env['DB_PASSWORD'],
         'HOST': host,
         'PORT': env.get('DB_PORT') or '5432',
-        # Close connections after each request to bound idle connections across
-        # Cloud Run instances. Size Cloud Run's instance limit for the database.
+        # Returning a connection releases it to the bounded per-process pool.
+        # Budget every web worker, overlapping revision, and migration job.
         'CONN_MAX_AGE': 0,
         'CONN_HEALTH_CHECKS': True,
-        'OPTIONS': {'connect_timeout': 10},
+        'OPTIONS': {
+            'connect_timeout': 10,
+            'pool': {
+                'min_size': 0,
+                'max_size': pool_size,
+                'timeout': 5,
+                'max_waiting': 32,
+                'max_idle': 60,
+            },
+        },
     }

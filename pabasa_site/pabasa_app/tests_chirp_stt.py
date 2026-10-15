@@ -53,6 +53,19 @@ class ChirpAdapterTests(SimpleTestCase):
                 self.assertEqual(recognize.call_count, attempts)
                 self.assertEqual(words, [])
 
+    def test_transport_closes_after_success_or_provider_failure(self):
+        for failure in (False, True):
+            with self.subTest(failure=failure):
+                self.client.reset_mock()
+                self.client.return_value.recognize.side_effect = InvalidArgument('bad encoding') if failure else None
+                self.client.return_value.recognize.return_value = cloud_speech.RecognizeResponse()
+                if failure:
+                    with self.assertRaises(InvalidArgument):
+                        self.transcribe('chirp_3')
+                else:
+                    self.transcribe('chirp_3')
+                self.client.return_value.transport.close.assert_called_once()
+
     def test_chirp2_requests_word_values_and_keeps_all_segments(self):
         self.client.return_value.recognize.return_value = cloud_speech.RecognizeResponse(results=[
             {'alternatives': [{'transcript': 'bata', 'words': [
@@ -190,6 +203,46 @@ class ChirpRoutingTests(SimpleTestCase):
         self.assertEqual(transcribe.call_args.kwargs['model'], 'chirp_3')
         self.assertFalse(transcribe.call_args.kwargs['allow_fallback'])
         knowlez.assert_not_called()
+
+    @patch('pabasa_app.views.connection')
+    @patch('pabasa_app.views.transcribe_audio_bytes_with_model')
+    def test_crla_releases_db_slot_before_provider_io(self, transcribe, database):
+        database.in_atomic_block = False
+        def recognize(*args, **kwargs):
+            database.close.assert_called_once()
+            return 'bata', 'chirp_3', ''
+        transcribe.side_effect = recognize
+        request = self.request('chirp_3')
+        request.POST = request.POST.copy()
+        request.POST['official_crla_assessment'] = '1'
+        self.assertEqual(reading_transcribe_api(request).status_code, 200)
+
+    @patch('pabasa_app.views.connection')
+    @patch('pabasa_app.views.transcribe_audio_bytes_with_model', return_value=('bata', 'chirp_3', ''))
+    def test_crla_does_not_close_a_callers_transaction(self, transcribe, database):
+        database.in_atomic_block = True
+        request = self.request('chirp_3')
+        request.POST = request.POST.copy()
+        request.POST['official_crla_assessment'] = '1'
+        self.assertEqual(reading_transcribe_api(request).status_code, 200)
+        database.close.assert_not_called()
+
+    @patch('pabasa_app.views.transcribe_audio_bytes_with_model')
+    def test_bad_crla_recording_requires_new_audio_without_a_score(self, transcribe):
+        transcribe.side_effect = InvalidArgument('Audio data does not appear to be in a supported encoding.')
+        request = self.request('chirp_3')
+        request.POST = request.POST.copy()
+        request.POST['official_crla_assessment'] = '1'
+        with self.assertLogs('pabasa_app.views', level='ERROR'):
+            response = reading_transcribe_api(request)
+        result = json.loads(response.content)
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(result['success'])
+        self.assertFalse(result['retryable'])
+        self.assertTrue(result['rerecord'])
+        self.assertNotIn('correct_word_count', result)
+        self.assertEqual(transcribe.call_count, 1)
+        self.assertFalse(transcribe.call_args.kwargs['allow_fallback'])
 
     @override_settings(GOOGLE_STT_API_KEY='test-key')
     @patch('pabasa_app.views.transcribe_audio_bytes_with_model', return_value=('bata', 'chirp_3', ''))

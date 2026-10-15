@@ -25,6 +25,29 @@ class DatabaseConfigurationTests(SimpleTestCase):
         self.assertEqual(config['HOST'], '/cloudsql/example:asia-southeast1:pabasa-db')
         self.assertEqual(config['CONN_MAX_AGE'], 0)
 
+    def test_postgres_pool_bounds_connections_and_waiters(self):
+        config = database_config(self.env, Path('/project'), production=True)
+        pool = config['OPTIONS']['pool']
+        self.assertEqual((pool['min_size'], pool['max_size']), (0, 6))
+        self.assertEqual((pool['timeout'], pool['max_waiting']), (5, 32))
+        from django.db.backends.postgresql.base import DatabaseWrapper
+        wrapper = DatabaseWrapper({**config, 'TIME_ZONE': None}, alias='pool_configuration_test')
+        try:
+            self.assertEqual(wrapper.pool.max_size, 6)
+            self.assertEqual(wrapper.pool.min_size, 0)
+        finally:
+            wrapper.close_pool()
+
+    def test_postgres_pool_size_is_configurable(self):
+        self.env['DB_POOL_MAX_SIZE'] = '4'
+        self.assertEqual(database_config(self.env, Path('/project'), production=True)['OPTIONS']['pool']['max_size'], 4)
+
+    def test_invalid_pool_limits_fail_closed_without_credentials(self):
+        for value in ('0', '-1', '33', 'unbounded', '1.5'):
+            with self.subTest(value=value), self.assertRaises(ImproperlyConfigured) as raised:
+                database_config({**self.env, 'DB_POOL_MAX_SIZE': value}, Path('/project'), production=True)
+            self.assertNotIn(self.env['DB_PASSWORD'], str(raised.exception))
+
     def test_proxy_host_can_be_used_locally(self):
         self.env.update(DB_ENGINE='postgresql', DB_HOST='127.0.0.1', DB_PORT='15432')
         config = database_config(self.env, Path('/project'))
@@ -60,4 +83,4 @@ class DatabaseConfigurationTests(SimpleTestCase):
                         "assert s.DJANGO_ENV == 'production'; "
                         "assert s.DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql'")
                 subprocess.run([sys.executable, '-c', code], env=env, check=True,
-                               capture_output=True, timeout=30)
+                               cwd=Path(__file__).resolve().parents[1], capture_output=True, timeout=30)

@@ -557,6 +557,13 @@ def is_retryable_stt_error(exc):
     return exc.__cause__ is not None and is_retryable_stt_error(exc.__cause__)
 
 
+def is_invalid_recording_error(exc):
+    from google.api_core.exceptions import InvalidArgument
+    return isinstance(exc, InvalidArgument) and any(phrase in str(exc).lower() for phrase in (
+        'supported encoding', 'audio data', 'audio content', 'empty audio',
+    ))
+
+
 def transcribe_audio_bytes_v2_chirp3(
     audio_bytes,
     language_code,
@@ -630,14 +637,17 @@ def _transcribe_audio_bytes_v2_chirp(
     )
     # Keep the retry budget explicit, independent of SDK defaults, and retain
     # the same recording and selected model within the browser's request limit.
-    for attempt in range(2):
-        try:
-            response = client.recognize(request=request, timeout=timeout_seconds, retry=None)
-            break
-        except Exception as exc:
-            if attempt or not is_retryable_stt_error(exc):
-                raise
-            time.sleep(random.uniform(0.2, 0.5))
+    try:
+        for attempt in range(2):
+            try:
+                response = client.recognize(request=request, timeout=timeout_seconds, retry=None)
+                break
+            except Exception as exc:
+                if attempt or not is_retryable_stt_error(exc):
+                    raise
+                time.sleep(random.uniform(0.2, 0.5))
+    finally:
+        client.transport.close()
     transcripts = []
     if response_metadata is not None:
         response_metadata['response_language_codes'] = list(dict.fromkeys(

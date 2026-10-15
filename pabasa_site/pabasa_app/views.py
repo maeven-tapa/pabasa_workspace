@@ -101,6 +101,7 @@ from .reading_stt import (
     google_stt_credentials,
     google_stt_credentials_available,
     is_retryable_stt_error,
+    is_invalid_recording_error,
     l22_c_pronunciation_match,
     word_numbers_in_transcript,
 )
@@ -25334,6 +25335,10 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
         elif knowlez_selected:
             transcript, model_used, fallback_reason = transcribe_knowlez_audio(audio, language_code)
         else:
+            # Authentication/authorization has completed. Do not occupy a scarce
+            # DB slot while CRLA waits for a remote speech response or its retry.
+            if official_crla_assessment and not connection.in_atomic_block:
+                connection.close()
             transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
                 audio.read(),
                 api_key,
@@ -25747,6 +25752,13 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
         return JsonResponse({'success': False, 'error': str(exc), 'retryable': exc.retryable}, status=exc.status)
     except Exception as exc:
         logger.exception('Reading transcription failed')
+        if official_crla_assessment and is_invalid_recording_error(exc):
+            return JsonResponse({
+                'success': False,
+                'error': 'The recording could not be read. Please read this item again.',
+                'retryable': False,
+                'rerecord': True,
+            }, status=400)
         if request.POST.get('prescribed_activity_key') == 'aral-l23-g6-q-syllable-builder':
             return JsonResponse({'success': False, 'error': 'Hindi magamit ang mikropono ngayon. Subukan muli mamaya.'}, status=502)
         return JsonResponse({'success': False, 'error': str(exc), 'retryable': is_retryable_stt_error(exc)}, status=502)

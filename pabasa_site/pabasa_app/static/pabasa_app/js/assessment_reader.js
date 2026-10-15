@@ -304,7 +304,6 @@
         let crlaStreamStarting = false;
         let crlaStreamingUnavailable = false;
         let crlaSpeechFailure = false;
-        let speechAudioChunks = [];
         let stoppingSpeechRecognition = false;
         let isFinalizingReading = false;
         let isSendingChunk = false;
@@ -4058,31 +4057,36 @@
 
         function startSpeechChunkRecorder() {
             if (!mediaStream || stoppingSpeechRecognition || isMuted || !isRecording || isAdvancingItem
-                || sentenceCountdownTimer) return;
+                || sentenceCountdownTimer || mediaRecorder) return;
             if (canStreamCrla()) { startCrlaLiveSpeech(); return; }
             const recorderContext = currentSpeechContext();
             const mimeType = pickAudioMimeType();
-            speechAudioChunks = [];
+            const chunks = [];
+            const recorderStream = mediaStream;
+            let recorder;
             try {
-                mediaRecorder = new MediaRecorder(mediaStream, mimeType ? { mimeType } : undefined);
+                recorder = new MediaRecorder(recorderStream, mimeType ? { mimeType } : undefined);
+                mediaRecorder = recorder;
             } catch (error) {
                 console.warn("PABASA: MediaRecorder could not start", error);
                 setSpeechStatus("Speech recorder error.", error.message || "Please try starting again.");
                 return;
             }
-            mediaRecorder.ondataavailable = (event) => {
+            recorder.ondataavailable = (event) => {
                 if (event.data && event.data.size > 0) {
-                    speechAudioChunks.push(event.data);
+                    chunks.push(event.data);
                 }
             };
-            mediaRecorder.onerror = (event) => {
+            recorder.onerror = (event) => {
+                if (mediaRecorder !== recorder || !isCurrentSpeechContext(recorderContext)) return;
                 console.warn("PABASA: MediaRecorder error", event.error);
                 setSpeechStatus("Speech recorder error.", event.error?.message || "Please try starting again.");
             };
-            mediaRecorder.onstop = async () => {
-                const chunks = speechAudioChunks.slice();
-                const recorderMimeType = mediaRecorder?.mimeType || mimeType || "audio/webm";
-                speechAudioChunks = [];
+            recorder.onstop = async () => {
+                // A stopped recorder can deliver its final events after navigation
+                // has already attached another recorder. It owns only its chunks.
+                if (mediaRecorder !== recorder) return;
+                const recorderMimeType = recorder.mimeType || mimeType || "audio/webm";
                 mediaRecorder = null;
 
                 const hasPendingSentenceCorrection = isOfficialAssessmentLaunch
@@ -4097,11 +4101,12 @@
                     await sendAudioChunk(new Blob(chunks, { type: recorderMimeType }), recorderContext);
                 }
 
-                if (!stoppingSpeechRecognition && isRecording && !isMuted && !isAdvancingItem) {
+                if (!stoppingSpeechRecognition && isRecording && !isMuted && !isAdvancingItem
+                    && mediaStream === recorderStream && !mediaRecorder) {
                     startSpeechChunkRecorder();
                 }
             };
-            mediaRecorder.start();
+            recorder.start();
             speechChunkStartedAt = Date.now();
         }
 
@@ -4172,7 +4177,6 @@
             mediaRecorder = null;
             recognitionActive = false;
             pendingAudioChunk = null;
-            speechAudioChunks = [];
             hasHeardSinceLastChunk = false;
             shell?.classList.remove("is-recording", "is-hearing");
             updateAssessmentNavigationButtons();
@@ -7009,15 +7013,28 @@
             return Date.now() + liveServerTimeOffsetMs;
         }
 
-        async function fetchLiveSessionState() {
+        let liveStateFetchPromise = null;
+        function fetchLiveSessionState() {
+            if (!liveStateFetchPromise) {
+                liveStateFetchPromise = fetchLiveSessionStateNow().finally(() => {
+                    liveStateFetchPromise = null;
+                });
+            }
+            return liveStateFetchPromise;
+        }
+
+        async function fetchLiveSessionStateNow() {
             if (!liveSessionStateUrl) {
                 console.debug('LIVE_CRLA_CLOSE_SAVE_DEBUG polling skipped', { liveSessionId, liveSessionStateUrl });
                 return null;
             }
+            const controller = new AbortController();
+            const timeout = window.setTimeout(() => controller.abort(), 10000);
             try {
                 console.debug('LIVE_CRLA_CLOSE_SAVE_DEBUG polling request', { liveSessionId, liveSessionStateUrl });
                 traceEndSession('fetchLiveSessionState.request');
                 const response = await fetch(liveSessionStateUrl, {
+                    signal: controller.signal,
                     cache: 'no-store',
                     credentials: 'same-origin',
                     headers: { Accept: 'application/json' },
@@ -7042,6 +7059,8 @@
                 traceEndSession('fetchLiveSessionState.error', { message: String(error.message || error) });
                 console.warn('PABASA: Live session state fetch failed', error);
                 return null;
+            } finally {
+                window.clearTimeout(timeout);
             }
         }
 
@@ -7239,10 +7258,18 @@
         // updates can otherwise overlap, allowing an older snapshot to reach
         // the server after a newer one and move recovery backwards.
         let liveStatePublishQueue = Promise.resolve();
+        let liveStatePendingWrites = 0;
+        let liveStateWriteRetryAt = 0;
+        let liveStateWriteDelay = 2000;
         function publishLiveSessionState(updateValues = {}) {
+            liveStatePendingWrites++;
             const operation = liveStatePublishQueue.then(() => (
                 publishLiveSessionStateNow(updateValues)
-            ));
+            )).then(state => {
+                liveStateWriteDelay = state ? 2000 : Math.min(liveStateWriteDelay * 2, 15000);
+                liveStateWriteRetryAt = state ? 0 : Date.now() + liveStateWriteDelay;
+                return state;
+            }).finally(() => { liveStatePendingWrites--; });
             liveStatePublishQueue = operation.catch(() => null);
             return operation;
         }
@@ -7260,6 +7287,9 @@
             liveSessionLastHeartbeatAt = Date.now();
             liveSessionHeartbeatTimer = window.setInterval(() => {
                 if (!isRecording || liveSessionPaused || liveSessionEnded) return;
+                // Explicit score/recovery/terminal writes retain their ordering.
+                // Periodic heartbeats can wait for those writes instead of queuing.
+                if (liveStatePendingWrites || Date.now() < liveStateWriteRetryAt) return;
                 const now = Date.now();
                 if (now - liveSessionLastHeartbeatAt < 1000) return;
                 liveSessionLastHeartbeatAt = now;
@@ -7562,20 +7592,40 @@
             }
         }
 
-        async function pollLiveSessionState() {
-            const state = await fetchLiveSessionState();
-            await handleLiveSessionState(state);
+        let liveSessionPolling = false;
+        let liveSessionPollGeneration = 0;
+        let liveSessionPollDelay = 2000;
+        async function pollLiveSessionState(generation) {
+            if (!liveSessionPolling || generation !== liveSessionPollGeneration) return;
+            let state = null;
+            try {
+                state = await fetchLiveSessionState();
+                if (!liveSessionPolling || generation !== liveSessionPollGeneration) return;
+                await handleLiveSessionState(state);
+            } catch (error) {
+                state = null;
+                console.warn('PABASA: Live session polling failed', error);
+            } finally {
+                if (liveSessionPolling && generation === liveSessionPollGeneration) {
+                    liveSessionPollDelay = state ? 2000 : Math.min(liveSessionPollDelay * 2, 15000);
+                    liveSessionPollTimer = window.setTimeout(() => pollLiveSessionState(generation), liveSessionPollDelay);
+                }
+            }
         }
 
         function startLiveSessionPolling() {
             if (!liveSessionStateUrl) return;
-            pollLiveSessionState();
-            liveSessionPollTimer = window.setInterval(pollLiveSessionState, 2000);
+            stopLiveSessionPolling();
+            liveSessionPolling = true;
+            liveSessionPollDelay = 2000;
+            pollLiveSessionState(liveSessionPollGeneration);
         }
 
         function stopLiveSessionPolling() {
+            liveSessionPolling = false;
+            liveSessionPollGeneration++;
             if (liveSessionPollTimer) {
-                window.clearInterval(liveSessionPollTimer);
+                window.clearTimeout(liveSessionPollTimer);
                 liveSessionPollTimer = null;
             }
         }

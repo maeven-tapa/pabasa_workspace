@@ -1,5 +1,6 @@
 import asyncio
 import json
+import threading
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
@@ -24,6 +25,55 @@ class CrlaStreamingTests(SimpleTestCase):
         self.fields = {'official_assessment_id': '12', 'official_crla_assessment': '1',
                        'target_text': 'bata', 'mode': 'word', 'language': 'Filipino',
                        'crla_rhymes': '0', 'crla_sentence_word_scoring': '0', 'crla_story_reading': '0'}
+
+    async def test_database_worker_cleanup_on_success_and_authorization_failure(self):
+        loop_thread = threading.get_ident()
+        for failure in (False, True):
+            events = []
+            def cleanup():
+                events.append(('cleanup', threading.get_ident()))
+            def query():
+                events.append(('query', threading.get_ident()))
+                if failure:
+                    raise PermissionError('Access revoked')
+                return 'cached result'
+            with self.subTest(failure=failure), patch.object(crla_stream, 'close_old_connections', cleanup):
+                if failure:
+                    with self.assertRaises(PermissionError):
+                        await crla_stream.database_call(query)
+                else:
+                    self.assertEqual(await crla_stream.database_call(query), 'cached result')
+            self.assertEqual([event[0] for event in events], ['cleanup', 'query', 'cleanup'])
+            self.assertEqual(len({event[1] for event in events}), 1)
+            self.assertNotEqual(events[0][1], loop_thread)
+
+    async def test_cancelled_socket_still_cleans_its_database_worker(self):
+        started, release, cleaned = threading.Event(), threading.Event(), threading.Event()
+        def query():
+            started.set()
+            release.wait(timeout=5)
+        def cleanup():
+            if release.is_set():
+                cleaned.set()
+        with patch.object(crla_stream, 'close_old_connections', cleanup):
+            task = asyncio.create_task(crla_stream.database_call(query))
+            try:
+                for _ in range(100):
+                    if started.is_set():
+                        break
+                    await asyncio.sleep(0.01)
+                self.assertTrue(started.is_set())
+                task.cancel()
+                release.set()
+                with self.assertRaises(asyncio.CancelledError):
+                    await task
+                for _ in range(100):
+                    if cleaned.is_set():
+                        break
+                    await asyncio.sleep(0.01)
+                self.assertTrue(cleaned.is_set())
+            finally:
+                release.set()
 
     def request(self, data):
         request = self.factory.post('/api/reading/crla-stream/evaluate/', json.dumps(data), content_type='application/json')

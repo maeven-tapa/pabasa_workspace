@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.core import signing
+from django.db import close_old_connections
 from django.http import HttpRequest, JsonResponse, QueryDict
 from django.http.request import validate_host
 from django.utils.crypto import constant_time_compare, salted_hmac
@@ -23,6 +24,19 @@ PRESCRIBED_RESULT_SALT = 'prescribed-stream-result-v1'
 MATERIAL_RESULT_SALT = 'material-stream-result-v1'
 STREAM_PATH = '/ws/reading/crla/'
 MAX_FRAME_BYTES = 12800
+
+
+async def database_call(function, *args):
+    """WebSockets have no HTTP request signals to release worker connections."""
+    def run():
+        close_old_connections()
+        try:
+            return function(*args)
+        finally:
+            # Must run in the worker that performed the ORM/session lookup.
+            close_old_connections()
+
+    return await sync_to_async(run, thread_sensitive=False)()
 
 
 def session_binding(session):
@@ -406,11 +420,11 @@ async def crla_websocket(scope, receive, send):
         await send({'type': 'websocket.send', 'text': json.dumps(payload)})
 
     try:
-        session = await sync_to_async(socket_session, thread_sensitive=False)(scope)
+        session = await database_call(socket_session, scope)
         first = await asyncio.wait_for(receive(), 5)
         if first['type'] != 'websocket.receive' or not first.get('text') or len(first['text']) > 50000:
             raise ValueError('A speech ticket is required.')
-        payload = await sync_to_async(validate_socket_ticket, thread_sensitive=False)(json.loads(first['text'])['ticket'], session)
+        payload = await database_call(validate_socket_ticket, json.loads(first['text'])['ticket'], session)
         from google.api_core.client_options import ClientOptions
         from google.cloud.speech_v2 import SpeechAsyncClient
         from google.cloud.speech_v2.types import cloud_speech

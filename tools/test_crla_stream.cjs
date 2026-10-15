@@ -128,6 +128,7 @@ async function readerTest() {
         window: {CrlaSpeechStream: Stream, AudioWorkletNode: true, WebSocket: true, SpeechDebug: {format: data => data.transcript}},
         document: {getElementById: () => preview},
         crlaStreamStarting: false, stoppingSpeechRecognition: false, isRecording: true, isMuted: false, isFinalizingReading: false,
+        sentenceCountdownTimer: null,
         crlaLiveSpeech: null, crlaLiveContext: null, crlaStreamingUnavailable: false, crlaSpeechFailure: false,
         isOfficialAssessmentLaunch: true, isCrla: true, mode: 'word', officialAssessmentId: '12',
         customMaterialData: null, isTemplateActivity: false,
