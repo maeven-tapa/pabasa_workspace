@@ -41,11 +41,7 @@
                 <time id="systemTime" class="admin-system-time" datetime="{{ system_time_iso }}">Loading…</time>
                 <p id="systemTimeDate" class="admin-system-time-date">{{ system_time_zone }}</p>
             </div>
-            <button class="btn btn-outline-warning btn-sm admin-system-time-debug-button" id="systemTimeDebugButton" type="button" aria-expanded="false" aria-controls="systemTimeDebugPanel">
-                <i class="bi bi-bug-fill" aria-hidden="true"></i>
-                <span>Debug System Time</span>
-            </button>
-            <button class="btn btn-outline-primary btn-sm admin-system-time-debug-button" id="prescribedAccessButton" type="button" aria-expanded="false" aria-controls="prescribedAccessPanel"><i class="bi bi-unlock-fill" aria-hidden="true"></i><span>{% if prescribed_unlock_all_enabled %}Lock All Activities{% else %}Unlock All Activities{% endif %}</span></button>
+
         </div>
         <div class="admin-account-avatar" aria-hidden="true">
             <i class="bi bi-person-gear"></i>
@@ -57,66 +53,17 @@
         </div>
     </section>
 
-    <section id="systemTimeDebugPanel" class="admin-settings-card" aria-labelledby="systemTimeDebugHeading" hidden>
-        <form method="post" class="d-grid gap-3">
-            {% csrf_token %}
-            <input type="hidden" name="settings_action" value="save_system_time_debug">
-            <div class="admin-settings-card-header admin-system-time-debug-header">
-                <div class="d-flex align-items-start gap-3">
-                    <span class="admin-settings-card-icon" aria-hidden="true"><i class="bi bi-bug"></i></span>
-                    <div>
-                        <h3 id="systemTimeDebugHeading">System Time Debug</h3>
-                        <p>Simulate an advancing system time across all PABASA components. Use this only for testing.</p>
-                    </div>
-                </div>
-                <label class="admin-setting-row admin-system-time-debug-toggle" for="systemTimeDebugEnabled">
-                    <span>Enable debug time</span>
-                    <input class="form-check-input" type="checkbox" id="systemTimeDebugEnabled" name="system_time_debug_enabled" {% if system_time_debug_enabled %}checked{% endif %}>
-                </label>
-            </div>
-            <div>
-                <label class="form-label small" for="systemTimeDebugValue">Simulated date and time</label>
-                <input class="form-control" id="systemTimeDebugValue" name="system_time_debug_value" type="datetime-local" value="{{ system_time_debug_value }}" {% if not system_time_debug_enabled %}disabled{% endif %}>
-                <p class="small text-muted mt-2 mb-0">Once applied, this time continues to advance in real time until disabled.</p>
-            </div>
-            <div class="admin-settings-actions">
-                <button class="btn btn-warning" type="submit"><i class="bi bi-clock-history" aria-hidden="true"></i> Apply Debug Time</button>
-            </div>
-        </form>
-    </section>
-
-    <section id="prescribedAccessPanel" class="admin-settings-card" aria-labelledby="prescribedAccessHeading" hidden>
-        <form method="post" class="d-grid gap-3">{% csrf_token %}<input type="hidden" name="settings_action" value="set_prescribed_activity_access"><input type="hidden" name="unlock_all_activities" value="{% if prescribed_unlock_all_enabled %}off{% else %}on{% endif %}">
-            <div class="admin-settings-card-header"><div class="d-flex align-items-start gap-3"><span class="admin-settings-card-icon" aria-hidden="true"><i class="bi {% if prescribed_unlock_all_enabled %}bi-unlock{% else %}bi-lock{% endif %}"></i></span><div><h3 id="prescribedAccessHeading">Prescribed Activity Access</h3><p>{% if prescribed_unlock_all_enabled %}When on, learners unlock all activities all at once.{% else %}When off, learners unlock the next activity by completing the current one.{% endif %}</p></div></div></div>
-            <div><h4 class="h6 mb-2">{% if prescribed_unlock_all_enabled %}All activities unlocked{% else %}Sequential access enabled{% endif %}</h4><p class="mb-0 text-muted">{% if prescribed_unlock_all_enabled %}Students can open every prescribed activity now.{% else %}The next activity opens only after the previous one is complete.{% endif %}</p></div>
-            <div class="admin-settings-actions"><button class="btn {% if prescribed_unlock_all_enabled %}btn-warning{% else %}btn-outline-primary{% endif %}" type="submit"><i class="bi {% if prescribed_unlock_all_enabled %}bi-unlock-fill{% else %}bi-lock-fill{% endif %}" aria-hidden="true"></i> {% if prescribed_unlock_all_enabled %}Lock All Activities{% else %}Unlock All Activities{% endif %}</button></div>
-        </form>
-    </section>
-
-    <section class="admin-settings-card" aria-labelledby="otpDebugHeading">
-        <form method="post" class="d-grid gap-3">
-            {% csrf_token %}
-            <input type="hidden" name="settings_action" value="save_otp_debug">
-            <div class="admin-settings-card-header">
-                <span class="admin-settings-card-icon" aria-hidden="true"><i class="bi bi-bug"></i></span>
-                <div>
-                    <h3 id="otpDebugHeading">OTP Debug</h3>
-                    <p>Skip OTP emails and verification for teacher signup, student signup, and password resets. Use only for debugging.</p>
-                </div>
-            </div>
-            <label class="admin-setting-row otp-debug-toggle" for="disableOtp">
-                <span>Disable OTP</span>
-                <span class="form-check form-switch m-0 ps-0">
-                    <input class="form-check-input" type="checkbox" role="switch" id="disableOtp" name="disable_otp" aria-describedby="otpDebugStatus" {% if otp_debug_disabled %}checked{% endif %}>
-                </span>
-            </label>
-            <p id="otpDebugStatus" class="small {% if otp_debug_disabled %}text-danger{% else %}text-muted{% endif %} mb-0">
-                {% if otp_debug_disabled %}OTP is disabled. Anyone who knows an account's email can reset its password while this switch is on.{% else %}OTP verification is enabled. Turning this on allows password resets without proving ownership of the email address.{% endif %}
-            </p>
-            <div class="admin-settings-actions">
-                <button class="btn btn-warning" type="submit">Save OTP Debug Setting</button>
-            </div>
-        </form>
+    <section class="admin-settings-card" aria-labelledby="debugControlsHeading">
+        <div class="admin-settings-card-header">
+            <span class="admin-settings-card-icon" aria-hidden="true"><i class="bi bi-bug"></i></span>
+            <div><h3 id="debugControlsHeading">Debug Controls</h3><p>Open a debug option to review or change its settings.</p></div>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-outline-warning" id="systemTimeDebugButton" type="button" data-bs-toggle="modal" data-bs-target="#systemTimeDebugModal"><i class="bi bi-bug-fill me-1" aria-hidden="true"></i>Debug System Time</button>
+            <button class="btn btn-outline-primary" id="prescribedAccessButton" type="button" data-bs-toggle="modal" data-bs-target="#prescribedAccessModal"><i class="bi bi-unlock-fill me-1" aria-hidden="true"></i>{% if prescribed_unlock_all_enabled %}Lock All Activities{% else %}Unlock All Activities{% endif %}</button>
+            <button class="btn btn-outline-warning" type="button" data-bs-toggle="modal" data-bs-target="#otpDebugModal"><i class="bi bi-bug me-1" aria-hidden="true"></i>OTP Debug</button>
+            <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#practiceDebugModal"><i class="bi bi-controller me-1" aria-hidden="true"></i>Unlock All Practice</button>
+        </div>
     </section>
 
     <section class="admin-settings-grid" aria-label="Admin account settings">
@@ -183,6 +130,93 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="systemTimeDebugModal" tabindex="-1" aria-labelledby="systemTimeDebugModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header"><h3 class="modal-title fs-5" id="systemTimeDebugModalTitle">System Time Debug</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body"><form method="post" class="d-grid gap-3">
+            {% csrf_token %}
+            <input type="hidden" name="settings_action" value="save_system_time_debug">
+            <div class="admin-settings-card-header admin-system-time-debug-header">
+                <div class="d-flex align-items-start gap-3">
+                    <span class="admin-settings-card-icon" aria-hidden="true"><i class="bi bi-bug"></i></span>
+                    <div>
+
+                        <p>Simulate an advancing system time across all PABASA components. Use this only for testing.</p>
+                    </div>
+                </div>
+                <label class="admin-setting-row admin-system-time-debug-toggle" for="systemTimeDebugEnabled">
+                    <span>Enable debug time</span>
+                    <input class="form-check-input" type="checkbox" id="systemTimeDebugEnabled" name="system_time_debug_enabled" {% if system_time_debug_enabled %}checked{% endif %}>
+                </label>
+            </div>
+            <div>
+                <label class="form-label small" for="systemTimeDebugValue">Simulated date and time</label>
+                <input class="form-control" id="systemTimeDebugValue" name="system_time_debug_value" type="datetime-local" value="{{ system_time_debug_value }}" {% if not system_time_debug_enabled %}disabled{% endif %}>
+                <p class="small text-muted mt-2 mb-0">Once applied, this time continues to advance in real time until disabled.</p>
+            </div>
+            <div class="admin-settings-actions">
+                <button class="btn btn-warning" type="submit"><i class="bi bi-clock-history" aria-hidden="true"></i> Apply Debug Time</button>
+            </div>
+        </form></div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="prescribedAccessModal" tabindex="-1" aria-labelledby="prescribedAccessModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header"><h3 class="modal-title fs-5" id="prescribedAccessModalTitle">Prescribed Activity Access</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body"><form method="post" class="d-grid gap-3">{% csrf_token %}<input type="hidden" name="settings_action" value="set_prescribed_activity_access"><input type="hidden" name="unlock_all_activities" value="{% if prescribed_unlock_all_enabled %}off{% else %}on{% endif %}">
+            <div class="admin-settings-card-header"><div class="d-flex align-items-start gap-3"><span class="admin-settings-card-icon" aria-hidden="true"><i class="bi {% if prescribed_unlock_all_enabled %}bi-unlock{% else %}bi-lock{% endif %}"></i></span><div><p>{% if prescribed_unlock_all_enabled %}When on, learners unlock all activities all at once.{% else %}When off, learners unlock the next activity by completing the current one.{% endif %}</p></div></div></div>
+            <div><h4 class="h6 mb-2">{% if prescribed_unlock_all_enabled %}All activities unlocked{% else %}Sequential access enabled{% endif %}</h4><p class="mb-0 text-muted">{% if prescribed_unlock_all_enabled %}Students can open every prescribed activity now.{% else %}The next activity opens only after the previous one is complete.{% endif %}</p></div>
+            <div class="admin-settings-actions"><button class="btn {% if prescribed_unlock_all_enabled %}btn-warning{% else %}btn-outline-primary{% endif %}" type="submit"><i class="bi {% if prescribed_unlock_all_enabled %}bi-unlock-fill{% else %}bi-lock-fill{% endif %}" aria-hidden="true"></i> {% if prescribed_unlock_all_enabled %}Lock All Activities{% else %}Unlock All Activities{% endif %}</button></div>
+        </form></div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="otpDebugModal" tabindex="-1" aria-labelledby="otpDebugModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header"><h3 class="modal-title fs-5" id="otpDebugModalTitle">OTP Debug</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body"><form method="post" class="d-grid gap-3">
+            {% csrf_token %}
+            <input type="hidden" name="settings_action" value="save_otp_debug">
+            <div class="admin-settings-card-header">
+                <span class="admin-settings-card-icon" aria-hidden="true"><i class="bi bi-bug"></i></span>
+                <div>
+
+                    <p>Skip OTP emails and verification for teacher signup, student signup, and password resets. Use only for debugging.</p>
+                </div>
+            </div>
+            <label class="admin-setting-row otp-debug-toggle" for="disableOtp">
+                <span>Disable OTP</span>
+                <span class="form-check form-switch m-0 ps-0">
+                    <input class="form-check-input" type="checkbox" role="switch" id="disableOtp" name="disable_otp" aria-describedby="otpDebugStatus" {% if otp_debug_disabled %}checked{% endif %}>
+                </span>
+            </label>
+            <p id="otpDebugStatus" class="small {% if otp_debug_disabled %}text-danger{% else %}text-muted{% endif %} mb-0">
+                {% if otp_debug_disabled %}OTP is disabled. Anyone who knows an account's email can reset its password while this switch is on.{% else %}OTP verification is enabled. Turning this on allows password resets without proving ownership of the email address.{% endif %}
+            </p>
+            <div class="admin-settings-actions">
+                <button class="btn btn-warning" type="submit">Save OTP Debug Setting</button>
+            </div>
+        </form></div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="practiceDebugModal" tabindex="-1" aria-labelledby="practiceDebugModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
+        <div class="modal-header"><h3 class="modal-title fs-5" id="practiceDebugModalTitle">Unlock All Practice</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <div class="modal-body">
+            <form method="post" class="d-grid gap-3">
+                {% csrf_token %}<input type="hidden" name="settings_action" value="set_practice_debug_access">
+                <div><strong>Debug: Unlock all practice — {% if practice_debug_unlock_all %}ON{% else %}OFF{% endif %}</strong><p class="mb-0 mt-2">Unlock every published practice level for all students in both languages, without star or completion requirements. Turn off to restore normal progression.</p></div>
+                <div class="admin-settings-actions"><button type="submit" class="btn {% if practice_debug_unlock_all %}btn-warning{% else %}btn-outline-primary{% endif %}" name="unlock_all" value="{% if practice_debug_unlock_all %}off{% else %}on{% endif %}" aria-pressed="{% if practice_debug_unlock_all %}true{% else %}false{% endif %}"><i class="bi bi-bug me-1" aria-hidden="true"></i>{% if practice_debug_unlock_all %}Turn Debug Off{% else %}Turn Debug On{% endif %}</button></div>
+            </form>
+        </div>
+    </div></div>
+</div>
+
 <script>
 (() => {
     const timeElement = document.getElementById('systemTime');
@@ -226,18 +260,6 @@
     syncSystemTime();
     setInterval(renderSystemTime, 250);
     setInterval(syncSystemTime, 60000);
-
-    const debugButton = document.getElementById('systemTimeDebugButton');
-    const debugPanel = document.getElementById('systemTimeDebugPanel');
-    debugButton?.addEventListener('click', () => {
-        const isHidden = debugPanel.hidden;
-        debugPanel.hidden = !isHidden;
-        debugButton.setAttribute('aria-expanded', String(isHidden));
-    });
-
-    const prescribedAccessButton = document.getElementById('prescribedAccessButton');
-    const prescribedAccessPanel = document.getElementById('prescribedAccessPanel');
-    prescribedAccessButton?.addEventListener('click', () => { const open = prescribedAccessPanel.hidden; prescribedAccessPanel.hidden = !open; prescribedAccessButton.setAttribute('aria-expanded', String(open)); });
 
     const debugTimeEnabled = document.getElementById('systemTimeDebugEnabled');
     const debugTimeValue = document.getElementById('systemTimeDebugValue');

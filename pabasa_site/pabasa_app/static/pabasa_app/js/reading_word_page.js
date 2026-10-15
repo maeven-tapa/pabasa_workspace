@@ -330,24 +330,6 @@
         if (testMeta) testMeta.innerHTML += ' <span style="background: rgba(148, 163, 184, 0.2); color: var(--muted); padding: 2px 8px; border-radius: 6px; font-size: 0.6em; vertical-align: middle; margin-left: 8px;">Review Mode</span>';
     }
 
-    // Function to ensure dark mode is applied to the body if the theme is dark
-    function ensureDarkMode() {
-        const theme = localStorage.getItem("pabasa_theme");
-        if (theme === "dark") {
-            if (!document.body.classList.contains("dark-theme")) {
-                document.body.classList.add("dark-theme");
-                console.log("PABASA: Applied dark-theme to body from reading_word_page.js");
-            }
-        } else {
-            document.body.classList.remove("dark-theme");
-        }
-    }
-
-    // Call on initial load
-    ensureDarkMode();
-    // Listen for global theme changes (e.g., from profile page)
-    window.addEventListener("pabasa:preferences-updated", ensureDarkMode);
-
     loadItems();
     renderWord();
 })();

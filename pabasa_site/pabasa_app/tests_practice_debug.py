@@ -1,7 +1,7 @@
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
-from .models import Material, PracticeDebugSettings
+from .models import Material, PracticeDebugSettings, User
 from .views import (
     _practice_difficulty_is_accessible,
     _practice_game_progression,
@@ -12,6 +12,10 @@ from .views import (
 class PracticeDebugTests(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
+        self.admin = User.objects.create(
+            custom_id='DEBUG-ADMIN', role='admin', first_name='Debug', last_name='Admin',
+            sex='female', birth_month=1, birth_day=1, birth_year=1990,
+        )
         for language in ('English', 'Filipino'):
             for mode in ('free', 'color', 'hunt'):
                 Material.objects.create(
@@ -38,7 +42,7 @@ class PracticeDebugTests(TestCase):
 
     def request_toggle(self, role, value='on'):
         request = self.factory.post(reverse('admin_practice_assessment'), {'unlock_all': value, 'language': 'Filipino'})
-        request.session = {'user_id': 1, 'user_role': role}
+        request.session = {'user_id': self.admin.pk, 'user_role': role}
         request._dont_enforce_csrf_checks = True
         return admin_practice_assessment(request)
 
@@ -53,7 +57,7 @@ class PracticeDebugTests(TestCase):
 
     def test_csrf_and_invalid_values_are_rejected(self):
         request = self.factory.post(reverse('admin_practice_assessment'), {'unlock_all': 'on'})
-        request.session = {'user_id': 1, 'user_role': 'admin'}
+        request.session = {'user_id': self.admin.pk, 'user_role': 'admin'}
         self.assertEqual(admin_practice_assessment(request).status_code, 403)
         self.assertEqual(self.request_toggle('admin', 'invalid').status_code, 400)
         self.assertFalse(PracticeDebugSettings.objects.exists())

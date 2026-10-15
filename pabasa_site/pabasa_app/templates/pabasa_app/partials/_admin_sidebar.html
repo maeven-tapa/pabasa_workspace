@@ -1,12 +1,12 @@
 {% load static %}
 <div class="signature-sidebar d-flex flex-column">
+    {% if sidebar_mobile %}
+    <button class="admin-mobile-sidebar-close-btn" type="button" data-bs-dismiss="offcanvas" aria-label="Close sidebar"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+    {% endif %}
     <div class="signature-brand admin-sidebar-top">
         <a class="sidebar-logo-link admin-homepage-logo" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
             {% include "pabasa_app/partials/_pabasa_image_logo.html" with collapsible=True %}
         </a>
-        {% if sidebar_mobile %}
-        <button class="admin-mobile-sidebar-close-btn" type="button" data-bs-dismiss="offcanvas" aria-label="Close sidebar"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
-        {% endif %}
     </div>
     <div class="signature-nav-frame" data-sidebar-nav-frame>
         {% include "pabasa_app/partials/_sidebar_scroll_button.html" with direction="up" %}

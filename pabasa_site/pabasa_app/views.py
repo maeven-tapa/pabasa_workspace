@@ -8572,6 +8572,8 @@ def admin_course_archive(request, material_id):
 @require_http_methods(["GET", "POST"])
 def admin_practice_assessment(request):
     if request.method == 'POST':
+        if not _current_admin_user(request):
+            return redirect('auth')
         if request.POST.get('unlock_all') not in {'on', 'off'}:
             return HttpResponseBadRequest('Choose on or off for practice debug access.')
         PracticeDebugSettings.objects.update_or_create(
@@ -12118,6 +12120,21 @@ def admin_settings(request):
             access.save(update_fields=['unlock_all_activities', 'updated_at'])
             context['settings_success'] = 'All prescribed activities are unlocked.' if access.unlock_all_activities else 'Sequential prescribed activity access is enabled.'
 
+        elif action == 'set_practice_debug_access':
+            if user.role != 'admin' or user.is_archived:
+                return redirect('auth')
+            unlock_all = request.POST.get('unlock_all')
+            if unlock_all not in {'on', 'off'}:
+                context['settings_error'] = 'Choose on or off for practice debug access.'
+            else:
+                PracticeDebugSettings.objects.update_or_create(
+                    pk=1, defaults={'unlock_all': unlock_all == 'on'},
+                )
+                context['settings_success'] = (
+                    'All published practice levels are unlocked.' if unlock_all == 'on'
+                    else 'Normal practice progression is restored.'
+                )
+
         elif action == 'save_otp_debug':
             if user.role != 'admin' or user.is_archived:
                 return redirect('auth')
@@ -12183,6 +12200,7 @@ def admin_settings(request):
     system_time = timezone.localtime(system_now())
     system_time_override = SystemTimeOverride.objects.filter(pk=1).first()
     context['prescribed_unlock_all_enabled'] = _prescribed_access_settings().unlock_all_activities
+    context['practice_debug_unlock_all'] = _practice_debug_unlock_all()
     context['otp_debug_disabled'] = _otp_debug_disabled()
     context['notification_settings'] = notification_settings
     context['system_time_iso'] = system_time.isoformat()

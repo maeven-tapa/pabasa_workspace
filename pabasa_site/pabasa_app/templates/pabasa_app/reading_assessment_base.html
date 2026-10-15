@@ -4401,31 +4401,7 @@
     {% if crla_official_assessment_data.assessment_kind != 'crla' %}
     {% include "pabasa_app/partials/_forest_world.html" %}
     {% endif %}
-    <script>
-        (function() {
-            const readTheme = () => {
-                let theme = localStorage.getItem('pabasa_theme');
-                try { theme = JSON.parse(theme); } catch (e) {}
-                return theme === 'dark';
-            };
-
-            const applyTheme = () => {
-                const isDark = readTheme();
-                document.documentElement.classList.toggle('dark-theme', isDark);
-                document.body.classList.toggle('dark-theme', isDark);
-            };
-
-            applyTheme();
-            window.addEventListener('storage', function (event) {
-                if (event.key === 'pabasa_theme') applyTheme();
-            });
-            window.addEventListener('pabasa:preferences-updated', applyTheme);
-            window.addEventListener('focus', applyTheme);
-            document.addEventListener('visibilitychange', function () {
-                if (!document.hidden) applyTheme();
-            });
-        })();
-    </script>
+    {% include "pabasa_app/partials/_light_appearance.html" %}
     <main class="reader-shell {% block mode_class %}{% endblock %}">
         <header class="reader-top">
             <div class="reader-title">

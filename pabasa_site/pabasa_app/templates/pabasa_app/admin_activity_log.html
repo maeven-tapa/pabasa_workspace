@@ -16,8 +16,9 @@
     .activity-log-filter .custom-device-menu { flex:0 0 200px; min-width:200px; width:200px; }
     .activity-log-filter .custom-device-trigger,
     .activity-log-filter .custom-device-option { white-space:nowrap; }
-    .activity-log-card { background:#fff; border:1px solid #e1e8f0; border-radius:18px; box-shadow:0 8px 24px rgba(24,49,83,.06); overflow:hidden; }
-    .activity-log-table-scroll { flex:1 1 auto; min-height:0; overflow-y:auto; }
+    .activity-log-card { background:#fff; border:1px solid #e1e8f0; border-radius:18px; box-shadow:none; overflow:hidden; }
+    .activity-log-table-scroll { background:#fff; border-radius:inherit; flex:1 1 auto; min-height:0; overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; }
+    .activity-log-table-scroll::-webkit-scrollbar-corner { background:#fff; }
     .activity-log-table { margin:0; min-width:650px; }
     .activity-log-table th { background:#f6f9fc; border-bottom:1px solid #e1e8f0; color:#536a84; font-size:.74rem; letter-spacing:.05em; padding:1rem; position:sticky; text-transform:uppercase; top:0; z-index:1; }
     .activity-log-table td { border-color:#edf1f5; color:#29425f; padding:1rem; vertical-align:top; }
@@ -28,7 +29,7 @@
     @media (min-width: 992px) {
         html:has(.activity-log-header),
         body:has(.activity-log-header) { height:100%; min-height:0; overflow:hidden; }
-        body:has(.activity-log-header) .admin-app-shell { height:100dvh; min-height:0; overflow:hidden; }
+        body:has(.activity-log-header) .admin-app-shell { height:var(--admin-normalized-viewport-height); min-height:0; overflow:hidden; }
         .admin-main:has(.activity-log-header) { display:flex; flex:1 1 auto; flex-direction:column; height:100%; min-height:0; overflow:hidden; }
         .admin-main:has(.activity-log-header) > .admin-content { display:flex; flex:1 1 0; flex-direction:column; height:0; min-height:0; overflow:hidden; }
         .admin-main:has(.activity-log-header) .activity-log-header { flex:0 0 auto; }
@@ -36,6 +37,16 @@
     }
     @media (max-width: 767px) { .activity-log-header { align-items:stretch; flex-direction:column; } .activity-log-controls { align-items:stretch; } .activity-log-filter .form-select, .activity-log-filter .custom-device-dropdown, .activity-log-filter .custom-device-trigger, .activity-log-filter .custom-device-menu { flex-basis:200px; min-width:200px; width:200px; } .activity-log-server-time { white-space:normal; } }
     @media (max-width: 991.98px) { .admin-content:has(.activity-log-header) { padding-top: 1rem; } }
+    @media (max-width: 575.98px) {
+        .activity-log-header { padding:1rem; }
+        .activity-log-header > *, .activity-log-controls { min-width:0; max-width:100%; }
+        .activity-log-filter { flex-wrap:wrap; }
+        .activity-log-table, .activity-log-table tbody { display:block; min-width:0; width:100%; }
+        .activity-log-table thead { display:none; }
+        .activity-log-row { display:block; padding:1rem; border-bottom:1px solid #e1e8f0; }
+        .activity-log-table .activity-log-row td { display:block; padding:.35rem 0; border:0; white-space:normal; overflow-wrap:anywhere; }
+        .activity-log-row td::before { content:attr(data-label); display:block; color:#52677f; font-size:.72rem; font-weight:800; text-transform:uppercase; margin-bottom:.2rem; }
+    }
 </style>
 
 <section class="activity-log-header" aria-labelledby="activityLogHeading">
@@ -73,13 +84,13 @@
             </thead>
             <tbody>
                 {% for entry in activity_entries %}
-                    <tr>
-                        <td class="activity-log-time"><time datetime="{{ entry.created_at|date:'c' }}">{{ entry.created_at|date:"M j, Y, g:i:s A T" }}</time></td>
-                        <td>
+                    <tr class="activity-log-row">
+                        <td data-label="Server timestamp" class="activity-log-time"><time datetime="{{ entry.created_at|date:'c' }}">{{ entry.created_at|date:"M j, Y, g:i:s A T" }}</time></td>
+                        <td data-label="Activity">
                             <span class="activity-log-title">{{ entry.title }}</span>
                             {% if entry.message %}<span class="activity-log-message">{{ entry.message }}</span>{% endif %}
                         </td>
-                        <td>{% if entry.actor %}{{ entry.actor.first_name }} {{ entry.actor.last_name }}{% else %}System{% endif %}</td>
+                        <td data-label="Performed by">{% if entry.actor %}{{ entry.actor.first_name }} {{ entry.actor.last_name }}{% else %}System{% endif %}</td>
                     </tr>
                 {% empty %}
                     <tr><td class="activity-log-empty" colspan="3"><i class="bi bi-inbox fs-3 d-block mb-2" aria-hidden="true"></i>No activity has been recorded yet.</td></tr>

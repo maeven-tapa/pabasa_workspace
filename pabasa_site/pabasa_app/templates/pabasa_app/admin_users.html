@@ -3,6 +3,8 @@
 
 {% block content %}
 <style>
+    .admin-users-panel { box-shadow: none; }
+
     .admin-users-panel .admin-user-badge {
         border: 1px solid transparent;
         font-weight: 800;
@@ -19,14 +21,19 @@
     .admin-users-panel .admin-status-archived { background: #eef0f2; border-color: #cdd2d8; color: #59636d; }
 
     .admin-users-panel > .table-responsive {
+        background: #fff;
         border-radius: 12px;
         overflow: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
     }
+
+    .admin-users-panel > .table-responsive::-webkit-scrollbar-corner { background: #fff; }
 
     @media (min-width: 992px) {
         html:has(.admin-users-panel),
         body:has(.admin-users-panel) { height:100%; min-height:0; overflow:hidden; }
-        body:has(.admin-users-panel) .admin-app-shell { height:100dvh; min-height:0; overflow:hidden; }
+        body:has(.admin-users-panel) .admin-app-shell { height:var(--admin-normalized-viewport-height); min-height:0; overflow:hidden; }
         .admin-main:has(.admin-users-panel) { display:flex; flex:1 1 auto; flex-direction:column; height:100%; min-height:0; overflow:hidden; }
         .admin-main:has(.admin-users-panel) > .admin-content { display:flex; flex:1 1 0; flex-direction:column; height:0; min-height:0; max-width:none; overflow:hidden; width:100%; }
         .admin-main:has(.admin-users-panel) .admin-users-panel { display:flex; flex:1 1 0; flex-direction:column; height:0; min-height:0; overflow:hidden; width:100%; }
@@ -42,8 +49,24 @@
 
     @media (max-width: 991.98px) {
         .admin-content:has(.admin-users-panel) {
-            padding-top: clamp(0.75rem, 2vw, 1.25rem);
+            display: flex;
+            flex: 1 0 auto;
+            flex-direction: column;
+            justify-content: center;
+            padding-block: 1rem;
         }
+        .admin-users-panel { display:flex; flex-direction:column; max-height:calc(100dvh - 110px); min-height:0; }
+        .admin-users-panel > form { flex:0 0 auto; }
+        .admin-users-panel > .table-responsive { flex:0 1 auto; min-height:0; }
+    }
+
+    @media (max-width: 575.98px) {
+        .admin-users-panel .table, .admin-users-panel tbody { display:block; width:100%; }
+        .admin-users-panel thead { display:none; }
+        .admin-users-panel .admin-user-row { display:block; padding:.75rem; border-bottom:1px solid #dce8f0; }
+        .admin-users-panel .admin-user-row td { display:grid; grid-template-columns:5.5rem minmax(0,1fr); gap:.5rem; padding:.35rem 0; border:0; white-space:normal !important; overflow-wrap:anywhere; }
+        .admin-users-panel .admin-user-row td::before { content:attr(data-label); color:#52677f; font-size:.8rem; font-weight:800; }
+        .admin-users-panel .admin-table-actions { min-width:0; flex-wrap:wrap; }
     }
 
 </style>
@@ -71,19 +94,19 @@
             <thead><tr>{% for header in table_headers %}<th>{{ header }}</th>{% endfor %}</tr></thead>
             <tbody>
                 {% for user in users %}
-                <tr>
-                    <td><span class="fw-bold d-block">{{ user.first_name }}{% if user.middle_initial %} {{ user.middle_initial }}.{% endif %} {{ user.last_name }}{% if user.suffix %} {{ user.suffix }}{% endif %}</span></td>
-                    <td>{{ user.custom_id }}</td>
-                    <td>{{ user.email }}</td>
-                    <td>
+                <tr class="admin-user-row">
+                    <td data-label="Name"><span class="fw-bold d-block">{{ user.first_name }}{% if user.middle_initial %} {{ user.middle_initial }}.{% endif %} {{ user.last_name }}{% if user.suffix %} {{ user.suffix }}{% endif %}</span></td>
+                    <td data-label="PABASA-ID">{{ user.custom_id }}</td>
+                    <td data-label="Email">{{ user.email }}</td>
+                    <td data-label="Category"><div>
                         <span class="badge rounded-pill admin-user-badge admin-category-{{ user.role|lower }}">{{ user.role|title }}</span>
                         {% if user.account_status == 'pending_archive' %}<span class="badge rounded-pill admin-user-badge admin-status-pending">Pending Archive</span>
                         {% elif user.account_status == 'dropped' %}<span class="badge rounded-pill admin-user-badge admin-status-dropped">Dropped</span>
                         {% elif user.is_archived %}<span class="badge rounded-pill admin-user-badge admin-status-archived">Archived</span>
                         {% else %}<span class="badge rounded-pill admin-user-badge admin-status-active">Active</span>{% endif %}
-                    </td>
-                    <td class="text-secondary text-nowrap">{{ user.created_at|localtime|date:"M j, Y · g:i A" }}</td>
-                    <td>
+                    </div></td>
+                    <td data-label="Created at" class="text-secondary text-nowrap">{{ user.created_at|localtime|date:"M j, Y · g:i A" }}</td>
+                    <td data-label="Actions">
                         <div class="admin-table-actions">
                             {% if user.role == 'student' %}
                             {% if user.account_status == 'pending_archive' %}

@@ -12,6 +12,7 @@ html body :is(.signature-surface, #dashboardSidebar) {
 html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar {
     --signature-icon-column: 56px; container-name: signature-sidebar; container-type: size;
     display: flex !important; flex-direction: column !important;
+    position: relative !important;
     box-sizing: border-box; height: var(--signature-viewport-height,100dvh) !important; min-height: 0 !important;
     width: 100% !important; padding: max(28px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom)) !important;
     gap: 0 !important; overflow: hidden !important; color: #eff9ff;
@@ -26,7 +27,7 @@ html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin
 html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .sidebar-logo-link { display: flex !important; align-items: center !important; justify-content: center !important; width: 100% !important; min-height: 72px !important; height: 72px !important; padding: 0 !important; margin: 0 !important; }
 html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .dashboard-navbar-logo { display: block !important; width: 215px !important; max-width: 100% !important; height: 72px !important; flex: none !important; object-fit: contain; }
 html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .dashboard-navbar-mascot { display: none !important; }
-html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar :is(.mobile-sidebar-close-btn,.admin-mobile-sidebar-close-btn) { position: absolute !important; top: -15px !important; right: -9px !important; width: 44px !important; height: 44px !important; display: inline-flex; align-items: center; justify-content: center; color: #e2f5ff !important; background: transparent !important; border: 0; border-radius: 10px; }
+html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar :is(.mobile-sidebar-close-btn,.admin-mobile-sidebar-close-btn) { position: absolute !important; top: calc(8px + env(safe-area-inset-top, 0px)) !important; right: 8px !important; width: 44px !important; height: 44px !important; display: inline-flex; align-items: center; justify-content: center; padding: 0 !important; transform: none !important; z-index: 2; color: #e2f5ff !important; background: transparent !important; border: 0; border-radius: 10px; }
 html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-frame { display: grid; grid-template-rows: 0 minmax(0,1fr) 0; flex: 1 1 0; min-height: 0; overflow: hidden; }
 html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-frame.has-overflow { grid-template-rows: 44px minmax(0,1fr) 44px; }
 html body :is(#dashboardSidebar, #adminSidebarCanvas, .dashboard-sidebar, .admin-sidebar) .signature-sidebar .signature-nav-scroll { position: relative; display: block !important; flex: initial !important; min-height: 0 !important; max-height: none !important; height: auto !important; width: 100% !important; margin: 0 !important; padding: 2px 0 !important; border: 0 !important; overflow-y: auto !important; overflow-x: hidden !important; scrollbar-width: none; overscroll-behavior: contain; }
@@ -239,4 +240,12 @@ html body :is(#adminSidebarCanvas,.admin-sidebar) .signature-sidebar .signature-
 html body :is(#dashboardSidebar,#adminSidebarCanvas,.dashboard-sidebar,.admin-sidebar) .signature-sidebar .signature-footer :is(.sidebar-text,.admin-logout-text) { display: inline !important; }
 @media (min-width: 992px) {
     html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar,#adminSidebarCanvas,.dashboard-sidebar,.admin-sidebar) .signature-sidebar .signature-footer :is(.sidebar-text,.admin-logout-text) { display: none !important; }
+}
+
+/* Match admin tab backgrounds to the shared 56px icon column. */
+@media (min-width: 992px) {
+    html body.sidebar-collapsed :is(#dashboardSidebar,.dashboard-sidebar) .teacher-sidebar .signature-nav-item {
+        min-width: 0 !important;
+        max-width: none !important;
+    }
 }

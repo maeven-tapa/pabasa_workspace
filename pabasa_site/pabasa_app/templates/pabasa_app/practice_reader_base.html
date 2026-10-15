@@ -6331,31 +6331,7 @@
 </head>
 <body data-student-theme="{{ student_theme_slug|default:'sky' }}">
     {% include "pabasa_app/partials/_forest_world.html" %}
-    <script>
-        (function() {
-            const readTheme = () => {
-                let theme = localStorage.getItem('pabasa_theme');
-                try { theme = JSON.parse(theme); } catch (e) {}
-                return theme === 'dark';
-            };
-
-            const applyTheme = () => {
-                const isDark = readTheme();
-                document.documentElement.classList.toggle('dark-theme', isDark);
-                document.body.classList.toggle('dark-theme', isDark);
-            };
-
-            applyTheme();
-            window.addEventListener('storage', function (event) {
-                if (event.key === 'pabasa_theme') applyTheme();
-            });
-            window.addEventListener('pabasa:preferences-updated', applyTheme);
-            window.addEventListener('focus', applyTheme);
-            document.addEventListener('visibilitychange', function () {
-                if (!document.hidden) applyTheme();
-            });
-        })();
-    </script>
+    {% include "pabasa_app/partials/_light_appearance.html" %}
     <main class="practice-shell{% if request.GET.game == 'free' %} practice-scrolls-shell{% elif request.GET.game == 'hunt' %} practice-hunt-shell{% else %} {% block mode_class %}{% endblock %}{% endif %}" data-practice-mode="{% block data_mode %}word{% endblock %}" data-practice-difficulty="{{ request.GET.difficulty|default:'easy' }}" {% if request.GET.game == 'free' %} data-free-mode="true"{% elif request.GET.game == 'hunt' %} data-hunt-mode="true" data-hunt-difficulty="{{ request.GET.difficulty|default:'easy' }}"{% endif %}>
         {% if request.GET.game != 'color' %}
         <button class="reading-help-btn" id="practiceHelpBtn" type="button" aria-haspopup="dialog"><i class="bi bi-question-circle-fill"></i> Help</button>

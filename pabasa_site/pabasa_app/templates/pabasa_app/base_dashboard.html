@@ -126,7 +126,7 @@
         }
         body.teacher-dashboard-body .dashboard-sidebar {
             backdrop-filter: blur(18px) saturate(150%);
-            background: linear-gradient(145deg, #135679 0%, #0f4c5c 55%, #0b3552 100%);
+            background: linear-gradient(145deg, #13507a 0%, #10466e 70%, #0b3552 100%);
         }
         body.teacher-dashboard-body .dashboard-main .dashboard-topbar {
             background: rgba(255, 255, 255, 0.97);
@@ -850,10 +850,10 @@
         }
 
         body.teacher-dashboard-body .mobile-dashboard-topbar {
-            background: linear-gradient(145deg, #135679 0%, #0f4c5c 55%, #0b3552 100%);
+            background: linear-gradient(145deg, #13507a 0%, #10466e 70%, #0b3552 100%);
         }
 
-        body.dashboard-body[data-student-theme]:not([data-student-theme="sky"]) .mobile-dashboard-topbar {
+        body.dashboard-body[data-student-theme]:not([data-student-theme=""]):not([data-student-theme="sky"]) .mobile-dashboard-topbar {
             background: linear-gradient(145deg, color-mix(in srgb, var(--dash-primary-deep) 88%, #0f172a), var(--dash-primary-deep));
         }
 
@@ -3654,7 +3654,7 @@
         }
     </style>
     <link rel="stylesheet" href="{% static 'pabasa_app/dashboard_branding.css' %}?v=20261011-sidebar-slide">
-    <link rel="stylesheet" href="{% static 'pabasa_app/signature_sidebar.css' %}?v=20261012-1">
+    <link rel="stylesheet" href="{% static 'pabasa_app/signature_sidebar.css' %}?v=20261016-admin-tab-alignment">
 </head>
 <body class="dashboard-body dashboard-preloading{% if nav_role == 'teacher' %} teacher-dashboard-body{% endif %}" data-student-theme="{% if nav_role == 'student' %}{{ student_theme_slug|default:'sky' }}{% endif %}">
     <script>
@@ -3692,25 +3692,7 @@
             }
         } catch (error) {}
     </script>
-    <script>
-        (function() {
-            const applyTheme = () => {
-                let theme = localStorage.getItem('pabasa_theme');
-                try { theme = JSON.parse(theme); } catch(e) {}
-                if (theme === 'dark') {
-                    document.documentElement.classList.add('dark-theme');
-                    document.body.classList.add('dark-theme');
-                } else {
-                    document.documentElement.classList.remove('dark-theme');
-                    document.body.classList.remove('dark-theme');
-                }
-            };
-            applyTheme();
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'pabasa_theme') applyTheme();
-            });
-        })();
-    </script>
+    {% include "pabasa_app/partials/_light_appearance.html" %}
     <div class="d-flex dashboard-app-shell">
         <aside class="signature-surface dashboard-sidebar d-none d-lg-block">
             {% include "pabasa_app/partials/_sidebar.html" with notification_badge_id="desktopNotifBadge" %}
@@ -3910,7 +3892,7 @@
     {% if nav_role == 'student' %}
     <script src="{% static 'pabasa_app/js/student_classes.js' %}?v=20261011-1"></script>
     {% endif %}
-    <script src="{% static 'pabasa_app/js/base_dashboard.js' %}?v=20261011-shared-classes-1"></script>
+    <script src="{% static 'pabasa_app/js/base_dashboard.js' %}?v=20261016-light-appearance"></script>
     <script src="{% static 'pabasa_app/js/notifications_shared.js' %}"></script>
     <script>
         (() => {

@@ -2594,9 +2594,16 @@
 
             .admin-main {
                 margin-left: 0;
+                min-width: 0;
+                width: 100%;
+                display: flex;
+                flex-direction: column;
                 padding-left: 1rem;
                 padding-right: 1rem;
             }
+
+            .admin-content { min-width: 0; max-width: 100%; width: 100%; }
+            .mobile-admin-topbar { flex: 0 0 62px; }
 
             .admin-profile-card,
             .admin-role-card,
@@ -2738,11 +2745,10 @@
         }
         @media (max-width: 1024px) {
             /* Tables: allow horizontal scroll instead of shrinking */
-            .admin-content .table-responsive,
-            .admin-content table.table,
-            .admin-content .table {
+            .admin-content .table-responsive {
                 display: block;
                 width: 100%;
+                max-width: 100%;
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
             }
@@ -3496,9 +3502,10 @@
         }
     </style>
     <link rel="stylesheet" href="{% static 'pabasa_app/dashboard_branding.css' %}?v=20261011-sidebar-slide">
-    <link rel="stylesheet" href="{% static 'pabasa_app/signature_sidebar.css' %}?v=20261012-1">
+    <link rel="stylesheet" href="{% static 'pabasa_app/signature_sidebar.css' %}?v=20261015-close-button">
 </head>
 <body class="admin-preloading">
+    {% include "pabasa_app/partials/_light_appearance.html" %}
     <script>
         (() => {
             const applyAdminDisplayScale = () => {

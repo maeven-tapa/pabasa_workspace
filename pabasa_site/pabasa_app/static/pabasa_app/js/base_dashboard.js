@@ -48,126 +48,6 @@ var getStudentClassData = window.getStudentClassData = function() {
     return getStudentSectionData();
 };
 
-/**
- * THEME INITIALIZATION & READER STYLES
- * Ensures the dark theme is applied immediately to prevent UI flashing and 
- * provides robust styles for reading/practice interfaces.
- */
-(function() {
-    let theme = localStorage.getItem("pabasa_theme");
-    try { theme = JSON.parse(theme); } catch(e) {}
-
-    if (theme === "dark") {
-        document.documentElement.classList.add("dark-theme");
-    }
-
-    const applyBodyTheme = () => {
-        let t = localStorage.getItem("pabasa_theme");
-        try { t = JSON.parse(t); } catch(e) {}
-        if (t === "dark") {
-            document.body.classList.add("dark-theme");
-        }
-    };
-
-    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", applyBodyTheme);
-    else applyBodyTheme();
-
-    // Global listener to sync theme changes across tabs and within the current page
-    const syncTheme = () => {
-        let currentTheme = localStorage.getItem("pabasa_theme");
-        try { currentTheme = JSON.parse(currentTheme); } catch(e) {}
-        const isDark = currentTheme === "dark";
-        document.documentElement.classList.toggle("dark-theme", isDark);
-        document.body.classList.toggle("dark-theme", isDark);
-    };
-
-    window.addEventListener("storage", (e) => {
-        if (e.key === "pabasa_theme") syncTheme();
-    });
-
-    window.addEventListener("pabasa:preferences-updated", () => {
-        syncTheme();
-    });
-
-    const style = document.createElement('style');
-    style.textContent = `
-        /* Global Dark Mode Overrides */
-        body.dark-theme {
-            background-color: #0f172a !important;
-            background-image: none !important;
-            color: #f8fafc !important;
-        }
-        /* Specialized Reader UI (Word, Sentence, Paragraph) Overrides */
-        body.dark-theme .reader-shell, 
-        body.dark-theme .practice-shell,
-        body.dark-theme .reader-background,
-        body.dark-theme .reader-container {
-            background: #0f172a !important;
-            background-image: none !important;
-            color: #f8fafc !important;
-        }
-        body.dark-theme .reader-card, 
-        body.dark-theme .completion-card, 
-        body.dark-theme .practice-card,
-        body.dark-theme .reader-start-screen {
-            background: #1e293b !important;
-            border-color: rgba(255, 255, 255, 0.1) !important;
-            backdrop-filter: blur(12px) !important;
-            color: #f8fafc !important;
-        }
-        body.dark-theme #readingWord, 
-        body.dark-theme #practiceText, 
-        body.dark-theme .reading-text-display, 
-        body.dark-theme .word-display {
-            color: #ffffff !important;
-        }
-        body.dark-theme .pause-menu-content, 
-        body.dark-theme .reader-pause-menu,
-        body.dark-theme .pause-menu {
-            background: #1e293b !important;
-            color: #f8fafc !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        }
-        body.dark-theme .modal-content {
-            background-color: #1e293b !important;
-            color: #f8fafc !important;
-        }
-        body.dark-theme .reader-controls, 
-        body.dark-theme .reader-footer,
-        body.dark-theme .reader-header {
-            background: #0f172a !important;
-            border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-        }
-        body.dark-theme .btn-outline-dark {
-            border-color: rgba(255, 255, 255, 0.2) !important;
-            color: #f1f5f9 !important;
-        }
-        body.dark-theme .btn-outline-dark:hover {
-            background: rgba(255, 255, 255, 0.05) !important;
-            color: #fff !important;
-        }
-        body.dark-theme .progress {
-            background-color: rgba(255, 255, 255, 0.1) !important;
-        }
-        body.dark-theme .text-secondary, body.dark-theme .text-muted {
-            color: #94a3b8 !important;
-        }
-        body.dark-theme #testMeta, 
-        body.dark-theme #counter, 
-        body.dark-theme #practiceCounter,
-        body.dark-theme .reader-meta {
-            color: #cbd5e1 !important;
-        }
-        body.dark-theme #pauseOverlay {
-            background: rgba(0, 0, 0, 0.7) !important;
-        }
-        body.dark-theme .completion-card h1, body.dark-theme .completion-card h2 {
-            color: #f8fafc !important;
-        }
-    `;
-    document.head.appendChild(style);
-})();
-
 (function () {
     let navigationPending = false;
 
@@ -176,11 +56,7 @@ var getStudentClassData = window.getStudentClassData = function() {
     }
 
     function isDashboardDarkThemeActive() {
-        let theme = localStorage.getItem("pabasa_theme");
-        try { theme = JSON.parse(theme); } catch(e) {}
-        return theme === "dark" ||
-            document.documentElement.classList.contains("dark-theme") ||
-            document.body.classList.contains("dark-theme");
+        return false;
     }
 
     function syncDashboardPageLoaderTheme(loader) {
@@ -283,10 +159,6 @@ var getStudentClassData = window.getStudentClassData = function() {
     function releaseDashboardPreload() {
         window.PabasaDashboardLoading.whenReady(hideDashboardPageLoader);
     }
-
-    window.addEventListener("storage", function (event) {
-        if (event.key === "pabasa_theme") syncDashboardPageLoaderTheme();
-    });
 
     window.addEventListener("pabasa:preferences-updated", function () {
         syncDashboardPageLoaderTheme();

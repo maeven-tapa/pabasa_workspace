@@ -2,10 +2,17 @@
 
 {% block content %}
 <style>
+    .admin-courses-panel { box-shadow: none; }
+
     .admin-courses-panel > .table-responsive {
+        background: #fff;
         border-radius: 12px;
         overflow: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
     }
+
+    .admin-courses-panel > .table-responsive::-webkit-scrollbar-corner { background: #fff; }
 
     .admin-courses-panel,
     .admin-courses-panel > form,
@@ -40,7 +47,7 @@
     @media (min-width: 992px) {
         html:has(.admin-courses-panel),
         body:has(.admin-courses-panel) { height:100%; min-height:0; overflow:hidden; }
-        body:has(.admin-courses-panel) .admin-app-shell { height:100dvh; min-height:0; overflow:hidden; }
+        body:has(.admin-courses-panel) .admin-app-shell { height:var(--admin-normalized-viewport-height); min-height:0; overflow:hidden; }
         .admin-main:has(.admin-courses-panel) { display:flex; flex:1 1 auto; flex-direction:column; height:100%; min-height:0; overflow:hidden; }
         .admin-main:has(.admin-courses-panel) > .admin-content { display:flex; flex:1 1 0; flex-direction:column; height:0; min-height:0; max-width:none; overflow:hidden; width:100%; }
         .admin-main:has(.admin-courses-panel) .admin-courses-panel { display:flex; flex:1 1 0; flex-direction:column; height:0; min-height:0; overflow:hidden; width:100%; }

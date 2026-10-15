@@ -9844,7 +9844,7 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertContains(response, "Theme Shop")
         self.assertContains(response, "Sky Island")
         self.assertContains(response, "Magic Library")
-        self.assertContains(response, "Light and Dark Mode stay separate.")
+        self.assertContains(response, "Personalize your reading space.")
 
     def test_profile_uses_the_students_equipped_theme(self):
         self.student.equipped_theme = "forest"
@@ -9855,6 +9855,7 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["student_theme_slug"], "forest")
         self.assertContains(response, 'data-student-theme="forest"')
+        self.assertNotContains(response, 'id="themeToggle"')
 
     def test_forest_dark_mode_styles_shared_custom_select_menus(self):
         template = (Path(__file__).resolve().parent / "templates" / "pabasa_app" / "base_dashboard.html").read_text(encoding="utf-8")

@@ -2089,9 +2089,6 @@
         </div>
         <div class="profile-page-actions">
             {% if nav_role == 'student' or nav_role == 'teacher' %}<button class="btn btn-primary profile-settings-link" type="button" data-bs-toggle="modal" data-bs-target="#playerSettingsModal"><i class="bi bi-gear-fill me-1"></i> Settings</button>{% else %}<a class="btn btn-primary profile-settings-link" href="{% url 'settings' %}"><i class="bi bi-gear-fill me-1"></i> Settings</a>{% endif %}
-            <button class="btn btn-outline-primary btn-sm rounded-circle d-flex align-items-center justify-content-center" id="themeToggle" type="button" style="width: 38px; height: 38px; padding: 0;" title="Toggle Theme">
-                <i class="bi bi-sun"></i>
-            </button>
         </div>
     </div>
 
@@ -2835,5 +2832,5 @@
         });
     })();
 </script>
-<script src="{% static 'pabasa_app/js/profile.js' %}?v=materials-overview-2"></script>
+<script src="{% static 'pabasa_app/js/profile.js' %}?v=20261016-light-appearance"></script>
 {% endblock %}

@@ -97,22 +97,31 @@
 
     }
     @media (max-width: 991.98px) {
+        .admin-main:has(.practice-content-header) { height:100dvh; min-height:0; overflow:hidden; }
         .admin-content:has(.practice-content-header) {
             display: flex;
             flex-direction: column;
             justify-content: center;
-            padding-top: 1rem;
-            padding-bottom: 1rem;
+            flex: 1 1 0;
+            height: 0;
+            min-height: 0;
+            padding-block: 1rem;
         }
 
         .admin-content:has(.practice-empty-panel) {
-            min-height: calc(100dvh - 4.5rem);
+            min-height: 0;
             justify-content: center;
         }
 
         .admin-content:has(.practice-content-header) > .admin-panel {
             margin-inline: auto;
+            min-width: 0;
+            width: 100%;
+            max-height: 100%;
+            overflow-y: auto;
+            overscroll-behavior: contain;
         }
+        .practice-empty-panel .practice-results tbody td { padding:1.5rem .75rem !important; }
     }
     .practice-empty-panel .practice-results {
         width: 100%;
@@ -133,17 +142,7 @@
     }
 </style>
 <div class="admin-panel{% if not practice_items %} practice-empty-panel{% endif %}">
-    <form method="post" class="alert {% if practice_debug_unlock_all %}alert-warning{% else %}alert-secondary{% endif %} d-flex flex-wrap align-items-center justify-content-between gap-3">
-        {% csrf_token %}
-        <input type="hidden" name="language" value="{{ language_filter }}">
-        <div>
-            <strong>Debug: Unlock all practice — {% if practice_debug_unlock_all %}ON{% else %}OFF{% endif %}</strong>
-            <div class="small">Unlock every published practice level for all students in both languages, without star or completion requirements. Turn off to restore normal progression.</div>
-        </div>
-        <button type="submit" class="btn {% if practice_debug_unlock_all %}btn-warning{% else %}btn-outline-primary{% endif %}" name="unlock_all" value="{% if practice_debug_unlock_all %}off{% else %}on{% endif %}" aria-pressed="{% if practice_debug_unlock_all %}true{% else %}false{% endif %}">
-            <i class="bi bi-bug me-1" aria-hidden="true"></i>{% if practice_debug_unlock_all %}Turn Debug Off{% else %}Turn Debug On{% endif %}
-        </button>
-    </form>
+
     <div class="practice-content-header d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
         <div>
             <h2 class="h4 fw-bold mb-1">Practice Content</h2>
@@ -263,6 +262,21 @@
             .practice-filter-row--secondary .practice-filter-control {
                 flex-basis: 100%;
             }
+        }
+        @media (min-width: 576px) and (max-width: 991.98px) {
+            .practice-filter-row--controls { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        }
+        @media (min-width: 768px) and (max-width: 991.98px) {
+            .practice-filter-row--controls { grid-template-columns:repeat(3,minmax(0,1fr)); }
+        }
+        @media (max-width: 575.98px) {
+            .practice-filter-row--controls { grid-template-columns:repeat(2,minmax(0,1fr)); }
+            .practice-filter-row--controls .practice-filter-actions .btn { min-width:0; width:100%; }
+            .practice-content-header > *, .practice-language-filter { width:100%; min-width:0; }
+            .practice-content-header .btn { align-self:stretch; text-align:center; }
+            .practice-empty-panel .practice-results thead { display:none; }
+            .practice-filter-bar { padding:1rem; }
+            .practice-results .table-responsive { min-width:0; max-width:100%; }
         }
     </style>
 

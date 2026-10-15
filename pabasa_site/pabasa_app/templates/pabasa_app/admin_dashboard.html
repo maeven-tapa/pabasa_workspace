@@ -29,6 +29,13 @@
     }
 
     @media (max-width: 991.98px) {
+        .admin-dashboard-shell, .admin-dashboard-shell > *, .admin-dashboard-hero > div,
+        .admin-dashboard-shell .admin-stat-card, .admin-stat-card-trigger, .admin-stat-card-copy { min-width:0; max-width:100%; }
+        .admin-dashboard-hero { grid-template-columns:minmax(0,1fr); }
+        .admin-dashboard-hero-icon { display:none; }
+        .admin-dashboard-hero p, .admin-stat-label { overflow-wrap:anywhere; }
+        .admin-dashboard-action { max-width:100%; white-space:normal; }
+        .admin-dashboard-shell .admin-stat-grid { grid-template-columns:minmax(0,1fr); }
         .admin-content:has(.admin-dashboard-shell) {
             align-content: start;
             display: block;
