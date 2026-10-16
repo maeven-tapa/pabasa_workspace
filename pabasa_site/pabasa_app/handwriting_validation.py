@@ -1,4 +1,4 @@
-"""Server-side stroke validation for Lesson 7 Gawain 2C only."""
+"""Server-side stroke validation for prescribed handwriting activities."""
 from math import hypot
 
 
@@ -29,14 +29,18 @@ def is_scribble_like(value):
     return False
 
 
-def normalize_strokes(value):
+def normalize_strokes(value, *, max_points_per_stroke=500, max_total_points=None):
     if not isinstance(value, list) or not value or len(value) > 40:
         return None
     result = []
+    total_points = 0
     for stroke in value:
         # A lowercase i dot can legitimately be a single deliberate tap.
         # The full Ii structure is still required below, so a tap alone cannot pass.
-        if not isinstance(stroke, list) or not 1 <= len(stroke) <= 500:
+        if not isinstance(stroke, list) or not 1 <= len(stroke) <= max_points_per_stroke:
+            return None
+        total_points += len(stroke)
+        if max_total_points is not None and total_points > max_total_points:
             return None
         points = []
         for point in stroke:
@@ -48,6 +52,70 @@ def normalize_strokes(value):
             points.append((x, y))
         result.append(points)
     return result
+
+
+def is_recognizable_single_i(value):
+    """A lowercase i needs a separate dot above a short stem."""
+    strokes = normalize_strokes(value)
+    if strokes is None or len(strokes) != 2:
+        return False
+    shapes = []
+    for stroke in strokes:
+        xs, ys = zip(*stroke)
+        shapes.append((min(xs), max(xs), min(ys), max(ys)))
+    stem = max(shapes, key=lambda shape: shape[3] - shape[2])
+    dot = next(shape for shape in shapes if shape is not stem)
+    stem_width, stem_height = stem[1] - stem[0], stem[3] - stem[2]
+    dot_width, dot_height = dot[1] - dot[0], dot[3] - dot[2]
+    return (stem_height >= .07 and stem_height >= stem_width * 1.5
+            and dot_width <= .035 and dot_height <= .035
+            and dot[3] < stem[2] and stem[2] - dot[3] <= max(.18, stem_height)
+            and abs((dot[0] + dot[1] - stem[0] - stem[1]) / 2) <= max(.045, stem_width))
+
+
+def is_recognizable_single_e(value, uppercase):
+    """Distinguish a three-bar capital E from a curved lowercase e."""
+    strokes = normalize_strokes(value, max_points_per_stroke=2000, max_total_points=6000)
+    if strokes is None:
+        return False
+    points = []
+    for stroke in strokes:
+        points.extend(stroke)
+        for first, second in zip(stroke, stroke[1:]):
+            # Include sparse pointer paths without depending on noisy changes
+            # of direction between individual browser events.
+            steps = min(30, max(1, int(hypot(second[0] - first[0], second[1] - first[1]) / .01)))
+            points.extend((first[0] + (second[0] - first[0]) * step / steps,
+                           first[1] + (second[1] - first[1]) * step / steps)
+                          for step in range(1, steps))
+    left, right = min(x for x, _ in points), max(x for x, _ in points)
+    top, bottom = min(y for _, y in points), max(y for _, y in points)
+    width, height = right - left, bottom - top
+    # Canvas x/y values are normalized separately. The writing row is far
+    # wider than it is tall, so a correctly proportioned E can have a very
+    # small normalized width/height ratio.
+    if width < .008 or height < .06:
+        return False
+    def span(low, high):
+        xs = [x for x, y in points if low <= (y - top) / height <= high]
+        return (max(xs) - min(xs)) / width if xs else 0
+
+    left_bins = {min(11, int((y - top) / height * 12)) for x, y in points
+                 if x <= left + width * .12}
+    left_stem = len(left_bins) >= 10
+    top_bar = span(0, .20) >= .50
+    middle_bar = span(.36, .64) >= .35
+    bottom_bar = span(.80, 1) >= .45
+    capital = left_stem and top_bar and middle_bar and bottom_bar
+    if uppercase:
+        return capital
+    if capital:
+        return False
+    # A lowercase e has a middle entry and a curved upper and lower rim.
+    upper_right = any(x >= left + width * .6 and y <= top + height * .4 for x, y in points)
+    lower_left = any(x <= left + width * .4 and y >= top + height * .6 for x, y in points)
+    lower_right = any(x >= left + width * .6 and y >= top + height * .6 for x, y in points)
+    return middle_bar and upper_right and lower_left and lower_right and not left_stem
 
 
 def _direction_runs(stroke):

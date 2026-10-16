@@ -445,7 +445,7 @@ def _enforce_prescribed_activity_sequence(request, activity_key):
     if not student or not _student_can_open_prescribed_activity(student, activity_key):
         return redirect('assessment')
     return None
-from .handwriting_validation import is_recognizable_a, is_recognizable_f, is_recognizable_h, is_recognizable_i, is_recognizable_ii, is_recognizable_l, is_recognizable_m, is_recognizable_s, is_recognizable_t, is_recognizable_letter_pair, is_recognizable_n, is_recognizable_p, is_recognizable_trace, is_scribble_like, normalize_strokes, is_recognizable_session4_pair, is_recognizable_lesson13_pair, segment_session4_trace_groups, segment_lesson13_trace_groups
+from .handwriting_validation import is_recognizable_a, is_recognizable_f, is_recognizable_h, is_recognizable_i, is_recognizable_l, is_recognizable_m, is_recognizable_s, is_recognizable_t, is_recognizable_letter_pair, is_recognizable_n, is_recognizable_p, is_recognizable_trace, is_scribble_like, normalize_strokes, is_recognizable_session4_pair, is_recognizable_lesson13_pair, is_recognizable_single_i, is_recognizable_single_e, segment_session4_trace_groups, segment_lesson13_trace_groups
 from .reader_classification import classify_student_account
 from .scoring import (
     ADAPTED_READING_LEVEL_DISCLAIMER,
@@ -14915,12 +14915,12 @@ def _active_prescribed_student(request):
 
 def _lesson7_gawain2c_row_is_recognizable(strokes, row_index):
     """Validate the separate I/i rows without weakening other activities."""
-    if is_recognizable_ii(strokes):
-        return True
+    if row_index == 1:
+        return is_recognizable_single_i(strokes)
     normalized = normalize_strokes(strokes)
     if normalized is None:
         return False
-    vertical = horizontal = compact = False
+    vertical = horizontal = False
     for stroke in normalized:
         if len(stroke) < 2:
             continue
@@ -14928,8 +14928,7 @@ def _lesson7_gawain2c_row_is_recognizable(strokes, row_index):
         width, height = max(xs) - min(xs), max(ys) - min(ys)
         vertical |= height >= .04 and height >= width * 1.1
         horizontal |= width >= .012 and width >= height * 1.1
-        compact |= width <= .08 and height <= .08
-    return (vertical and horizontal) if row_index == 0 else (vertical and compact)
+    return vertical and horizontal if row_index == 0 else False
 
 
 @login_required()
@@ -16066,6 +16065,21 @@ def prescribed_activity_page(request, activity_key):
         }
         return render(request, 'pabasa_app/lesson_7_gawain_4_page.html', context)
     if activity_key == 'lesson8-gawain1':
+        stored_rows = raw_state.get('validated_rows') if isinstance(raw_state.get('validated_rows'), dict) else {}
+        verified_rows = {}
+        for row_index in range(2):
+            row_strokes = stored_rows.get(str(row_index))
+            if not is_recognizable_single_e(row_strokes, uppercase=row_index == 0):
+                break
+            verified_rows[str(row_index)] = row_strokes
+        verified_count = len(verified_rows)
+        if progress and (progress.current_index != verified_count or progress.completed_items != verified_count):
+            progress.current_index = progress.completed_items = progress.correct_items = verified_count
+            if verified_count != 2:
+                progress.activity_completed = False
+            progress.state = {**raw_state, 'validated_rows': verified_rows}
+            progress.save(update_fields=['current_index', 'completed_items', 'correct_items', 'activity_completed', 'state', 'updated_at'])
+            raw_state = progress.state
         context = _dashboard_context(request)
         context['handwriting_activity_data'] = {
             'activity_key': activity_key, 'session_key': 'session-3', 'title': activity['title'], 'instruction': activity['instruction'],
@@ -20018,7 +20032,7 @@ def prescribed_activity_progress(request, activity_key):
         except (TypeError, ValueError, json.JSONDecodeError):
             return JsonResponse({'success': False, 'error': 'Invalid handwriting progress.'}, status=400)
         if row_index not in range(2) or normalize_strokes(strokes) is None or not _lesson7_gawain2c_row_is_recognizable(strokes, row_index):
-            return JsonResponse({'success': False, 'error': 'Isulat ang buong Ii: malaking I at maliit na i na may tuldok.'}, status=400)
+            return JsonResponse({'success': False, 'error': 'Isulat ang tamang letrang I o maliit na i na may tuldok.'}, status=400)
         progress, _ = _current_progress_get_or_create(student, lifecycle, activity_key, defaults={'total_items': 2, 'state': {'validated_rows': {}}})
         state = progress.state if isinstance(progress.state, dict) else {}
         rows = state.get('validated_rows') if isinstance(state.get('validated_rows'), dict) else {}
@@ -20061,14 +20075,21 @@ def prescribed_activity_progress(request, activity_key):
             if data.get('reset') is True:
                 progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0, 'total_items': 2, 'activity_completed': False, 'state': {'activity_key': activity_key, 'session_key': 'session-3', 'current_index': 0}})
                 return JsonResponse({'success': True, 'progress': {'state': progress.state, 'completed_items': 0, 'activity_completed': False}})
-            index = max(0, min(2, int(data.get('current_index') or 0)))
-            state = data.get('state') if isinstance(data.get('state'), dict) else {}
+            index = int(data.get('current_index'))
+            strokes = data.get('strokes')
         except (TypeError, ValueError, json.JSONDecodeError):
             return JsonResponse({'success': False, 'error': 'Invalid handwriting progress.'}, status=400)
+        if index not in (1, 2) or not is_recognizable_single_e(strokes, uppercase=index == 1):
+            return JsonResponse({'success': False, 'error': 'Isulat ang tamang letrang E o e.'}, status=400)
         existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
+        if index == 2 and (not existing or existing.current_index < 1):
+            return JsonResponse({'success': False, 'error': 'Complete the first writing area first.'}, status=400)
         if existing and (existing.activity_completed or existing.current_index > index): progress = existing
         else:
-            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index, 'total_items': 2, 'activity_completed': False, 'state': {'activity_key': activity_key, 'session_key': 'session-3', **state}})
+            prior = existing.state if existing and isinstance(existing.state, dict) else {}
+            rows = dict(prior.get('validated_rows', {}))
+            rows[str(index - 1)] = strokes
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': index, 'total_items': 2, 'activity_completed': False, 'state': {'activity_key': activity_key, 'session_key': 'session-3', 'validated_rows': rows}})
         return JsonResponse({'success': True, 'progress': {'current_index': progress.current_index, 'completed_items': progress.completed_items, 'total_items': 2, 'activity_completed': progress.activity_completed, 'state': progress.state}})
     if activity_key == 'lesson7-gawain4a':
         try:
@@ -21355,7 +21376,8 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': True, 'result': {'items_completed': 2, 'accuracy': 100.0}})
     if activity_key == 'lesson8-gawain1':
         existing = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
-        if not existing or existing.completed_items < 2:
+        rows = existing.state.get('validated_rows', {}) if existing and isinstance(existing.state, dict) else {}
+        if not existing or not all(is_recognizable_single_e(rows.get(str(i)), uppercase=i == 0) for i in range(2)):
             return JsonResponse({'success': False, 'error': 'Complete all writing areas first.'}, status=400)
         existing.activity_completed = True; existing.current_index = existing.completed_items = existing.correct_items = 2
         existing.save(update_fields=['activity_completed', 'current_index', 'completed_items', 'correct_items', 'updated_at'])
