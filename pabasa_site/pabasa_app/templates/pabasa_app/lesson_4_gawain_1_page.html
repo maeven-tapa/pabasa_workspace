@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 		if(read.dataset.lesson4ReadBound!=='1'){
 			const originalRead=window.Basahin.getActivity(read);
 			read.dataset.lesson4ReadBound='1';
-			window.Basahin.bindActivity(read,async event=>{try{tries=0}catch(error){}if(read.disabled)return;app.dataset.lesson4Retry='1';await originalRead?.call(read,event);try{tries=0}catch(error){}const status=app.querySelector('#status');if(status&&/^Hindi pa(?: ito tama)?\./.test(status.textContent))status.textContent='Hindi pa ito tama. Subukan muli';if(typeof phase==='string'&&phase!=='read')delete app.dataset.lesson4Retry});
+			window.Basahin.bindActivity(read,async event=>{if(read.disabled)return;app.dataset.lesson4Retry='1';await originalRead?.call(read,event);const status=app.querySelector('#status');if(status&&/^Hindi pa(?: ito tama)?\./.test(status.textContent))status.textContent='Hindi pa ito tama. Subukan muli';if(typeof phase==='string'&&phase!=='read')delete app.dataset.lesson4Retry});
 		}
 		if(listen.dataset.lesson4ListenBound!=='1'){
 			listen.dataset.lesson4ListenBound='1';
@@ -358,8 +358,124 @@ setTimeout(function(){
 .card .focus-picture{position:relative;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;isolation:isolate}.card .focus-picture:before{content:"";position:absolute;z-index:-1;width:76%;height:58%;border-radius:50%;background:radial-gradient(ellipse,rgba(255,244,207,.52) 0%,rgba(255,244,207,.22) 48%,transparent 76%);filter:blur(10px);pointer-events:none}.card .focus-picture img{position:relative;z-index:1;filter:drop-shadow(0 7px 8px rgba(66,42,25,.22));object-fit:contain;background:transparent}
 </style>
 <style>.complete{z-index:50!important;isolation:isolate}.complete-card{position:relative;z-index:51;isolation:isolate;background:#fffbea!important;overflow:hidden}.complete-card>*{position:relative;z-index:1}</style>
-<script type="text/plain" data-lesson4-g1-bootstrap>(function(){let retryVersion=0,retryAudio=null;const stopRetry=()=>{retryVersion++;if(retryAudio){retryAudio.onended=null;retryAudio.onerror=null;retryAudio.pause();retryAudio.currentTime=0;retryAudio=null}},retryNarration=async itemIndex=>{const run=++retryVersion,form=new FormData();form.append('target_text','Subukan muli');form.append('language','Filipino');form.append('mode','reading');const response=await fetch('{% url "reading_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':token()},body:form}),result=await response.json();if(!response.ok||!result.success)throw Error(result.error||'Hindi available ang audio.');if(run!==retryVersion||itemIndex!==index||phase!=='read')return false;const clip=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);retryAudio=clip;await new Promise((resolve,reject)=>{clip.onended=resolve;clip.onerror=reject;clip.play().catch(reject)});if(retryAudio===clip)retryAudio=null;return run===retryVersion&&itemIndex===index&&phase==='read'};const retryRecord=async function(){if(busy||phase!=='read')return;busy=true;const button=document.getElementById('read'),item=items[index],itemIndex=index;button.disabled=true;button.classList.add('listening');button.textContent='Nagbabasa...';let stream;try{stream=await window.Basahin.openMicrophone({audio:true});let chunks=[],recorder=null;const basahinAudio = await window.Basahin.capture({button:document.querySelector('[data-basahin-button]'),stream: stream, onRecorder: value => { recorder = value; }});chunks.push(basahinAudio);stream.getTracks().forEach(track=>track.stop());stream=null;button.classList.remove('listening');button.classList.add('processing');button.textContent='Pinoproseso...';const form=new FormData();form.append('audio',basahinAudio,basahinAudio.type.includes('ogg')?'reading.ogg':'reading.webm');window.Basahin.attachStreamResult?.(form,basahinAudio);form.append('target_text',item.word);form.append('language','Filipino');form.append('mode','reading');const response=await fetch('{% url "reading_transcribe_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':token()},body:form}),result=await response.json();if(itemIndex!==index||phase!=='read')return;if(result.success&&result.complete){phase='classify';tries=0;introReady=false;render();return}tries++;introReady=true;if(tries>=3)phase='listen';else{const status=document.getElementById('status');if(status)status.textContent='Subukan muli';await retryNarration(itemIndex)}}catch(error){if(itemIndex===index&&phase==='read'){introReady=true;const status=document.getElementById('status');if(status)status.textContent='Hindi nakuha ang iyong boses. Subukan muli.'}}finally{if(stream)stream.getTracks().forEach(track=>track.stop());busy=false;if(phase!=='classify'&&itemIndex===index)render()}};const bind=()=>{const button=document.getElementById('read');if(button&&phase==='read')window.Basahin.bindActivity(button,retryRecord)};new MutationObserver(bind).observe(document.getElementById('app'),{childList:true,subtree:true});bind();addEventListener('pagehide',stopRetry)})();</script>
-<script type="text/plain" data-lesson4-g1-bootstrap>(function(){let narrationVersion=0,narrationAudio=null,introReady=false;const phaseOneQuestion='Pangalanan ang larawan',phaseOneStatus='Sabihin ang salita nang malinaw',identifyQuestion='Nagsisimula ba ang salitang ito sa tunog /m/?';const stopNarration=()=>{narrationVersion++;if(narrationAudio){narrationAudio.onended=null;narrationAudio.onerror=null;narrationAudio.pause();narrationAudio.currentTime=0;narrationAudio=null}},isCurrent=(version,itemIndex,expectedPhase)=>version===narrationVersion&&itemIndex===index&&phase===expectedPhase;async function narrate(text,itemIndex,expectedPhase){const version=++narrationVersion;if(narrationAudio){narrationAudio.onended=null;narrationAudio.onerror=null;narrationAudio.pause();narrationAudio.currentTime=0;narrationAudio=null}const form=new FormData();form.append('target_text',text);form.append('language','Filipino');form.append('mode','reading');const response=await fetch('{% url "reading_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':token()},body:form}),result=await response.json();if(!response.ok||!result.success)throw Error(result.error||'Hindi available ang audio.');if(!isCurrent(version,itemIndex,expectedPhase))return false;const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);narrationAudio=audio;await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=()=>reject(new Error('Hindi available ang audio.'));audio.play().catch(reject)});if(narrationAudio===audio)narrationAudio=null;return isCurrent(version,itemIndex,expectedPhase)}const setStatus=text=>{const status=document.getElementById('status');if(status)status.textContent=text},setChoices=enabled=>document.querySelectorAll('.choice').forEach(button=>button.disabled=!enabled);async function playPhaseOne(itemIndex){const read=document.getElementById('read');if(!read)return;read.disabled=true;try{const first=await narrate(phaseOneQuestion,itemIndex,'read');if(!first)return;const second=await narrate(phaseOneStatus,itemIndex,'read');if(second&&itemIndex===index&&phase==='read'){introReady=true;read.disabled=false}}catch(error){if(itemIndex===index&&phase==='read')setStatus(error.message||'Hindi available ang audio.')}}render=function(){stopNarration();if(index>=total){app.innerHTML=header()+'<div class="overview">'+wheel()+'</div><div class="complete"><div class="complete-card"><div style="font-size:3rem;color:#4d9661">✓</div><h1>Magaling! Natapos mo ang gawain!</h1><p>Mahusay! Narito ang iyong puntos.</p><div class="score">'+score+' / '+total+'</div><button class="done" id="done">Done</button><div class="error" id="error"></div></div></div>';document.getElementById('done').onclick=async()=>{const button=document.getElementById('done');button.disabled=true;button.textContent='Saving...';try{await save(true);location.href='{% url "assessment" %}'}catch(error){button.disabled=false;button.textContent='Done';document.getElementById('error').textContent='Hindi na-save ang progress. Subukan muli.'}};return}if(!started){app.innerHTML=header()+'<div class="overview">'+wheel()+'<h2>Tingnan ang mga larawan sa bilog.</h2><p>Isa-isa nating pangalanan ang mga ito.</p><button class="start" id="start">Magsimula</button></div>';document.getElementById('start').onclick=()=>{started=true;introReady=false;render()};return}const item=items[index],isIdentify=phase==='classify',isListen=phase==='listen',question=isIdentify?identifyQuestion:isListen?'Pakinggang mabuti ang salita':phaseOneQuestion,control=isIdentify?'<div class="choices"><button class="choice" data-answer="yes">Oo</button><button class="choice no" data-answer="no">Hindi</button></div>':'<button data-basahin-button class="read read '+(isListen?'listening':'')+'" id="read" '+(!isListen&&!introReady?'disabled':'')+'>'+(isListen?'Pakinggan muna':window.BasahinButton.LABEL)+'</button>',status=isListen?'':isIdentify?'Piliin ang Oo o Hindi.':phaseOneStatus;app.innerHTML=header()+'<div class="focused"><div class="focus-picture"><img src="{% static "pabasa_app/images/simula/" %}'+item.image+'" alt="Aktibong larawan"></div>'+wheel()+'<section class="controls"><div class="question">'+question+'</div><div class="support">'+(isIdentify?'Piliin ang Oo o Hindi.':'Basahin ang salita nang malinaw.')+'</div>'+(isListen?'':'<div id="status" class="status">'+status+'</div>')+control+'</section></div>';if(isIdentify){document.querySelectorAll('.choice').forEach(button=>button.onclick=classify);return}const read=document.getElementById('read');window.Basahin.bindActivity(read,isListen?aloud:record);if(!isListen&&!introReady)playPhaseOne(index)};record=async function(){if(busy||phase!=='read')return;busy=true;const button=document.getElementById('read'),status=document.getElementById('status'),item=items[index],itemIndex=index;button.disabled=true;button.classList.add('listening');button.textContent='Nagbabasa...';let stream;try{stream=await window.Basahin.openMicrophone({audio:true});let chunks=[],recorder=null;const basahinAudio = await window.Basahin.capture({button:document.querySelector('[data-basahin-button]'),stream: stream, onRecorder: value => { recorder = value; }});chunks.push(basahinAudio);stream.getTracks().forEach(track=>track.stop());stream=null;button.classList.remove('listening');button.classList.add('processing');button.textContent='Pinoproseso...';const form=new FormData();form.append('audio',basahinAudio,basahinAudio.type.includes('ogg')?'reading.ogg':'reading.webm');window.Basahin.attachStreamResult?.(form,basahinAudio);form.append('target_text',item.word);form.append('language','Filipino');form.append('mode','reading');const response=await fetch('{% url "reading_transcribe_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':token()},body:form}),result=await response.json();if(itemIndex!==index||phase!=='read')return;if(result.success&&result.complete){phase='classify';tries=0;introReady=false;render();return}tries++;introReady=true;if(tries>=3)phase='listen';else setStatus('Hindi pa ito tama. Subukan muli ('+tries+'/3)')}catch(error){if(itemIndex===index&&phase==='read'){introReady=true;setStatus('Hindi nakuha ang iyong boses. Subukan muli.')}}finally{if(stream)stream.getTracks().forEach(track=>track.stop());busy=false;if(phase!=='classify'&&itemIndex===index)render()}};aloud=async function(){if(busy||phase!=='listen'||listens>=3)return;busy=true;listens++;const itemIndex=index,button=document.getElementById('read');button.disabled=true;try{await narrate(items[itemIndex].word,itemIndex,'listen')}catch(error){}finally{busy=false;if(itemIndex!==index||phase!=='listen')return;if(listens>=3){phase='read';introReady=true}else phase='listen';render()}};classify=async function(event){if(busy||phase!=='classify')return;const yes=event.currentTarget.dataset.answer==='yes',itemIndex=index;if(yes!==items[itemIndex].starts_m){busy=true;setChoices(false);setStatus('Hindi pa ito tama. Subukan muli');try{await narrate('Hindi pa ito tama. Subukan muli',itemIndex,'classify')}catch(error){}finally{busy=false;if(itemIndex===index&&phase==='classify')setChoices(true)}return}busy=true;setChoices(false);setStatus('Magaling!');try{await narrate('Magaling!',itemIndex,'classify');if(itemIndex!==index||phase!=='classify')return;score++;circled.push(index);responses.push(yes);index++;phase='read';tries=0;listens=0;introReady=false;await save(index>=total);render()}catch(error){if(itemIndex===index&&phase==='classify')setChoices(true)}finally{busy=false}};addEventListener('pagehide',stopNarration);render()})();</script>
+<script type="text/plain" data-lesson4-g1-bootstrap>
+(function(){
+  const retryAudioUrl = "{% static 'pabasa_app/prescribed/audio/SESSION 2/LESSON 4/GAWAIN 1/OTHERS/subukan_muli.mp3' %}";
+  let retryVersion = 0, retryAudio = null, stopPendingRetry = null;
+  const stopRetry = () => {
+    retryVersion++;
+    stopPendingRetry?.();
+    retryAudio?.pause();
+  };
+  const retryNarration = async itemIndex => {
+    const version = ++retryVersion;
+    for (let playback = 1; playback <= 2; playback++) {
+      if (version !== retryVersion || itemIndex !== index || phase !== 'read') return false;
+      const clip = new Audio(retryAudioUrl);
+      retryAudio = clip;
+      try {
+        await new Promise((resolve, reject) => {
+          let settled = false;
+          const settle = error => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timeout);
+            clip.onended = null;
+            clip.onerror = null;
+            stopPendingRetry = null;
+            if (error) reject(error);
+            else resolve();
+          };
+          const timeout = setTimeout(() => settle(new Error('Retry feedback timed out')), 8000);
+          stopPendingRetry = () => settle(new Error('Retry feedback canceled'));
+          clip.onended = () => settle();
+          clip.onerror = () => settle(new Error('Retry feedback audio failed to load'));
+          try { Promise.resolve(clip.play()).catch(settle); }
+          catch (error) { settle(error); }
+        });
+        return true;
+      } catch (error) {
+        if (version !== retryVersion || itemIndex !== index || phase !== 'read') return false;
+        console.error('Lesson 4 retry feedback narration failed', {itemIndex, playback, error});
+      } finally {
+        clip.pause();
+        if (retryAudio === clip) retryAudio = null;
+      }
+    }
+    return false;
+  };
+  const retryRecord = async function(){
+    if (busy || phase !== 'read') return;
+    busy = true;
+    const button = document.getElementById('read'), item = items[index], itemIndex = index;
+    button.disabled = true;
+    button.classList.add('listening');
+    button.textContent = 'Nagbabasa...';
+    let stream;
+    try {
+      stream = await window.Basahin.openMicrophone({audio:true});
+      let chunks = [], recorder = null;
+      const basahinAudio = await window.Basahin.capture({
+        button: document.querySelector('[data-basahin-button]'),
+        stream,
+        onRecorder: value => { recorder = value; },
+      });
+      chunks.push(basahinAudio);
+      stream.getTracks().forEach(track => track.stop());
+      stream = null;
+      button.classList.remove('listening');
+      button.classList.add('processing');
+      button.textContent = 'Pinoproseso...';
+      const form = new FormData();
+      form.append('audio', basahinAudio, basahinAudio.type.includes('ogg') ? 'reading.ogg' : 'reading.webm');
+      window.Basahin.attachStreamResult?.(form, basahinAudio);
+      form.append('target_text', item.word);
+      form.append('language', 'Filipino');
+      form.append('mode', 'reading');
+      const response = await fetch('{% url "reading_transcribe_api" %}', {
+        method:'POST', credentials:'same-origin', headers:{'X-CSRFToken':token()}, body:form,
+      });
+      const result = await response.json();
+      if (itemIndex !== index || phase !== 'read') return;
+      if (result.success && result.complete) {
+        phase = 'classify';
+        tries = 0;
+        introReady = false;
+        render();
+        return;
+      }
+      tries++;
+      introReady = true;
+      const status = document.getElementById('status');
+      if (status) status.textContent = 'Subukan muli (' + Math.min(tries, 3) + '/3)';
+      await retryNarration(itemIndex);
+      if (itemIndex !== index || phase !== 'read') return;
+      if (tries >= 3) phase = 'listen';
+    } catch (error) {
+      if (itemIndex === index && phase === 'read') {
+        introReady = true;
+        const status = document.getElementById('status');
+        if (status) status.textContent = 'Hindi nakuha ang iyong boses. Subukan muli.';
+      }
+    } finally {
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      busy = false;
+      if (phase !== 'classify' && itemIndex === index) render();
+    }
+  };
+  window.lesson4RetryRecord = retryRecord;
+  const bind = () => {
+    const button = document.getElementById('read');
+    if (button && phase === 'read' && window.Basahin.getActivity(button) !== retryRecord) {
+      window.Basahin.bindActivity(button, retryRecord);
+    }
+  };
+  new MutationObserver(bind).observe(document.getElementById('app'), {childList:true, subtree:true});
+  bind();
+  addEventListener('pagehide', stopRetry);
+})();
+</script>
+<script type="text/plain" data-lesson4-g1-bootstrap>(function(){let narrationVersion=0,narrationAudio=null,introReady=false;const phaseOneQuestion='Pangalanan ang larawan',phaseOneStatus='Sabihin ang salita nang malinaw',identifyQuestion='Nagsisimula ba ang salitang ito sa tunog /m/?';const stopNarration=()=>{narrationVersion++;if(narrationAudio){narrationAudio.onended=null;narrationAudio.onerror=null;narrationAudio.pause();narrationAudio.currentTime=0;narrationAudio=null}},isCurrent=(version,itemIndex,expectedPhase)=>version===narrationVersion&&itemIndex===index&&phase===expectedPhase;async function narrate(text,itemIndex,expectedPhase){const version=++narrationVersion;if(narrationAudio){narrationAudio.onended=null;narrationAudio.onerror=null;narrationAudio.pause();narrationAudio.currentTime=0;narrationAudio=null}const form=new FormData();form.append('target_text',text);form.append('language','Filipino');form.append('mode','reading');const response=await fetch('{% url "reading_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':token()},body:form}),result=await response.json();if(!response.ok||!result.success)throw Error(result.error||'Hindi available ang audio.');if(!isCurrent(version,itemIndex,expectedPhase))return false;const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);narrationAudio=audio;await new Promise((resolve,reject)=>{audio.onended=resolve;audio.onerror=()=>reject(new Error('Hindi available ang audio.'));audio.play().catch(reject)});if(narrationAudio===audio)narrationAudio=null;return isCurrent(version,itemIndex,expectedPhase)}const setStatus=text=>{const status=document.getElementById('status');if(status)status.textContent=text},setChoices=enabled=>document.querySelectorAll('.choice').forEach(button=>button.disabled=!enabled);async function playPhaseOne(itemIndex){const read=document.getElementById('read');if(!read)return;read.disabled=true;try{const first=await narrate(phaseOneQuestion,itemIndex,'read');if(!first)return;const second=await narrate(phaseOneStatus,itemIndex,'read');if(second&&itemIndex===index&&phase==='read'){introReady=true;read.disabled=false}}catch(error){if(itemIndex===index&&phase==='read')setStatus(error.message||'Hindi available ang audio.')}}render=function(){stopNarration();if(index>=total){app.innerHTML=header()+'<div class="overview">'+wheel()+'</div><div class="complete"><div class="complete-card"><div style="font-size:3rem;color:#4d9661">✓</div><h1>Magaling! Natapos mo ang gawain!</h1><p>Mahusay! Narito ang iyong puntos.</p><div class="score">'+score+' / '+total+'</div><button class="done" id="done">Done</button><div class="error" id="error"></div></div></div>';document.getElementById('done').onclick=async()=>{const button=document.getElementById('done');button.disabled=true;button.textContent='Saving...';try{await save(true);location.href='{% url "assessment" %}'}catch(error){button.disabled=false;button.textContent='Done';document.getElementById('error').textContent='Hindi na-save ang progress. Subukan muli.'}};return}if(!started){app.innerHTML=header()+'<div class="overview">'+wheel()+'<h2>Tingnan ang mga larawan sa bilog.</h2><p>Isa-isa nating pangalanan ang mga ito.</p><button class="start" id="start">Magsimula</button></div>';document.getElementById('start').onclick=()=>{started=true;introReady=false;render()};return}const item=items[index],isIdentify=phase==='classify',isListen=phase==='listen',question=isIdentify?identifyQuestion:isListen?'Pakinggang mabuti ang salita':phaseOneQuestion,control=isIdentify?'<div class="choices"><button class="choice" data-answer="yes">Oo</button><button class="choice no" data-answer="no">Hindi</button></div>':'<button data-basahin-button class="read read '+(isListen?'listening':'')+'" id="read" '+(!isListen&&!introReady?'disabled':'')+'>'+(isListen?'Pakinggan muna':window.BasahinButton.LABEL)+'</button>',status=isListen?'':isIdentify?'Piliin ang Oo o Hindi.':phaseOneStatus;app.innerHTML=header()+'<div class="focused"><div class="focus-picture"><img src="{% static "pabasa_app/images/simula/" %}'+item.image+'" alt="Aktibong larawan"></div>'+wheel()+'<section class="controls"><div class="question">'+question+'</div><div class="support">'+(isIdentify?'Piliin ang Oo o Hindi.':'Basahin ang salita nang malinaw.')+'</div>'+(isListen?'':'<div id="status" class="status">'+status+'</div>')+control+'</section></div>';if(isIdentify){document.querySelectorAll('.choice').forEach(button=>button.onclick=classify);return}const read=document.getElementById('read');window.Basahin.bindActivity(read,isListen?aloud:record);if(!isListen&&!introReady)playPhaseOne(index)};record=window.lesson4RetryRecord;aloud=async function(){if(busy||phase!=='listen'||listens>=3)return;busy=true;listens++;const itemIndex=index,button=document.getElementById('read');button.disabled=true;try{await narrate(items[itemIndex].word,itemIndex,'listen')}catch(error){}finally{busy=false;if(itemIndex!==index||phase!=='listen')return;if(listens>=3){phase='read';introReady=true}else phase='listen';render()}};classify=async function(event){if(busy||phase!=='classify')return;const yes=event.currentTarget.dataset.answer==='yes',itemIndex=index;if(yes!==items[itemIndex].starts_m){busy=true;setChoices(false);setStatus('Hindi pa ito tama. Subukan muli');try{await narrate('Hindi pa ito tama. Subukan muli',itemIndex,'classify')}catch(error){}finally{busy=false;if(itemIndex===index&&phase==='classify')setChoices(true)}return}busy=true;setChoices(false);setStatus('Magaling!');try{await narrate('Magaling!',itemIndex,'classify');if(itemIndex!==index||phase!=='classify')return;score++;circled.push(index);responses.push(yes);index++;phase='read';tries=0;listens=0;introReady=false;await save(index>=total);render()}catch(error){if(itemIndex===index&&phase==='classify')setChoices(true)}finally{busy=false}};addEventListener('pagehide',stopNarration);render()})();</script>
 <script type="text/plain" data-lesson4-g1-bootstrap>(function(){const questionText='__lesson4_part2_legacy_narration_disabled__',questionNarration='Nagsisimula ba ang salitang ito sa tunog em?',promptText='Piliin ang Oo o Hindi.';let activeQuestion=null,version=0,audio=null;const stop=()=>{version++;if(audio){audio.onended=null;audio.onerror=null;audio.pause();audio.currentTime=0;audio=null}},speak=async(text,run,node)=>{const form=new FormData();form.append('target_text',text);form.append('language','Filipino');form.append('mode','reading');const response=await fetch('{% url "reading_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':token()},body:form}),result=await response.json();if(!response.ok||!result.success)throw Error(result.error||'Hindi available ang audio.');if(run!==version||node!==activeQuestion)return false;const clip=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);audio=clip;await new Promise((resolve,reject)=>{clip.onended=resolve;clip.onerror=reject;clip.play().catch(reject)});if(audio===clip)audio=null;return run===version&&node===activeQuestion};async function begin(){const question=document.querySelector('#app .question');if(!question||question.textContent.trim()!==questionText){if(activeQuestion){activeQuestion=null;stop()}return}if(question===activeQuestion)return;activeQuestion=question;const run=++version;const choices=[...document.querySelectorAll('#app .choice')];choices.forEach(button=>button.disabled=true);try{const first=await speak(questionNarration,run,question);if(!first)return;const second=await speak(promptText,run,question);if(second&&run===version&&question===activeQuestion)choices.forEach(button=>button.disabled=false)}catch(error){}}new MutationObserver(begin).observe(document.getElementById('app'),{childList:true,subtree:true});begin();addEventListener('pagehide',stop)})();</script>
 <script type="text/plain" data-lesson4-g1-bootstrap>
 /* Keep the Part 1 Pakinggan control present after every focused render. */
@@ -544,8 +660,36 @@ body.lesson-4-responsive:has(.complete) .complete-card #done::after{font-size:cl
 body.lesson-4-responsive:has(.complete) .card>.overview{display:none!important}
 </style>
 <script>(function(){const originalFetch=window.fetch.bind(window);window.fetch=function(input,init){const url=String(input?.url||input||'');const body=init?.body;if(url.includes('/api/reading/transcribe/')&&body instanceof FormData){body.set('prescribed_activity_key','lesson-4-gawain-1')}return originalFetch(input,init)}})();</script>
-<script type="text/plain" data-lesson4-g1-bootstrap>(function(){if(typeof render!=='function')return;const originalRender=render;render=function(){if(typeof phase==='string'&&phase==='read'&&typeof tries==='number'&&tries>0&&tries<3&&document.querySelector('#app .focused')){const status=document.querySelector('#app .focused #status');const button=document.querySelector('#app .focused #read');if(status)status.textContent='Subukan muli ('+tries+'/3)';if(button){button.disabled=false;button.classList.remove('listening','processing');button.textContent=window.BasahinButton?.LABEL||'Basahin'}return}return originalRender.apply(this,arguments)}})();</script>
-<script type="text/plain" data-lesson4-g1-bootstrap>(function(){if(typeof render!=='function')return;const originalRender=render;let played=false;render=function(){const focused=document.querySelector('#app .focused');if(focused&&typeof tries==='number'&&tries>=3&&typeof phase==='string'&&phase==='listen'){const status=focused.querySelector('#status'),button=focused.querySelector('#read');if(status)status.textContent='Subukan muli (3/3)';if(button){button.disabled=false;button.classList.remove('listening','processing');button.textContent=window.BasahinButton?.LABEL||'Basahin'}if(!played){played=true;fetch('{% url "reading_read_aloud_api" %}',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||'','Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({target_text:'Subukan muli',language:'Filipino',mode:'reading'})}).then(r=>r.json()).then(result=>{if(result.success){const audio=new Audio('data:'+(result.mime_type||'audio/mpeg')+';base64,'+result.audio_content);audio.play().catch(()=>{})}}).catch(()=>{})}return}if(typeof phase==='string'&&phase==='read'&&typeof tries==='number'&&tries>0&&tries<3&&focused){const status=focused.querySelector('#status'),button=focused.querySelector('#read');if(status)status.textContent='Subukan muli ('+tries+'/3)';if(button){button.disabled=false;button.classList.remove('listening','processing');button.textContent=window.BasahinButton?.LABEL||'Basahin'}return}return originalRender.apply(this,arguments)}})();</script>
+<script type="text/plain" data-lesson4-g1-bootstrap>
+(function(){
+  if (typeof render !== 'function') return;
+  const originalRender = render;
+  render = function(){
+    const focused = document.querySelector('#app .focused');
+    if (focused && typeof tries === 'number' && tries >= 3 && phase === 'listen') {
+      const status = focused.querySelector('#status'), button = focused.querySelector('#read');
+      if (status) status.textContent = 'Subukan muli (3/3)';
+      if (button) {
+        button.disabled = false;
+        button.classList.remove('listening', 'processing');
+        button.textContent = window.BasahinButton?.LABEL || 'Basahin';
+      }
+      return;
+    }
+    if (focused && phase === 'read' && typeof tries === 'number' && tries > 0 && tries < 3) {
+      const status = focused.querySelector('#status'), button = focused.querySelector('#read');
+      if (status) status.textContent = 'Subukan muli (' + tries + '/3)';
+      if (button) {
+        button.disabled = false;
+        button.classList.remove('listening', 'processing');
+        button.textContent = window.BasahinButton?.LABEL || 'Basahin';
+      }
+      return;
+    }
+    return originalRender.apply(this, arguments);
+  };
+})();
+</script>
 <script>
 (function () {
   const localRetryAudio = '/static/pabasa_app/prescribed/audio/SESSION%202/LESSON%204/GAWAIN%201/OTHERS/subukan_muli.mp3';
