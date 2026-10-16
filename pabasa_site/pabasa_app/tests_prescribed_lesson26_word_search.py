@@ -402,6 +402,10 @@ class PrescribedLesson26WordSearchTests(TestCase):
             self.assertIn(f"window.__prescribedLeaveAdapters['{prefix}']", script)
             if prefix == 'prescribed-s13l29g1':
                 self.assertIn('await sentenceReader.flush()', script)
+            elif prefix in ('prescribed-l28a2', 'prescribed-s13l29g3'):
+                # Leaving must finish an answer/upload already sent before
+                # navigation; these adapters no longer return a no-op promise.
+                self.assertIn('await Promise.all([...pendingWrites])', script)
             elif prefix != 'prescribed-s13l29g3':
                 self.assertIn('Promise.resolve()', script)
 

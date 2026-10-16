@@ -242,10 +242,11 @@ html body :is(#dashboardSidebar,#adminSidebarCanvas,.dashboard-sidebar,.admin-si
     html body:is(.sidebar-collapsed,.admin-sidebar-collapsed) :is(#dashboardSidebar,#adminSidebarCanvas,.dashboard-sidebar,.admin-sidebar) .signature-sidebar .signature-footer :is(.sidebar-text,.admin-logout-text) { display: none !important; }
 }
 
-/* Match admin tab backgrounds to the shared 56px icon column. */
+/* Match student and teacher tab backgrounds to the shared 56px icon column. */
 @media (min-width: 992px) {
-    html body.sidebar-collapsed :is(#dashboardSidebar,.dashboard-sidebar) .teacher-sidebar .signature-nav-item {
+    html body.sidebar-collapsed :is(#dashboardSidebar,.dashboard-sidebar) :is(.teacher-sidebar,.student-sidebar) .signature-nav-item {
         min-width: 0 !important;
         max-width: none !important;
+        grid-template-columns: minmax(0, 1fr);
     }
 }

@@ -43,7 +43,7 @@
     const visibleSuffix = String(item.stem || '').replace(/^_+/, '');
     const readingStem = String(item.stem || '').replace(/^_+/, '_');
     app.innerHTML = `<div class="eyebrow">SESSION 12 · LESSON 28 · ACTIVITY 1</div><p class="instruction">Read the word, then write the missing letter.</p><div class="content"><div class="item"><div class="item-top"><img class="picture" src="${esc(item.image_url)}" alt="Picture clue for ${esc(item.word)}"><div class="word-area"><div class="label">${letterPhase ? 'Write the missing letter' : 'Read the word aloud first'}</div><div class="stem">${letterPhase ? `<input class="letter" id="letter" maxlength="1" aria-label="Missing first letter">${esc(visibleSuffix)}` : esc(readingStem)}</div></div></div><div class="actions">${letterPhase ? '<button class="button" id="check" type="button">Check letter</button>' : `<button data-basahin-button data-basahin-language="English" class="button" id="read" type="button">Read</button><button class="button secondary" id="listen" type="button" ${canListen ? '' : 'disabled'}>🔊 Listen</button>`}</div></div></div>${progress()}`;
-    publishDebug({status: isPaused ? 'Paused' : 'Ready', expected: item.word, error: '—'});
+    publishDebug({status: isPaused ? 'Paused' : 'Ready', expected: item.word, ...(kind === 'bad' ? {error: message} : {})});
     window.Basahin.bindActivity(document.getElementById('read'), () => record(item));
     document.getElementById('listen')?.addEventListener('click', () => playAudio(item.word).catch(error => render(error.message,'bad')));
     document.getElementById('check')?.addEventListener('click', () => submitLetter(item));

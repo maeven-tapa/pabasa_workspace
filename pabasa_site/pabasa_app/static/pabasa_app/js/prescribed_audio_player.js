@@ -65,24 +65,48 @@
             const audio = current.audio = new Audio();
             for (const source of list) {
               if (token !== generation) throw cancelled();
-              audio.src = source;
+              // A later clip may depend on a progress request made while the
+              // intro is playing. Keep its result on the same media element.
+              const url = typeof source === 'function'
+                ? await Promise.race([Promise.resolve().then(() => source(current.controller.signal)), cancellation])
+                : source;
+              if (token !== generation) throw cancelled();
+              if (!url) throw new Error('Could not find the audio for this activity.');
+              audio.src = url;
               audio.load?.();
               await Promise.race([
                 new Promise((resolve, reject) => {
-                  // A few Chromium builds can miss `ended` after replacing a
-                  // media element's source. Do not leave the activity locked
-                  // forever; the visible Listen control remains available.
-                  const timeout = setTimeout(resolve, 8000);
-                  audio.onended = resolve;
-                  audio.onerror = () => { clearTimeout(timeout); reject(new Error('Audio playback failed. Try again.')); };
-                  audio.addEventListener('pause', () => reject(cancelled()), {once:true});
-                  audio.play().catch(reject);
+                  let settled = false;
+                  const finish = error => {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(timeout);
+                    audio.onended = audio.onerror = null;
+                    audio.removeEventListener('pause', onPause);
+                    current.controller.signal.removeEventListener('abort', onAbort);
+                    error ? reject(error) : resolve();
+                  };
+                  const onPause = () => {
+                    // Native audio can emit pause just before ended when it
+                    // naturally reaches the end. That completes this clip.
+                    if (!audio.ended) finish(cancelled());
+                  };
+                  const onAbort = () => finish(cancelled());
+                  // A timeout is an error; it must never skip the rest of an
+                  // introduction and play the target word over it.
+                  const timeout = setTimeout(() => finish(new Error('Audio playback timed out. Try again.')), 30000);
+                  audio.onended = () => finish();
+                  audio.onerror = () => finish(new Error('Audio playback failed. Try again.'));
+                  audio.addEventListener('pause', onPause, {once:true});
+                  current.controller.signal.addEventListener('abort', onAbort, {once:true});
+                  audio.play().catch(finish);
                 }),
                 cancellation,
               ]);
             }
             if (token !== generation) throw cancelled();
           } finally {
+            current.audio?.pause();
             if (operation === current) operation = null;
           }
         },

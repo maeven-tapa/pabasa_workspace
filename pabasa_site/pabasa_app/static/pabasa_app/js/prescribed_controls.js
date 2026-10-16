@@ -173,7 +173,13 @@
       });
       q('-audio-test')?.addEventListener('click', () => open(audio));
       q('-audio-close')?.addEventListener('click', () => { config.adapter.stopAudioTest?.(); open(pause); });
-      [help, pause, restart, audio].forEach(modal => modal?.addEventListener('click', e => { if (e.target === modal) { if (modal === audio) { config.adapter.stopAudioTest?.(); open(pause); } else { if (modal === help) config.adapter.resume?.(); close(modal); } } }));
+      [help, pause, restart, audio].forEach(modal => modal?.addEventListener('click', e => {
+        if (e.target !== modal) return;
+        if (modal === audio) { config.adapter.stopAudioTest?.(); open(pause); return; }
+        if (modal === restart) { open(pause); return; }
+        close(modal);
+        if (modal === help || modal === pause) config.adapter.resume?.();
+      }));
       const mic = q('-mic-toggle');
       mic?.addEventListener('click', () => { const muted = !(mic.getAttribute('aria-pressed') === 'true'); if (muted) cancelReading(); config.adapter.setMuted?.(muted); });
       window.addEventListener('keydown', e => {

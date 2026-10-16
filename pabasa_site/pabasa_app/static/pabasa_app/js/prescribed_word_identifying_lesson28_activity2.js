@@ -16,11 +16,18 @@
   const retryAudio = 'Hmm, let’s try that again..mp3';
   const completionAudio = 'Great job! You completed Word Identifying..mp3';
   const wordAudio = {let: 'Let.mp3', lit: 'Lit.mp3', met: 'Met.mp3', sat: 'Sat.mp3', set: 'Set.mp3', sit: 'Sit.mp3', sun: 'Sun.mp3'};
+  const audioUrl = filename => {
+    if (!filename) throw new Error('Could not find the audio for this activity.');
+    return `${audioBase}${filename.split('/').map(encodeURIComponent).join('/')}`;
+  };
 
   let state = {...(data.progress?.state || {})};
   let busy = false;
   let paused = false;
-  let audio = null;
+  const audioPlayer = window.PrescribedAudioPlayer.create();
+  const pendingWrites = new Set();
+  let started = false, restarting = false, disposed = false;
+  const current = token => audioPlayer.isCurrent(token) && !paused && !disposed;
   let wrongChoice = '';
 
   function updateStaticCopy() {
@@ -35,6 +42,13 @@
   }
 
   async function post(url, body) {
+    const task = send(url, body);
+    pendingWrites.add(task);
+    try { return await task; }
+    finally { pendingWrites.delete(task); }
+  }
+
+  async function send(url, body) {
     const response = await fetch(url, {
       method: 'POST',
       credentials: 'same-origin',
@@ -68,10 +82,10 @@
       <div class="content">
         <p class="label">Listen carefully, then circle the matching word.</p>
         <div class="choices" aria-label="Circle the matching word">
-          ${item.choices.map(word => `<button class="choice ${wrongChoice === word ? 'is-wrong' : ''}" data-choice="${esc(word)}" type="button" ${!target || busy || paused ? 'disabled' : ''}>${esc(word)}</button>`).join('')}
+          ${item.choices.map(word => `<button class="choice ${wrongChoice === word ? 'is-wrong' : ''}" data-choice="${esc(word)}" type="button" ${!target || busy || paused || pendingWrites.size ? 'disabled' : ''}>${esc(word)}</button>`).join('')}
         </div>
         <p class="status ${kind}" id="status">${esc(message || (target ? 'Choose the word you heard.' : 'Preparing the word…'))}</p>
-        <div class="actions"><button class="button secondary" id="listen" type="button" ${!target || busy || paused ? 'disabled' : ''}><span aria-hidden="true">🔊</span> Listen</button></div>
+        <div class="actions"><button class="button secondary" id="listen" type="button" ${!target || busy || paused || pendingWrites.size ? 'disabled' : ''}><span aria-hidden="true">🔊</span> Listen</button></div>
       </div>${steps()}`;
 
     document.getElementById('listen')?.addEventListener('click', () => playWord(target).catch(error => render(error.message, 'bad')));
@@ -81,38 +95,34 @@
   }
 
   async function playFile(filename) {
-    if (!filename) throw new Error('Could not find the audio for this activity.');
-    audio?.pause();
-    audio = new Audio(`${audioBase}${filename.split('/').map(encodeURIComponent).join('/')}`);
-    await new Promise((resolve, reject) => {
-      audio.onended = resolve;
-      audio.onerror = () => reject(new Error('Audio playback failed. Try again.'));
-      audio.play().catch(reject);
-    });
-    audio = null;
+    await audioPlayer.playSequence([audioUrl(filename)]);
   }
 
   async function playWord(word) {
-    if (busy || paused || !word) return;
+    if (busy || paused || disposed || pendingWrites.size || !word) return;
+    const token = audioPlayer.generation;
     busy = true;
+    let message = '';
     render('Listening…');
     try {
       await playFile(wordAudio[String(word).toLowerCase()]);
+    } catch (error) {
+      if (current(token) && error.name !== 'AbortError') message = error.message;
     } finally {
-      busy = false;
-      render();
+      if (current(token)) { busy = false; render(message, message ? 'bad' : ''); }
     }
   }
 
   async function begin() {
     await post(data.progress_url, {action: 'begin', item_index: state.current_item});
     wrongChoice = '';
-    render();
   }
 
   async function choose(choice) {
-    if (busy || paused || !state.target_word) return;
+    if (busy || paused || disposed || pendingWrites.size || !state.target_word) return;
+    const token = audioPlayer.generation;
     busy = true;
+    render();
     let message = '';
     let kind = '';
     let nextTarget = '';
@@ -124,60 +134,86 @@
         item_index: state.current_item,
         choice,
       });
+      if (!current(token)) return;
       accepted = Boolean(result.accepted);
       wrongChoice = accepted ? '' : choice;
       message = accepted ? 'Correct! Listen to the next word.' : 'That is not the matching word. Try another choice.';
       kind = accepted ? 'good' : 'bad';
-      nextTarget = accepted ? state.target_word : '';
+      // A mistake repeats this row's target. A correct answer has already
+      // advanced the server state, so its target belongs to the next row.
+      nextTarget = state.phase === 'complete' ? '' : state.target_word;
       feedbackAudio = accepted
         ? (state.phase === 'complete' ? completionAudio : correctAudio)
         : retryAudio;
       render(message, kind);
-      await playFile(feedbackAudio);
+      const clips = [audioUrl(feedbackAudio)];
+      if (nextTarget) clips.push(audioUrl(wordAudio[String(nextTarget).toLowerCase()]));
+      await audioPlayer.playSequence(clips);
+      if (!current(token)) return;
       if (!accepted) wrongChoice = '';
     } catch (error) {
+      if (!current(token) || error.name === 'AbortError') return;
       message = error.message || 'Could not save your choice.';
       kind = 'bad';
     } finally {
-      busy = false;
+      if (current(token)) busy = false;
     }
+    if (!current(token)) return;
     render(message, kind);
-    if (nextTarget) await playWord(nextTarget);
   }
 
   function stopAudio() {
-    audio?.pause();
-    audio = null;
+    audioPlayer.cancel();
+    busy = Boolean(pendingWrites.size);
+    wrongChoice = '';
   }
 
   async function reset(event) {
     event?.preventDefault();
-    if (busy) return;
+    if (restarting) return;
+    restarting = true;
+    stopAudio();
     busy = true;
     try {
+      // An answer already sent must settle before reset can clear it.
+      await Promise.allSettled([...pendingWrites]);
       await post(data.progress_url, {reset: true});
       window.location.reload();
     } catch (error) {
       busy = false;
+      restarting = false;
+      paused = false;
+      render(error.message, 'bad');
       window.alert(error.message || 'Could not reset the activity.');
     }
   }
 
   document.getElementById('lesson28a2-later')?.addEventListener('click', reset);
   document.getElementById('lesson28a2-go')?.addEventListener('click', async () => {
+    if (started) return;
+    started = true;
+    const token = audioPlayer.generation;
     document.getElementById('lesson28a2-start').hidden = true;
     document.getElementById('lesson28a2-stage').classList.remove('waiting');
+    busy = true;
+    render();
+    // Prepare the target while the introduction plays. Handle a rejected save
+    // immediately, even if the learner pauses before the intro has finished.
+    const prepared = begin().then(() => null, error => error);
     try {
-      await playFile(introAudio);
-      await begin();
-      await playWord(state.target_word);
+      await audioPlayer.playSequence([audioUrl(introAudio), async () => {
+        const error = await prepared;
+        if (error) throw error;
+        return audioUrl(wordAudio[String(state.target_word || '').toLowerCase()]);
+      }]);
+      if (current(token)) { busy = false; render(); }
     } catch (error) {
-      busy = false;
-      render(error.message, 'bad');
+      if (current(token) && error.name !== 'AbortError') { busy = false; render(error.message, 'bad'); }
     }
   });
 
-  window.addEventListener('pagehide', stopAudio);
+  window.addEventListener('pagehide', () => { disposed = true; stopAudio(); });
+  window.addEventListener('pageshow', event => { if (event.persisted) window.location.reload(); });
   updateStaticCopy();
   hydrate();
   render();
@@ -192,22 +228,36 @@
           stopAudio();
           render();
         },
-        resume() {
+        async resume() {
+          if (!paused || restarting || disposed) return;
           paused = false;
+          const token = audioPlayer.generation;
+          busy = true;
           render();
+          try {
+            await Promise.allSettled([...pendingWrites]);
+            if (!current(token) || restarting) return;
+            if (started && !state.target_word && state.phase !== 'complete') await begin();
+            if (!current(token) || restarting) return;
+            busy = false;
+            render();
+            if (started && state.phase !== 'complete') await playWord(state.target_word);
+          } catch (error) {
+            if (current(token)) { busy = false; render(error.message, 'bad'); }
+          }
         },
         restart() {
           return reset();
         },
-        cleanup: stopAudio,
+        cleanup() { disposed = true; stopAudio(); },
       },
     });
   }
   window.__prescribedLeaveAdapters ||= {};
   window.__prescribedLeaveAdapters['prescribed-l28a2'] = {
-    saveCurrentProgress() {
-      return Promise.resolve();
+    async saveCurrentProgress() {
+      await Promise.all([...pendingWrites]);
     },
-    cleanup: stopAudio,
+    cleanup() { disposed = true; stopAudio(); },
   };
 })();
