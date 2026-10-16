@@ -25547,6 +25547,18 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
             )
         ):
             matching_transcript = 'riles'
+        # In these two Session 3 activities, Chirp 3 can hear ``elesi`` as
+        # the letters ``LC``. Preserve the provider transcript for diagnostics.
+        if (
+            request.POST.get('prescribed_activity_key') in {'lesson7-gawain3', 'lesson8-gawain1a'}
+            and not rejected_language
+            and model_used == 'chirp_3'
+            and language_code.lower() == 'fil-ph'
+            and mode == 'reading'
+            and target_text.strip().casefold() == 'elesi'
+            and str(transcript or '').strip().casefold() == 'lc'
+        ):
+            matching_transcript = target_text
         # Chirp 3 sometimes returns these complete-token sequences for ``elesi``.
         # Keep this narrowly scoped to the two Session 3 activities and only the
         # exact expected target; the raw transcript remains unchanged for debug.

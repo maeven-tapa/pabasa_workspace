@@ -129,6 +129,48 @@ class PrescribedStreamingTests(SimpleTestCase):
         self.assertTrue(json.loads(streamed.content)['complete'])
         provider.assert_not_called()
 
+    def test_session_3_lc_only_matches_elesi_with_chirp_3(self):
+        cases = [
+            ('lesson7-gawain3', 'elesi', 'LC', 'chirp_3', True),
+            ('lesson7-gawain3', 'elesi', 'elesi', 'chirp_3', True),
+            ('lesson7-gawain3', 'elesi', 'ilaw', 'chirp_3', False),
+            ('lesson7-gawain3', 'elepante', 'LC', 'chirp_3', False),
+            ('lesson8-gawain1a', 'elesi', 'LC', 'chirp_3', True),
+            ('lesson8-gawain1a', 'elepante', 'LC', 'chirp_3', False),
+            ('lesson7-gawain3', 'elesi', 'LC', 'chirp_2', False),
+            ('lesson8-gawain1a', 'elesi', 'LC', 'chirp_2', False),
+            ('lesson-13-gawain-3', 'elesi', 'LC', 'chirp_3', False),
+        ]
+        for activity_key, target, heard, model, expected_complete in cases:
+            with self.subTest(activity_key=activity_key, target=target, heard=heard, model=model), \
+                    patch.object(views, '_enforce_student_access_for_request', return_value=None), \
+                    patch.object(views, 'transcribe_audio_bytes_with_model', return_value=(heard, model, '')):
+                request = self.clip(heard, target_text=target, mode='reading',
+                                    prescribed_activity_key=activity_key)
+                request.POST = request.POST.copy()
+                request.POST.pop('prescribed_stream_token')
+                response = views.reading_transcribe_api(request)
+            result = json.loads(response.content)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(result['complete'], expected_complete)
+            self.assertEqual(result['raw_transcript'], heard)
+        for activity_key in ('lesson7-gawain3', 'lesson8-gawain1a'):
+            with self.subTest(streamed_activity=activity_key), \
+                    patch.object(crla_stream, 'authorize_prescribed', return_value={}), \
+                    patch.object(views, '_enforce_student_access_for_request', return_value=None), \
+                    patch.object(views, 'transcribe_audio_bytes_with_model') as provider:
+                request = self.clip('LC', payload={**self.payload, 'activity_key': activity_key},
+                                    prescribed_stream_activity=activity_key,
+                                    prescribed_activity_key=activity_key,
+                                    target_text='elesi', mode='reading')
+                response = views.reading_transcribe_api(request)
+                result = json.loads(response.content)
+                self.assertEqual(response.status_code, 200)
+                self.assertTrue(result['complete'])
+                self.assertEqual(result['transcript'], 'elesi')
+                self.assertEqual(result['raw_transcript'], 'LC')
+                provider.assert_not_called()
+
     def test_signed_utterances_share_clip_verdicts_for_aliases_sentences_and_exact_rhymes(self):
         cases = [
             ('bata', 'bata', {'mode': 'reading'}),
