@@ -3,6 +3,9 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}?v=20261010-centered-nav">
+<link rel="stylesheet" href="{% static 'pabasa_app/home_features.css' %}?v=20261016-paper-to-pabasa">
+<link rel="stylesheet" href="{% static 'pabasa_app/home_audience.css' %}?v=20261016-salawag-refined">
+<link rel="stylesheet" href="{% static 'pabasa_app/home_gallery.css' %}?v=20261016-turning-pages-no-caption-v3">
 {% if reading_animation_frames %}
     {% for frame in reading_animation_frames %}
 <link rel="preload" as="image" href="{% static frame %}">
@@ -12,21 +15,15 @@
 
 {% block content %}
 
-<section class="section-container-hero fade-in-section">
+<section class="section-container-hero inside-pabasa-hero fade-in-section">
     <div class="section-wrapper">
         <div class="hero-stage">
-            <div class="hero-decor hero-decor--pencil" aria-hidden="true">✏️</div>
-            <div class="hero-decor hero-decor--star" aria-hidden="true">⭐</div>
-            <div class="hero-decor hero-decor--bubble" aria-hidden="true">💬</div>
-            <div class="hero-decor hero-decor--plane" aria-hidden="true">✈️</div>
-            <div class="hero-decor hero-decor--wave" aria-hidden="true">🎵</div>
-
             <div class="browser-window">
                 <div class="browser-body">
                     <div class="hero-copy">
                         <span class="hero-chip">Inside the learning space</span>
-                        <h1>Every child deserves the opportunity to become a confident reader.</h1>
-                        <p>Welcome inside PABASA, where teachers guide reading practice, celebrate progress, and turn every lesson into a confident next step.</p>
+                        <h1>Inside <span>PABASA</span></h1>
+                        <p>Every child can discover the joy and confidence of reading. Through every word read, challenge overcome, and small achievement, PABASA transforms everyday learning into a journey toward stronger reading skills, greater confidence, and a lifelong love for learning.</p>
                         <div class="hero-cta-group">
                             <a href="{% url 'signup' %}" class="btn btn-primary">Get Started</a>
                             <a href="{% url 'auth' %}" class="btn btn-outline-primary">Login</a>
@@ -35,6 +32,11 @@
 
                     <div class="hero-image-showcase">
                         <div class="hero-image-glow" aria-hidden="true"></div>
+                        <span class="hero-accent hero-accent--star-left" aria-hidden="true">★</span>
+                        <span class="hero-accent hero-accent--star-right" aria-hidden="true">★</span>
+                        <svg class="hero-accent hero-accent--book" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                            <path d="M24 12c-5-4-11-5-18-4v26c7-1 13 0 18 4m0-26c5-4 11-5 18-4v26c-7-1-13 0-18 4m0-26v26" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
                         <img src="{% static 'pabasa_app/images/hero1.png' %}"
                              alt="Children enjoying an interactive PABASA reading activity"
                              class="hero-main-image">
@@ -45,44 +47,107 @@
     </div>
 </section>
 
-<section class="fade-in-section section-container section-container-2">
-    <div class="section-wrapper">
-        <div class="audience-story">
-            <header class="audience-story__heading">
-                <div class="section-kicker">Designed for everyone</div>
-                <h2>One reading space, built around every learner.</h2>
-            </header>
+<section class="paper-to-pabasa fade-in-section" aria-labelledby="paper-to-pabasa-title">
+    <div class="paper-to-pabasa__inner">
+        <span class="paper-to-pabasa__star paper-to-pabasa__star--left" aria-hidden="true">★</span>
+        <span class="paper-to-pabasa__star paper-to-pabasa__star--right" aria-hidden="true">★</span>
+        <svg class="paper-to-pabasa__book paper-to-pabasa__book--left" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M24 12c-5-4-11-5-18-4v26c7-1 13 0 18 4m0-26c5-4 11-5 18-4v26c-7-1-13 0-18 4m0-26v26" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        <svg class="paper-to-pabasa__book paper-to-pabasa__book--right" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M24 12c-5-4-11-5-18-4v26c7-1 13 0 18 4m0-26c5-4 11-5 18-4v26c-7-1-13 0-18 4m0-26v26" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
 
-            <article class="audience-row">
-                <div class="audience-row__visual">
-                    <span class="audience-row__orb" aria-hidden="true"></span>
-                    <img src="{% static 'pabasa_app/images/hero3.png' %}" alt="Teachers guiding learners through reading practice">
+        <header class="paper-to-pabasa__heading">
+            <span class="paper-to-pabasa__eyebrow">A smarter way to support reading</span>
+            <h2 id="paper-to-pabasa-title">From Pen and Paper to <span>PABASA</span></h2>
+            <p>PABASA transforms traditional reading assessments into a more efficient and engaging digital experience, bringing CRLA assessments and ARAL activities together in one centralized and standardized learning space.</p>
+        </header>
+
+        <div class="paper-to-pabasa__grid">
+            <article class="paper-feature paper-feature--crla" aria-labelledby="paper-feature-crla-title">
+                <div class="paper-feature__intro">
+                    <span class="paper-feature__icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><circle cx="18" cy="16" r="6" stroke="currentColor" stroke-width="3"/><path d="M5 37c0-7 5-11 13-11s13 4 13 11v2H5v-2Z" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M33 12a6 6 0 0 1 0 12m0 5c6 0 10 3 10 9v1h-8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></span>
+                    <div><h3 id="paper-feature-crla-title">CRLA Assessment</h3><p>Assess up to 10 students simultaneously with real-time monitoring, automated recording, and organized CRLA results.</p></div>
                 </div>
-                <div class="audience-row__copy">
-                    <h3>Made for teachers</h3>
-                    <p>Run oral reading checks, review fluency, and turn each result into a clear next step.</p>
+                <div class="paper-feature__preview paper-feature__preview--crla" aria-label="Illustrative preview of the Live Assessment Student Monitor; no student data shown">
+                    <div class="paper-feature__browser-bar"><span class="paper-feature__browser-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>Live Assessment</strong><span class="paper-feature__preview-tag">Interface preview</span></div>
+                    <div class="paper-monitor">
+                        <div class="paper-monitor__header"><div><strong>Student Monitor</strong><small>Monitor selected participants in real time</small></div><span class="paper-monitor__session-status"><i aria-hidden="true"></i> Waiting</span></div>
+                        <div class="paper-monitor__status-key" aria-label="Available status labels"><span class="paper-monitor__pill paper-monitor__pill--reading">Reading</span><span class="paper-monitor__pill paper-monitor__pill--waiting">Waiting</span><span class="paper-monitor__pill paper-monitor__pill--finished">Finished</span></div>
+                        <div class="paper-monitor__table" aria-hidden="true"><div class="paper-monitor__table-head"><span>Student</span><span>Status</span><span>Progress</span><span>Time</span><span>Reading Level</span></div><div class="paper-monitor__table-row"><span><i class="paper-monitor__avatar"></i><i class="paper-monitor__placeholder"></i></span><span class="paper-monitor__pill paper-monitor__pill--reading">Reading</span><span class="paper-monitor__progress"><i></i></span><span>—</span><span>—</span></div><div class="paper-monitor__table-row"><span><i class="paper-monitor__avatar"></i><i class="paper-monitor__placeholder paper-monitor__placeholder--short"></i></span><span class="paper-monitor__pill paper-monitor__pill--waiting">Waiting</span><span class="paper-monitor__progress"></span><span>—</span><span>—</span></div><div class="paper-monitor__table-row"><span><i class="paper-monitor__avatar"></i><i class="paper-monitor__placeholder"></i></span><span class="paper-monitor__pill paper-monitor__pill--finished">Finished</span><span class="paper-monitor__progress"><i></i></span><span>—</span><span>—</span></div></div>
+                    </div>
+                </div>
+                <div class="paper-feature__highlight"><span class="paper-feature__highlight-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M5 26V16h5v10H5Zm9 0V7h5v19h-5Zm9 0V12h5v14h-5Z" fill="currentColor"/></svg></span><span>Generate the official CRLA scoresheet automatically.</span></div>
+            </article>
+
+            <article class="paper-feature paper-feature--aral" aria-labelledby="paper-feature-aral-title">
+                <div class="paper-feature__intro">
+                    <span class="paper-feature__icon" aria-hidden="true"><img src="{% static 'pabasa_app/images/aral-program-logo-v1.webp' %}" alt=""></span>
+                    <div><h3 id="paper-feature-aral-title">ARAL Workbook</h3><p>Digitizes all 93 activities across 15 sessions of the official ARAL Workbook, with interactive, narrated activities and immediate feedback.</p></div>
+                </div>
+                <div class="paper-feature__preview paper-feature__preview--aral" aria-label="Illustrative preview of Lesson 7 Gawain 2C handwriting activity">
+                    <div class="paper-feature__browser-bar"><span class="paper-feature__browser-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>Lesson 7 · Gawain 2C</strong><span class="paper-feature__preview-tag">Activity preview</span></div>
+                    <div class="paper-aral">
+                        <div class="paper-aral__card"><span class="paper-aral__eyebrow">Session 3 · Lesson 7 · Gawain 2</span><h4>Letrang Ii</h4><p>Magsanay magsulat ng letrang I. Isulat nang isang beses ang letrang I sa bawat Hanay.</p><div class="paper-aral__progress" aria-label="First of two writing rows"><i></i></div><div class="paper-aral__sheet"><div class="paper-aral__writing-row"><span>I</span></div></div><div class="paper-aral__actions" aria-hidden="true"><span>Burahin</span><span>Susunod</span></div></div>
+                    </div>
+                </div>
+                <div class="paper-feature__highlight"><span class="paper-feature__highlight-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="m6 23 17-17 4 4-17 17-6 1 2-5Z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="m20 9 4 4M5 29h22" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></span><span>Helps teachers track progress and identify students who need additional support.</span></div>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="salawag-audience fade-in-section" aria-labelledby="salawag-audience-title">
+    <div class="salawag-audience__inner">
+        <header class="salawag-audience__heading">
+            <span class="salawag-audience__eyebrow">PABASA for Salawag Elementary School</span>
+            <h2 id="salawag-audience-title">By the Students, <span>for Salawag.</span></h2>
+            <p>A reading space designed to support teachers, students, and Salawag Elementary School in building stronger readers for a brighter future.</p>
+        </header>
+
+        <div class="salawag-audience__grid">
+            <article class="audience-card audience-card--teachers" aria-labelledby="audience-teachers-title">
+                <div class="audience-card__visual audience-card__visual--monitor" role="img" aria-label="Illustrative Student Monitor interface preview with Reading, Waiting, and Finished statuses">
+                    <div class="audience-monitor">
+                        <div class="audience-monitor__chrome"><span><i></i><i></i><i></i></span><strong>Live Assessment</strong><small>Interface preview</small></div>
+                        <div class="audience-monitor__screen">
+                            <div class="audience-monitor__top"><strong>Student Monitor</strong><span>Waiting</span></div>
+                            <div class="audience-monitor__columns"><b>Student</b><b>Status</b><b>Progress</b><b>Time</b><b>Reading Level</b></div>
+                            <div class="audience-monitor__row"><span><i class="audience-monitor__avatar"></i><i class="audience-monitor__placeholder"></i></span><em class="is-reading">Reading</em><i class="audience-monitor__progress"><b></b></i><small>—</small><small>—</small></div>
+                            <div class="audience-monitor__row"><span><i class="audience-monitor__avatar"></i><i class="audience-monitor__placeholder"></i></span><em class="is-waiting">Waiting</em><i class="audience-monitor__progress"></i><small>—</small><small>—</small></div>
+                            <div class="audience-monitor__row"><span><i class="audience-monitor__avatar"></i><i class="audience-monitor__placeholder"></i></span><em class="is-finished">Finished</em><i class="audience-monitor__progress is-complete"><b></b></i><small>—</small><small>—</small></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="audience-card__body">
+                    <div class="audience-card__category"><span class="audience-card__number">01</span><div><h3 id="audience-teachers-title">For Teachers</h3><p>Simpler assessment. Smarter support.</p></div></div>
+                    <ul class="audience-card__features">
+                        <li><span class="audience-card__feature-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><rect x="7" y="4" width="18" height="24" rx="3" stroke="currentColor" stroke-width="2.5"/><path d="M12 11h8M12 16h8M12 21h5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="m22 22 2 2 4-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><strong>Conduct CRLA Assessments</strong><small>Administer digitized reading assessments with up to 10 students simultaneously through Live Assessment.</small></span></li>
+                        <li><span class="audience-card__feature-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M16 8c-3-2-7-3-12-2v19c5-1 9 0 12 2m0-19c3-2 7-3 12-2v19c-5-1-9 0-12 2m0-19v19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><strong>Provide Supplementary Materials</strong><small>Create and assign reading materials based on students' learning needs.</small></span></li>
+                        <li><span class="audience-card__feature-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M5 26V17h5v9H5Zm9 0V7h5v19h-5Zm9 0V12h5v14h-5Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg></span><span><strong>Monitor Student Progress</strong><small>Track reading performance, assessment results, and activity completion.</small></span></li>
+                    </ul>
                 </div>
             </article>
 
-            <article class="audience-row audience-row--reverse">
-                <div class="audience-row__visual">
-                    <span class="audience-row__orb" aria-hidden="true"></span>
-                    <img src="{% static 'pabasa_app/images/hero2.png' %}" alt="A student building reading confidence">
-                </div>
-                <div class="audience-row__copy">
-                    <h3>Motivating for students</h3>
-                    <p>Practice aloud with friendly prompts, matched activities, and feedback that builds confidence.</p>
+            <article class="audience-card audience-card--students" aria-labelledby="audience-students-title">
+                <div class="audience-card__visual"><img src="{% static 'pabasa_app/images/homepage/student-reading-session.webp' %}" alt="Grade 2 student completing a PABASA reading assessment with a microphone and laptop" loading="lazy" decoding="async"></div>
+                <div class="audience-card__body">
+                    <div class="audience-card__category"><span class="audience-card__number">02</span><div><h3 id="audience-students-title">For Students</h3><p>Make reading a happier journey.</p></div></div>
+                    <ul class="audience-card__features">
+                        <li><span class="audience-card__feature-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><rect x="12" y="4" width="8" height="17" rx="4" stroke="currentColor" stroke-width="2.5"/><path d="M8 15a8 8 0 0 0 16 0m-8 8v5m-5 0h10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></span><span><strong>Take Reading Assessments</strong><small>Participate in interactive assessments that evaluate oral reading skills.</small></span></li>
+                        <li><span class="audience-card__feature-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M5 17h4l3-7 5 13 4-9 2 3h4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="2.5"/></svg></span><span><strong>Strengthen Reading Skills</strong><small>Improve accuracy, fluency, and confidence through engaging practice activities.</small></span></li>
+                        <li><span class="audience-card__feature-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M16 8c-3-2-7-3-12-2v19c5-1 9 0 12 2m0-19c3-2 7-3 12-2v19c-5-1-9 0-12 2m0-19v19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><strong>Explore ARAL Activities</strong><small>Complete digitized ARAL Workbook activities with narrated instructions and immediate feedback.</small></span></li>
+                        <li><span class="audience-card__feature-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M8 4h11l6 6v18H8V4Z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M19 4v7h6m-13 5h8m-8 5h8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></span><span><strong>Access Supplementary Materials</strong><small>Receive additional reading exercises suited to individual learning needs.</small></span></li>
+                    </ul>
                 </div>
             </article>
 
-            <article class="audience-row">
-                <div class="audience-row__visual">
-                    <span class="audience-row__orb" aria-hidden="true"></span>
-                    <img src="{% static 'pabasa_app/images/hero4.png' %}" alt="A school community supporting literacy growth">
-                </div>
-                <div class="audience-row__copy">
-                    <h3>Connected for schools</h3>
-                    <p>See classroom progress clearly and create a consistent approach to literacy support across the school.</p>
+            <article class="audience-card audience-card--schools" aria-labelledby="audience-schools-title">
+                <div class="audience-card__visual"><img src="{% static 'pabasa_app/images/homepage/salawag-elementary-school.webp' %}" alt="Stage and SALAWAG ELEMENTARY SCHOOL sign at Salawag Elementary School" loading="lazy" decoding="async"></div>
+                <div class="audience-card__body">
+                    <div class="audience-card__category"><span class="audience-card__number">03</span><div><h3 id="audience-schools-title">For Schools</h3><p>A stronger reading community.</p></div></div>
+                    <ul class="audience-card__features">
+                        <li><span class="audience-card__feature-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M5 26V17h5v9H5Zm9 0V7h5v19h-5Zm9 0V12h5v14h-5Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg></span><span><strong>Monitor Reading Development</strong><small>View students' reading performance, assessment completion, and progress.</small></span></li>
+                        <li><span class="audience-card__feature-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><circle cx="12" cy="10" r="4" stroke="currentColor" stroke-width="2.5"/><path d="M4 27v-2c0-4 3-7 8-7s8 3 8 7v2H4Zm18-13a4 4 0 1 0-2-7m3 11c3 1 5 3 5 6v3h-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><strong>Support Reading Interventions</strong><small>Help identify students who need additional reading support.</small></span></li>
+                        <li><span class="audience-card__feature-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="4" stroke="currentColor" stroke-width="2.5"/><path d="M16 3v4m0 18v4M3 16h4m18 0h4M7 7l3 3m12 12 3 3m0-18-3 3m-12 12-3 3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle cx="16" cy="16" r="10" stroke="currentColor" stroke-width="2.5"/></svg></span><span><strong>Centralize Reading Resources</strong><small>Manage CRLA assessments, ARAL activities, and reading materials in one standardized platform.</small></span></li>
+                    </ul>
                 </div>
             </article>
         </div>
@@ -187,46 +252,49 @@
     </div>
 </section>
 
-<section class="fade-in-section section-container section-container-gallery">
-    <div class="text-center">
-        <h2 class="turning-pages-title">#TurningPagesTogether</h2>
+<section class="fade-in-section section-container section-container-gallery" id="turning-pages-gallery" aria-labelledby="turning-pages-heading">
+    <header class="turning-pages-heading">
+        <span class="turning-pages-eyebrow">Moments from our deployment</span>
+        <h2 class="turning-pages-title" id="turning-pages-heading"><span class="turning-pages-hash">#</span>TurningPages<span class="turning-pages-blue">Together</span></h2>
         <p class="turning-pages-subtitle">Reading Forward with PABASA</p>
-    </div>
+        <p class="turning-pages-description">Real moments of young readers exploring PABASA at Salawag Elementary School.</p>
+    </header>
     <div class="turning-pages-container">
-        <div class="turning-pages-stage">
-            <div class="turning-pages-count" aria-live="polite"><span id="turningPagesCurrent">1</span> / 7 pages</div>
-            <button class="turning-pages-arrow" id="sliderLeftBtn" aria-label="Previous page">
-                <span>&#8249;</span>
+        <div class="turning-pages-stage" id="turningPagesStage" role="region" aria-roledescription="carousel" aria-label="PABASA deployment photos" tabindex="0">
+            <button class="turning-pages-arrow" id="sliderLeftBtn" type="button" aria-label="Previous photo">
+                <span aria-hidden="true">&#8249;</span>
             </button>
             <div class="turning-pages-slider">
                 <div class="turning-pages-grid" id="turningPagesGrid">
-                    <div class="turning-pages-image">
-                        <img src="{% static 'pabasa_app/images/overall_image/1.png' %}" alt="Students reading">
-                    </div>
-                    <div class="turning-pages-image">
-                        <img src="{% static 'pabasa_app/images/overall_image/2.png' %}" alt="Students reading">
-                    </div>
-                    <div class="turning-pages-image">
-                        <img src="{% static 'pabasa_app/images/overall_image/3.png' %}" alt="Students reading">
-                    </div>
-                    <div class="turning-pages-image">
-                        <img src="{% static 'pabasa_app/images/overall_image/5.png' %}" alt="Students reading">
-                    </div>
-                    <div class="turning-pages-image">
-                        <img src="{% static 'pabasa_app/images/overall_image/6.png' %}" alt="Students reading">
-                    </div>
-                    <div class="turning-pages-image">
-                        <img src="{% static 'pabasa_app/images/overall_image/7.png' %}" alt="Students reading">
-                    </div>
-                    <div class="turning-pages-image">
-                        <img src="{% static 'pabasa_app/images/overall_image/8.png' %}" alt="Students reading">
-                    </div>
+                    <figure class="turning-pages-image" data-title="Reading Together" aria-hidden="true">
+                        <img src="{% static 'pabasa_app/images/overall_image/1.png' %}" alt="A teacher and learner using PABASA together" loading="lazy" decoding="async">
+                    </figure>
+                    <figure class="turning-pages-image is-prev" data-title="Reading Aloud with Pip" aria-hidden="true">
+                        <img src="{% static 'pabasa_app/images/overall_image/2.png' %}" alt="A student reading aloud with a microphone beside a laptop" loading="lazy" decoding="async">
+                    </figure>
+                    <figure class="turning-pages-image is-active" data-title="Learning One Word at a Time" aria-hidden="false">
+                        <img src="{% static 'pabasa_app/images/overall_image/3.png' %}" alt="A student using a PABASA reading activity with Pip nearby" loading="eager" fetchpriority="high" decoding="async">
+                    </figure>
+                    <figure class="turning-pages-image is-next" data-title="A Shared Reading Moment" aria-hidden="true">
+                        <img src="{% static 'pabasa_app/images/overall_image/5.png' %}" alt="A learner holding a reading material beside Pip" loading="lazy" decoding="async">
+                    </figure>
+                    <figure class="turning-pages-image" data-title="Practice with PABASA" aria-hidden="true">
+                        <img src="{% static 'pabasa_app/images/overall_image/6.png' %}" alt="A student practicing with PABASA on a laptop" loading="lazy" decoding="async">
+                    </figure>
+                    <figure class="turning-pages-image" data-title="Reading as a Class" aria-hidden="true">
+                        <img src="{% static 'pabasa_app/images/overall_image/7.png' %}" alt="Students using PABASA on laptops in a classroom" loading="lazy" decoding="async">
+                    </figure>
+                    <figure class="turning-pages-image" data-title="Learning from the Screen" aria-hidden="true">
+                        <img src="{% static 'pabasa_app/images/overall_image/8.png' %}" alt="Learners following a PABASA activity on a laptop" loading="lazy" decoding="async">
+                    </figure>
                 </div>
             </div>
-            <button class="turning-pages-arrow" id="sliderRightBtn" aria-label="Next page">
-                <span>&#8250;</span>
+            <button class="turning-pages-arrow" id="sliderRightBtn" type="button" aria-label="Next photo">
+                <span aria-hidden="true">&#8250;</span>
             </button>
         </div>
+        <div class="turning-pages-count" aria-label="Current photo" aria-live="polite"><span id="turningPagesCurrent">03</span><span class="turning-pages-count-divider" aria-hidden="true">/</span><span id="turningPagesTotal"></span></div>
+        <div class="turning-pages-indicators" id="turningPagesIndicators" role="group" aria-label="Choose a deployment photo"></div>
     </div>
 </section>
 
@@ -266,43 +334,72 @@
         }, 500);
     });
 
-    // Turning Pages 3D page-flip carousel.
+    // Turning Pages photo carousel.
     const sliderGrid = document.getElementById('turningPagesGrid');
     const sliderLeftBtn = document.getElementById('sliderLeftBtn');
     const sliderRightBtn = document.getElementById('sliderRightBtn');
     const turningPagesCurrent = document.getElementById('turningPagesCurrent');
+    const turningPagesTotal = document.getElementById('turningPagesTotal');
+    const turningPagesStage = document.getElementById('turningPagesStage');
+    const turningPagesIndicators = document.getElementById('turningPagesIndicators');
 
-    if (sliderLeftBtn && sliderRightBtn && sliderGrid) {
+    if (sliderLeftBtn && sliderRightBtn && sliderGrid && turningPagesStage && turningPagesIndicators) {
         const pages = Array.from(sliderGrid.querySelectorAll('.turning-pages-image'));
         const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        let currentPage = 0;
+        let currentPage = Math.min(2, pages.length - 1);
         let autoplayTimer = null;
+        let pointerStartX = null;
+        const progressButtons = pages.map((page, pageIndex) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'turning-pages-indicator';
+            button.setAttribute('aria-label', `Show photo ${pageIndex + 1}`);
+            button.addEventListener('click', () => { goToPageIndex(pageIndex); startAutoplay(); });
+            turningPagesIndicators.appendChild(button);
+            return button;
+        });
 
         const renderTurningPages = () => {
+            if (!pages.length) return;
+            const previousIndex = (currentPage - 1 + pages.length) % pages.length;
+            const nextIndex = (currentPage + 1) % pages.length;
             pages.forEach((page, pageIndex) => {
-                const offset = (pageIndex - currentPage + pages.length) % pages.length;
-                if (offset === 0) page.classList.remove('is-turned');
-                page.style.setProperty('--page-offset', Math.min(offset, 6));
-                page.style.setProperty('--page-depth', pages.length - offset);
-                page.classList.toggle('is-active', offset === 0);
-                page.classList.toggle('is-stacked', offset > 0 && !page.classList.contains('is-turned'));
-                page.setAttribute('aria-hidden', offset === 0 ? 'false' : 'true');
+                const isActive = pageIndex === currentPage;
+                const isPrevious = pageIndex === previousIndex;
+                const isNext = pageIndex === nextIndex;
+                page.classList.toggle('is-active', isActive);
+                page.classList.toggle('is-prev', isPrevious);
+                page.classList.toggle('is-next', isNext);
+                page.classList.toggle('is-hidden', !isActive && !isPrevious && !isNext);
+                page.setAttribute('aria-hidden', (isActive || isPrevious || isNext) ? 'false' : 'true');
+                page.setAttribute('aria-label', `Photo ${pageIndex + 1} of ${pages.length}: ${page.dataset.title}`);
+                page.setAttribute('role', (isPrevious || isNext) ? 'button' : 'group');
+                page.tabIndex = (isPrevious || isNext) ? 0 : -1;
+                page.setAttribute('aria-roledescription', (isPrevious || isNext) ? 'navigation control' : 'slide');
+                page.setAttribute('aria-label', isPrevious ? `Previous photo: ${page.dataset.title}` : isNext ? `Next photo: ${page.dataset.title}` : `Photo ${pageIndex + 1} of ${pages.length}: ${page.dataset.title}`);
             });
-            if (turningPagesCurrent) turningPagesCurrent.textContent = String(currentPage + 1);
+            if (turningPagesCurrent) turningPagesCurrent.textContent = String(currentPage + 1).padStart(2, '0');
+            if (turningPagesTotal) turningPagesTotal.textContent = String(pages.length).padStart(2, '0');
+            progressButtons.forEach((button, pageIndex) => {
+                if (pageIndex === currentPage) {
+                    button.classList.add('is-active');
+                    button.setAttribute('aria-current', 'true');
+                } else {
+                    button.classList.remove('is-active');
+                    button.removeAttribute('aria-current');
+                }
+            });
         };
 
         const goToPage = (direction) => {
-            const leavingPage = pages[currentPage];
-            const nextPageIndex = (currentPage + direction + pages.length) % pages.length;
-            if (direction < 0) pages[nextPageIndex].classList.remove('is-turned');
-            leavingPage.classList.add(direction > 0 ? 'is-turning-forward' : 'is-turning-back');
-            window.setTimeout(() => {
-                leavingPage.classList.remove('is-turning-forward', 'is-turning-back');
-                if (direction > 0) leavingPage.classList.add('is-turned');
-            }, reduceMotion ? 0 : 720);
-            currentPage = nextPageIndex;
-            window.requestAnimationFrame(renderTurningPages);
+            currentPage = (currentPage + direction + pages.length) % pages.length;
+            renderTurningPages();
         };
+
+        function goToPageIndex(pageIndex) {
+            currentPage = (pageIndex + pages.length) % pages.length;
+            renderTurningPages();
+        }
 
         const stopAutoplay = () => {
             if (autoplayTimer) window.clearInterval(autoplayTimer);
@@ -316,10 +413,51 @@
 
         sliderLeftBtn.addEventListener('click', () => { goToPage(-1); startAutoplay(); });
         sliderRightBtn.addEventListener('click', () => { goToPage(1); startAutoplay(); });
-        sliderGrid.addEventListener('mouseenter', stopAutoplay);
-        sliderGrid.addEventListener('mouseleave', startAutoplay);
-        sliderGrid.addEventListener('focusin', stopAutoplay);
-        sliderGrid.addEventListener('focusout', startAutoplay);
+        turningPagesStage.addEventListener('mouseenter', stopAutoplay);
+        turningPagesStage.addEventListener('mouseleave', startAutoplay);
+        turningPagesStage.addEventListener('focusin', stopAutoplay);
+        turningPagesStage.addEventListener('focusout', (event) => {
+            if (!turningPagesStage.contains(event.relatedTarget)) startAutoplay();
+        });
+        turningPagesStage.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                goToPage(-1);
+                startAutoplay();
+            } else if (event.key === 'ArrowRight') {
+                event.preventDefault();
+                goToPage(1);
+                startAutoplay();
+            }
+        });
+        pages.forEach((page, pageIndex) => {
+            page.addEventListener('click', () => {
+                if (pageIndex === (currentPage - 1 + pages.length) % pages.length || pageIndex === (currentPage + 1) % pages.length) {
+                    goToPageIndex(pageIndex);
+                    startAutoplay();
+                }
+            });
+            page.addEventListener('keydown', (event) => {
+                if ((event.key === 'Enter' || event.key === ' ') && pageIndex !== currentPage) {
+                    event.preventDefault();
+                    goToPageIndex(pageIndex);
+                    startAutoplay();
+                }
+            });
+        });
+        turningPagesStage.addEventListener('pointerdown', (event) => {
+            pointerStartX = event.pointerType === 'touch' ? event.clientX : null;
+        });
+        turningPagesStage.addEventListener('pointerup', (event) => {
+            if (pointerStartX === null) return;
+            const deltaX = event.clientX - pointerStartX;
+            pointerStartX = null;
+            if (Math.abs(deltaX) > 45) {
+                goToPage(deltaX < 0 ? 1 : -1);
+                startAutoplay();
+            }
+        });
+        turningPagesStage.addEventListener('pointercancel', () => { pointerStartX = null; });
 
         renderTurningPages();
         startAutoplay();

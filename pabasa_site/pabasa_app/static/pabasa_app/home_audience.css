@@ -1,0 +1,362 @@
+/* “By the Students, for Salawag” homepage audience feature. */
+.salawag-audience {
+    position: relative;
+    overflow: hidden;
+    padding: clamp(4rem, 6vw, 5.5rem) clamp(1rem, 1.8vw, 2rem);
+    background: linear-gradient(180deg, #f6fbff 0%, #fff 38%, #f7fbfe 100%);
+}
+
+.salawag-audience__inner {
+    width: min(100%, 1600px);
+    margin-inline: auto;
+}
+
+.salawag-audience__heading {
+    width: min(100%, 980px);
+    margin: 0 auto clamp(2rem, 3.5vw, 2.85rem);
+    text-align: center;
+}
+
+.salawag-audience__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.3rem;
+    margin-bottom: .95rem;
+    padding: .42rem 1rem;
+    border-radius: 999px;
+    background: #e1f3fc;
+    color: #247caf;
+    font-size: .78rem;
+    font-weight: 900;
+    letter-spacing: .1em;
+    line-height: 1.35;
+    text-transform: uppercase;
+}
+
+.salawag-audience__heading h2 {
+    margin: 0 0 .75rem;
+    color: #10466e;
+    font-size: clamp(2.65rem, 5vw, 4.35rem);
+    font-weight: 900;
+    letter-spacing: -.045em;
+    line-height: 1.08;
+}
+
+.salawag-audience__heading h2 span { color: #1689d0; }
+
+.salawag-audience__heading > p {
+    width: min(100%, 850px);
+    margin: 0 auto;
+    color: #4a6680;
+    font-size: clamp(1rem, 1.55vw, 1.2rem);
+    line-height: 1.6;
+}
+
+.salawag-audience__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+    gap: clamp(.9rem, 1.5vw, 1.4rem);
+}
+
+.audience-card {
+    --audience-accent: #2ea8e5;
+    --audience-tint: #eaf7fd;
+    --audience-border: #d4edf9;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--audience-border);
+    border-radius: 1.4rem;
+    background: var(--audience-tint);
+    box-shadow: 0 10px 30px rgba(16,70,110,.055);
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+/* Override legacy homepage card defaults that otherwise inset these photo headers. */
+.salawag-audience .audience-card {
+    min-height: 0;
+    padding: 0;
+    justify-content: flex-start;
+    border: 1px solid var(--audience-border) !important;
+    background: var(--audience-tint) !important;
+    box-shadow: 0 10px 30px rgba(16,70,110,.055) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .salawag-audience .audience-card:hover {
+        transform: translateY(-3px);
+        border-color: var(--audience-border) !important;
+        box-shadow: 0 16px 36px rgba(16,70,110,.1) !important;
+    }
+}
+
+.audience-card--students {
+    --audience-accent: #dfa800;
+    --audience-tint: #fffaf0;
+    --audience-border: #f1e7ca;
+}
+
+.audience-card--schools {
+    --audience-accent: #27a878;
+    --audience-tint: #f0fbf7;
+    --audience-border: #d7f0e4;
+}
+
+.audience-card__visual {
+    position: relative;
+    flex: 0 0 auto;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: #dceefa;
+}
+
+.audience-card__visual > img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 48%;
+}
+
+.audience-card--schools .audience-card__visual > img { object-position: center 46%; }
+
+/* Small static rendition of the real Live Assessment Student Monitor. */
+.audience-card__visual--monitor {
+    display: grid;
+    place-items: stretch;
+    padding: 0;
+    background: #d8efff;
+}
+
+.audience-monitor {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+    color: #17486d;
+    font-family: inherit;
+}
+
+.audience-monitor__chrome {
+    display: grid;
+    grid-template-columns: auto minmax(0,1fr) auto;
+    align-items: center;
+    gap: .55rem;
+    min-height: 2rem;
+    padding: .35rem .55rem;
+    border-bottom: 1px solid #dceaf3;
+    background: #f8fcff;
+    font-size: clamp(.54rem, .7vw, .68rem);
+}
+
+.audience-monitor__chrome > span { display: flex; gap: .2rem; }
+.audience-monitor__chrome > span i { width: .4rem; height: .4rem; border-radius: 50%; background: #e9b650; }
+.audience-monitor__chrome > span i:first-child { background: #ee8d8d; }
+.audience-monitor__chrome > span i:last-child { background: #77c99c; }
+.audience-monitor__chrome strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.audience-monitor__chrome small { color: #6b8191; font-size: .55rem; white-space: nowrap; }
+
+.audience-monitor__screen {
+    display: grid;
+    flex: 1;
+    grid-template-rows: auto auto repeat(3, minmax(2.2rem, auto));
+    align-content: space-evenly;
+    gap: .4rem;
+    padding: clamp(.55rem, 1vw, .8rem);
+    background: linear-gradient(145deg, #fff, #f6fbff);
+}
+
+.audience-monitor__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .4rem;
+    margin-bottom: .1rem;
+    font-size: clamp(.67rem, .95vw, .85rem);
+}
+
+.audience-monitor__top strong { color: #1268ae; }
+.audience-monitor__top > span { padding: .22rem .5rem; border-radius: 999px; background: #fff4d7; color: #8b6418; font-size: .62rem; font-weight: 800; }
+
+.audience-monitor__columns,
+.audience-monitor__row {
+    display: grid;
+    grid-template-columns: minmax(3.1rem,1.2fr) minmax(3.2rem,1fr) minmax(2.4rem,.8fr) minmax(1.3rem,.42fr) minmax(2.7rem,.8fr);
+    align-items: center;
+    gap: .28rem;
+    min-width: 0;
+}
+
+.audience-monitor__columns {
+    padding: .15rem .3rem;
+    color: #72889a;
+    font-size: clamp(.4rem, .57vw, .52rem);
+    font-weight: 800;
+}
+
+.audience-monitor__row {
+    min-height: 2.2rem;
+    padding: .22rem .3rem;
+    border: 1px solid #dcecf7;
+    border-radius: .45rem;
+    background: #f6faff;
+    font-size: .52rem;
+}
+
+.audience-monitor__row > span { display: flex; align-items: center; gap: .25rem; min-width: 0; }
+.audience-monitor__avatar { flex: 0 0 auto; width: .95rem; height: .95rem; border: 1px solid white; border-radius: 50%; background: linear-gradient(145deg,#f0c69b 0 48%,#328ecb 49%); box-shadow: 0 0 0 1px #c8dce9; }
+.audience-monitor__placeholder { width: min(100%, 1.6rem); height: .3rem; border-radius: 999px; background: #cbdde9; }
+.audience-monitor__row em { width: max-content; padding: .16rem .34rem; border-radius: 999px; font-size: .49rem; font-style: normal; font-weight: 800; white-space: nowrap; }
+.audience-monitor__row .is-reading { background: #e0f1ff; color: #1769a0; }
+.audience-monitor__row .is-waiting { background: #fff2d2; color: #8b6418; }
+.audience-monitor__row .is-finished { background: #e2f6e9; color: #287c4c; }
+.audience-monitor__row > small { color: #8094a3; font-size: .49rem; }
+.audience-monitor__progress { display: block; height: .3rem; overflow: hidden; border-radius: 999px; background: #e2edf5; }
+.audience-monitor__progress b { display: block; width: 62%; height: 100%; border-radius: inherit; background: #65b8ed; }
+.audience-monitor__progress.is-complete b { width: 100%; background: #69c68b; }
+
+.audience-card__body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    padding: clamp(1.15rem, 1.7vw, 1.55rem);
+}
+
+.audience-card__category {
+    display: grid;
+    grid-template-columns: 3.65rem minmax(0,1fr);
+    align-items: center;
+    gap: .9rem;
+    margin-bottom: .65rem;
+}
+
+.audience-card__number {
+    display: grid;
+    place-items: center;
+    width: 3.65rem;
+    height: 3.65rem;
+    border-radius: 1rem;
+    background: var(--audience-accent);
+    color: #fff;
+    font-size: 1.35rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.audience-card--students .audience-card__number { color: #fff; }
+
+.audience-card__category h3 {
+    margin: 0 0 .15rem;
+    color: #10466e;
+    font-size: clamp(1.55rem, 2.1vw, 1.9rem);
+    font-weight: 900;
+    letter-spacing: -.025em;
+    line-height: 1.15;
+}
+
+.audience-card__category p {
+    margin: 0;
+    color: #526f84;
+    font-size: clamp(.92rem, 1.08vw, 1.02rem);
+    line-height: 1.4;
+}
+
+.audience-card__features {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.audience-card__features li {
+    display: grid;
+    grid-template-columns: 2.75rem minmax(0,1fr);
+    align-items: start;
+    gap: .7rem;
+    padding: .78rem .05rem;
+}
+
+.audience-card__features li + li { border-top: 1px solid rgba(74,102,128,.13); }
+
+.audience-card__feature-icon {
+    display: grid;
+    place-items: center;
+    width: 2.45rem;
+    height: 2.45rem;
+    border-radius: .72rem;
+    background: rgba(255,255,255,.78);
+    color: var(--audience-accent);
+}
+
+.audience-card__feature-icon svg { width: 1.65rem; height: 1.65rem; }
+
+.audience-card__features li > span:last-child { display: grid; gap: .18rem; min-width: 0; }
+
+.audience-card__features strong {
+    color: #173f5c;
+    font-size: clamp(.95rem, 1.05vw, 1.02rem);
+    font-weight: 800;
+    line-height: 1.35;
+}
+
+.audience-card__features small {
+    color: #4a6680;
+    font-size: clamp(.84rem, .95vw, .92rem);
+    line-height: 1.45;
+}
+
+@media (max-width: 1199px) {
+    .salawag-audience__grid { grid-template-columns: repeat(2, minmax(0,1fr)); grid-auto-rows: 1fr; }
+    .audience-card:last-child { grid-column: 1 / -1; width: calc(50% - .55rem); justify-self: center; }
+    .audience-card__visual { aspect-ratio: 4 / 3; }
+    .audience-card__category h3 { font-size: clamp(1.4rem, 2.4vw, 1.8rem); }
+}
+
+@media (max-width: 900px) {
+    .salawag-audience { padding: 3.5rem 1rem; }
+    .salawag-audience__heading { margin-bottom: 1.8rem; }
+    .salawag-audience__heading h2 { font-size: clamp(2.1rem, 8.5vw, 3rem); }
+    .salawag-audience__heading > p { font-size: .98rem; }
+    .salawag-audience__grid { grid-template-columns: minmax(0,1fr); max-width: 32rem; margin-inline: auto; gap: 1rem; }
+    .audience-card:last-child { grid-column: auto; width: 100%; }
+    .audience-card__visual { aspect-ratio: 4 / 3; }
+    .audience-card__body { padding: 1.1rem 1.15rem; }
+    .audience-card__category { grid-template-columns: 3.2rem minmax(0,1fr); gap: .75rem; }
+    .audience-card__number { width: 3.2rem; height: 3.2rem; font-size: 1.2rem; }
+    .audience-card__category h3 { font-size: 1.5rem; }
+    .audience-card__features li { grid-template-columns: 2.7rem minmax(0,1fr); gap: .6rem; padding: .7rem 0; }
+    .audience-card__feature-icon { width: 2.5rem; height: 2.5rem; }
+    .audience-card__feature-icon svg { width: 1.6rem; height: 1.6rem; }
+    .audience-card__features strong { font-size: .94rem; }
+    .audience-card__features small { font-size: .84rem; }
+    .audience-monitor__columns,
+    .audience-monitor__row { grid-template-columns: minmax(4rem,1.2fr) minmax(4rem,1fr) minmax(3rem,.8fr) minmax(1.5rem,.42fr) minmax(3rem,.8fr); }
+    .audience-monitor__columns { font-size: .5rem; }
+    .audience-monitor__row { min-height: 2rem; }
+    .audience-monitor__row em { font-size: .56rem; }
+    .audience-monitor__chrome { font-size: .65rem; }
+}
+
+@media (max-width: 380px) {
+    .salawag-audience { padding-inline: .7rem; }
+    .salawag-audience__eyebrow { font-size: .66rem; letter-spacing: .07em; }
+    .salawag-audience__heading h2 { font-size: 2rem; }
+    .audience-card__visual { aspect-ratio: 4 / 3; }
+    .audience-card__body { padding: .95rem; }
+    .audience-monitor__columns,
+    .audience-monitor__row { grid-template-columns: minmax(3rem,1.1fr) minmax(3.4rem,1fr) minmax(2rem,.7fr) minmax(1rem,.35fr) minmax(2.3rem,.7fr); gap: .15rem; }
+    .audience-monitor__columns { font-size: .42rem; }
+    .audience-monitor__row em { padding-inline: .26rem; font-size: .49rem; }
+    .audience-monitor__placeholder { display: none; }
+}
