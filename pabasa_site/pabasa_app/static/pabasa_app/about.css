@@ -2050,6 +2050,10 @@ body { overflow-x: hidden; }
 .team-member-modal-close { top: .8rem !important; right: .8rem !important; width: 2.75rem !important; height: 2.75rem !important; border-radius: 50%; background: #fff !important; }
 @media (max-width:700px) { .team-member-modal-content { grid-template-columns: 1fr !important; grid-template-rows: auto !important; max-height: calc(100svh - 1rem) !important; padding: 1rem !important; } .team-member-modal-image { grid-column: 1 !important; grid-row: auto !important; width: min(13rem,62vw) !important; max-height: 16rem !important; margin: 0 auto .25rem !important; } .team-member-modal-title, .team-member-modal-role, .team-member-modal-content > p:not(.team-member-modal-role), .team-member-modal-message { grid-column: 1 !important; } .team-member-modal-title { margin: .2rem 3rem 0 0 !important; font-size: clamp(1.5rem,8vw,2.1rem) !important; } }
 
+.development-team-section .team-member-card[data-member="tapa"] > img {
+    object-position: center 12% !important;
+}
+
 /* Restored portrait gallery presentation; researcher data and modal behavior remain unchanged. */
 .development-team-section .team-member-card {
     display: block !important;
