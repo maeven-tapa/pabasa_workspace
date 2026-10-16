@@ -81,6 +81,54 @@ class PrescribedStreamingTests(SimpleTestCase):
             with patch.object(views, '_student_can_open_prescribed_activity', return_value=True):
                 self.assertTrue(crla_stream.authorize_prescribed(request, self.key))
 
+    @override_settings(GOOGLE_STT_MODEL='chirp_3')
+    def test_lesson_7_gawain_1_legacy_key_receives_stream_ticket(self):
+        user = SimpleNamespace(is_archived=False, account_status='active', role='admin')
+        with patch.object(views, '_current_user', return_value=user):
+            self.key = 'lesson7-gawain1'
+            rejected = crla_stream.prescribed_stream_ticket(self.start(language='Filipino'))
+            self.assertEqual(rejected.status_code, 403)
+            self.assertEqual(json.loads(rejected.content)['error'], 'This prescribed activity is unavailable.')
+            self.key = 'lesson-7-gawain-1'
+            response = crla_stream.prescribed_stream_ticket(self.start(language='Filipino'))
+        self.assertEqual(response.status_code, 200)
+        ticket = json.loads(response.content)['ticket']
+        payload = signing.loads(ticket, salt=crla_stream.TICKET_SALT)
+        self.assertEqual(payload['activity_key'], self.key)
+
+    def test_lesson_7_ilang_ilang_hyphen_is_scored_without_changing_raw_transcript(self):
+        cases = [
+            ('lesson-7-gawain-1', 'ilang-ilang', True),
+            ('lesson-7-gawain-1', 'ilang ilang', True),
+            ('lesson-7-gawain-1', 'ilaw', False),
+            ('lesson-13-gawain-3', 'ilang-ilang', False),
+        ]
+        for activity_key, heard, expected_complete in cases:
+            with self.subTest(activity_key=activity_key, heard=heard), \
+                    patch.object(views, '_enforce_student_access_for_request', return_value=None), \
+                    patch.object(views, 'transcribe_audio_bytes_with_model', return_value=(heard, 'chirp_3', '')):
+                request = self.clip(heard, target_text='Ilang Ilang', mode='reading',
+                                    prescribed_activity_key=activity_key)
+                request.POST = request.POST.copy()
+                request.POST.pop('prescribed_stream_token')
+                response = views.reading_transcribe_api(request)
+            result = json.loads(response.content)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(result['complete'], expected_complete)
+            self.assertEqual(result['raw_transcript'], heard)
+        with patch.object(crla_stream, 'authorize_prescribed', return_value={}), \
+                patch.object(views, '_enforce_student_access_for_request', return_value=None), \
+                patch.object(views, 'transcribe_audio_bytes_with_model') as provider:
+            request = self.clip('ilang-ilang',
+                                payload={**self.payload, 'activity_key': 'lesson-7-gawain-1'},
+                                prescribed_stream_activity='lesson-7-gawain-1',
+                                prescribed_activity_key='lesson-7-gawain-1',
+                                target_text='Ilang Ilang', mode='reading')
+            streamed = views.reading_transcribe_api(request)
+        self.assertEqual(streamed.status_code, 200)
+        self.assertTrue(json.loads(streamed.content)['complete'])
+        provider.assert_not_called()
+
     def test_signed_utterances_share_clip_verdicts_for_aliases_sentences_and_exact_rhymes(self):
         cases = [
             ('bata', 'bata', {'mode': 'reading'}),

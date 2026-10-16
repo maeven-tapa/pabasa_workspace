@@ -25455,6 +25455,18 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
             and ReadingMatcher.normalize_spoken_words(transcript) == ['medias']
         ):
             matching_transcript = 'medyas'
+        # The Lesson 7 label uses a space, while STT can spell the same
+        # repeated word with a hyphen. Match its displayed two-word target
+        # without changing the provider transcript returned to the client.
+        if (
+            request.POST.get('prescribed_activity_key') == 'lesson-7-gawain-1'
+            and not rejected_language
+            and language_code.lower() == 'fil-ph'
+            and mode == 'reading'
+            and target_text.strip().casefold() == 'ilang ilang'
+            and str(transcript or '').strip().casefold() == 'ilang-ilang'
+        ):
+            matching_transcript = target_text
         # Session 5 Lesson 14 Gawain 4 accepts Google's Ana/Anna variant only
         # for the displayed phrase "salamin ni Ana". Keep the raw transcript.
         if (

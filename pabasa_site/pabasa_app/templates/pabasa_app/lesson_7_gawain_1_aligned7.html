@@ -128,8 +128,8 @@ window.record=async function(){
   busy=true;
   listen.disabled=true;
   try{
-    const result=await window.Basahin.read({target_text:item.word,language:'Filipino',mode:'reading',prescribed_activity_key:'lesson7-gawain1'},{button:read});
-    if(result.success&&result.complete===true){phase='classify';render();return}
+    const result=await window.Basahin.read({target_text:item.word,language:'Filipino',mode:'reading',prescribed_activity_key:'lesson-7-gawain-1'},{button:read});
+    if(result.success&&result.complete===true){window.lesson7ShowReadingSuccess();return}
     tries++;
     document.getElementById('status').textContent='Subukan muli. ('+tries+'/3)';
     if(tries>=3){pakingganUnlocked=true;listen.hidden=false;tries=0}

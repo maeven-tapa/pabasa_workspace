@@ -1,25 +1,3 @@
-(() => {
-  if (window.__lesson7RecognitionFeedbackFetch) return;
-  window.__lesson7RecognitionFeedbackFetch = true;
-  const nativeFetch = window.fetch.bind(window);
-  window.fetch = (input, init) => {
-    const request = nativeFetch(input, init);
-    if (!String(input).includes('/api/reading/transcribe/')) return request;
-    return request.then(response => {
-      const nativeJson = response.json.bind(response);
-      response.json = async () => {
-        const data = await nativeJson();
-        const target = document.querySelector('#app .item.active')?.getAttribute('aria-label') || '';
-        const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
-        const correct = data?.success && normalize(data.transcript).includes(normalize(target));
-        window.__lesson7RecognitionFeedback = correct ? 'correct' : 'wrong';
-        return data;
-      };
-      return response;
-    });
-  };
-})();
-
 document.addEventListener('DOMContentLoaded', function () {
   const app = document.getElementById('app');
   if (!app) return;
@@ -38,12 +16,24 @@ document.addEventListener('DOMContentLoaded', function () {
   let narratedStatus = null;
   let feedbackNarrating = false;
   let statusNarrating = false;
+  let statusNarrationToken = 0;
+  let statusAudio = null;
+  let finishStatusAudio = null;
   let choicesLockedForNarration = false;
   let transitionToken = 0;
   let feedbackToken = 0;
   const controls = () => [app.querySelector('#read'), app.querySelector('#aloud'), ...app.querySelectorAll('.choice')].filter(Boolean);
   const lockControls = disabled => controls().forEach(button => { button.disabled = disabled; });
   const csrf = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || '';
+
+  const stopStatusNarration = () => {
+    statusNarrationToken += 1;
+    if (statusAudio) statusAudio.pause();
+    finishStatusAudio?.();
+    statusAudio = null;
+    finishStatusAudio = null;
+    statusNarrating = false;
+  };
 
   const narrateFeedback = text => {
     const requestToken = ++feedbackToken;
@@ -87,9 +77,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const showFeedback = (status, text) => {
     const feedbackKey = `${text}\u0000${status?.textContent.trim() || ''}`;
-    if (!status || status.dataset.feedbackNarrating === feedbackKey || status.dataset.feedbackNarrated === feedbackKey) return;
+    if (!status || feedbackNarrating || status.dataset.feedbackNarrated === feedbackKey) return;
     status.dataset.feedbackNarrating = feedbackKey;
     feedbackNarrating = true;
+    stopStatusNarration();
     setFeedbackDisabled(true);
     narrateFeedback(text).finally(() => {
       if (status.isConnected && status.dataset.feedbackNarrating === feedbackKey) {
@@ -105,6 +96,12 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!statusNarrating) lockControls(false);
       sync();
     });
+  };
+
+  window.lesson7ShowReadingSuccess = () => {
+    if (typeof phase !== 'undefined' && phase === 'read') {
+      showFeedback(app.querySelector('#status'), 'Magaling!');
+    }
   };
 
   const playWordAudio = async listen => {
@@ -204,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   window.addEventListener('basahin:state', event => {
     const read = app.querySelector('#read');
-    if (read) read.disabled = false;
+    if (read) read.disabled = feedbackNarrating || statusNarrating;
   });
 
   const narrateStatus = () => {
@@ -223,6 +220,7 @@ document.addEventListener('DOMContentLoaded', function () {
     syncReadControls();
     lockControls(true);
     statusNarrating = true;
+    const narrationToken = ++statusNarrationToken;
 
     fetch('/api/reading/read-aloud/', {
       method: 'POST',
@@ -240,17 +238,25 @@ document.addEventListener('DOMContentLoaded', function () {
     })
       .then(response => response.ok ? response.json() : null)
       .then(result => new Promise(resolve => {
-        if (!result?.success || !result.audio_content) {
+        if (narrationToken !== statusNarrationToken || !result?.success || !result.audio_content) {
           resolve();
           return;
         }
         const audio = new Audio(`data:${result.mime_type || 'audio/mpeg'};base64,${result.audio_content}`);
-        audio.onended = resolve;
-        audio.onerror = resolve;
-        audio.play().catch(resolve);
+        const finish = () => {
+          if (statusAudio === audio) statusAudio = null;
+          if (finishStatusAudio === finish) finishStatusAudio = null;
+          resolve();
+        };
+        statusAudio = audio;
+        finishStatusAudio = finish;
+        audio.onended = finish;
+        audio.onerror = finish;
+        audio.play().catch(finish);
       }))
       .catch(error => console.error('Lesson 7 Gawain 1 status narration failed', error))
       .finally(() => {
+        if (narrationToken !== statusNarrationToken) return;
         statusNarrating = false;
         if (!feedbackNarrating) lockControls(false);
       });
@@ -277,16 +283,14 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       const statusText = status.textContent.trim();
       if (/^Subukan muli\.!?(?: \(\d+\/3\))?$/i.test(statusText)) {
+        // The retry restores the visible question, but it is not a new question step.
+        narratedStatus = status;
         status.textContent = app.querySelector('.choices')
           ? 'Nagsisimula ba ang larawan sa tunog I?'
           : 'Ano ang nasa larawan?';
         delete status.dataset.feedbackNarrated;
         delete status.dataset.feedbackNarrating;
         showFeedback(status, 'Subukan muli!', '');
-      } else if (window.__lesson7RecognitionFeedback === 'correct' && statusText !== 'Magaling!') {
-        window.__lesson7RecognitionFeedback = null;
-        lockControls(true);
-        showFeedback(status, 'Magaling!');
       }
     }
     narrateStatus();
