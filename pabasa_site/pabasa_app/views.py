@@ -25444,6 +25444,17 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
                 code.lower().startswith('ko') for code in recognition_metadata.get('response_language_codes', []))
             if rejected_language:
                 matching_transcript, syllable_context = '', ''
+        # Chirp 3 sometimes spells the Lesson 4 word phonetically as "medias".
+        # Keep the provider result in raw_transcript while scoring "medyas".
+        if (
+            request.POST.get('prescribed_activity_key') == 'session-2-lesson-4-gawain-2'
+            and model_used == 'chirp_3'
+            and language_code.lower() == 'fil-ph'
+            and mode == 'reading'
+            and ReadingMatcher.normalize_word(target_text) == 'medyas'
+            and ReadingMatcher.normalize_spoken_words(transcript) == ['medias']
+        ):
+            matching_transcript = 'medyas'
         # Session 5 Lesson 14 Gawain 4 accepts Google's Ana/Anna variant only
         # for the displayed phrase "salamin ni Ana". Keep the raw transcript.
         if (

@@ -9,7 +9,7 @@ from .views import reading_transcribe_api
 
 @override_settings(GOOGLE_STT_API_KEY='test-key')
 class BasahinReadingVerdictTests(SimpleTestCase):
-    def transcribe(self, target, heard, **fields):
+    def transcribe(self, target, heard, *, model_used='stt_v1', **fields):
         request = RequestFactory().post('/api/reading/transcribe/', {
             'audio': SimpleUploadedFile('reading.webm', b'audio', content_type='audio/webm'),
             'target_text': target, 'language': 'Filipino', 'mode': 'reading', **fields,
@@ -18,7 +18,7 @@ class BasahinReadingVerdictTests(SimpleTestCase):
         with (
             patch('pabasa_app.views._check_auth', return_value=True),
             patch('pabasa_app.views._enforce_student_access_for_request', return_value=None),
-            patch('pabasa_app.views.transcribe_audio_bytes_with_model', return_value=(heard, 'stt_v1', '')),
+            patch('pabasa_app.views.transcribe_audio_bytes_with_model', return_value=(heard, model_used, '')),
         ):
             response = reading_transcribe_api(request)
         self.assertEqual(response.status_code, 200)
@@ -118,6 +118,34 @@ class BasahinReadingVerdictTests(SimpleTestCase):
         )
         self.assertEqual(unchanged['processed_transcript'], 'manga')
         self.assertEqual(unchanged['raw_transcript'], 'manga')
+
+    def test_lesson4_medyas_chirp_spelling_counts_the_syllable(self):
+        for heard in ('medias', 'Medias.'):
+            with self.subTest(heard=heard):
+                result = self.transcribe(
+                    'medyas', heard, model_used='chirp_3',
+                    prescribed_activity_key='session-2-lesson-4-gawain-2',
+                )
+                self.assertTrue(result['complete'])
+                self.assertEqual(result['transcript'], 'medyas')
+                self.assertEqual(result['processed_transcript'], 'medyas')
+                self.assertEqual(result['raw_transcript'], heard)
+                self.assertEqual(result['matched'], 1)
+                self.assertEqual(result['current_syllable_index'], 1)
+                self.assertEqual(result['progress'], 100.0)
+
+    def test_lesson4_medyas_spelling_is_scoped_to_chirp_and_activity(self):
+        key = 'session-2-lesson-4-gawain-2'
+        for fields in ({}, {'prescribed_activity_key': 'another-activity'}):
+            with self.subTest(fields=fields):
+                self.assertFalse(self.transcribe('medyas', 'medias', model_used='chirp_3', **fields)['complete'])
+        self.assertFalse(self.transcribe('medyas', 'medias', prescribed_activity_key=key)['complete'])
+        self.assertFalse(self.transcribe('medyas', 'medias sa bata', model_used='chirp_3',
+                                         prescribed_activity_key=key)['complete'])
+        self.assertFalse(self.transcribe('saya', 'medias', model_used='chirp_3',
+                                         prescribed_activity_key=key)['complete'])
+        self.assertTrue(self.transcribe('medyas', 'medyas', model_used='chirp_3',
+                                        prescribed_activity_key=key)['complete'])
 
     def test_empty_speech_is_not_correct(self):
         self.assertFalse(self.transcribe('bata', '')['complete'])
