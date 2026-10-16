@@ -160,32 +160,11 @@ from .clap_count_word_bank import score_displayed_words, word_bank_catalog, vali
 from .sound_detective import catalog as sound_detective_catalog, validate_configuration as validate_sound_detective
 from .prescribed_activity_catalog import (
     PRESCRIBED_ACTIVITIES,
+    LEGACY_SESSION_PROGRESS_ACTIVITIES,
+    LEGACY_SESSION_PROGRESS_ALIASES,
     active_prescribed_activities,
     prescribed_activity,
 )
-
-# These activities use the original standalone activity flow. Keep this map
-# separate from PRESCRIBED_ACTIVITIES so the dashboard can include their
-# already-saved progress without changing prescribed-activity routing or
-# navigation.
-LEGACY_SESSION_PROGRESS_ACTIVITIES = (
-    {'activity_key': 'lesson-1-gawain-1', 'session_number': 1},
-    {'activity_key': 'lesson-2-gawain-1', 'session_number': 1},
-    {'activity_key': 'lesson-3-gawain-1', 'session_number': 1},
-    {'activity_key': 'lesson-3-gawain-2', 'session_number': 1},
-    {'activity_key': 'lesson-4-gawain-1', 'session_number': 2},
-    {'activity_key': 'lesson-5-gawain-1', 'session_number': 2},
-    {'activity_key': 'lesson-6-gawain-1', 'session_number': 2},
-    {'activity_key': 'lesson-7-gawain-1', 'session_number': 3},
-)
-
-# The Session 2 Gawain 2 activity was later moved into the prescribed catalog
-# under a canonical key. Keep the old progress key readable without counting
-# the same activity twice in the dashboard.
-LEGACY_SESSION_PROGRESS_ALIASES = {
-    'session-2-lesson-4-gawain-2': 'lesson-4-gawain-2',
-}
-
 
 def _prescribed_activity_order():
     legacy_keys = [item['activity_key'] for item in LEGACY_SESSION_PROGRESS_ACTIVITIES]
@@ -5881,65 +5860,14 @@ def _dashboard_context(request, nav_role=None, extra=None):
                 'name': cls.class_name,
                 'student_count': _section_student_count(cls),
             })
-        # Build a dashboard-only compatibility view. Catalog entries remain
-        # authoritative when a key is ever present in both collections.
-        activity_by_key = {
-            item.get('activity_key'): item
-            for item in PRESCRIBED_ACTIVITIES.values()
-            if item.get('activity_key')
-        }
-        for legacy_activity in LEGACY_SESSION_PROGRESS_ACTIVITIES:
-            activity_by_key.setdefault(legacy_activity['activity_key'], legacy_activity)
-        activity_values = list(activity_by_key.values())
-        legacy_activity_keys = {item['activity_key'] for item in LEGACY_SESSION_PROGRESS_ACTIVITIES}
-        activity_keys = [item.get('activity_key') for item in activity_values if item.get('activity_key')]
-        progress_lookup_keys = set(activity_keys) | set(LEGACY_SESSION_PROGRESS_ALIASES.values())
-        activity_rows = {
-            row.activity_key: row
-            for row in StudentActivityProgress.objects.filter(
-                student=student_user,
-                activity_key__in=progress_lookup_keys,
-            )
-        }
-        for session_number in range(1, 16):
-            session_activities = [
-                item for item in activity_values
-                if int(item.get('session_number') or 0) == session_number
-            ]
-            total = len(session_activities)
-            completed = 0
-            for activity in session_activities:
-                activity_key = activity.get('activity_key')
-                row = activity_rows.get(activity_key)
-                if row is None:
-                    row = activity_rows.get(LEGACY_SESSION_PROGRESS_ALIASES.get(activity_key))
-                is_legacy = activity_key in legacy_activity_keys
-                if is_legacy:
-                    # Legacy activities persist their authoritative item count
-                    # with each student's progress row. Lesson 1 is teacher-
-                    # checked, so submission alone must not mark it complete.
-                    item_total = max(1, int(row.total_items or 1)) if row else 1
-                    is_complete = bool(row and (
-                        row.activity_completed
-                        or (activity_key != 'lesson-1-gawain-1'
-                            and int(row.completed_items or 0) >= item_total)
-                    ))
-                else:
-                    item_total = max(1, int(activity.get('total_items') or len(activity.get('items') or []) or 1))
-                    is_complete = bool(row and (
-                        row.activity_completed or int(row.completed_items or 0) >= item_total
-                    ))
-                if is_complete:
-                    completed += 1
-            student_session_progress.append({
-                'session': session_number,
-                'total': total,
-                'completed': completed,
-                'percent': round((completed / total) * 100) if total else 0,
-            })
+        from .achievements import prescribed_summary
+        lifecycle = _current_learning_context(student_user)
+        student_session_progress = prescribed_summary(
+            student_user, lifecycle.get('school_calendar'), lifecycle.get('term'),
+        )['sessions']
         # Do not expose historical/session summaries as current intervention
         # work before this term's CRLA has unlocked ARAL participation.
-        if _current_learning_context(student_user).get('state') != 'ARAL_ACTIVE':
+        if lifecycle.get('state') != 'ARAL_ACTIVE':
             student_session_progress = []
         perf_log('joined_classes_built', 'joined_classes_start', {
             'joined_classes_count': len(joined_classes),
@@ -6366,6 +6294,10 @@ def dashboard(request):
     )
     try:
         print("DASHBOARD_BEFORE_RENDER")
+        from .achievements import refresh_student_achievements
+        context['student_achievements'] = refresh_student_achievements(
+            dashboard_user, _current_learning_context(dashboard_user),
+        )
         response = render(request, 'pabasa_app/dashboard.html', context)
         print("DASHBOARD_AFTER_RENDER")
         logger.warning(
@@ -26294,10 +26226,13 @@ def _record_material_practice_completion(material, student_user, attempt_payload
         existing_stars = 0
     game_mode = str(content_json.get('mode') or attempt_payload.get('game_mode') or '').strip().lower()
     saved_stars = max(existing_stars, incoming_stars) if game_mode in {'color', 'hunt'} else incoming_stars
+    completed_at = attempt_payload.get('completed_at') or system_now()
+    if isinstance(completed_at, datetime):
+        completed_at = completed_at.isoformat()
     completion = {
         'student_id': student_user.id,
         'status': 'completed',
-        'completed_at': attempt_payload.get('completed_at') or system_now().isoformat(),
+        'completed_at': completed_at,
         'stars_earned': saved_stars,
         'items_completed': attempt_payload.get('items_completed', 0),
         'total_practice_items': attempt_payload.get('total_practice_items', 0),
@@ -26316,6 +26251,9 @@ def _record_material_practice_completion(material, student_user, attempt_payload
     content_json['student_completions'] = completions
     material.content_json = content_json
     material.save(update_fields=['content_json', 'updated_at'])
+    from .achievements import record_learning_dates, refresh_student_achievements, _local_date
+    record_learning_dates(student_user.pk, {_local_date(system_now())})
+    refresh_student_achievements(student_user)
     return completion
 
 
@@ -31162,16 +31100,10 @@ STUDENT_THEME_CATALOG = {
 def _student_theme_lifetime_stars(student_user):
     if not student_user:
         return 0
-    progression_total = sum(
-        max(0, int(_practice_game_progression(mode, student_user)['summary'].get('stars_earned') or 0))
-        for mode in ['free', 'color', 'hunt']
-    )
-    preference = student_user.preference if isinstance(student_user.preference, dict) else {}
-    stored_total = max(0, int(preference.get('total_stars_earned', 0) or 0))
-    # Hunt awards are deposited immediately and therefore may be newer than
-    # the per-material progression snapshot shown on the Practice page.
-    credited_total = max(0, int(student_user.theme_stars_credited or 0))
-    return max(progression_total, stored_total, credited_total)
+    # Share the achievement calculation, including Filipino progression and
+    # already credited/spent stars, rather than defaulting to English here.
+    from .achievements import practice_summary
+    return practice_summary(student_user)[0]
 
 
 def _sync_student_theme_wallet(student_user):
@@ -31726,6 +31658,10 @@ def profile(request):
             max(0, int(summary.get('completed_levels') or 0))
             for summary in progression_summaries.values()
         )
+        from .achievements import refresh_student_achievements
+        earned_badges = {
+            badge['id'] for badge in refresh_student_achievements(user)['badges'] if badge['unlocked']
+        }
         profile_context.update({
             'achievement_total_stars': _student_theme_lifetime_stars(user),
             'achievement_completed_sets': completed_sets,
@@ -31733,7 +31669,7 @@ def profile(request):
             'achievement_completed_levels': completed_levels,
             'achievement_progress_percent': round((completed_sets / total_sets) * 100) if total_sets else 0,
             'achievement_first_challenge': completed_sets >= 1,
-            'achievement_star_collector': _student_theme_lifetime_stars(user) >= 25,
+            'achievement_star_collector': 'star-collector' in earned_badges,
             'achievement_word_master': completed_levels >= 5,
             'achievement_practice_streak': completed_sets >= 10,
             'pabasa_reading_level': pabasa_reading_level,

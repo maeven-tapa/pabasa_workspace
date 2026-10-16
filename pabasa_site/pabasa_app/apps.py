@@ -7,8 +7,11 @@ logger = logging.getLogger(__name__)
 
 class PabasaAppConfig(AppConfig):
     name = 'pabasa_app'
+    # Match the existing schema rather than Django 6's new implicit default.
+    default_auto_field = 'django.db.models.AutoField'
 
     def ready(self):
+        from . import achievement_signals  # noqa: F401
         try:
             from .management.commands.seed_official_crla_assessments import validate_official_crla_payloads
             warnings = validate_official_crla_payloads()

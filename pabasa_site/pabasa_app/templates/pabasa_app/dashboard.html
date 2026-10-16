@@ -2000,12 +2000,12 @@
         padding: 0.45rem 0.25rem;
     }
 
-    .achievement-badge.unlocked:nth-child(1) { background: linear-gradient(145deg, #ffd9a8, #e99a50); }
-    .achievement-badge.unlocked:nth-child(2) { background: linear-gradient(145deg, #f6b0c4, #d66d8d); }
-    .achievement-badge.unlocked:nth-child(3) { background: linear-gradient(145deg, #a7d9f4, #4b9ccc); }
-    .achievement-badge.unlocked:nth-child(4) { background: linear-gradient(145deg, #a9dfc0, #51a87a); }
-    .achievement-badge.unlocked:nth-child(5) { background: linear-gradient(145deg, #c8b4eb, #8565bd); }
-    .achievement-badge.unlocked:nth-child(6) { background: linear-gradient(145deg, #ffd79d, #d98b47); }
+    .achievement-badge.unlocked:nth-child(6n + 1) { background: linear-gradient(145deg, #ffd9a8, #e99a50); }
+    .achievement-badge.unlocked:nth-child(6n + 2) { background: linear-gradient(145deg, #f6b0c4, #d66d8d); }
+    .achievement-badge.unlocked:nth-child(6n + 3) { background: linear-gradient(145deg, #a7d9f4, #4b9ccc); }
+    .achievement-badge.unlocked:nth-child(6n + 4) { background: linear-gradient(145deg, #a9dfc0, #51a87a); }
+    .achievement-badge.unlocked:nth-child(6n + 5) { background: linear-gradient(145deg, #c8b4eb, #8565bd); }
+    .achievement-badge.unlocked:nth-child(6n + 6) { background: linear-gradient(145deg, #ffd79d, #d98b47); }
 
     .achievement-badge.locked {
         background: #e2e8f0;
@@ -2766,11 +2766,49 @@
     .class-card-summary h3 { overflow-wrap: anywhere; }
     .class-card-summary .reading-level-badge { white-space: normal; overflow-wrap: normal; word-break: normal; }
 
-    /* Six badges stay balanced in two complete rows after the sidebar and
+    /* Six badges per page retain the original two-row card after the sidebar and
        display scaling apply. */
     .student-dashboard .achievements-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
+    .student-dashboard .achievement-lock { top: .3rem; bottom: auto; }
+    .student-dashboard .achievement-badge:focus-visible { outline: 3px solid #0876d1; outline-offset: 2px; }
+    .student-dashboard .achievement-badge[hidden] { display: none !important; }
+    .student-dashboard button.achievement-badge { width: 100%; min-width: 0; font-family: inherit; cursor: pointer; }
+    .my-achievements { container: achievement-card / inline-size; }
+    .achievement-header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; min-width: 0; }
+    .achievement-header .section-title { margin: 0; min-width: 0; }
+    .achievement-pagination { display: flex; align-items: center; gap: .25rem; flex-shrink: 0; color: #476077; }
+    .achievement-pagination[hidden] { display: none; }
+    .achievement-pagination button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 1px solid #a3b3c54d; border-radius: 8px; background: #ffffffb3; color: #254b68; font: inherit; cursor: pointer; }
+    .achievement-pagination button:hover:not(:disabled) { background: #fff; border-color: #0876d1; }
+    .achievement-pagination button:focus-visible { outline: 2px solid #0876d1; outline-offset: 2px; }
+    .achievement-pagination button:disabled { opacity: .4; cursor: default; }
+    .achievement-pagination span { min-width: 29px; text-align: center; font: 800 .72rem/1 "Nunito", sans-serif; }
+    body.dark-theme .achievement-pagination { color: #dbeafe; }
+    body.dark-theme .achievement-pagination button { background: #334155; color: #e2e8f0; border-color: #64748b; }
+    @container achievement-card (max-width: 300px) {
+        .achievement-header .section-title { font-size: .9rem; white-space: nowrap; }
+        .achievement-pagination button { width: 24px; height: 24px; }
+    }
+    .achievement-details-modal .modal-dialog { max-width: 420px; }
+    .achievement-details-modal .modal-content { border: 1px solid #dbe6ef; border-radius: 22px; background: #fff; color: #173d59; box-shadow: 0 20px 60px #14365330; }
+    .achievement-details-modal .modal-header { gap: 1rem; padding: 1.1rem 1.25rem; border-color: #e6edf3; }
+    .achievement-details-modal .modal-title { font-size: 1.2rem; font-weight: 900; }
+    .achievement-details-modal .modal-body { padding: 1.25rem; text-align: center; }
+    .achievement-details-icon { display: grid; place-items: center; width: 76px; height: 76px; margin: 0 auto .8rem; border-radius: 22px; background: #e5f4ff; color: #0876d1; font-size: 2.2rem; }
+    .achievement-details-state { display: inline-block; margin: 0 0 1rem; padding: .3rem .8rem; border-radius: 999px; background: #edf2f7; color: #52657b; font-size: .85rem; font-weight: 900; }
+    .achievement-details-modal.is-earned .achievement-details-icon { background: #fff1c6; color: #a7690c; }
+    .achievement-details-modal.is-earned .achievement-details-state { background: #dff5e9; color: #24704b; }
+    .achievement-details-modal h3 { font-size: 1rem; font-weight: 900; }
+    .achievement-details-requirement { margin: .6rem 0; line-height: 1.6; font-weight: 800; }
+    .achievement-details-message { margin: .8rem 0 0; color: #61758a; font-size: .9rem; }
+    .achievement-details-modal .modal-footer { justify-content: center; padding: 0 1.25rem 1.25rem; border: 0; }
+    .achievement-details-modal .modal-footer button { min-width: 120px; border-radius: 999px; font-weight: 900; }
+    body.dark-theme .achievement-details-modal .modal-content { background: #1e293b; border-color: #475569; color: #f1f5f9; }
+    body.dark-theme .achievement-details-modal .modal-header { border-color: #475569; }
+    body.dark-theme .achievement-details-message { color: #cbd5e1; }
+    body.dark-theme .achievement-details-modal .btn-close { filter: invert(1) grayscale(1) brightness(2); }
 
     .my-reading-journey[data-reading-journey] { grid-template-rows: max-content max-content max-content max-content; gap: .7rem; }
     @media (min-width: 1200px) {
@@ -3100,17 +3138,57 @@
 
             <!-- My Achievements -->
             <div class="my-achievements" data-achievements>
-                <h3 class="section-title">
-                    <span>My Achievements</span>
-                </h3>
-                <div class="achievements-grid" data-achievements-grid></div>
+                <div class="achievement-header">
+                    <h3 class="section-title"><span>My Achievements</span></h3>
+                    <nav class="achievement-pagination" aria-label="Achievement pages" data-achievement-pagination>
+                        <button type="button" data-achievement-prev aria-label="Previous achievement page" aria-controls="student-achievements-grid" disabled><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+                        <span data-achievement-page aria-live="polite" aria-atomic="true" aria-label="Page 1 of 2">1 / 2</span>
+                        <button type="button" data-achievement-next aria-label="Next achievement page" aria-controls="student-achievements-grid"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+                    </nav>
+                </div>
+                <div class="achievements-grid" id="student-achievements-grid" data-achievements-grid>
+                    {% for badge in student_achievements.badges %}
+                    <button type="button" class="achievement-badge {% if badge.unlocked %}unlocked{% else %}locked{% endif %}"
+                         data-achievement-id="{{ badge.id }}" tabindex="0"{% if forloop.counter > 6 %} hidden{% endif %}
+                         title="{{ badge.description }}"
+                         aria-haspopup="dialog" aria-controls="achievementDetailsModal"
+                         aria-label="{{ badge.name }}: {{ badge.description }} {% if badge.unlocked %}Earned{% else %}Locked{% endif %}">
+                        <span class="achievement-icon"><i class="bi bi-{{ badge.icon }}" aria-hidden="true"></i></span>
+                        <span class="achievement-name">{{ badge.name }}</span>
+                        <span class="achievement-lock" aria-hidden="true"><i class="bi bi-lock-fill"></i></span>
+                    </button>
+                    {% endfor %}
+                </div>
             </div>
         </div>
     </div>
 </section>
 
-{{ student_session_progress|default:"[]"|json_script:"student-session-progress" }}
+<div class="modal fade achievement-details-modal" id="achievementDetailsModal" tabindex="-1"
+     aria-labelledby="achievementDetailsTitle" aria-describedby="achievementDetailsRequirement achievementDetailsMessage" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="achievementDetailsTitle">Achievement</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close achievement details"></button>
+            </div>
+            <div class="modal-body">
+                <div class="achievement-details-icon" data-achievement-details-icon aria-hidden="true"></div>
+                <p class="achievement-details-state" data-achievement-details-state></p>
+                <h3>How to earn it</h3>
+                <p class="achievement-details-requirement" id="achievementDetailsRequirement"></p>
+                <p class="achievement-details-message" id="achievementDetailsMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ student_session_progress|json_script:"student-session-progress" }}
 {{ student_current_prescribed_activity|json_script:"student-current-prescribed-activity" }}
+<script src="{% static 'pabasa_app/js/student_achievements.js' %}?v=details-20261017-1" defer></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const dataNode = document.getElementById('student-session-progress');
@@ -3129,6 +3207,7 @@
         if (!dataNode || !pointsGroup || !fillPath) return;
         let sessions = [];
         try { sessions = JSON.parse(dataNode.textContent || '[]') || []; } catch (_) { sessions = []; }
+        if (!Array.isArray(sessions)) sessions = [];
         const coordinates = [
             [100, 45], [300, 45], [500, 45], [700, 45], [900, 45],
             [900, 162], [700, 162], [500, 162], [300, 162], [100, 162],
@@ -3895,204 +3974,10 @@
             window.alert("This code does not match any class created by a teacher.");
         };
 
-        // Define achievements
-        const ACHIEVEMENTS = [
-            {
-                id: 'first-steps',
-                name: 'First Steps',
-                description: 'Complete your first assessment',
-                icon: '<i class="bi bi-tree-fill" aria-hidden="true"></i>'
-            },
-            {
-                id: 'book-explorer',
-                name: 'Book Explorer',
-                description: 'Complete all 3 assessments',
-                icon: '<i class="bi bi-book-fill" aria-hidden="true"></i>'
-            },
-            {
-                id: 'reading-streak',
-                name: 'Reading Streak',
-                description: 'Read for 7 consecutive days',
-                icon: '<i class="bi bi-lightning-charge-fill" aria-hidden="true"></i>'
-            },
-            {
-                id: 'rising-reader',
-                name: 'Rising Reader',
-                description: 'Reach 50% reading progress',
-                icon: '<i class="bi bi-star-fill" aria-hidden="true"></i>'
-            },
-            {
-                id: 'practice-star',
-                name: 'Practice Star',
-                description: 'Complete every level in Free Mode, Color Mode, and Hunt Mode',
-                icon: '<i class="bi bi-award-fill" aria-hidden="true"></i>'
-            },
-            {
-                id: 'reading-champion',
-                name: 'Reading Champion',
-                description: 'Complete 100% of the course',
-                icon: '<i class="bi bi-trophy-fill" aria-hidden="true"></i>'
-            }
-        ];
-
-        // Calculate reading progress and determine unlocked achievements
-        const calculateProgress = () => {
-            try {
-                const readings = JSON.parse(localStorage.getItem("pabasa_section_readings") || "{}");
-                const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
-                
-                let totalAssessments = 0;
-                let completedAssessments = 0;
-                let readingDays = 0;
-                const practiceProgressStorageKey = "pabasa_practice_progress_v1";
-
-                // Calculate assessment totals across all classes only
-                Object.keys(readings).forEach(classCode => {
-                    const classReadings = readings[classCode];
-                    if (!classReadings) return;
-
-                    ['word', 'sentence', 'paragraph', 'story', 'words', 'sentences', 'paragraphs', 'stories'].forEach(type => {
-                        (classReadings[type] || []).forEach(material => {
-                            if (!material) return;
-
-                            let isLive = !material.status || material.status === 'published';
-                            if (material.status === 'scheduled' && material.schedule) {
-                                isLive = new Date(material.schedule).getTime() <= window.pabasaServerNow();
-                            }
-                            if (!isLive) return;
-
-                            const mType = (material.type || "").toLowerCase();
-                            if (mType !== 'assessment' && mType !== 'both') return;
-
-                            totalAssessments++;
-                            const mId = (material.id !== undefined && material.id !== null) ? String(material.id).trim() : null;
-                            if (mId && seenIds.includes(mId)) {
-                                completedAssessments++;
-                            }
-                        });
-                    });
-                });
-
-                // Calculate assessment progress percentage
-                const readingPercent = totalAssessments > 0 ? Math.round((completedAssessments / totalAssessments) * 100) : 0;
-                
-                // Estimate reading days from completed assessments (assessment-based pace)
-                readingDays = completedAssessments > 0 ? Math.min(Math.ceil(completedAssessments / 2), 30) : 0;
-
-                // Determine unlocked achievements
-                const unlockedAchievements = new Set();
-                
-                if (completedAssessments >= 1) {
-                    unlockedAchievements.add('first-steps');
-                }
-                
-                if (completedAssessments >= 3) {
-                    unlockedAchievements.add('book-explorer');
-                }
-                
-                if (readingDays >= 7) {
-                    unlockedAchievements.add('reading-streak');
-                }
-                
-                if (readingPercent >= 50) {
-                    unlockedAchievements.add('rising-reader');
-                }
-                
-                if (readingPercent >= 100) {
-                    unlockedAchievements.add('reading-champion');
-                }
-
-                try {
-                    const practiceProgress = JSON.parse(localStorage.getItem(practiceProgressStorageKey) || "{}");
-                    const allPracticeModes = ["free", "color", "hunt"];
-                    const allPracticeDifficulties = ["easy", "medium", "hard"];
-                    const allPracticeLevels = ["level_1", "level_2", "level_3", "level_4", "level_5"];
-                    const hasCompletedFullPracticeMode = allPracticeModes.every(mode =>
-                        allPracticeDifficulties.every(difficulty =>
-                            allPracticeLevels.every(level => {
-                                const entry = practiceProgress?.[mode]?.[difficulty]?.[level];
-                                return Boolean(entry?.completed);
-                            })
-                        )
-                    );
-
-                    if (hasCompletedFullPracticeMode) {
-                        unlockedAchievements.add('practice-star');
-                    }
-                } catch (error) {
-                    console.error('Error reading practice progress for achievements:', error);
-                }
-
-                return {
-                    readingPercent,
-                    assessmentCount: completedAssessments,
-                    readingDays,
-                    unlockedAchievements,
-                    completedAssessments,
-                    totalAssessments
-                };
-            } catch (error) {
-                console.error('Error calculating progress:', error);
-                return {
-                    readingPercent: 0,
-                    assessmentCount: 0,
-                    readingDays: 0,
-                    unlockedAchievements: new Set(),
-                    completedAssessments: 0,
-                    totalAssessments: 0
-                };
-            }
-        };
-
-        // Render progress and achievements
+        // Achievement badges are rendered from saved, student-specific server data.
         const renderProgressAndAchievements = () => {
-            const mainLayout = document.querySelector("[data-dashboard-main-layout]");
-            const readingJourney = document.querySelector("[data-reading-journey]");
-            const achievementsContainer = document.querySelector("[data-achievements]");
-            
-            if (!mainLayout || !readingJourney || !achievementsContainer) return;
-
-            const progress = calculateProgress();
-
-            // Update reading journey
-            const readingPercentEl = document.querySelector("[data-reading-percent]");
-            const readingProgressFill = document.querySelector("[data-reading-progress-fill]");
-            const readingProgressBar = readingProgressFill ? readingProgressFill.closest(".progress-bar-container") : null;
-            const assessmentsCompletedEl = document.querySelector("[data-assessments-completed]");
-            const readingDaysEl = document.querySelector("[data-reading-days]");
-
-            if (readingPercentEl) readingPercentEl.textContent = `${progress.readingPercent}%`;
-            if (readingProgressBar) {
-                readingProgressBar.dataset.progress = String(progress.readingPercent);
-                readingProgressBar.classList.toggle("is-complete", progress.readingPercent >= 100);
-                readingProgressBar.classList.toggle("is-milestone", [25, 50, 75].includes(progress.readingPercent));
-            }
-            if (readingProgressFill) {
-                readingProgressFill.style.width = `${progress.readingPercent}%`;
-                readingProgressFill.style.setProperty("--progress-pct", `${progress.readingPercent}%`);
-                readingProgressFill.style.setProperty("--progress-glow", `rgba(31, 182, 255, ${Math.min(0.14 + (progress.readingPercent / 100) * 0.18, 0.34)})`);
-            }
-            if (assessmentsCompletedEl) assessmentsCompletedEl.textContent = progress.assessmentCount;
-            if (readingDaysEl) readingDaysEl.textContent = progress.readingDays;
-
-            // Render achievements
-            const achievementsGrid = document.querySelector("[data-achievements-grid]");
-            if (achievementsGrid) {
-                achievementsGrid.innerHTML = ACHIEVEMENTS.map(achievement => {
-                    const isUnlocked = progress.unlockedAchievements.has(achievement.id);
-                    return `
-                        <div class="achievement-badge ${isUnlocked ? 'unlocked' : 'locked'}" title="${achievement.description}">
-                            <div class="achievement-icon">${achievement.icon}</div>
-                            <div class="achievement-name">${achievement.name}</div>
-                            <div class="achievement-lock"><i class="bi bi-lock-fill"></i></div>
-                        </div>
-                    `;
-                }).join("");
-            }
-
-            // Show layout when classes exist
-            const isJoined = getSavedCodes().length > 0;
-            mainLayout.style.display = isJoined ? '' : 'none';
+            const mainLayout = document.querySelector('[data-dashboard-main-layout]');
+            if (mainLayout) mainLayout.style.display = getSavedCodes().length > 0 ? '' : 'none';
         };
 
         // Fetch class details from database API instead of localStorage

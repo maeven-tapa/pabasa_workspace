@@ -908,15 +908,14 @@ class SchoolCalendarAdminTests(TestCase):
 
 
 class DashboardAchievementBadgeTests(TestCase):
-    def test_dashboard_template_contains_practice_star_achievement(self):
-        template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "dashboard.html"
-        content = template_path.read_text(encoding="utf-8")
-
-        self.assertIn("'practice-star'", content)
-        self.assertIn("Complete every level in Free Mode, Color Mode, and Hunt Mode", content)
-        self.assertIn("pabasa_practice_progress_v1", content)
-        self.assertNotIn("pabasa_practice_sessions_completed", content)
-        self.assertNotIn(">= 10", content)
+    def test_dashboard_uses_server_achievement_badges(self):
+        from .achievements import ACHIEVEMENTS
+        definitions = {key: description for key, _name, description, _icon in ACHIEVEMENTS}
+        self.assertEqual(len(definitions), 12)
+        self.assertIn('45 levels', definitions['practice-star'])
+        content = (Path(__file__).resolve().parent / 'templates/pabasa_app/dashboard.html').read_text(encoding='utf-8')
+        self.assertIn('for badge in student_achievements.badges', content)
+        self.assertNotIn('pabasa_practice_progress_v1', content)
 
 
 class DashboardGreetingNameTests(TestCase):

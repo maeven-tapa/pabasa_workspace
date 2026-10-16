@@ -204,6 +204,29 @@ class User(models.Model):
         self.save(update_fields=["grade_level", "section", "school_calendar", "school", "updated_at"])
 
 
+class StudentAchievement(models.Model):
+    """An earned badge remains earned when assignments or terms change."""
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='achievement_awards')
+    achievement_key = models.CharField(max_length=40)
+    earned_at = models.DateTimeField(default=system_now, editable=False)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(
+            fields=['student', 'achievement_key'], name='unique_student_achievement',
+        )]
+
+
+class StudentLearningDay(models.Model):
+    """One local calendar date with saved reading/practice evidence."""
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='learning_days')
+    date = models.DateField()
+
+    class Meta:
+        constraints = [models.UniqueConstraint(
+            fields=['student', 'date'], name='unique_student_learning_day',
+        )]
+
+
 class HuntStarAward(models.Model):
     """Immutable, idempotent star deposits made only by Hunt Mode."""
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="hunt_star_awards")
@@ -976,7 +999,9 @@ class Assessment(models.Model):
                 student=student, section=self.section,
                 school_calendar_id=self.section.school_calendar_id,
             ).order_by('id').first()
-        attempt_row = Assessment.objects.create(
+        # Apply the complete payload before the first save. Achievement hooks
+        # must see final review/exclusion metadata, not a partial result.
+        attempt_row = Assessment(
             title=self.title,
             code=self._build_attempt_code(group_assessment.code, attempt_number),
             assessment_type=self.assessment_type,
@@ -1615,7 +1640,8 @@ class Material(models.Model):
             self.assessment = parent_assessment
             self.save(update_fields=['assessment', 'updated_at'])
         
-        result = Assessment.objects.create(
+        # _apply_attempt_payload performs the initial save with all metadata.
+        result = Assessment(
             title=self.title or self.prompt_text or "Assessment Result",
             code=self._build_result_code(attempt_number),
             is_system_owned=bool(self.is_system_owned),
@@ -1683,6 +1709,8 @@ class SupplementaryMaterialPublication(models.Model):
 
 class SupplementaryStudentAssignment(models.Model):
     """Student allow-list entry scoped to one Supplementary publication."""
+    # This later-added table already uses bigint IDs (migration 0023).
+    id = models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')
 
     publication = models.ForeignKey(
         SupplementaryMaterialPublication,
@@ -2260,6 +2288,23 @@ class StudentActivityRecordingSubmission(models.Model):
     review_status = models.CharField(max_length=20, default="not_required")
     submitted_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        self._previous_submitted_at = None
+        update_fields = kwargs.get('update_fields')
+        writes_audio = update_fields is None or 'audio_file' in update_fields
+        if self.pk and writes_audio and self.status == 'submitted' and self.audio_file:
+            previous = type(self).objects.filter(pk=self.pk).values('audio_file', 'submitted_at').first()
+            if previous and (
+                not self.audio_file._committed or self.audio_file.name != previous['audio_file']
+            ):
+                # A learner's replacement upload is a new reading date. A
+                # teacher checking an existing recording must keep its date.
+                self._previous_submitted_at = previous['submitted_at']
+                self.submitted_at = system_now()
+                if update_fields is not None:
+                    kwargs['update_fields'] = set(update_fields) | {'submitted_at'}
+        return super().save(*args, **kwargs)
 
     class Meta:
         db_table = "student_activity_recording_submissions"

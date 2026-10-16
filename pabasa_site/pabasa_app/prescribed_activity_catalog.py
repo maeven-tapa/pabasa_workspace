@@ -7,6 +7,29 @@ workbook interaction everywhere it is used.
 from copy import deepcopy
 
 
+# These activities use the original standalone activity flow. Keep this map
+# separate from PRESCRIBED_ACTIVITIES so the dashboard can include their
+# already-saved progress without changing prescribed-activity routing or
+# navigation.
+LEGACY_SESSION_PROGRESS_ACTIVITIES = (
+    {'activity_key': 'lesson-1-gawain-1', 'session_number': 1},
+    {'activity_key': 'lesson-2-gawain-1', 'session_number': 1},
+    {'activity_key': 'lesson-3-gawain-1', 'session_number': 1},
+    {'activity_key': 'lesson-3-gawain-2', 'session_number': 1},
+    {'activity_key': 'lesson-4-gawain-1', 'session_number': 2},
+    {'activity_key': 'lesson-5-gawain-1', 'session_number': 2},
+    {'activity_key': 'lesson-6-gawain-1', 'session_number': 2},
+    {'activity_key': 'lesson-7-gawain-1', 'session_number': 3},
+)
+
+# The Session 2 Gawain 2 activity was later moved into the prescribed catalog
+# under a canonical key. Keep the old progress key readable without counting
+# the same activity twice in the dashboard.
+LEGACY_SESSION_PROGRESS_ALIASES = {
+    'session-2-lesson-4-gawain-2': 'lesson-4-gawain-2',
+}
+
+
 LESSON_16_IMAGE_PATHS = {
     'gumamela': 'pabasa_app/images/lesson_16/gumamela.png',
     'banga': 'pabasa_app/images/lesson_16/banga.png',
