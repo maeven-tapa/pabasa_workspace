@@ -18,7 +18,10 @@ class Session67ActivityFixTests(SimpleTestCase):
         self.assertIsNotNone(finders.find(asset))
         for name in ('prescribed_picture_word_write_page', 'prescribed_picture_syllable_matching_page'):
             source = (Path(__file__).parent / 'templates' / 'pabasa_app' / f'{name}.html').read_text(encoding='utf-8')
-            self.assertIn(asset, source)
+            expected = ('pabasa_app/prescribed/audio/SESSION_6/LESSON_17_18/GAWAIN_7/magaling_tama_ang_nabasa_mo_tts.mp3'
+                        if name == 'prescribed_picture_syllable_matching_page' else asset)
+            self.assertIsNotNone(finders.find(expected))
+            self.assertIn(expected, source)
             self.assertNotIn('magaling_tama_ang_iyong_pagbasa.mp3', source)
         matching = (Path(__file__).parent / 'templates' / 'pabasa_app' / 'prescribed_picture_syllable_matching_page.html').read_text(encoding='utf-8')
         self.assertIn('GAWAIN_7/hindi_pa_tama_tts.mp3', matching)

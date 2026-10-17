@@ -8,10 +8,10 @@
   const label='Bumalik sa Aking Gawain';
   const listUrl=document.querySelector('a.back,a.l16g3-back')?.getAttribute('href')||'/dashboard/assessment/';
   // Load last so activity-specific historical back-link rules cannot override it.
-  const css=document.createElement('link');css.rel='stylesheet';css.href='/static/pabasa_app/css/session67_reference.css?v=session67-fixes';document.head.append(css);
+  const css=document.createElement('link');css.rel='stylesheet';css.href='/static/pabasa_app/css/session67_reference.css?v=2';document.head.append(css);
   function refresh(){
     document.querySelectorAll('[data-session6-controls],[data-prescribed-session-controls]').forEach(root=>{
-      const buttons=['-help-btn','-audio-settings-btn','-mic-toggle'].map(suffix=>root.querySelector(`[id$="${suffix}"]`));
+      const buttons=['-help-btn','-mic-toggle','-audio-settings-btn'].map(suffix=>root.querySelector(`[id$="${suffix}"]`));
       if(buttons.every(Boolean)&&buttons.some((button,index)=>root.children[index]!==button))root.append(...buttons);
     });
     document.querySelectorAll('a[href]').forEach(link=>{

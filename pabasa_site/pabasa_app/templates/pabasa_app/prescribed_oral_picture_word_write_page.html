@@ -190,7 +190,7 @@
     }
     async function listen(index){
       if(busy)return;busy=true;stopAudio();const button=app.querySelector('#listen');button.disabled=true;
-      try{await playFiles(['pakinggan_ang_salita_bago_basahin_tts.mp3',`${items[index].id}_tts.mp3`,'subukan_mong_basahin_salita_tts.mp3']);if(Number(state.read_aloud_plays[String(index)]||0)<3)state.read_aloud_plays[String(index)]=(Number(state.read_aloud_plays[String(index)]||0)+1);await save();render('Subukan mong basahin ang salita.','good')}
+      try{await playFiles([`${items[index].id}_tts.mp3`]);if(Number(state.read_aloud_plays[String(index)]||0)<3)state.read_aloud_plays[String(index)]=(Number(state.read_aloud_plays[String(index)]||0)+1);await save();render('Subukan mong basahin ang salita.','good')}
       catch(error){render(error.message||'Hindi available ang audio. Subukan muli.','bad')}
       finally{busy=false}
     }

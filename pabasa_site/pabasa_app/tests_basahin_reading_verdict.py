@@ -149,3 +149,148 @@ class BasahinReadingVerdictTests(SimpleTestCase):
 
     def test_empty_speech_is_not_correct(self):
         self.assertFalse(self.transcribe('bata', '')['complete'])
+
+    def test_gawain6_pusa_accepts_usa_with_normal_scoring_and_raw_speech(self):
+        key = 'lesson-17-18-gawain-6'
+        expected = self.transcribe('PUSA', 'PUSA', prescribed_activity_key=key)
+        for heard in ('USA', 'usa', 'Usa.'):
+            with self.subTest(heard=heard):
+                result = self.transcribe('PUSA', heard, prescribed_activity_key=key)
+                self.assertTrue(result['complete'])
+                self.assertEqual(result['raw_transcript'], heard)
+                self.assertEqual(result['processed_transcript'], 'PUSA')
+                for field in ('matched', 'current_syllable_index', 'progress'):
+                    self.assertEqual(result[field], expected[field])
+
+    def test_gawain6_usa_allowance_does_not_apply_to_other_activities(self):
+        for key in ('', 'another-activity', 'lesson-17-18-gawain-5',
+                    'lesson-17-18-gawain-7', 'lesson-17-18-gawain-8',
+                    'lesson-17-18-gawain-9'):
+            with self.subTest(key=key):
+                self.assertFalse(self.transcribe('PUSA', 'USA', prescribed_activity_key=key)['complete'])
+
+    def test_gawain6_other_words_keep_normal_matching_and_scoring(self):
+        for target in ('PAKO', 'PARUPARO', 'ROSAS', 'KARITON'):
+            for heard in (target, 'USA', ''):
+                with self.subTest(target=target, heard=heard):
+                    normal = self.transcribe(target, heard)
+                    scoped = self.transcribe(target, heard, prescribed_activity_key='lesson-17-18-gawain-6')
+                    for field in ('complete', 'matched', 'current_syllable_index', 'progress', 'raw_transcript'):
+                        self.assertEqual(scoped[field], normal[field])
+
+    def test_gawain6_pusa_allowance_requires_the_isolated_filipino_reading(self):
+        key = 'lesson-17-18-gawain-6'
+        for heard in ('ang usa', 'usapan', 'u s a', 'usa usa', ''):
+            with self.subTest(heard=heard):
+                self.assertFalse(self.transcribe('PUSA', heard, prescribed_activity_key=key)['complete'])
+        for fields in ({'language': 'English'}, {'mode': 'sentence'}, {'mode': 'word'}):
+            with self.subTest(fields=fields):
+                self.assertFalse(self.transcribe('PUSA', 'USA', prescribed_activity_key=key, **fields)['complete'])
+
+    def test_gawain6_pusa_allowance_preserves_the_selected_provider(self):
+        with (
+            patch('pabasa_app.views.uses_knowlez_stt', return_value=True),
+            patch('pabasa_app.views.transcribe_knowlez_audio', return_value=('USA', 'knowlez', '')) as provider,
+        ):
+            result = self.transcribe('PUSA', '', prescribed_activity_key='lesson-17-18-gawain-6')
+        self.assertTrue(result['complete'])
+        self.assertEqual(result['raw_transcript'], 'USA')
+        self.assertEqual(result['stt_provider'], 'knowlez')
+        self.assertEqual(provider.call_args.args[1], 'fil-PH')
+
+    def test_gawain6_provider_failure_is_not_a_success_or_fallback(self):
+        from .knowlez_stt import KnowlezSpeechError
+        request = RequestFactory().post('/api/reading/transcribe/', {
+            'audio': SimpleUploadedFile('reading.webm', b'audio', content_type='audio/webm'),
+            'target_text': 'PUSA', 'language': 'Filipino', 'mode': 'reading',
+            'prescribed_activity_key': 'lesson-17-18-gawain-6',
+        })
+        request._dont_enforce_csrf_checks = True
+        with (
+            patch('pabasa_app.views._check_auth', return_value=True),
+            patch('pabasa_app.views._enforce_student_access_for_request', return_value=None),
+            patch('pabasa_app.views.uses_knowlez_stt', return_value=True),
+            patch('pabasa_app.views.transcribe_knowlez_audio', side_effect=KnowlezSpeechError('Provider unavailable')),
+            patch('pabasa_app.views.transcribe_audio_bytes_with_model') as google,
+        ):
+            response = reading_transcribe_api(request)
+        self.assertEqual(response.status_code, 502)
+        self.assertFalse(json.loads(response.content)['success'])
+        google.assert_not_called()
+
+    def test_gawain6_requested_spellings_keep_raw_speech_and_normal_scores(self):
+        key = 'lesson-17-18-gawain-6'
+        for target, alias in (('PAKO', 'paco'), ('ROSAS', 'roses'), ('KARITON', 'carton')):
+            for word in (target, target.lower(), target.title()):
+                expected = self.transcribe(word, word, prescribed_activity_key=key)
+                for heard in (alias, alias.upper(), alias.title()):
+                    with self.subTest(target=word, heard=heard):
+                        result = self.transcribe(word, heard, prescribed_activity_key=key)
+                        self.assertTrue(result['complete'])
+                        self.assertEqual(result['raw_transcript'], heard)
+                        self.assertEqual(result['processed_transcript'], word)
+                        for field in ('matched', 'current_syllable_index', 'progress'):
+                            self.assertEqual(result[field], expected[field])
+
+    def test_gawain6_requested_spellings_do_not_change_other_targets_or_activities(self):
+        key = 'lesson-17-18-gawain-6'
+        pairs = (('PAKO', 'paco'), ('ROSAS', 'roses'), ('KARITON', 'carton'))
+        for target, heard in pairs:
+            for other_key in ('', 'another-activity', 'lesson-17-18-gawain-5',
+                              'lesson-17-18-gawain-7', 'lesson-17-18-gawain-8',
+                              'lesson-17-18-gawain-9'):
+                with self.subTest(target=target, heard=heard, key=other_key):
+                    self.assertFalse(self.transcribe(target, heard, prescribed_activity_key=other_key)['complete'])
+            for other_word in ('PUSA', 'PAKO', 'PARUPARO', 'ROSAS', 'KARITON'):
+                if other_word == target:
+                    continue
+                with self.subTest(target=other_word, heard=heard):
+                    normal = self.transcribe(other_word, heard)
+                    scoped = self.transcribe(other_word, heard, prescribed_activity_key=key)
+                    self.assertEqual(scoped, normal)
+
+    def test_gawain6_requested_spellings_require_exact_filipino_reading_transcripts(self):
+        key = 'lesson-17-18-gawain-6'
+        for target, alias in (('PAKO', 'paco'), ('ROSAS', 'roses'), ('KARITON', 'carton')):
+            for heard in (f'ang {alias}', f'{alias} {alias}', f'{alias}.', f'{alias}s',
+                          ' '.join(alias), '', 'pako roses carton'):
+                with self.subTest(target=target, heard=heard):
+                    normal = self.transcribe(target, heard)
+                    scoped = self.transcribe(target, heard, prescribed_activity_key=key)
+                    self.assertEqual(scoped, normal)
+            for fields in ({'language': 'English'}, {'mode': 'sentence'}, {'mode': 'word'}):
+                with self.subTest(target=target, fields=fields):
+                    normal = self.transcribe(target, alias, **fields)
+                    scoped = self.transcribe(target, alias, prescribed_activity_key=key, **fields)
+                    self.assertEqual(scoped, normal)
+
+    def test_gawain6_requested_spellings_preserve_selected_provider_and_failures(self):
+        from .knowlez_stt import KnowlezSpeechError
+        for target, heard in (('PAKO', 'paco'), ('ROSAS', 'roses'), ('KARITON', 'carton')):
+            with (
+                self.subTest(target=target),
+                patch('pabasa_app.views.uses_knowlez_stt', return_value=True),
+                patch('pabasa_app.views.transcribe_knowlez_audio', return_value=(heard, 'knowlez', '')) as provider,
+            ):
+                result = self.transcribe(target, '', prescribed_activity_key='lesson-17-18-gawain-6')
+                self.assertTrue(result['complete'])
+                self.assertEqual(result['raw_transcript'], heard)
+                self.assertEqual(result['stt_provider'], 'knowlez')
+                self.assertEqual(provider.call_args.args[1], 'fil-PH')
+            request = RequestFactory().post('/api/reading/transcribe/', {
+                'audio': SimpleUploadedFile('reading.webm', b'audio', content_type='audio/webm'),
+                'target_text': target, 'language': 'Filipino', 'mode': 'reading',
+                'prescribed_activity_key': 'lesson-17-18-gawain-6',
+            })
+            request._dont_enforce_csrf_checks = True
+            with (
+                patch('pabasa_app.views._check_auth', return_value=True),
+                patch('pabasa_app.views._enforce_student_access_for_request', return_value=None),
+                patch('pabasa_app.views.uses_knowlez_stt', return_value=True),
+                patch('pabasa_app.views.transcribe_knowlez_audio', side_effect=KnowlezSpeechError('Provider unavailable')),
+                patch('pabasa_app.views.transcribe_audio_bytes_with_model') as google,
+            ):
+                response = reading_transcribe_api(request)
+            self.assertEqual(response.status_code, 502)
+            self.assertFalse(json.loads(response.content)['success'])
+            google.assert_not_called()

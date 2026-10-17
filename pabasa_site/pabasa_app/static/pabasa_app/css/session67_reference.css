@@ -159,8 +159,8 @@ body.session67-activity.session67-activity .s6-tool, body.session67-activity.ses
   font-size: 1.6rem !important;
 }
 body.session67-activity [id$="-help-btn"] { order: 0; }
-body.session67-activity [id$="-audio-settings-btn"] { order: 1; }
-body.session67-activity [id$="-mic-toggle"] { order: 2; }
+body.session67-activity [id$="-mic-toggle"] { order: 1; }
+body.session67-activity [id$="-audio-settings-btn"] { order: 2; }
 body.lesson-16-gawain2-page .blank {
   display: inline-block; width: 2.8em; min-width: 2.8em; height: 1em;
   border-bottom: 3px solid currentColor; letter-spacing: normal;

@@ -1,7 +1,7 @@
 {% load static %}
 {% if prefix == 'prescribed-session-target' %}<link rel="stylesheet" href="{% static 'pabasa_app/css/session8_completion_popup.css' %}"><script src="{% static 'pabasa_app/js/session8_completion_popup.js' %}"></script>{% endif %}
 {% if workbook_payload.activity.activity_key == 'aral-l22-g2-c-word-reading' or workbook_payload.activity.activity_key == 'aral-l22-g6-f-word-reading' or workbook_payload.activity.activity_key == 'aral-l22-g4-f-syllable-builder' or workbook_payload.activity.activity_key == 'aral-l23-g2-n-word-reading' or workbook_payload.activity.activity_key == 'aral-l24-g2-v-word-reading' or workbook_payload.activity.activity_key == 'aral-l24-g3-x-repeat' %}{% include 'pabasa_app/basahin_script.html' %}{% endif %}
-{% if prefix|slice:":14" == "prescribed-s7-" %}<link rel="stylesheet" href="{% static 'pabasa_app/css/session67_reference.css' %}?v=1"><script>document.body?.classList.add('session67-activity');</script>{% endif %}
+{% if prefix|slice:":14" == "prescribed-s7-" %}<link rel="stylesheet" href="{% static 'pabasa_app/css/session67_reference.css' %}?v=2"><script>document.body?.classList.add('session67-activity');</script>{% endif %}
 <link rel="stylesheet" href="{% static 'pabasa_app/vendor/bootstrap-icons/bootstrap-icons.css' %}">
 <style>
   .prescribed-session-tools{position:fixed;top:22px;right:24px;z-index:8;display:flex;gap:14px;align-items:center}
@@ -41,4 +41,4 @@
 <script src="{% static 'pabasa_app/js/prescribed_session8_11_controls.js' %}?v={% if prefix == 'prescribed-s7-l20-21-g4' %}4{% else %}3{% endif %}" defer></script>
 <script src="{% static 'pabasa_app/js/session7_intro_modal.js' %}?v=4"></script>
 
-<script src="{% static 'pabasa_app/js/session67_ui.js' %}?v=1" defer></script>
+<script src="{% static 'pabasa_app/js/session67_ui.js' %}?v=2" defer></script>

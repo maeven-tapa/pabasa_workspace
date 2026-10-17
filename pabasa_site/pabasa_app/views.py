@@ -25479,6 +25479,27 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
             )
         ):
             matching_transcript = 'riles'
+        # STT can omit the initial P for this Gawain 6 picture prompt.
+        # Keep the raw transcript and grade the known variant as PUSA.
+        if (
+            request.POST.get('prescribed_activity_key') == 'lesson-17-18-gawain-6'
+            and language_code.lower() == 'fil-ph'
+            and mode == 'reading'
+            and ReadingMatcher.normalize_spoken_words(target_text) == ['pusa']
+            and ReadingMatcher.normalize_spoken_words(transcript) == ['usa']
+        ):
+            matching_transcript = target_text
+        # Exact STT spellings accepted only for the current Gawain 6 word.
+        # Preserve raw speech and let the existing matcher calculate the score.
+        if (
+            request.POST.get('prescribed_activity_key') == 'lesson-17-18-gawain-6'
+            and language_code.lower() == 'fil-ph'
+            and mode == 'reading'
+            and str(transcript or '').casefold() == {
+                'pako': 'paco', 'rosas': 'roses', 'kariton': 'cartoon',
+            }.get(target_text.casefold())
+        ):
+            matching_transcript = target_text
         # In these two Session 3 activities, Chirp 3 can hear ``elesi`` as
         # the letters ``LC``. Preserve the provider transcript for diagnostics.
         if (
