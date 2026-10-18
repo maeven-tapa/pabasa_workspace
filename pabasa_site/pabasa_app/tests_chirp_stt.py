@@ -227,6 +227,31 @@ class ChirpRoutingTests(SimpleTestCase):
         self.assertEqual(reading_transcribe_api(request).status_code, 200)
         database.close.assert_not_called()
 
+    @patch('pabasa_app.views.connection')
+    @patch('pabasa_app.views.transcribe_audio_bytes_with_model')
+    def test_regular_recording_releases_db_slot_before_google(self, transcribe, database):
+        database.in_atomic_block = False
+        def recognize(*args, **kwargs):
+            database.close.assert_called_once()
+            return 'bata', 'chirp_3', ''
+        transcribe.side_effect = recognize
+        self.assertEqual(reading_transcribe_api(self.request('chirp_3')).status_code, 200)
+
+    @patch('pabasa_app.views.uses_knowlez_stt', return_value=True)
+    @patch('pabasa_app.views.connection')
+    @patch('pabasa_app.views.transcribe_knowlez_audio')
+    @patch('pabasa_app.views.transcribe_audio_bytes_with_model')
+    def test_selected_knowlez_releases_db_slot_without_switching_provider(self, google, knowlez, database, selection):
+        database.in_atomic_block = False
+        def recognize(*args, **kwargs):
+            database.close.assert_called_once()
+            return 'bata', 'knowlez', ''
+        knowlez.side_effect = recognize
+        response = reading_transcribe_api(self.request('chirp_3'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.content)['stt_provider'], 'knowlez')
+        google.assert_not_called()
+
     @patch('pabasa_app.views.transcribe_audio_bytes_with_model')
     def test_bad_crla_recording_requires_new_audio_without_a_score(self, transcribe):
         transcribe.side_effect = InvalidArgument('Audio data does not appear to be in a supported encoding.')

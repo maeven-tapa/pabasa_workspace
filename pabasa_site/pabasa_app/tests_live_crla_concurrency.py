@@ -2,6 +2,7 @@
 from contextlib import closing
 from datetime import timedelta
 import os
+import re
 from pathlib import Path
 import sqlite3
 import subprocess
@@ -10,6 +11,7 @@ import tempfile
 
 from django.contrib.sessions.backends.db import SessionStore
 from django.contrib.auth.hashers import make_password
+from django.core.cache import cache
 from django.db import connection
 from django.test import TransactionTestCase
 from django.utils import timezone
@@ -146,7 +148,14 @@ def ticket_for(student):
         response = client.post(reverse('crla_stream_ticket'), json.dumps({
             'material_id': material_id, 'mode': 'word', 'target_text': 'bata',
         }), content_type='application/json')
-        assert response.status_code == 200, (response.status_code, response.json())
+        if response.status_code != 200:
+            from django.test import RequestFactory
+            from pabasa_app import views
+            diagnostic = RequestFactory().post('/api/reading/crla-stream/start/')
+            diagnostic.session = client.session
+            blocked = views._enforce_student_access_for_request(diagnostic, material=session.material, json_response=True)
+            reason = json.loads(blocked.content).get('error') if blocked is not None else 'no block'
+            raise AssertionError(f'Speech fixture authorization: {reason}; type={session.material.type}; has_assessment={bool(session.material.assessment_id)}')
         return response.json()['ticket']
     finally:
         close_old_connections()
@@ -242,7 +251,7 @@ with patch('pabasa_app.reading_stt.google_stt_credentials', return_value=object(
     with ThreadPoolExecutor(max_workers=thread_count) as executor:
         for mode in ('sentence', 'paragraph'):
             assert list(executor.map(lambda student: read_sentence_or_story(student, mode), students)) == [200] * 20
-assert len(attempts) == 40
+assert len(attempts) == 2 * len(students)
 assert all(count == 2 for count in attempts.values())
 print('20 simultaneous sentence and 20 story readings recovered provider 500s with isolated, accurate scores.')
 
@@ -286,6 +295,13 @@ class LiveCrlaConcurrentRequestsTests(TransactionTestCase):
             email=identifier.lower() + '@example.com', password_hash=self.test_password_hash, school_record=self.school)
 
     def test_twenty_enrolled_students_can_reconnect_and_publish_concurrently(self):
+        self.run_enrolled_students(20)
+
+    def test_thirty_enrolled_students_can_reconnect_and_publish_concurrently(self):
+        self.run_enrolled_students(30)
+
+    def run_enrolled_students(self, client_count):
+        cache.clear()
         self.test_password_hash = make_password('concurrent-test-password')
         self.school = School.objects.create(name='Concurrent Test School', code='CONCURRENT')
         calendar = SchoolCalendar.objects.create(school_year='Concurrent Year', current_term=1, is_active=True)
@@ -305,19 +321,26 @@ class LiveCrlaConcurrentRequestsTests(TransactionTestCase):
         if material is None:
             material = Material.objects.create(title='CRLA BoSY', item_type='paragraph',
                 is_system_owned=True, is_official_reading=True, assessment_kind='crla',
-                system_assessment_key='bosy_crla_pretest')
+                system_assessment_key='bosy_crla_pretest', system_assessment_period='bosy',
+                system_assessment_phase='pretest', official_term=1, type='assessment')
         assessment = Assessment.objects.create(teacher=teacher, section=section, title='Concurrent CRLA',
             code='CONCURRENT', assessment_type='paragraph', status='published',
             is_system_owned=True, system_assessment_key='bosy_crla_pretest')
         Material.objects.filter(pk=material.pk).update(assessment=assessment, section=None,
-            language='Filipino', status='published', is_active=True)
+            language='Filipino', status='published', is_active=True, student_access=True, type='assessment')
         other_teacher = self.make_user('CONCURRENT-OTHER-TEACHER', 'teacher')
         other_section = Section.objects.create(school=self.school, school_calendar=calendar, teacher=other_teacher,
             class_code='CONCURRENT-B', class_name='Concurrent Class B', subject='Reading', assessment_week_enabled=True)
         sections = [section, other_section]
         teachers = [teacher, other_teacher]
+        if client_count == 30:
+            third_teacher = self.make_user('CONCURRENT-THIRD-TEACHER', 'teacher')
+            sections.append(Section.objects.create(school=self.school, school_calendar=calendar, teacher=third_teacher,
+                class_code='CONCURRENT-C', class_name='Concurrent Class C', subject='Reading', assessment_week_enabled=True))
+            teachers.append(third_teacher)
+        material.assigned_sections.add(*sections)
         students = []
-        for index in range(20):
+        for index in range(client_count):
             student = self.make_user(f'CONCURRENT-LIVE-STUDENT-{index}')
             sections[index // 10].add_student(student)
             login = SessionStore()
@@ -327,7 +350,7 @@ class LiveCrlaConcurrentRequestsTests(TransactionTestCase):
         # Preserve the product's ten-student batch limit: two legitimate classes
         # read simultaneously, for twenty distinct enrolled student clients.
         sessions = []
-        for group in range(2):
+        for group in range(client_count // 10):
             members = students[group * 10:(group + 1) * 10]
             sessions.append(LiveAssessmentSession.objects.create(id=f'concurrent-live-timeout-{group}',
                 teacher=teachers[group], section=sections[group], material=material,
@@ -341,14 +364,15 @@ class LiveCrlaConcurrentRequestsTests(TransactionTestCase):
             database = Path(directory) / 'live.sqlite3'
             with closing(sqlite3.connect(database)) as target:
                 connection.connection.backup(target)
-            result = subprocess.run([sys.executable, '-c', CONCURRENT_REQUESTS, str(database), sessions[0].pk],
+            code = CONCURRENT_REQUESTS if client_count == 20 else re.sub(r'\b20\b', '30', CONCURRENT_REQUESTS)
+            result = subprocess.run([sys.executable, '-c', code, str(database), sessions[0].pk],
                 cwd=Path(__file__).resolve().parents[1], env={**os.environ, 'K_SERVICE': ''},
                 capture_output=True, text=True, timeout=120)
             self.assertEqual(result.returncode, 0, result.stdout[-4000:] + result.stderr[-4000:])
-            self.assertIn('20 student logins preserved', result.stdout)
+            self.assertIn(f'{client_count} student logins preserved', result.stdout)
             self.assertIn('Login checks stayed available', result.stdout)
-            self.assertIn('20 simultaneous sentence and 20 story readings recovered', result.stdout)
-            self.assertIn('20 concurrent replacement logins', result.stdout)
+            self.assertIn(f'{client_count} simultaneous sentence and {client_count} story readings recovered', result.stdout)
+            self.assertIn(f'{client_count} concurrent replacement logins', result.stdout)
             for line in result.stdout.splitlines():
                 if line.startswith('LIVE_GOOGLE_TWENTY:'):
                     print(line)

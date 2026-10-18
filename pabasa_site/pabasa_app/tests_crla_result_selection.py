@@ -7,7 +7,8 @@ from datetime import timedelta
 
 from .models import Assessment, Enrollment, Material, School, Section, User
 from .utils.crla_export import _latest_attempts, canonical_crla_result_values
-from .utils.crla_results import latest_completed_official_crla_results
+from .utils.crla_results import (latest_completed_official_crla_results, official_crla_result_queryset,
+    has_completed_official_crla_result, RECOGNIZED_CRLA_CLASSIFICATIONS)
 from .views import _latest_completed_official_crla_results
 
 
@@ -55,6 +56,28 @@ class OfficialCrlaResultSelectionTests(TestCase):
             crla_classification=classification, is_system_owned=system,
             crla_score_data=score_data or {},
         )
+
+    def test_completion_predicate_matches_full_selector_for_legacy_and_conflicting_labels(self):
+        result = self._result('CRLA-SEL-PREDICATE')
+        for primary, legacy in [(label,'') for label in RECOGNIZED_CRLA_CLASSIFICATIONS] + [
+            ('','Low Emerging Reader'),
+            ('Unclassified','Low Emerging Reader'),('   ','Low Emerging Reader'),('','')]:
+            with self.subTest(primary=primary,legacy=legacy):
+                Assessment.objects.filter(pk=result.pk).update(crla_classification=primary,classification=legacy)
+                expected = bool(latest_completed_official_crla_results(student_ids=[self.student.pk]))
+                with self.assertNumQueries(1):
+                    self.assertEqual(has_completed_official_crla_result(self.student.pk),expected)
+
+    def test_multiple_source_materials_do_not_duplicate_result_rows(self):
+        root = Assessment.objects.create(title='Legacy source',code='CRLA-SEL-LEGACY',
+            teacher=self.teacher,assessment_type='word')
+        for index in range(3):
+            Material.objects.create(title='Legacy CRLA',code=f'CRLA-SEL-LEGACY-{index}',
+                assessment=root,assessment_kind='crla',item_type='word',type='assessment')
+        result = self._result('CRLA-SEL-EXISTS',source=root)
+        Assessment.objects.filter(pk=result.pk).update(material=None)
+        self.assertEqual(list(official_crla_result_queryset().filter(student=self.student).values_list('pk',flat=True)),[result.pk])
+        self.assertTrue(has_completed_official_crla_result(self.student.pk))
 
     def test_scoped_selector_keeps_historical_term_and_phase_results(self):
         base = timezone.now()

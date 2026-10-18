@@ -46,7 +46,6 @@ import subprocess
 import tempfile
 from smtplib import SMTPException
 import time
-import threading
 import uuid
 import zipfile
 import csv
@@ -64,6 +63,9 @@ IMAGE_OCR_EMPTY_MESSAGE = (
 OCR_ENGINE_UNAVAILABLE_MESSAGE = (
     'No OCR engine is currently configured. Image text extraction is temporarily unavailable.'
 )
+from .background_work import queue_after_commit
+from .utils.crla_results import has_completed_official_crla_result
+from pabasa_site.http_admission import provider_io
 from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_items
 from .class_materials import ClassMaterialsProgress, listing_summary, supplementary_launch_url
 from .email_branding import email_logo_html
@@ -676,6 +678,16 @@ def _student_current_sections(user):
     return Section.objects.filter(pk=enrollment.section_id) if enrollment and enrollment.section_id else Section.objects.none()
 
 
+def _student_enrolled_sections(user):
+    """Match Section.has_student(active_only=True) without scanning all sections."""
+    if not user or not user.pk or getattr(user, 'role', '') != 'student':
+        return Section.objects.none()
+    return Section.objects.filter(
+        is_active=True, enrollments__student_id=user.pk,
+        enrollments__status='active', enrollments__is_active=True,
+    )
+
+
 def _active_canonical_section(grade_level, section_name, school=None, school_calendar=None, section_id=None):
     """Resolve a selectable canonical class; signup never creates one."""
     filters = {'is_active': True}
@@ -1082,7 +1094,7 @@ def _student_has_completed_official_crla(student):
     """
     if not student or not getattr(student, 'pk', None):
         return False
-    return bool(latest_completed_official_crla_results(student_ids=[student.pk]))
+    return has_completed_official_crla_result(student.pk)
 
 
 def _assessment_workflow_context(student):
@@ -1640,11 +1652,7 @@ def _published_crla_material_for_student(student):
     if not student or getattr(student, 'role', '') != 'student':
         return None
 
-    sections = [
-        section
-        for section in Section.objects.filter(is_active=True)
-        if section.has_student(student, active_only=True)
-    ]
+    sections = list(_student_enrolled_sections(student))
     if not sections:
         return None
 
@@ -2113,8 +2121,8 @@ def _teachers_for_assessment_completion(assessment=None, material=None, student_
                     add_teacher(section.teacher)
 
     if not teachers and student_user:
-        for section in Section.objects.filter(is_active=True).select_related('teacher'):
-            if not section.teacher or not section.has_student(student_user, active_only=True):
+        for section in _student_enrolled_sections(student_user).select_related('teacher'):
+            if not section.teacher:
                 continue
             if assessment and assessment.section_id == section.id:
                 add_teacher(section.teacher)
@@ -10249,11 +10257,7 @@ def _official_assessment_availability_for_student(student, request=None):
     if not student or getattr(student, 'role', '') != 'student':
         return {'available': False, 'assessment_type': 'intervention', 'school_year': None, 'current_term': None, 'active_window': None}
 
-    joined_sections = [
-        section
-        for section in Section.objects.filter(is_active=True).only('id', 'students')
-        if section.has_student(student, active_only=True)
-    ]
+    joined_sections = list(_student_enrolled_sections(student).only('id', 'students'))
     if not joined_sections:
         return {'available': False, 'assessment_type': 'intervention', 'school_year': None, 'current_term': None, 'active_window': None}
 
@@ -10375,6 +10379,50 @@ def _official_crla_completed_result_for_material(student, material):
         getattr(student, 'id', None), getattr(material, 'id', None),
     )
     return None
+
+
+def _official_crla_completed_student_ids_for_material(students, material):
+    """Batch the live completion indicator using each learner's calendar bounds.
+
+    Match _official_crla_completed_result_for_material's nonempty classification
+    rule exactly. This is a transport indicator; the result-writing and export
+    paths retain their authoritative per-student result selection.
+    """
+    if not material or not _is_official_crla_material(material):
+        return set()
+    students = list(students)
+    results = Assessment.objects.filter(
+        student_id__in=[student.pk for student in students], material=material,
+        attempt_status='completed', completed_at__isnull=False,
+    ).order_by()
+    potential_ids = {student_id for student_id, primary, legacy in results.values_list(
+        'student_id', 'crla_classification', 'classification',
+    ) if str(primary or legacy or '').strip()}
+    if not potential_ids:
+        return set()
+    groups = {}
+    for student in students:
+        if student.pk not in potential_ids:
+            continue
+        calendar = _school_calendar_for_user(student) or _active_school_calendar()
+        school_year = str(getattr(calendar, 'school_year', '') or '')
+        bounds = None
+        if len(school_year) >= 9:
+            try:
+                bounds = (date(int(school_year[:4]), 6, 1), date(int(school_year[5:]), 5, 31))
+            except (TypeError, ValueError):
+                pass
+        groups.setdefault(bounds, []).append(student.pk)
+    if not groups:
+        return set()
+    eligible = Q(pk__in=[])
+    for bounds, student_ids in groups.items():
+        condition = Q(student_id__in=student_ids)
+        if bounds:
+            condition &= Q(completed_at__date__gte=bounds[0], completed_at__date__lte=bounds[1])
+        eligible |= condition
+    labels = results.filter(eligible).values_list('student_id', 'crla_classification', 'classification')
+    return {student_id for student_id, primary, legacy in labels if str(primary or legacy or '').strip()}
 
 
 def _crla_finalization_resolution(section, material):
@@ -10538,11 +10586,7 @@ def _official_reading_assessments_for_student(student, availability):
                 }
             )
 
-    joined_sections = [
-        section
-        for section in Section.objects.filter(is_active=True).only('id', 'students', 'subject')
-        if section.has_student(student, active_only=True)
-    ]
+    joined_sections = list(_student_enrolled_sections(student).only('id', 'students', 'subject'))
     if not joined_sections:
         return []
 
@@ -12562,11 +12606,7 @@ def assessment(request):
     if not isinstance(student_profile, dict):
         student_profile = {}
 
-    joined_sections = [
-        section
-        for section in Section.objects.filter(is_active=True).select_related('teacher')
-        if user and section.has_student(user, active_only=True)
-    ] if user and getattr(user, 'role', '') == 'student' else []
+    joined_sections = list(_student_enrolled_sections(user).select_related('teacher'))
     for section in joined_sections:
         _expire_assessment_week_if_needed(section)
     requested_section_id = request.GET.get('section_id')
@@ -25301,31 +25341,34 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
         except PermissionError as exc:
             return JsonResponse({'success': False, 'error': str(exc)}, status=403)
     words = []
+    # Every clip path has finished authentication and token validation here.
+    # Return its connection before either selected provider or retry backoff;
+    # regular recordings need the same protection as official CRLA clips.
+    release_for_provider = stream_transcript is None and not connection.in_atomic_block
+    if release_for_provider:
+        connection.close()
     try:
-        if stream_transcript is not None:
-            transcript, model_used, fallback_reason = stream_transcript, 'chirp_3', ''
-        elif knowlez_selected:
-            transcript, model_used, fallback_reason = transcribe_knowlez_audio(audio, language_code)
-        else:
-            # Authentication/authorization has completed. Do not occupy a scarce
-            # DB slot while CRLA waits for a remote speech response or its retry.
-            if official_crla_assessment and not connection.in_atomic_block:
-                connection.close()
-            transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
-                audio.read(),
-                api_key,
-                language_code=language_code,
-                phrase_hints=phrase_hints,
-                model=stt_model,
-                word_details=words,
-                allow_fallback=not selected_model and language_code.lower() != 'fil-ph',
-                project_id=project_id,
-                location=location,
-                mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
-                credentials_file=credentials_file,
-                **({'recognition_context': recognition_context, 'response_metadata': recognition_metadata}
-                   if guarded_filipino_reading and stt_model == 'chirp_3' else {}),
-            )
+        with provider_io(enabled=release_for_provider):
+            if stream_transcript is not None:
+                transcript, model_used, fallback_reason = stream_transcript, 'chirp_3', ''
+            elif knowlez_selected:
+                transcript, model_used, fallback_reason = transcribe_knowlez_audio(audio, language_code)
+            else:
+                transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
+                    audio.read(),
+                    api_key,
+                    language_code=language_code,
+                    phrase_hints=phrase_hints,
+                    model=stt_model,
+                    word_details=words,
+                    allow_fallback=not selected_model and language_code.lower() != 'fil-ph',
+                    project_id=project_id,
+                    location=location,
+                    mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
+                    credentials_file=credentials_file,
+                    **({'recognition_context': recognition_context, 'response_metadata': recognition_metadata}
+                       if guarded_filipino_reading and stt_model == 'chirp_3' else {}),
+                )
         logger.warning(
             "FREE_MODE_STT_DIAGNOSTIC provider=%s model=%s language=%s "
             "provider_transcript=%r provider_raw_result=unavailable fallback=%r",
@@ -26747,13 +26790,13 @@ def _live_session_batch_payload(session):
     current_batch = int(session.current_batch or 1)
     current_completed, current_total = _live_batch_progress(session, current_batch)
     selected_student_ids = [int(student_id) for student_id in (session.student_ids or [])]
-    selected_students = User.objects.filter(id__in=selected_student_ids)
+    selected_students = User.objects.filter(id__in=selected_student_ids).select_related('school_record')
     students_by_id = {student.id: student for student in selected_students}
-    all_selected_students_completed = bool(selected_student_ids) and all(
-        _official_crla_completed_result_for_material(students_by_id[student_id], session.material)
-        for student_id in selected_student_ids
-        if student_id in students_by_id
-    ) and len(students_by_id) == len(selected_student_ids)
+    completed_ids = _official_crla_completed_student_ids_for_material(students_by_id.values(), session.material)
+    all_selected_students_completed = bool(selected_student_ids) and (
+        len(students_by_id) == len(selected_student_ids)
+        and all(student_id in completed_ids for student_id in selected_student_ids)
+    )
     logger.warning(
         'LIVE_CRLA_BATCH_COMPLETE_SERVER_DEBUG session_id=%s status=%s selected_student_ids=%s official_all_complete=%s',
         session.id, session.status, selected_student_ids, all_selected_students_completed,
@@ -28004,36 +28047,36 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
 
     if is_practice or should_notify_assessment or (assist_teacher_user and not is_practice):
         _log_completion_timing('notification_queued')
-        transaction.on_commit(
-            lambda: threading.Thread(target=_run_completion_notifications, daemon=True).start()
-        )
+        queue_after_commit(_run_completion_notifications, label='assessment_completion')
 
     if should_notify_assessment:
-        try:
-            _log_completion_timing('auto_progress_update_start')
-            auto_course = _resolve_course_for_assessment_completion(
-                student_user,
-                material=material,
-                assessment=completed_result_row or assessment,
-                teacher_user=teacher_user,
-            )
-            if auto_course and completed_result_row:
-                auto_send_result = _auto_send_regular_progress_update(
-                    student=student_user,
-                    course=auto_course,
-                    teacher_user=teacher_user or auto_course.teacher,
-                    assessment_result=completed_result_row,
+        def _run_progress_followup():
+            try:
+                _log_completion_timing('auto_progress_update_start')
+                auto_course = _resolve_course_for_assessment_completion(
+                    student_user,
+                    material=material,
+                    assessment=completed_result_row or assessment,
+                    teacher_user=teacher_user,
                 )
-                if not auto_send_result.get('success'):
-                    logger.info(
-                        'Auto regular progress update skipped for student %s: %s',
-                        student_user.id,
-                        auto_send_result.get('reason', 'unknown'),
+                if auto_course and completed_result_row:
+                    auto_send_result = _auto_send_regular_progress_update(
+                        student=student_user,
+                        course=auto_course,
+                        teacher_user=teacher_user or auto_course.teacher,
+                        assessment_result=completed_result_row,
                     )
-            _log_completion_timing('auto_progress_update_end')
-        except Exception:
-            logger.exception('Failed to auto-send regular progress update')
-            _log_completion_timing('auto_progress_update_error')
+                    if not auto_send_result.get('success'):
+                        logger.info(
+                            'Auto regular progress update skipped for student %s: %s',
+                            student_user.id,
+                            auto_send_result.get('reason', 'unknown'),
+                        )
+                _log_completion_timing('auto_progress_update_end')
+            except Exception:
+                logger.exception('Failed to auto-send regular progress update')
+                _log_completion_timing('auto_progress_update_error')
+        queue_after_commit(_run_progress_followup, label='assessment_progress')
     _log_completion_timing('response_construction_start')
     response_payload = {'success': True}
     if not is_practice:
@@ -28383,48 +28426,50 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
     session = persisted_session
 
     if session.teacher and session.teacher.email and not was_already_ended:
-        try:
-            missed_students = []
-            completed_students = []
-            for sid in session.student_ids or []:
-                student_user = User.objects.filter(id=sid).first()
-                if not student_user:
-                    continue
-                student_state = (session.student_states or {}).get(str(sid), {}) if isinstance(session.student_states, dict) else {}
-                if str(student_state.get('status') or '').lower() == 'missed':
-                    missed_students.append(student_user)
-                else:
-                    completed_students.append(student_user)
+        def _send_session_summary():
+            try:
+                missed_students = []
+                completed_students = []
+                for sid in session.student_ids or []:
+                    student_user = User.objects.filter(id=sid).first()
+                    if not student_user:
+                        continue
+                    student_state = (session.student_states or {}).get(str(sid), {}) if isinstance(session.student_states, dict) else {}
+                    if str(student_state.get('status') or '').lower() == 'missed':
+                        missed_students.append(student_user)
+                    else:
+                        completed_students.append(student_user)
 
-            session_time = timezone.localtime(ended_at)
-            body_lines = [
-                f"Assessment title: {session.material.title or 'Reading Activity'}",
-                f"Date and time: {session_time.strftime('%B %d, %Y %I:%M %p')}",
-                f"Total selected students: {len(session.student_ids or [])}",
-                f"Completed: {len(completed_students)}",
-                f"Missed: {len(missed_students)}",
-                "",
-                "Completed",
-            ]
-            body_lines.extend([
-                f"- {student.first_name} {student.last_name}".strip()
-                for student in completed_students
-            ] or ['- None'])
-            body_lines.extend(["", "Missed"])
-            body_lines.extend([
-                f"- {student.first_name} {student.last_name}".strip()
-                for student in missed_students
-            ] or ['- None'])
-            _send_pabasa_email(
-                f"Live Assessment Summary: {session.material.title or 'Reading Activity'}",
-                "\n".join(body_lines),
-                [session.teacher.email],
-                heading='Live assessment summary',
-                eyebrow='PABASA classroom activity',
-                fail_silently=True,
-            )
-        except Exception:
-            logger.exception('Failed to send live assessment summary email for session %s', session.id)
+                session_time = timezone.localtime(ended_at)
+                body_lines = [
+                    f"Assessment title: {session.material.title or 'Reading Activity'}",
+                    f"Date and time: {session_time.strftime('%B %d, %Y %I:%M %p')}",
+                    f"Total selected students: {len(session.student_ids or [])}",
+                    f"Completed: {len(completed_students)}",
+                    f"Missed: {len(missed_students)}",
+                    "",
+                    "Completed",
+                ]
+                body_lines.extend([
+                    f"- {student.first_name} {student.last_name}".strip()
+                    for student in completed_students
+                ] or ['- None'])
+                body_lines.extend(["", "Missed"])
+                body_lines.extend([
+                    f"- {student.first_name} {student.last_name}".strip()
+                    for student in missed_students
+                ] or ['- None'])
+                _send_pabasa_email(
+                    f"Live Assessment Summary: {session.material.title or 'Reading Activity'}",
+                    "\n".join(body_lines),
+                    [session.teacher.email],
+                    heading='Live assessment summary',
+                    eyebrow='PABASA classroom activity',
+                    fail_silently=True,
+                )
+            except Exception:
+                logger.exception('Failed to send live assessment summary email for session %s', session.id)
+        queue_after_commit(_send_session_summary, label='live_session_summary')
     return session
 
 
@@ -36540,10 +36585,9 @@ def _student_has_assessment_week(student):
     if not student:
         return False
     return any(
-        section.has_student(student, active_only=True)
-        and _expire_assessment_week_if_needed(section)
+        _expire_assessment_week_if_needed(section)
         and _section_assessment_week_status(section) == 'during'
-        for section in Section.objects.filter(is_active=True, assessment_week_enabled=True)
+        for section in _student_enrolled_sections(student).filter(assessment_week_enabled=True)
     )
 
 
@@ -36761,9 +36805,8 @@ def _queue_material_creation_followups(material, section, teacher_user, status, 
             logger.exception('Failed to process follow-up work for material %s', getattr(material, 'id', None))
 
     # Run follow-ups asynchronously after the DB transaction commits.
-    # Using a background thread ensures the HTTP response is returned
-    # immediately and heavy work does not block the request thread.
-    transaction.on_commit(lambda: threading.Thread(target=_run_followups, daemon=True).start())
+    # Share a bounded worker and return every connection at the task boundary.
+    queue_after_commit(_run_followups, label='material_followups')
 
 
 @csrf_protect

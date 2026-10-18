@@ -56,6 +56,17 @@ CSRF_TRUSTED_ORIGINS = [
     'https://www.tupcpabasa.app',
 ]
 
+# An explicitly configured revision URL permits verification before traffic
+# moves. Do not accept arbitrary hosts from request headers.
+revision_host = os.environ.get('PABASA_REVISION_HOST', '').strip().lower()
+if revision_host:
+    if not revision_host.endswith('.run.app') or any(
+        character not in 'abcdefghijklmnopqrstuvwxyz0123456789.-' for character in revision_host
+    ):
+        raise ImproperlyConfigured('PABASA_REVISION_HOST must be a Cloud Run hostname.')
+    ALLOWED_HOSTS.append(revision_host)
+    CSRF_TRUSTED_ORIGINS.append('https://' + revision_host)
+
 
 # Application definition
 

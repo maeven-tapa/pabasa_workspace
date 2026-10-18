@@ -41,6 +41,16 @@ class DatabaseCapacityResponseTests(SimpleTestCase):
         self.assertEqual(response.status_code, 503)
         self.assertNotIn(b'pool', response.content)
 
+    def test_busy_html_navigation_retries_but_post_is_never_replayed(self):
+        client = Client(raise_request_exception=False)
+        response = client.get('/busy/', HTTP_ACCEPT='text/html')
+        self.assertEqual(response.status_code, 503)
+        self.assertIn(b'service_busy.js', response.content)
+        self.assertEqual(response['Cache-Control'], 'no-store')
+        response = client.post('/busy/', HTTP_ACCEPT='text/html')
+        self.assertEqual(response.status_code, 503)
+        self.assertNotIn(b'<script', response.content)
+
     def test_unrelated_exceptions_remain_server_errors(self):
         response = Client(raise_request_exception=False).get('/other/')
         self.assertEqual(response.status_code, 500)

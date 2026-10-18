@@ -1,8 +1,8 @@
 """Authoritative selection of persisted official CRLA result rows."""
 
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 
-from pabasa_app.models import Assessment
+from pabasa_app.models import Assessment, Material
 from pabasa_app.scoring import CRLA_CLASSIFICATIONS, canonical_crla_classification
 
 
@@ -33,7 +33,10 @@ def official_crla_result_queryset():
     official CRLA system key, or be linked to material explicitly identified as
     CRLA assessment content.  System ownership alone is never sufficient.
     """
-    return Assessment.objects.filter(
+    source_material = Material.objects.filter(
+        assessment_id=OuterRef('source_assessment_id'), assessment_kind='crla',
+    )
+    return Assessment.objects.alias(_source_is_crla=Exists(source_material)).filter(
         attempt_status="completed",
         completed_at__isnull=False,
         student__isnull=False,
@@ -44,10 +47,23 @@ def official_crla_result_queryset():
         Q(system_assessment_key__in=OFFICIAL_CRLA_KEYS)
         | Q(source_assessment__system_assessment_key__in=OFFICIAL_CRLA_KEYS)
         | Q(material__assessment_kind="crla")
-        | Q(
-            source_assessment__materials__assessment_kind="crla",
-        )
-    ).select_related("student", "teacher", "section", "section__teacher", "material", "source_assessment", "source_assessment__material").distinct()
+        | Q(_source_is_crla=True)
+    ).select_related("student", "teacher", "section", "section__teacher", "material", "source_assessment", "source_assessment__material")
+
+
+def has_completed_official_crla_result(student_id):
+    """Apply the selector's exact classification precedence without loading content.
+
+    Selecting two scalar fields avoids wide joined model rows for access checks.
+    Keep canonicalization: an invalid nonempty primary label must not be rescued
+    by a different legacy label when the full selector would reject that row.
+    """
+    if not student_id:
+        return False
+    labels = official_crla_result_queryset().filter(student_id=student_id).order_by().values_list(
+        'crla_classification', 'classification',
+    )
+    return any(canonical_crla_classification(primary or legacy) for primary, legacy in labels)
 
 
 def latest_completed_official_crla_results(

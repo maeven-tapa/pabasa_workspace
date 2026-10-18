@@ -74,6 +74,7 @@ class GoogleStream:
     async def streaming_recognize(self, requests, **kwargs):
         async def responses():
             count = 0
+            final_sent = False
             async for request in requests:
                 if request.streaming_config:
                     assert request.streaming_config.config.model == 'chirp_3'
@@ -83,11 +84,14 @@ class GoogleStream:
                     continue
                 frames.append(bytes(request.audio))
                 count += 1
-                if count in {2, 5}:
+                is_final = (count >= 5 and not final_sent
+                            and len(clients) >= int(os.environ.get('CRLA_TEST_CLIENTS', '1')))
+                if count == 2 or is_final:
+                    final_sent = final_sent or is_final
                     yield cloud_speech.StreamingRecognizeResponse(results=[{
-                        'alternatives': [{'transcript': ('The cat' if count == 2 else 'The cat wore a hat.')
-                                          if english_prescribed else ('Si Bibo' if count == 2 else 'Si Bibo ay bata.')}],
-                        'is_final': count == 5,
+                        'alternatives': [{'transcript': ('The cat wore a hat.' if is_final else 'The cat')
+                                          if english_prescribed else ('Si Bibo ay bata.' if is_final else 'Si Bibo')}],
+                        'is_final': is_final,
                     }])
         return responses()
 
@@ -244,19 +248,24 @@ const {chromium}=require('playwright');
   const liveGoogle=process.env.CRLA_TEST_LIVE==='1';
   const prescribed=process.env.CRLA_TEST_PRESCRIBED==='1';
   const english=process.env.CRLA_TEST_ENGLISH==='1';
-  const args=['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream'];
+  const args=['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding'];
   if(prescribed)args.push('--use-file-for-fake-audio-capture='+process.env.CRLA_TEST_SYNTHETIC+'%noloop');
   if(liveGoogle)args.push('--use-file-for-fake-audio-capture='+require('node:path').join(process.env.TEMP,'pabasa-crla-stream-test.wav'));
-  const browser=await chromium.launch({executablePath:process.env.CRLA_CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args});
+  const clientCount=Number(process.env.CRLA_TEST_CLIENTS || 1);
+  const browsers=await Promise.all(Array.from({length:Math.ceil(clientCount/10)}, () => chromium.launch({executablePath:process.env.CRLA_CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args})));
   try {
-    const context=await browser.newContext({permissions:['microphone']});
+    const pages=await Promise.all(Array.from({length:clientCount}, async (_,index) => {
+    const context=await browsers[Math.floor(index/10)].newContext({permissions:['microphone']});
     await context.addCookies([
       {name:'sessionid',value:process.env.CRLA_TEST_SESSION,url:`http://127.0.0.1:${process.env.CRLA_TEST_PORT}`},
       {name:'csrftoken',value:'a'.repeat(32),url:`http://127.0.0.1:${process.env.CRLA_TEST_PORT}`}]);
     const page=await context.newPage();const pageErrors=[];page.on('pageerror',e=>pageErrors.push(e.message));
     await page.goto(`http://127.0.0.1:${process.env.CRLA_TEST_PORT}/stream-test/`);
+    return {page, context, pageErrors};
+    }));
+    await Promise.all(pages.map(async ({page,context,pageErrors}) => {
     await page.click(english?'#record-verse':'#start');
-    await page.waitForFunction(()=>window.results.length>=1||window.errors.length>0,{},{timeout:15000});
+    await page.waitForFunction(()=>window.results.length>=1||window.errors.length>0,{},{timeout:60000});
     if(english)await page.waitForFunction(()=>document.querySelector('.lesson27-prompt')?.textContent.includes('verse 2'),{},{timeout:5000});
     const state=await page.evaluate(async()=>{
       if(window.live)await live.finish();
@@ -267,7 +276,10 @@ const {chromium}=require('playwright');
     if(pageErrors.length||state.errors.length||(!liveGoogle&&state.interims.length!==(prescribed?2:1))||!state.results[0].complete||state.results[0].correct_word_count!==(liveGoogle?6:english?5:4))throw new Error(JSON.stringify({state,pageErrors}));
     if(prescribed&&(!state.tracksEnded||state.evaluations!==1||!state.results[0].audioBytes))throw new Error('Prescribed recording lifecycle failed: '+JSON.stringify(state));
     console.log('PASS: '+(prescribed?'Basahin -> ':'')+'Chrome microphone -> AudioWorklet PCM -> real Uvicorn WebSocket -> '+(liveGoogle?'live Google':'mock Google')+' -> signed final -> shared HTTP evaluator; '+(prescribed?'one completed attempt':state.results[0].correct_word_count+' words scored')+', '+state.interims.length+' provisional updates');
-  }finally{await browser.close();}
+    await context.close();
+    }));
+    console.log('PASS: '+clientCount+' concurrent browser capture/evaluation lifecycles');
+  }finally{await Promise.all(browsers.map(browser=>browser.close()));}
 })().catch(e=>{console.error(e);process.exitCode=1});
 '''
             try:
@@ -278,6 +290,9 @@ const {chromium}=require('playwright');
             if not live_google:
                 assert frames and all(0 < len(frame) <= crla_stream.MAX_FRAME_BYTES for frame in frames)
                 assert clients and all(client.transport.close.await_count == 1 for client in clients)
+                if int(os.environ.get('CRLA_TEST_CLIENTS', '1')) > 1:
+                    assert len(clients) == int(os.environ['CRLA_TEST_CLIENTS'])
+                    print('PASS: all concurrent capture streams connected before any final result')
             if english_prescribed:
                 assert progress_requests == [{'action': 'verse_read', 'item_index': 0, 'verse_index': 0, 'success': True}]
                 print('PASS: actual English Read button streams en-PH and saves exactly one completed verse')

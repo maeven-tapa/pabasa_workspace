@@ -266,6 +266,8 @@
         let startTime = null;
         let completionSubmitted = false;
         let completionSavePromise = Promise.resolve();
+        let completionSaveFailed = false;
+        let assessmentReturnPromise = null;
         let recognition = null;
         let recognitionActive = false;
         let spokenTranscript = "";
@@ -6573,6 +6575,7 @@
                 return;
             }
             completionSubmitted = true;
+            completionSaveFailed = false;
             traceEndSession('showCompletion.sideEffectsStart');
 
             if (isRetakeMode && materialId) {
@@ -6783,7 +6786,7 @@
                         branch_state: branchState,
                         official_assessment_id: officialAssessmentId,
                     });
-                    publishLiveSessionState({
+                    completionSavePromise = saveLiveCompletion({
                         status: liveStatus,
                         items_completed: Math.max(1, items.length),
                         items_total: Math.max(1, items.length),
@@ -6793,10 +6796,21 @@
                         final_score: finalScore != null ? Number(finalScore) : null,
                         connection_status: 'connected',
                         completion_payload: payload,
+                    }).then(state => {
+                        completionSaveFailed = !state;
+                        if (!state) completionSubmitted = false;
+                        return state;
                     });
                     // A Live CRLA completion is still temporary.  The
                     // teacher's End Session is the only caller that records
                     // the official Assessment row.
+                    await completionSavePromise;
+                    if (completionSaveFailed) {
+                        setSpeechStatus('Your reading work has not reached the server. Please choose Finish again.', '', false);
+                        setCompletionActionButtonsProcessing(false);
+                        setCompletionLoadingState(false);
+                        return {success: false};
+                    }
                     return { success: true, temporary_live_completion: true };
                 }
 
@@ -6930,6 +6944,9 @@
                     }
                     return d;
                 }).catch(e => {
+                    completionSaveFailed = true;
+                    completionSubmitted = false;
+                    setSpeechStatus('Your results have not been saved. Please choose Finish again.', '', false);
                     traceEndSession('showCompletion.recordAssessmentCompletion.error', { message: String(e.message || e) });
                     console.error("PABASA: Completion error", e);
                 }).finally(() => {
@@ -7258,6 +7275,15 @@
         // updates can otherwise overlap, allowing an older snapshot to reach
         // the server after a newer one and move recovery backwards.
         let liveStatePublishQueue = Promise.resolve();
+        async function saveLiveCompletion(updateValues) {
+            for (let attempt = 0; attempt < 3; attempt++) {
+                const state = await publishLiveSessionState(updateValues);
+                if (state) return state;
+                if (attempt < 2) await new Promise(resolve => window.setTimeout(resolve,
+                    1000 + Math.floor(Math.random() * 500)));
+            }
+            return null;
+        }
         let liveStatePendingWrites = 0;
         let liveStateWriteRetryAt = 0;
         let liveStateWriteDelay = 2000;
@@ -7424,7 +7450,7 @@
                     window.clearInterval(liveSessionEndRedirectTimer);
                     liveSessionEndRedirectTimer = null;
                     traceLiveCrlaRedirect('end_session_redirect', { destination, reason: isSavedTransition ? 'saved_transition_countdown_complete' : 'ended_transition_countdown_complete' });
-                    window.location.replace(destination);
+                    window.setTimeout(() => window.location.replace(destination), Math.floor(Math.random() * 1000));
                     return;
                 }
                 countdown -= 1;
@@ -8316,7 +8342,7 @@
             pauseOverlay?.classList.add("d-none");
         }
 
-        function goBackToAssessments() {
+        async function goBackToAssessments() {
             clearStoryReadingTimer();
             if (isAdminPreview) {
                 itemResultVersion += 1;
@@ -8351,9 +8377,29 @@
                 }
                 return;
             }
+            // Keep navigation asynchronous, but never abandon a pending save.
+            // Multiple clicks share the same operation and cannot queue redirects.
+            if (assessmentReturnPromise) return assessmentReturnPromise;
             const assessmentUrl = new URL('/dashboard/assessment/', window.location.origin);
-            traceLiveCrlaRedirect('return_to_assessment_redirect', { destination: assessmentUrl.toString(), reason: 'reader_exit_or_completion' });
-            window.location.assign(assessmentUrl.toString());
+            assessmentReturnPromise = (async () => {
+                await completionSavePromise;
+                if (completionSaveFailed) {
+                    setSpeechStatus('Your results have not been saved. Please choose Finish again.', '', false);
+                    return false;
+                }
+                stopSpeechRecognition();
+                stopReadAloud();
+                // Spread the classroom's page requests across approximately a second.
+                await new Promise(resolve => window.setTimeout(resolve, 250 + Math.floor(Math.random() * 1000)));
+                traceLiveCrlaRedirect('return_to_assessment_redirect', { destination: assessmentUrl.toString(), reason: 'reader_exit_or_completion' });
+                window.location.assign(assessmentUrl.toString());
+                return true;
+            })();
+            try {
+                return await assessmentReturnPromise;
+            } finally {
+                assessmentReturnPromise = null;
+            }
         }
 
         storyQuestionBackBtn?.addEventListener("click", () => {
@@ -8601,6 +8647,10 @@
             window.location.assign(restartUrl.toString());
         });
         finishBtn?.addEventListener("click", async () => {
+            if (completionSaveFailed) {
+                await showCompletion(true);
+                return;
+            }
             const transitionUrl = finishBtn.dataset.transitionUrl || "";
             if (transitionUrl) {
                 finishBtn.disabled = true;
