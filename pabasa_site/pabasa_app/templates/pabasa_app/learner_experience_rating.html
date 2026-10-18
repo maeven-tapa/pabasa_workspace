@@ -35,7 +35,7 @@
             display: grid;
             font-family: 'Schoolbell', cursive;
             min-height: 100vh;
-            overflow: hidden;
+            overflow-x: hidden;
             padding: 3vh 4vw;
         }
 
@@ -80,7 +80,7 @@
         .rating-form {
             align-items: stretch;
             display: flex;
-            gap: clamp(0.1rem, 0.6vw, 0.55rem);
+            gap: clamp(0.55rem, 1.2vw, 1rem);
             justify-content: center;
             max-width: 1120px;
             width: 100%;
@@ -88,23 +88,26 @@
 
         .rating-option {
             align-items: center;
-            background: transparent;
-            border: 2px solid transparent;
-            border-radius: 14px;
+            background: #fffefa;
+            border: 2px solid #d5e6e3;
+            border-radius: 22px;
             color: var(--ink);
             cursor: pointer;
             display: flex;
             flex: 1 1 0;
             flex-direction: column;
-            gap: clamp(0.15rem, 0.5vw, 0.45rem);
+            gap: 0.35rem;
             min-width: 0;
-            padding: clamp(0.25rem, 0.65vw, 0.7rem);
-            transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+            min-height: 240px;
+            padding: 0.85rem 0.55rem 1rem;
+            box-shadow: 0 8px 20px rgba(35,75,59,.08);
+            transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
         }
 
         .rating-option:hover,
         .rating-option:focus-visible {
-            background: rgba(255, 255, 255, 0.45);
+            background: #f4fbff;
+            border-color: #8fc3da;
             outline: none;
             transform: translateY(-4px);
         }
@@ -114,28 +117,28 @@
         }
 
         .rating-option.is-selected {
-            background: transparent;
+            background: #fffbea;
             border-color: var(--selected);
-            box-shadow: 0 0 0 2px rgba(228, 184, 63, 0.42);
-            transform: translateY(-4px) scale(1.025);
+            box-shadow: 0 0 0 4px rgba(228, 184, 63, 0.25), 0 12px 24px rgba(35,75,59,.12);
+            transform: translateY(-4px);
         }
 
-        .rating-option img {
-            display: block;
-            height: auto;
-            max-height: 30vh;
-            object-fit: contain;
-            transform: scale(1.9);
-            width: 100%;
-        }
+        .rating-pip { display:block; position:relative; width:min(100%,145px); aspect-ratio:1; overflow:hidden; -webkit-mask-image:linear-gradient(to right,transparent,#000 9%,#000 91%,transparent); mask-image:linear-gradient(to right,transparent,#000 9%,#000 91%,transparent); }
+        .rating-pip img { position:absolute; display:block; height:165%; width:auto; max-width:none; top:50%; left:50%; transform:translate(var(--pip-shift),-50%); pointer-events:none; }
+        .rating-option[data-rating="1"] { --pip-shift:-10%; }
+        .rating-option[data-rating="2"] { --pip-shift:-30%; }
+        .rating-option[data-rating="3"] { --pip-shift:-51%; }
+        .rating-option[data-rating="4"] { --pip-shift:-70%; }
+        .rating-option[data-rating="5"] { --pip-shift:-88%; }
 
-        .rating-number {
+        .rating-label {
             color: var(--ink);
             font-family: 'Schoolbell', cursive;
-            font-size: clamp(1.8rem, 3.6vw, 3.15rem);
-            font-weight: 400;
-            line-height: 1;
+            font-size: clamp(1rem, 1.5vw, 1.3rem);
+            font-weight: 700;
+            line-height: 1.2;
         }
+        .rating-number { color:#527462; font:800 .85rem 'Schoolbell',cursive; }
 
         .continue-button {
             background: #e4b83f;
@@ -163,8 +166,8 @@
             opacity: 0.48;
         }
 
-        @media (max-width: 600px) {
-            body { padding: 2vh 2vw; }
+        @media (max-width: 700px) {
+            body { padding: 1.5rem .75rem; }
 
             .board-content {
                 gap: 1.1rem;
@@ -173,26 +176,29 @@
                 width: 100%;
             }
 
-            .rating-form { gap: 0.1rem; }
-            .rating-option { padding-inline: 0.1rem; }
-            .rating-option img { max-height: 20vh; transform: scale(1.55); }
+            .rating-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; }
+            .rating-option { min-height:190px; padding:.6rem .35rem; }
+            .rating-option:last-child { grid-column:1 / -1; width:min(100%,240px); justify-self:center; }
+            .rating-pip { width:min(100%,110px); }
             .continue-button { min-height: 2.7rem; padding: 0.45rem 1.5rem; }
         }
+        @media (prefers-reduced-motion: reduce) { .rating-option, .continue-button { transition:none; } }
     </style>
 </head>
 <body>
     <main class="board" aria-labelledby="page-title">
         <div class="board-content">
             <header>
-                <h1 id="page-title">How did your reading go?</h1>
-                <p class="instruction">Choose the face that matches!</p>
+                <h1 id="page-title">Ano ang pakiramdam mo sa pagbasa?</h1>
+                <p class="instruction">Piliin ang Pip na katulad ng naramdaman mo.</p>
             </header>
 
-            <div class="rating-form" role="radiogroup" aria-label="Learner experience rating">
+            <div class="rating-form" role="radiogroup" aria-label="How did the reading feel for you?">
                 {% for rating in "12345" %}
-                <button class="rating-option" type="button" role="radio" aria-checked="false" data-rating="{{ rating }}" aria-label="Rating {{ rating }}">
-                    <img src="{% static 'pabasa_app/images/learner_experience/' %}{{ rating }}.png" alt="Rating {{ rating }}">
-                    <span class="rating-number">{{ rating }}</span>
+                <button class="rating-option" type="button" role="radio" aria-checked="false" data-rating="{{ rating }}">
+                    <span class="rating-pip" aria-hidden="true"><img src="{% static 'pabasa_app/images/learner_experience/pip_reactions.png' %}" alt="" width="2172" height="724"></span>
+                    <span class="rating-label">{% if rating == '1' %}Nahirapan ako{% elif rating == '2' %}Medyo nahirapan ako{% elif rating == '3' %}Okay lang{% elif rating == '4' %}Madali lang{% else %}Ang saya ko!{% endif %}</span>
+                    <span class="rating-number">{{ rating }} / 5</span>
                 </button>
                 {% endfor %}
             </div>

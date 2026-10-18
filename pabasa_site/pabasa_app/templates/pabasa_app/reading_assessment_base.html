@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Quattrocento+Sans:wght@400;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;700&family=Quattrocento+Sans:wght@400;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         @font-face {
             font-family: "Schoolbell";
@@ -1645,7 +1645,7 @@
 
         #learnerExperiencePage {
             align-items: center;
-            background: linear-gradient(135deg, #fff8df 0%, #e6f3e9 52%, #dff1f5 100%);
+            background: radial-gradient(ellipse 72% 68% at 50% 50%, rgba(255,255,255,.82), transparent 78%), linear-gradient(110deg, #e8f5ff 0%, #f5faff 32%, #fff9e9 68%, #e7f3ff 100%);
             color: #234b3b;
             display: none;
             min-height: calc(100vh - clamp(0.85rem, 2vw, 1.5rem) * 2);
@@ -1656,22 +1656,29 @@
         }
 
         #learnerExperiencePage:not(.d-none) { display: grid; }
-        #learnerExperiencePage::before, #learnerExperiencePage::after { content: "✦"; color: rgba(228, 184, 63, .55); font-size: clamp(1.5rem, 3vw, 2.8rem); position: absolute; pointer-events: none; }
-        #learnerExperiencePage::before { left: 8%; top: 13%; } #learnerExperiencePage::after { bottom: 14%; right: 9%; }
-        #learnerExperiencePage .learner-experience-content { align-items: center; background: rgba(255,255,255,.8); border: 2px solid rgba(255,255,255,.9); border-radius: 38px; box-shadow: 0 22px 55px rgba(35,75,59,.16); display: flex; flex-direction: column; gap: clamp(.8rem, 2vh, 1.35rem); max-height: 96%; padding: clamp(1.5rem, 4vh, 3rem) clamp(1.5rem, 4vw, 3.5rem); text-align: center; width: min(1180px, 94vw); }
-        #learnerExperiencePage h1 { color: #234b3b; font-family: "Schoolbell", cursive; font-size: clamp(2.5rem, 6vh, 4.8rem); line-height: 1; margin: 0; }
-        #learnerExperiencePage .learner-experience-instruction { color: #527462; font-family: "Schoolbell", cursive; font-size: clamp(1.45rem, 3.5vh, 2.35rem); margin: 0; }
+        #learnerExperiencePage .learner-experience-content { align-items:center; background:#fffefa; border:1px solid rgba(255,255,255,.98); border-radius:30px; box-shadow:0 24px 60px rgba(30,80,115,.15); display:flex; flex-direction:column; gap:clamp(.8rem,1.8vh,1.15rem); max-height:96%; padding:clamp(1.3rem,3vh,2.1rem) clamp(1.3rem,3vw,2.6rem); position:relative; text-align:center; width:min(1120px,calc(100% - 3rem)); z-index:1; }
+        #learnerExperiencePage h1 { color:#234b3b; font-family:"Fredoka","Nunito",sans-serif; font-size:clamp(2rem,4.6vh,3.45rem); font-weight:700; line-height:1.15; margin:0 0 .3rem; }
+        #learnerExperiencePage .learner-experience-instruction { color:#527462; font-family:"Fredoka","Nunito",sans-serif; font-size:clamp(1rem,2.2vh,1.3rem); font-weight:400; line-height:1.35; margin:0; }
         #learnerExperiencePage .rating-form { align-items: stretch; display: flex; gap: clamp(.55rem, 1.2vw, 1.1rem); justify-content: center; max-width: 1080px; width: 100%; }
-        #learnerExperiencePage .rating-option { align-items: center; background: #fffdf7; border: 3px solid transparent; border-radius: 26px; color: #234b3b; cursor: pointer; display: flex; flex: 1 1 0; flex-direction: column; font-family: "Schoolbell", cursive; gap: .35rem; min-width: 0; padding: clamp(.65rem, 1.4vh, 1rem) clamp(.3rem, .8vw, .8rem); transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
-        #learnerExperiencePage .rating-option:hover, #learnerExperiencePage .rating-option:focus-visible { background: rgba(255, 255, 255, 0.45); outline: none; transform: translateY(-4px); }
+        #learnerExperiencePage .rating-option { align-items:center; background:#fffdf7; border:3px solid #d5e6e3; border-radius:22px; color:#234b3b; cursor:pointer; display:flex; flex:1 1 0; flex-direction:column; font-family:"Fredoka","Nunito",sans-serif; gap:.5rem; justify-content:center; min-height:220px; min-width:0; padding:.7rem .4rem .8rem; transition:background-color 180ms ease,border-color 180ms ease,box-shadow 180ms ease,transform 180ms ease; }
+        #learnerExperiencePage .rating-option:hover, #learnerExperiencePage .rating-option:focus-visible { background:#f5fbff; border-color:#9ac9df; outline:none; transform:translateY(-3px); }
         #learnerExperiencePage .rating-option:focus-visible { box-shadow: 0 0 0 3px rgba(35, 75, 59, 0.25); }
         #learnerExperiencePage .rating-option.is-selected { background: #fff0bd; border-color: #e4b83f; box-shadow: 0 0 0 3px rgba(228, 184, 63, .28), 0 10px 18px rgba(35,75,59,.12); transform: translateY(-5px) scale(1.025); }
-        #learnerExperiencePage .rating-option img { display: block; height: clamp(145px, 23vh, 225px); max-width: 100%; object-fit: contain; width: auto; }
-        #learnerExperiencePage .rating-number { color: #234b3b; font-family: "Schoolbell", cursive; font-size: clamp(1.6rem, 3.5vh, 2.45rem); line-height: 1; }
-        #learnerExperiencePage .continue-button { background: #e4b83f; border: 0; border-radius: 999px; box-shadow: 0 8px 16px rgba(10, 30, 20, .22); color: #234b3b; cursor: pointer; font: 400 clamp(1.35rem, 3vh, 1.9rem) "Schoolbell", cursive; min-height: 3.5rem; min-width: 280px; padding: .65rem 3.5rem; }
-        #learnerExperiencePage .continue-button:disabled { cursor: not-allowed; opacity: 0.48; }
+        #learnerExperiencePage .rating-pip { display:block; position:relative; width:min(100%,clamp(110px,15dvh,138px)); aspect-ratio:1; overflow:hidden; -webkit-mask-image:linear-gradient(to right,transparent 10%,#000 14%,#000 86%,transparent 90%); mask-image:linear-gradient(to right,transparent 10%,#000 14%,#000 86%,transparent 90%); }
+        #learnerExperiencePage .rating-pip img { position:absolute; display:block; height:146%; width:auto; max-width:none; top:54%; left:50%; transform:translate(var(--pip-shift),-50%); pointer-events:none; }
+        #learnerExperiencePage .rating-option[data-rating="1"] { --pip-shift:-10%; }
+        #learnerExperiencePage .rating-option[data-rating="2"] { --pip-shift:-30%; }
+        #learnerExperiencePage .rating-option[data-rating="3"] { --pip-shift:-51%; }
+        #learnerExperiencePage .rating-option[data-rating="4"] { --pip-shift:-70%; }
+        #learnerExperiencePage .rating-option[data-rating="5"] { --pip-shift:-88%; }
+        #learnerExperiencePage .rating-label { color:#234b3b; font-family:"Fredoka","Nunito",sans-serif; font-size:clamp(.95rem,1.2vw,1.08rem); font-weight:400; line-height:1.25; }
+        #learnerExperiencePage .rating-number { color:#53746a; font-family:"Fredoka","Nunito",sans-serif; font-size:1rem; font-weight:400; line-height:1; }
+        #learnerExperiencePage .continue-button { background:#e4b83f; border:0; border-radius:999px; box-shadow:0 8px 16px rgba(10,30,20,.2); color:#234b3b; cursor:pointer; font:400 clamp(1.15rem,2.4vh,1.45rem) "Fredoka","Nunito",sans-serif; min-height:3.5rem; min-width:280px; padding:.65rem 3.5rem; transition:filter 180ms ease,transform 180ms ease,box-shadow 180ms ease; }
+        #learnerExperiencePage .continue-button:not(:disabled):hover { filter:brightness(1.06); transform:translateY(-2px); }
+        #learnerExperiencePage .continue-button:disabled { cursor:not-allowed; opacity:.52; box-shadow:none; }
         #learnerExperienceFeedback { color: #a13d32; font-family: "Nunito", sans-serif; font-weight: 800; min-height: 1.25rem; }
-        @media (max-width: 600px) { #learnerExperiencePage .learner-experience-content { border-radius: 24px; gap: .65rem; padding: 1rem .55rem; width: 96vw; } #learnerExperiencePage .rating-form { gap: .2rem; } #learnerExperiencePage .rating-option { border-radius: 16px; padding-inline: .1rem; } #learnerExperiencePage .rating-option img { height: clamp(78px, 17vh, 125px); } #learnerExperiencePage .continue-button { min-height: 2.8rem; min-width: 220px; padding: .45rem 2rem; } }
+        @media (max-width:700px) { #learnerExperiencePage { overflow-y:auto; } #learnerExperiencePage .learner-experience-content { border-radius:24px; gap:.75rem; max-height:none; padding:1rem .7rem; width:96vw; } #learnerExperiencePage .rating-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem; } #learnerExperiencePage .rating-option { border-radius:16px; min-height:190px; padding:.55rem .25rem .7rem; } #learnerExperiencePage .rating-option:last-child { grid-column:1 / -1; width:min(100%,220px); justify-self:center; } #learnerExperiencePage .rating-pip { width:min(100%,110px); } #learnerExperiencePage .continue-button { min-height:2.8rem; min-width:220px; padding:.45rem 2rem; } }
+        @media (prefers-reduced-motion:reduce) { #learnerExperiencePage .rating-option,#learnerExperiencePage .continue-button { transition:none; } }
 
         .completion-card {
             background:
@@ -4203,23 +4210,6 @@
         body.is-crla-reader .completion-mark { width: 52px; height: 52px; font-size: 1.5rem; }
         body.is-crla-reader .completion-card h1 { font-size: 1.5rem; }
         body.is-crla-reader .completion-classification-panel { padding: .75rem; }
-        body.is-crla-reader #learnerExperiencePage { min-height: 0; height: 100%; }
-        body.is-crla-reader #learnerExperiencePage .learner-experience-content {
-            width: 100%;
-            max-height: none;
-            padding: .75rem;
-            gap: .5rem;
-        }
-        body.is-crla-reader #learnerExperiencePage h1 { font-size: clamp(2rem, 6dvh, 3rem); }
-        body.is-crla-reader #learnerExperiencePage .learner-experience-instruction { font-size: 1.25rem; }
-        body.is-crla-reader #learnerExperiencePage .rating-option { padding: .5rem .15rem; }
-        body.is-crla-reader #learnerExperiencePage .rating-option img { height: clamp(64px, 20dvh, 150px); }
-        body.is-crla-reader #learnerExperiencePage .rating-number { font-size: 1.25rem; }
-        body.is-crla-reader #learnerExperiencePage .continue-button {
-            min-height: 44px;
-            min-width: min(220px, 100%);
-            padding: .4rem 1.5rem;
-        }
         body.is-crla-reader .reader-footer.is-official-crla-nav {
             grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
             grid-template-areas: "controls next";
@@ -4257,6 +4247,45 @@
             min-width: 0;
             justify-self: stretch;
         }
+    }
+    html:has(body.is-crla-reader .reader-shell.is-learner-experience) { height: 100%; overflow: hidden; }
+    body.is-crla-reader:has(.reader-shell.is-learner-experience) { height: 100dvh; min-height: 0; overflow: hidden; }
+    body.is-crla-reader .reader-shell.is-learner-experience {
+        height: 100dvh;
+        min-height: 0;
+        padding: 0;
+        gap: 0;
+        grid-template-rows: minmax(0, 1fr);
+    }
+    body.is-crla-reader .reader-shell.is-learner-experience #learnerExperiencePage {
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        max-height: 100dvh;
+        overflow: hidden;
+    }
+    body.is-crla-reader #learnerExperiencePage .learner-experience-content {
+        width: min(1100px, calc(100% - 3rem));
+        max-height: none;
+        padding: clamp(1.25rem, 3vh, 2rem) clamp(1rem, 2.5vw, 2.2rem);
+        gap: .9rem;
+    }
+    body.is-crla-reader #learnerExperiencePage h1 { font-size: clamp(2rem, 6dvh, 3rem); }
+    body.is-crla-reader #learnerExperiencePage .learner-experience-instruction { font-size: 1.1rem; }
+    body.is-crla-reader #learnerExperiencePage .rating-option { padding: .45rem .2rem .6rem; }
+    body.is-crla-reader #learnerExperiencePage .rating-pip { width:min(100%,clamp(100px,15dvh,138px)); }
+    body.is-crla-reader #learnerExperiencePage .rating-number { font-size:1rem; }
+    body.is-crla-reader #learnerExperiencePage .continue-button {
+        min-height: 44px;
+        min-width: min(220px, 100%);
+        padding: .4rem 1.5rem;
+    }
+    @media (max-width: 700px), (max-height: 620px) {
+        html:has(body.is-crla-reader .reader-shell.is-learner-experience),
+        body.is-crla-reader:has(.reader-shell.is-learner-experience) { height: auto; min-height: 100dvh; overflow: auto; }
+        body.is-crla-reader .reader-shell.is-learner-experience { height: auto; min-height: 100dvh; overflow: visible; }
+        body.is-crla-reader .reader-shell.is-learner-experience #learnerExperiencePage { height: auto; min-height: 100dvh; max-height: none; overflow: visible; padding-block: 1rem; }
+        body.is-crla-reader #learnerExperiencePage .learner-experience-content { width: min(calc(100% - 1rem), 1100px); }
     }
     @media (max-width: 600px) {
         body.is-crla-reader .reader-footer.is-official-crla-nav {
@@ -4799,18 +4828,19 @@
         <section id="learnerExperiencePage" class="d-none" aria-labelledby="learnerExperienceTitle">
             <div class="learner-experience-content">
                 <header>
-                    <h1 id="learnerExperienceTitle">How did your reading go?</h1>
-                    <p class="learner-experience-instruction">Choose the face that matches!</p>
+                    <h1 id="learnerExperienceTitle">Ano ang pakiramdam mo sa pagbasa?</h1>
+                    <p class="learner-experience-instruction">Piliin ang Pip na katulad ng naramdaman mo.</p>
                 </header>
-                <div class="rating-form" role="radiogroup" aria-label="Learner experience rating">
+                <div class="rating-form" role="radiogroup" aria-label="Pakiramdam sa pagbasa">
                     {% for rating in "12345" %}
-                    <button class="rating-option" type="button" role="radio" aria-checked="false" data-rating="{{ rating }}" aria-label="Rating {{ rating }}">
-                        <img src="{% static 'pabasa_app/images/learner_experience/' %}{{ rating }}.webp" alt="Rating {{ rating }}">
+                    <button class="rating-option" type="button" role="radio" aria-checked="false" data-rating="{{ rating }}">
+                        <span class="rating-pip" aria-hidden="true"><img src="{% static 'pabasa_app/images/learner_experience/pip_reactions.png' %}" alt="" width="2172" height="724"></span>
+                        <span class="rating-label">{% if rating == '1' %}Nahirapan ako{% elif rating == '2' %}Medyo nahirapan ako{% elif rating == '3' %}Okay lang{% elif rating == '4' %}Madali lang{% else %}Ang saya ko!{% endif %}</span>
                         <span class="rating-number">{{ rating }}</span>
                     </button>
                     {% endfor %}
                 </div>
-                <button class="continue-button" id="learnerExperienceContinue" type="button" disabled>Continue</button>
+                <button class="continue-button" id="learnerExperienceContinue" type="button" disabled>Tapos Na!</button>
                 <div id="learnerExperienceFeedback" role="status" aria-live="polite"></div>
             </div>
         </section>
