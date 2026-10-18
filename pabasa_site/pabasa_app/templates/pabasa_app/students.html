@@ -191,12 +191,22 @@
     .assessment-week-title { display:flex; align-items:center; gap:.7rem; min-width:0; }
     .assessment-week-heading-icon { display:inline-flex; align-items:center; justify-content:center; flex:0 0 2.65rem; width:2.65rem; height:2.65rem; border-radius:14px; background:#eef5fa; color:#10466e; font-size:1.2rem; }
     .assessment-week-title h2 { margin:0; color:#193247; font-size:1.12rem; font-weight:900; letter-spacing:-.01em; }
-    .assessment-week-state-dot { width:.52rem; height:.52rem; border-radius:50%; background:#a8b4bd; }
+    .assessment-week-state-dot { width:.52rem; height:.52rem; border-radius:50%; background:#a8b4bd; transition:background-color 180ms ease, box-shadow 180ms ease; }
     .assessment-week-card--enabled .assessment-week-state-dot { background:#3a8d5f; box-shadow:0 0 0 4px rgba(58,141,95,.12); }
+    .assessment-week-badge { padding:.28rem .62rem; border-radius:999px; color:#596772; background:#e9edf0; font-size:.7rem; font-weight:800; transition:background-color 180ms ease, color 180ms ease; }
+    .assessment-week-card--enabled .assessment-week-badge { color:#256b46; background:#dff3e6; }
+    .assessment-week-card .assessment-week-current-status { margin:.45rem 0 0 3.35rem; color:#687780; font-size:.84rem; font-weight:700; }
+    .assessment-week-card--enabled .assessment-week-current-status { color:#2d7650; }
     .assessment-week-card .card-subtitle { max-width:58ch; margin:.48rem 0 0 3.35rem; color:#6c7d89; font-size:.84rem; line-height:1.45; }
-    .assessment-week-card .form-check { display:flex; align-items:center; gap:.5rem; flex:0 0 auto; margin-top:.12rem; padding:.42rem .62rem; border:1px solid #e0e7ec; border-radius:999px; background:#f8fafb; }
-    .assessment-week-card--enabled .form-check { border-color:rgba(58,141,95,.24); background:#f3faf5; }
-    .assessment-week-card .form-check-input { width:2.05rem; height:1.1rem; margin:0; cursor:pointer; }
+    .assessment-week-card .form-check { display:flex; align-items:center; gap:.5rem; flex:0 0 auto; margin-top:.12rem; padding:.42rem .62rem; border:1px solid #e0e7ec; border-radius:999px; background:#f8fafb; animation:assessment-week-inactive-pulse 3s ease-in-out infinite; transition:background-color 220ms ease, border-color 220ms ease, box-shadow 220ms ease; }
+    .assessment-week-card--enabled .form-check { border-color:rgba(58,141,95,.3); background:#f3faf5; box-shadow:0 0 0 3px rgba(58,141,95,.1); animation:none; }
+    .assessment-week-card .form-check:hover, .assessment-week-card .form-check:focus-within { border-color:#83b5d0; background:#eef7fc; box-shadow:0 0 0 4px rgba(75,150,196,.13); animation:none; }
+    .assessment-week-card--enabled .form-check:hover, .assessment-week-card--enabled .form-check:focus-within { border-color:#6ab188; background:#eaf8ef; box-shadow:0 0 0 4px rgba(58,141,95,.15); }
+    @keyframes assessment-week-inactive-pulse { 0%, 100% { box-shadow:0 0 0 0 rgba(75,150,196,0); } 50% { box-shadow:0 0 0 5px rgba(75,150,196,.13); } }
+    .assessment-week-card .form-check-input { width:2.05rem; height:1.1rem; margin:0; cursor:pointer; background-color:#9aa5ae; border-color:#9aa5ae; transition:background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease; }
+    .assessment-week-card .form-check-input:checked { background-color:#3a8d5f; border-color:#3a8d5f; }
+    .assessment-week-card .form-check-input:focus-visible { outline:2px solid #2173a6; outline-offset:3px; }
+    @media (prefers-reduced-motion:reduce) { .assessment-week-card .form-check { animation:none; }.assessment-week-card .form-check, .assessment-week-card .form-check-input, .assessment-week-badge, .assessment-week-state-dot { transition:none; } }
     .assessment-week-card .form-check-label { color:#687780; font-size:.72rem; font-weight:800; letter-spacing:.06em; }
     .assessment-week-card--enabled .form-check-label { color:#2d7650; }
     .assessment-week-live-action { min-height:auto; margin:0 1.25rem; padding:.85rem 0 1rem; border:0; border-top:1px solid #e8edf0; background:transparent; }
@@ -208,7 +218,7 @@
     .assessment-confirm-body { padding:1.25rem 1.6rem 1.3rem; text-align:center; }
     .assessment-confirm-icon { display:inline-flex; align-items:center; justify-content:center; width:2.8rem; height:2.8rem; margin-bottom:.7rem; border-radius:14px; background:#eaf4ff; color:#2f80d9; font-size:1.25rem; }
     .assessment-confirm-title { margin:0 0 .45rem; font-size:1.28rem; font-weight:800; }.assessment-confirm-copy { margin:0; color:#304a63; line-height:1.45; }.assessment-confirm-info { display:flex; align-items:flex-start; gap:.5rem; width:100%; margin:.75rem auto 0; padding:.65rem .75rem; border:1px solid #c9e0f2; border-radius:10px; color:#2f5f83; background:#f0f8ff; font-size:.84rem; line-height:1.4; text-align:left; }.assessment-confirm-info .bi { flex:0 0 auto; margin-top:.08rem; color:#2f80d9; }.assessment-confirm-secondary { margin:.6rem 0 0; color:#71818d; font-size:.8rem; line-height:1.35; }.assessment-confirm-error { margin:.9rem 0 0; color:#b42318; font-size:.9rem; }.assessment-confirm-actions { display:flex; justify-content:center; gap:.65rem; margin-top:1rem; }.assessment-confirm-actions button { min-width:6.5rem; border-radius:10px; font-weight:700; }.assessment-confirm-cancel { border:1px solid #b9c8d4; color:#304a63; background:#fff; }.assessment-confirm-cancel:hover,.assessment-confirm-cancel:focus-visible { background:#f3f7fa; }.assessment-confirm-submit { border:0; background:#4d9bff; color:#071226; }.assessment-confirm-submit:hover,.assessment-confirm-submit:focus-visible { background:#76b4ff; }
-    @media (max-width:575.98px) { .assessment-week-card .card-header { padding:1rem; }.assessment-week-header { gap:.9rem; }.assessment-week-card .card-subtitle { margin-left:0; }.assessment-week-card .form-check { align-self:flex-start; }.assessment-week-live-action { align-items:flex-start!important; flex-direction:column; margin:0 1rem; padding:.85rem 0 1rem; }.assessment-week-live-action .btn { width:100%; } }
+    @media (max-width:575.98px) { .assessment-week-card .card-header { padding:1rem; }.assessment-week-header { gap:.9rem; }.assessment-week-card .card-subtitle, .assessment-week-card .assessment-week-current-status { margin-left:0; }.assessment-week-card .form-check { align-self:flex-start; }.assessment-week-live-action { align-items:flex-start!important; flex-direction:column; margin:0 1rem; padding:.85rem 0 1rem; }.assessment-week-live-action .btn { width:100%; } }
 
     #studentAssessmentRequestsModal .modal-dialog { max-width: 620px; }
     #studentAssessmentRequestsModal .modal-content { overflow:hidden; border:0; border-radius:24px; box-shadow:0 24px 70px rgba(15,45,69,.28); }

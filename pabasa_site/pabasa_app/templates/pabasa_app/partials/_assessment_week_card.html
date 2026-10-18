@@ -7,11 +7,13 @@
                 <span class="assessment-week-heading-icon" aria-hidden="true"><i class="bi bi-clipboard2-check"></i></span>
                 <h2 id="assessmentWeekHeading">Assessment Week</h2>
                 <span class="assessment-week-state-dot" aria-hidden="true"></span>
+                <span class="assessment-week-badge" id="assessmentWeekBadge">{% if assessment_week_section.assessment_week_enabled %}Active{% else %}Inactive{% endif %}</span>
             </div>
+            <p class="assessment-week-current-status" id="assessmentWeekMessage" role="status">{% if assessment_week_section.assessment_week_enabled %}Assessment Week is currently active for this section.{% else %}Assessment Week is currently inactive for this section.{% endif %}</p>
             <p class="card-subtitle">When enabled, students in this section can access only assessments. Other sections are not affected.</p>
         </div>
         <div class="form-check form-switch mb-0">
-            <input class="form-check-input" type="checkbox" role="switch" id="assessmentWeekToggle" {% if assessment_week_section.assessment_week_enabled %}checked{% endif %} data-results-recorded="{{ assessment_week_results_recorded|yesno:'true,false' }}" aria-describedby="assessmentWeekStatus">
+            <input class="form-check-input" type="checkbox" role="switch" id="assessmentWeekToggle" {% if assessment_week_section.assessment_week_enabled %}checked{% endif %} data-results-recorded="{{ assessment_week_results_recorded|yesno:'true,false' }}" title="{% if assessment_week_section.assessment_week_enabled %}Disable Assessment Week{% else %}Enable Assessment Week{% endif %}" aria-label="{% if assessment_week_section.assessment_week_enabled %}Disable Assessment Week{% else %}Enable Assessment Week{% endif %}" aria-describedby="assessmentWeekStatus assessmentWeekMessage">
             <label class="form-check-label fw-semibold" for="assessmentWeekToggle" id="assessmentWeekStatus">{% if assessment_week_section.assessment_week_enabled %}ON{% else %}OFF{% endif %}</label>
         </div>
     </div>
@@ -90,6 +92,20 @@ document.addEventListener('DOMContentLoaded', function () {
     const toggle = document.getElementById('assessmentWeekToggle');
     const status = document.getElementById('assessmentWeekStatus');
     if (!toggle || !status) return;
+    const card = toggle.closest('.assessment-week-card');
+    const badge = document.getElementById('assessmentWeekBadge');
+    const message = document.getElementById('assessmentWeekMessage');
+    function syncAssessmentWeekVisual() {
+        const enabled = toggle.checked;
+        card?.classList.toggle('assessment-week-card--enabled', enabled);
+        status.textContent = enabled ? 'ON' : 'OFF';
+        if (badge) badge.textContent = enabled ? 'Active' : 'Inactive';
+        toggle.title = enabled ? 'Disable Assessment Week' : 'Enable Assessment Week';
+        toggle.setAttribute('aria-label', toggle.title);
+        if (message) message.textContent = enabled
+            ? 'Assessment Week is currently active for this section.'
+            : 'Assessment Week is currently inactive for this section.';
+    }
     const csrfToken = document.querySelector('#assessmentWeekForm input[name="csrfmiddlewaretoken"]')?.value || '';
     const modal = document.getElementById('assessmentConfirmModal');
     const title = document.getElementById('assessmentConfirmTitle');
@@ -105,10 +121,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const hasRecordedResults = toggle.dataset.resultsRecorded === 'true';
     let modalMode = 'confirm';
     let isUpdating = false;
-    function closeModal(restore = true) { if (restore) toggle.checked = previousState; modal.classList.remove('is-visible'); modal.setAttribute('aria-hidden', 'true'); lastFocused?.focus(); }
+    function closeModal(restore = true) { if (restore) toggle.checked = previousState; syncAssessmentWeekVisual(); modal.classList.remove('is-visible'); modal.setAttribute('aria-hidden', 'true'); lastFocused?.focus(); }
     function openModal() { modalMode = 'confirm'; requestedState = toggle.checked; title.textContent = requestedState ? 'Enable Assessment Week?' : 'Disable Assessment Week?'; copy.textContent = requestedState ? 'Put this section in Assessment Week mode.' : 'Students in this section will return to the normal learning and prompt flow.'; info.hidden = !requestedState; secondary.hidden = !requestedState; error.hidden = true; cancel.hidden = false; submit.textContent = 'Confirm'; lastFocused = document.activeElement; modal.classList.add('is-visible'); modal.setAttribute('aria-hidden', 'false'); submit.focus(); }
     function showFailureModal(message, resultsRecorded = false) {
         toggle.checked = previousState;
+        syncAssessmentWeekVisual();
         modalMode = 'error';
         title.textContent = resultsRecorded ? 'Cannot Turn Off Assessment Week' : 'Assessment Week Could Not Be Updated';
         copy.textContent = resultsRecorded ? 'This Assessment Week can no longer be turned off because one or more student CRLA results have already been recorded. Assessment data must remain active to preserve the recorded student results.' : (message || 'The Assessment Week status was not changed. Please try again.');
@@ -134,10 +151,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 requestError.resultsRecorded = payload.code === 'assessment_week_results_recorded';
                 throw requestError;
             }
-            toggle.checked = Boolean(payload.assessment_week_enabled); status.textContent = toggle.checked ? 'ON' : 'OFF'; previousState = toggle.checked; window.location.reload();
+            toggle.checked = Boolean(payload.assessment_week_enabled); syncAssessmentWeekVisual(); previousState = toggle.checked; window.location.reload();
         } catch (requestError) { showFailureModal(requestError.message, requestError.resultsRecorded); } finally { isUpdating = false; toggle.disabled = false; submit.disabled = false; cancel.disabled = false; }
     }
-    toggle.addEventListener('change', () => { if (isUpdating) return; if (!toggle.checked && previousState && hasRecordedResults) { showFailureModal('', true); return; } openModal(); }); cancel.addEventListener('click', () => closeModal(true)); submit.addEventListener('click', () => { if (modalMode === 'error') closeModal(true); else applyChange(); }); modal.addEventListener('click', event => { if (event.target === modal && !submit.disabled) closeModal(true); }); document.addEventListener('keydown', event => { if (event.key === 'Escape' && modal.classList.contains('is-visible') && !submit.disabled) closeModal(true); });
+    toggle.addEventListener('change', () => { if (isUpdating) return; syncAssessmentWeekVisual(); if (!toggle.checked && previousState && hasRecordedResults) { showFailureModal('', true); return; } openModal(); }); cancel.addEventListener('click', () => closeModal(true)); submit.addEventListener('click', () => { if (modalMode === 'error') closeModal(true); else applyChange(); }); modal.addEventListener('click', event => { if (event.target === modal && !submit.disabled) closeModal(true); }); document.addEventListener('keydown', event => { if (event.key === 'Escape' && modal.classList.contains('is-visible') && !submit.disabled) closeModal(true); });
 });
 </script>
 {% if live_crla_material %}
