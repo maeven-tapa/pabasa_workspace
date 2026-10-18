@@ -165,7 +165,7 @@ class Lesson22Gawain1AudioTests(SimpleTestCase):
         workbook = (Path(__file__).parent / 'prescribed_workbook.py').read_text(encoding='utf-8')
         self.assertIn("building_word_total=len(L22_C_ACCEPTED_BUILDS)", workbook)
         self.assertIn("state.found_words||[]).length===Number(a.building_word_total||0)", self.js)
-        self.assertIn('state.found_words.map(w=>`<li>${esc(w)}</li>`).join', self.js)
+        self.assertIn('<strong>TAMANG NABUONG SALITA</strong>', self.js)
 
     def test_gawain1_startup_owner_is_independent_and_instruction_replay_remains(self):
         self.assertIn("if(!startupNarrationStarted){startupNarrationStarted=true;playStartup();}", self.js)
