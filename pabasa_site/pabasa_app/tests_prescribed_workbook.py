@@ -12,7 +12,7 @@ from django.urls import reverse
 from .models import Material, School, Section, StudentActivityProgress, User
 from .prescribed_activity_catalog import PRESCRIBED_ACTIVITIES, active_prescribed_activities
 from .prescribed_workbook import (
-    ACTIVITIES, L22_G2_C_WORDS, L22_G3_C_WORD_PATHS, L22_G5_F_WORD_PATHS, apply_event, get_activity,
+    ACTIVITIES, L22_C_ACCEPTED_BUILDS, L22_G2_C_WORDS, L22_G3_C_WORD_PATHS, L22_G5_F_WORD_PATHS, apply_event, get_activity,
     initial_l22_g2_state, initial_l22_g3_state, initial_l22_g5_state,
     initial_state, l22_g2_pronunciation_match, initial_l23_g1_state,
     l23_g1_pronunciation_match, normalize_l22_g2_speech,
@@ -763,14 +763,51 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertEqual(s['found_words'], [])
         self.assertEqual(s['pending_words'][0]['word'], 'cacbu')
         self.assertTrue(s['last_feedback'].startswith('Subukan muli.'))
-        with self.assertRaisesMessage(ValueError, 'Bumuo muna'):
+        with self.assertRaisesMessage(ValueError, 'Bumuo muna ng lahat'):
             apply_event(a, s, {'action': 'finish'})
         apply_event(a, s, {'action': 'build_word', 'parts': ['item-1', 'item-8']})
         with self.assertRaisesMessage(ValueError, 'ibang salita'):
             apply_event(a, s, {'action': 'build_word', 'parts': ['item-1', 'item-8']})
+        self.assertEqual(s['found_words'], ['cactus'])
+
+    def test_lesson22_gawain1_requires_all_unique_words_before_completion(self):
+        a = get_activity('aral-l22-g1-c-syllable-builder')
+        s = initial_state()
+        s.update(index=len(a['items']), read_aloud_started=True, read_aloud_completed=True,
+                 reading_phase='complete', found_words=['cactus'])
+        normalize_l22_c_state(s)
+        with self.assertRaisesMessage(ValueError, 'Bumuo muna ng lahat'):
+            apply_event(a, s, {'action': 'finish'})
+        self.assertFalse(s['completed'])
+        self.assertEqual(s['found_words'], ['cactus'])
+        for word, pieces in L22_C_ACCEPTED_BUILDS.items():
+            if word == 'cactus':
+                continue
+            ids = [next(item['id'] for item in a['items'] if item['text'] == piece) for piece in pieces]
+            apply_event(a, s, {'action': 'build_word', 'parts': ids})
+            self.assertFalse(s['completed'])
         apply_event(a, s, {'action': 'finish'})
         self.assertTrue(s['completed'])
+        self.assertEqual(set(s['found_words']), set(L22_C_ACCEPTED_BUILDS))
+        self.assertEqual(s['index'], len(a['items']))
+
+    def test_lesson22_gawain1_restores_premature_completion_to_word_building(self):
+        a = get_activity('aral-l22-g1-c-syllable-builder')
+        s = initial_state()
+        s.update(index=len(a['items']), read_aloud_started=True, read_aloud_completed=True,
+                 reading_phase='complete', found_words=['Celeste'], completed=True)
+        normalize_l22_c_state(s)
+        self.assertFalse(s['completed'])
+        self.assertEqual(s['index'], len(a['items']))
+        self.assertTrue(s['read_aloud_completed'])
+        self.assertEqual(s['found_words'], ['Celeste'])
+
+    def test_lesson22_gawain1_normalization_deduplicates_and_rejects_unknown_words(self):
+        s = {'found_words': ['cactus', 'Cactus', 'unknown'], 'read_aloud_completed': True,
+             'completed': True, 'index': 18}
+        normalize_l22_c_state(s)
         self.assertEqual(s['found_words'], ['cactus'])
+        self.assertFalse(s['completed'])
 
     def test_lesson22_gawain1_com_is_one_big_box_piece(self):
         a = get_activity('aral-l22-g1-c-syllable-builder')

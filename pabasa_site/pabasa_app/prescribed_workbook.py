@@ -424,7 +424,8 @@ add('aral-l22-g1-c-syllable-builder', 38, 22, '1', 'Letrang Cc', BOX, 'builder',
         [['item-16'], ['item-17'], ['item-18']],
     ],
     reading_contexts=L22_C_READING_CONTEXTS,
-    oral_flow=False, review_required=True, progress_total=1)
+    oral_flow=False, review_required=True, progress_total=1,
+    building_word_total=len(L22_C_ACCEPTED_BUILDS))
 add('aral-l22-g2-c-word-reading', 38, 22, '2', 'Mga salitang may letrang C',
     'Basahin ang mga salitang nagtataglay ng hiram na letrang C na may tunog na /k/ at /s/.',
     'reading', [['computer', 'Cebu'], ['cactus', 'Cita'], ['camera', 'Celso'],
@@ -2182,6 +2183,13 @@ def normalize_l22_c_state(state):
         state['read_aloud_completed'] = legacy_read
     if 'read_aloud_started' not in state:
         state['read_aloud_started'] = legacy_read or legacy_index > 0 or bool(oral)
+    canonical_words = {word.casefold(): word for word in L22_C_ACCEPTED_BUILDS}
+    found_words = state.get('found_words') if isinstance(state.get('found_words'), list) else []
+    normalized_found = []
+    for value in found_words:
+        canonical = canonical_words.get(str(value).casefold())
+        if canonical and canonical not in normalized_found:
+            normalized_found.append(canonical)
     if 'found_words' not in state:
         state['found_words'] = []
         saved_words = state.get('answers', {}).get('item-18', [])
@@ -2190,8 +2198,9 @@ def normalize_l22_c_state(state):
         if isinstance(saved_words, list):
             for parts in saved_words:
                 word = _l22_c_word_for_parts(_normalize_l22_c_parts(parts))
-                if word and word.casefold() not in {str(existing).casefold() for existing in state['found_words']}:
-                    state['found_words'].append(word)
+                if word and word.casefold() not in {str(existing).casefold() for existing in normalized_found}:
+                    normalized_found.append(word)
+    state['found_words'] = normalized_found
     state.setdefault('last_feedback', '')
     state.setdefault('last_transcript', '')
     state.setdefault('pending_words', [])
@@ -2210,11 +2219,14 @@ def normalize_l22_c_state(state):
         state['draft']['builder'] = _normalize_l22_c_parts(state['draft']['builder'])
     if state.get('read_aloud_completed'):
         state['index'] = item_count
-    if state.get('completed') and (not state['read_aloud_completed'] or not state['found_words']):
+    required_words = set(L22_C_ACCEPTED_BUILDS)
+    if state.get('completed') and (
+        not state['read_aloud_completed']
+        or set(state['found_words']) != required_words
+    ):
         state['completed'] = False
-        state['index'] = 0
-    elif state.get('completed'):
-        state['index'] = 1
+    if state.get('read_aloud_completed'):
+        state['index'] = item_count
     return state
 
 
@@ -2741,10 +2753,10 @@ def _apply_l22_c_builder(state, event, verified_reading):
     if action == 'finish':
         if not state['read_aloud_completed']:
             raise ValueError('Tapusin muna ang pagbasa.')
-        if not state['found_words']:
-            raise ValueError('Bumuo muna ng kahit isang wastong salita.')
+        if set(state['found_words']) != set(L22_C_ACCEPTED_BUILDS):
+            raise ValueError('Bumuo muna ng lahat ng wastong salita.')
         state['completed'] = True
-        state['index'] = 1
+        state['index'] = len(ACTIVITIES['aral-l22-g1-c-syllable-builder']['items'])
         state['last_feedback'] = 'Magaling! Natapos mo ang Gawain 1.'
         return state
     raise ValueError('Unknown action.')

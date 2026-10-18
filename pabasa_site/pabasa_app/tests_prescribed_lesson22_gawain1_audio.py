@@ -161,6 +161,12 @@ class Lesson22Gawain1AudioTests(SimpleTestCase):
         self.assertIn("if(busy)return", self.js)
         self.assertIn("check.onclick=()=>perform({action:'build_word',parts:builder})", renderer)
 
+    def test_gawain1_word_builder_finishes_only_after_authoritative_word_count(self):
+        workbook = (Path(__file__).parent / 'prescribed_workbook.py').read_text(encoding='utf-8')
+        self.assertIn("building_word_total=len(L22_C_ACCEPTED_BUILDS)", workbook)
+        self.assertIn("state.found_words||[]).length===Number(a.building_word_total||0)", self.js)
+        self.assertIn('state.found_words.map(w=>`<li>${esc(w)}</li>`).join', self.js)
+
     def test_gawain1_startup_owner_is_independent_and_instruction_replay_remains(self):
         self.assertIn("if(!startupNarrationStarted){startupNarrationStarted=true;playStartup();}", self.js)
         self.assertIn("playPrescribedAudio(l22StartupTtsText,true)", self.js)
