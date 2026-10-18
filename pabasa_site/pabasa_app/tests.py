@@ -25,7 +25,7 @@ from pypdf import PdfReader
 from reportlab.pdfgen import canvas
 
 from .forms import AdminPracticeMaterialForm
-from .models import Material, User, Section, Assessment, Notification, ActivityLog, Course, Note, LiveAssessmentSession, School, SchoolCalendar, CalendarEvent, StoryReadingProgress, SystemTimeOverride
+from .models import Material, User, Section, Assessment, AssessmentRequest, Notification, ActivityLog, Course, Note, LiveAssessmentSession, School, SchoolCalendar, CalendarEvent, StoryReadingProgress, SystemTimeOverride
 from .reading_stt import (
     ReadingMatcher,
     align_story_transcript,
@@ -6084,6 +6084,160 @@ class LiveAssessmentStartTests(TestCase):
         session.refresh_from_db()
         self.assertEqual(session.status, 'ended')
         self.assertIsNotNone(session.ends_at)
+
+    def test_cancelling_waiting_session_invalidates_only_its_approved_requests(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course,
+            material=self.material, student_ids=[self.student.id],
+            student_count=1, status='waiting', countdown_seconds=10,
+        )
+        approved = AssessmentRequest.objects.create(
+            student=self.student, section=self.section, status='approved',
+            official_material=self.material, live_session=session,
+        )
+        unrelated = AssessmentRequest.objects.create(
+            student=self.student, section=self.section, status='approved',
+            official_material=self.material,
+        )
+
+        response = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'cancel'}), content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        approved.refresh_from_db()
+        unrelated.refresh_from_db()
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'cancelled')
+        self.assertEqual(approved.status, 'cancelled')
+        self.assertEqual(unrelated.status, 'approved')
+        self.assertFalse(Assessment.objects.filter(student=self.student).exists())
+
+    def test_cancelling_legacy_waiting_session_invalidates_its_unlinked_approval(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course,
+            section=self.section, material=self.material,
+            student_ids=[self.student.id], student_count=1, status='waiting',
+        )
+        approved = AssessmentRequest.objects.create(
+            student=self.student, section=self.section, status='approved',
+            official_material=self.material, reviewed_at=timezone.now(),
+        )
+
+        response = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'cancel'}), content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        approved.refresh_from_db()
+        self.assertEqual(approved.status, 'cancelled')
+
+    def test_leaving_active_session_preserves_approved_request(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course,
+            section=self.section, material=self.material,
+            student_ids=[self.student.id], student_count=1, status='started',
+        )
+        approved = AssessmentRequest.objects.create(
+            student=self.student, section=self.section, status='approved',
+            official_material=self.material, live_session=session,
+        )
+
+        response = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'abandon'}), content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        approved.refresh_from_db()
+        self.assertEqual(approved.status, 'approved')
+
+    def test_cancelled_recovery_session_returns_student_to_request_page(self):
+        self.section.add_student(self.student)
+        today = timezone.localdate()
+        calendar = SchoolCalendar.objects.create(
+            school_year='2026-2027', current_term=1, is_active=True,
+        )
+        for event_type, start, end in (
+            ('school_opening', today - timedelta(days=30), today - timedelta(days=30)),
+            ('pre_assessment', today - timedelta(days=3), today - timedelta(days=1)),
+            ('school_closing', today + timedelta(days=30), today + timedelta(days=30)),
+        ):
+            CalendarEvent.objects.create(
+                school_calendar=calendar, term=1, event_type=event_type,
+                title=event_type, start_date=start, end_date=end,
+            )
+        self.section.school_calendar = calendar
+        self.section.assessment_week_enabled = True
+        self.section.save(update_fields=['school_calendar', 'assessment_week_enabled', 'updated_at'])
+        material = Material.objects.get(system_assessment_key='bosy_crla_pretest')
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, section=self.section,
+            material=material, student_ids=[self.student.id],
+            student_count=1, status='waiting',
+        )
+        approved = AssessmentRequest.objects.create(
+            student=self.student, section=self.section, status='approved',
+            school_calendar=calendar, term=1, official_phase='pretest',
+            official_material=material, live_session=session,
+        )
+        student_client = Client()
+        student_session = student_client.session
+        student_session['user_id'] = self.student.id
+        student_session['user_role'] = 'student'
+        student_session.save()
+
+        cancel = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'cancel'}), content_type='application/json',
+        )
+        self.assertEqual(cancel.status_code, 200)
+        approved.refresh_from_db()
+        self.assertEqual(approved.status, 'cancelled')
+        page = student_client.get(reverse('assessment'), {'section_id': self.section.id})
+        self.assertContains(page, 'Request to Take Assessment')
+        self.assertNotContains(page, 'Getting Ready')
+        status = student_client.get(
+            reverse('student_assessment_access_status'), {'section_id': self.section.id},
+        )
+        self.assertEqual(status.json()['workflow_stage'], 'assessment_not_taken')
+        self.assertFalse(status.json()['assessment_week_enabled'])
+        # A stale approval left behind by an older cancellation must not
+        # restore the waiting card or make the poll endpoint disagree.
+        approved.status = 'approved'
+        approved.save(update_fields=['status'])
+        self.assertContains(
+            student_client.get(reverse('assessment'), {'section_id': self.section.id}),
+            'Request to Take Assessment',
+        )
+        self.assertEqual(student_client.get(
+            reverse('student_assessment_access_status'), {'section_id': self.section.id},
+        ).json()['workflow_stage'], 'assessment_not_taken')
+        approved.live_session = None
+        approved.save(update_fields=['live_session'])
+        self.assertFalse(student_client.get(
+            reverse('student_assessment_access_status'), {'section_id': self.section.id},
+        ).json()['request_approved'])
+        new_request = student_client.post(
+            reverse('request_assessment_access'), {'section_id': self.section.id},
+        )
+        self.assertEqual(new_request.status_code, 200)
+        self.assertTrue(new_request.json()['pending'])
+
+        CalendarEvent.objects.filter(
+            school_calendar=calendar, event_type='pre_assessment',
+        ).update(end_date=today)
+        self.section.assessment_week_enabled = True
+        self.section.save(update_fields=['assessment_week_enabled', 'updated_at'])
+        active_page = student_client.get(reverse('assessment'), {'section_id': self.section.id})
+        self.assertContains(active_page, 'Getting Ready')
+        active_status = student_client.get(
+            reverse('student_assessment_access_status'), {'section_id': self.section.id},
+        ).json()
+        self.assertEqual(active_status['workflow_stage'], 'assessment_week_locked')
+        self.assertTrue(active_status['assessment_week_enabled'])
 
     def test_teacher_end_session_action_is_idempotent_on_repeat_click(self):
         session = LiveAssessmentSession.objects.create(

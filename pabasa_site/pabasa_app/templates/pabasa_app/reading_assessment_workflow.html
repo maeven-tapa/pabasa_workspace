@@ -336,6 +336,19 @@
                         <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
                         <span>You can start the assessment when your teacher makes it live. Stay on this page and check back soon!</span>
                     </div>
+                {% elif approved_request_waiting %}
+                    <span class="workflow-pill">REQUEST APPROVED</span>
+                    <div class="assessment-waiting-loader" role="status" aria-label="Preparing your assessment">
+                        <picture>
+                            <source media="(prefers-reduced-motion: reduce)" srcset="{% static 'pabasa_app/animations/assessment-waiting-spinner-still.png' %}">
+                            <img src="{% static 'pabasa_app/animations/assessment-waiting-spinner.gif' %}" width="224" height="224" alt="">
+                        </picture>
+                    </div>
+                    <div class="workflow-copy assessment-waiting-copy">
+                        <p class="workflow-subtitle">{{ workflow_subtitle }}</p>
+                        <h1>Getting Ready…</h1>
+                        <p class="workflow-message">Your request was approved. Please wait for your teacher to start the live assessment.</p>
+                    </div>
                 {% else %}
                     <span class="workflow-pill">ASSESSMENT WEEK NOT OPEN</span>
                     <span class="workflow-icon" aria-hidden="true"><i class="bi bi-lock-fill"></i></span>
@@ -588,15 +601,15 @@
         const stage = readWorkflowData('workflow-stage-data', '');
         const sectionId = String(readWorkflowData('workflow-section-id-data', '') || '');
         const waitingForAssessmentWeek = stage === 'assessment_week_locked';
-        const waitingAssessmentWeekEnabled = Boolean(readWorkflowData('workflow-assessment-week-enabled-data', false));
         const waitingForApproval = stage === 'assessment_not_taken'
             && Boolean(readWorkflowData('workflow-assessment-request-pending-data', false));
         const accessStatusUrl = document.getElementById('workflow-access-status-url')?.href;
         if ((!waitingForAssessmentWeek && !waitingForApproval) || !sectionId) return;
 
         let checking = false;
+        let transitioning = false;
         const checkAccess = async function () {
-            if (checking || document.visibilityState !== 'visible') return;
+            if (checking || transitioning || document.visibilityState !== 'visible') return;
             checking = true;
             try {
                 const url = new URL(accessStatusUrl, window.location.origin);
@@ -608,8 +621,9 @@
                 });
                 const data = await response.json();
                 if (!response.ok || !data.success) return;
-                const assessmentWeekStateChanged = waitingForAssessmentWeek && Boolean(data.assessment_week_enabled) !== waitingAssessmentWeekEnabled;
-                if ((waitingForAssessmentWeek && (data.assessment_live || assessmentWeekStateChanged)) || (waitingForApproval && data.request_approved)) {
+                const stageChanged = waitingForAssessmentWeek && data.workflow_stage !== 'assessment_week_locked';
+                if ((waitingForAssessmentWeek && (stageChanged || data.assessment_live)) || (waitingForApproval && data.request_approved)) {
+                    transitioning = true;
                     window.location.reload();
                 }
             } catch (error) {
