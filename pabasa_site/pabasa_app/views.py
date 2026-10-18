@@ -12242,15 +12242,16 @@ def admin_activity_log(request):
     return render(request, 'pabasa_app/admin_activity_log.html', context)
 
 
+@never_cache
 @admin_required
 @require_http_methods(["GET"])
 def admin_system_time(request):
-    """Return the server clock for the admin settings time display."""
-    system_time = timezone.localtime(system_now())
+    """Return the application clock (including overrides) for admin displays."""
+    system_time = timezone.localtime(system_now(), timezone.get_default_timezone())
     return JsonResponse({
         'success': True,
         'server_time': system_time.isoformat(),
-        'time_zone': timezone.get_current_timezone_name(),
+        'time_zone': timezone.get_default_timezone_name(),
     })
 
 def courses(request):

@@ -3506,6 +3506,7 @@
 </head>
 <body class="admin-preloading">
     {% include "pabasa_app/partials/_light_appearance.html" %}
+    {% block admin_display_scale %}
     <script>
         (() => {
             const applyAdminDisplayScale = () => {
@@ -3527,6 +3528,7 @@
             window.addEventListener('resize', applyAdminDisplayScale);
         })();
     </script>
+    {% endblock %}
     <div class="admin-page-loader" id="adminPageLoader" aria-hidden="false" role="status" aria-label="Loading page">
         <div class="admin-page-loader__spinner"></div>
     </div>
