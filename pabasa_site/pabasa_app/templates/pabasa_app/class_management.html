@@ -617,38 +617,6 @@
         display: none;
     }
 
-    .student-pagination {
-        display: flex;
-        flex: 0 0 auto;
-        min-height: 34px;
-        align-items: center;
-        justify-content: safe center;
-        gap: 0.35rem;
-        margin: 0.85rem 0 0.15rem;
-        overflow-x: auto;
-    }
-
-    .student-pagination button {
-        flex: 0 0 auto;
-        min-width: 34px;
-        min-height: 34px;
-        padding: 0.3rem 0.55rem;
-        border: 1px solid rgba(22, 95, 143, 0.16);
-        border-radius: 9px;
-        background: rgba(255, 255, 255, 0.8);
-        color: var(--primary);
-        font-size: 0.84rem;
-        font-weight: 700;
-    }
-
-    .student-pagination button.is-active,
-    .student-pagination button:hover:not(:disabled) {
-        background: var(--primary);
-        color: #fff;
-    }
-
-    .student-pagination button:disabled { cursor: not-allowed; opacity: 0.45; }
-
     .table-frame {
         overflow: hidden;
         border-radius: 18px;
@@ -1316,7 +1284,6 @@
             padding: 0.25rem 0 0.75rem;
         }
         .student-table-controls { margin-bottom: 0.35rem; }
-        .student-pagination { margin-top: 0.4rem; }
     }
 </style>
 {% endblock %}
@@ -1406,7 +1373,6 @@
                 </div>
             </div>
 
-            <nav class="student-pagination" id="studentPagination" aria-label="Enrolled students pages"></nav>
         </section>
         </section>
     </main>
@@ -1709,14 +1675,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const tableBody = document.querySelector('.student-table tbody');
     const noResults = document.getElementById('studentNoResults');
     const cardsNoResults = document.getElementById('studentCardsNoResults');
-    const pagination = document.getElementById('studentPagination');
     let rows = Array.from(document.querySelectorAll('.student-table tbody tr[data-search]'));
     let cards = Array.from(document.querySelectorAll('.student-cards .student-card[data-search]'));
     if (!searchInput || !sortSelect || !directionButton || !tableBody) return;
 
     let descending = false;
-    let currentPage = 1;
-    const pageSize = 10;
     function refreshStudents() {
         const query = searchInput.value.trim().toLocaleLowerCase();
         const sortKey = sortSelect.value;
@@ -1736,50 +1699,24 @@ document.addEventListener('DOMContentLoaded', function () {
             return (a.dataset[dataKey] || '').localeCompare(b.dataset[dataKey] || '', undefined, { numeric: true, sensitivity: 'base' }) * (descending ? -1 : 1);
         };
         visible.sort(compare);
-        const totalPages = Math.max(1, Math.ceil(visible.length / pageSize));
-        currentPage = Math.min(currentPage, totalPages);
-        const pageItems = visible.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-        pageItems.forEach(row => tableBody.appendChild(row));
+        visible.forEach(row => tableBody.appendChild(row));
         const cardContainer = document.querySelector('.student-cards');
         const matchingCards = cards.filter(card => (card.dataset.search || '').toLocaleLowerCase().includes(query)).sort(compare);
         if (cardContainer) matchingCards.forEach(card => cardContainer.appendChild(card));
-        rows.forEach(row => { row.hidden = !pageItems.includes(row); });
-        const pageCards = matchingCards.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-        cards.forEach(card => { card.hidden = !pageCards.includes(card); });
+        rows.forEach(row => { row.hidden = !visible.includes(row); });
+        cards.forEach(card => { card.hidden = !matchingCards.includes(card); });
         if (noResults) noResults.style.display = visible.length || !rows.length ? 'none' : 'table-row';
         if (cardsNoResults) cardsNoResults.hidden = Boolean(visible.length || !rows.length);
-        if (pagination) {
-            pagination.innerHTML = '';
-            pagination.style.display = 'flex';
-            const previous = document.createElement('button');
-            previous.type = 'button'; previous.textContent = '‹'; previous.disabled = currentPage === 1;
-            previous.setAttribute('aria-label', 'Previous page');
-            previous.addEventListener('click', () => { currentPage--; refreshStudents(); });
-            pagination.appendChild(previous);
-            for (let page = 1; page <= totalPages; page++) {
-                const button = document.createElement('button');
-                button.type = 'button'; button.textContent = page; button.classList.toggle('is-active', page === currentPage);
-                button.setAttribute('aria-label', `Page ${page}`); button.setAttribute('aria-current', page === currentPage ? 'page' : 'false');
-                button.addEventListener('click', () => { currentPage = page; refreshStudents(); });
-                pagination.appendChild(button);
-            }
-            const next = document.createElement('button');
-            next.type = 'button'; next.textContent = '›'; next.disabled = currentPage === totalPages;
-            next.setAttribute('aria-label', 'Next page');
-            next.addEventListener('click', () => { currentPage++; refreshStudents(); });
-            pagination.appendChild(next);
-        }
         directionButton.textContent = descending ? 'Z–A' : 'A–Z';
         directionButton.setAttribute('aria-label', descending ? 'Sort descending' : 'Sort ascending');
         directionButton.setAttribute('aria-pressed', String(descending));
     }
-    searchInput.addEventListener('input', () => { currentPage = 1; refreshStudents(); });
-    sortSelect.addEventListener('change', () => { currentPage = 1; refreshStudents(); });
+    searchInput.addEventListener('input', refreshStudents);
+    sortSelect.addEventListener('change', refreshStudents);
     directionButton.addEventListener('click', () => { descending = !descending; refreshStudents(); });
     window.refreshStudentDirectory = function () {
         rows = Array.from(document.querySelectorAll('.student-table tbody tr[data-search]'));
         cards = Array.from(document.querySelectorAll('.student-cards .student-card[data-search]'));
-        currentPage = Math.min(currentPage, Math.max(1, Math.ceil(rows.length / pageSize)));
         refreshStudents();
     };
     refreshStudents();
