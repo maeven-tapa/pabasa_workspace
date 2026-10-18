@@ -235,6 +235,11 @@
             line-height: 1.55;
             padding: clamp(0.65rem, 1.8vw, 1rem) 0 1rem;
         }
+        body:has(.teacher-control) .dashboard-app-shell > .dashboard-sidebar,
+        body:has(.teacher-control) #dashboardSidebar,
+        body:has(.teacher-control) .mobile-dashboard-menu-btn { display: none !important; }
+        body:has(.teacher-control) .dashboard-main,
+        body.sidebar-collapsed:has(.teacher-control) .dashboard-main { margin-left: 0; }
         body:has(.teacher-control) .dashboard-main,
         body:has(.teacher-control) .dashboard-page-wrap,
         body:has(.teacher-control) .dashboard-content-wrap,
