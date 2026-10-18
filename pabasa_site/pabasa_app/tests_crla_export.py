@@ -476,6 +476,7 @@ class CrlaExportResultTests(TestCase):
             ("CRLA-DURATION-S1", "Ana", 1, 45, (0, 45)),
             ("CRLA-DURATION-S2", "Ben", 2, 125, (2, 5)),
             ("CRLA-DURATION-S3", "Cara", 1, 179, (2, 59)),
+            ("CRLA-DURATION-S4", "Dina", 2, 90, (1, 30)),
         )
         students = [self.make_user(code, "student", name, "Reader") for code, name, *_ in cases]
         section = test_section_create(
@@ -512,7 +513,7 @@ class CrlaExportResultTests(TestCase):
         for _ in range(2):
             workbook = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)
             sheet = workbook["G2 MT Reading Scoresheet"]
-            rows = {sheet[f"C{row}"].value: row for row in range(11, 14)}
+            rows = {sheet[f"C{row}"].value: row for row in range(11, 15)}
             for _, name, story, _, expected in cases:
                 self.assertIn(f"{name} Reader", rows)
                 row = rows[f"{name} Reader"]
@@ -523,7 +524,7 @@ class CrlaExportResultTests(TestCase):
                 for column in ("I", "J", "P", "Q"):
                     self.assertTrue(sheet[f"{column}{row}"].value.startswith("="))
                     self.assertEqual(sheet[f"{column}{row}"].style_id, template["G2 MT Reading Scoresheet"][f"{column}{row}"].style_id)
-            observed = tuple(tuple(sheet.cell(row, column).value for column in range(2, 23)) for row in range(11, 14))
+            observed = tuple(tuple(sheet.cell(row, column).value for column in range(2, 23)) for row in range(11, 15))
             if previous is not None:
                 self.assertEqual(observed, previous)
             previous = observed

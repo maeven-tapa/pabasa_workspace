@@ -1608,7 +1608,7 @@
 
         function syncStoryReadingTimerProcessing() {
             if (storyReadingTimerStartedAt === null) return;
-            const shouldPause = Boolean((!crlaLiveSpeech && isSendingChunk) || pendingAudioChunk || crlaSpeechFailure || liveSessionPaused
+            const shouldPause = Boolean(isMuted || (!crlaLiveSpeech && isSendingChunk) || pendingAudioChunk || crlaSpeechFailure || liveSessionPaused
                 || liveSessionEnded || liveSessionEndRedirecting || isFinalizingReading || readAloudController);
             if (shouldPause && storyReadingTimerPausedAt === null) {
                 storyReadingTimerPausedAt = Date.now();
@@ -8145,6 +8145,7 @@
         
         btnToggleMic?.addEventListener("click", async () => {
             isMuted = !isMuted;
+            syncStoryReadingTimerProcessing();
             const icon = btnToggleMic.querySelector("i");
             if (icon) icon.className = isMuted ? "bi bi-mic-mute-fill" : "bi bi-mic-fill";
             btnToggleMic.classList.toggle("btn-outline-danger", isMuted);

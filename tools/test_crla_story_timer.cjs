@@ -15,6 +15,9 @@ function section(start, end) {
 function reader(overrides = {}) {
   let now = 10000, nextId = 0, completions = 0;
   const timers = new Map(), attributes = {}, scores = [];
+  let micClick;
+  const micButton = {querySelector: () => ({className: ''}), classList: {toggle() {}},
+    addEventListener: (event, callback) => { if (event === 'click') micClick = callback; }};
   const schedule = (callback, delay, interval = false) => {
     const id = ++nextId;
     timers.set(id, {callback, due: now + delay, interval: interval ? delay : 0});
@@ -31,6 +34,7 @@ function reader(overrides = {}) {
     liveSessionPaused: false, liveSessionEnded: false, liveSessionEndRedirecting: false, isFinalizingReading: false,
     isSendingChunk: false, pendingAudioChunk: null, crlaLiveSpeech: null, crlaSpeechFailure: false,
     readAloudController: null,
+    btnToggleMic: micButton,
     currentIndex: 0, currentSyllableIndex: 0, itemResultVersion: 0, items: ['Si Ana ay masaya.'],
     currentSelectedStory: {title: 'Story One'}, spokenTranscript: '',
     normalizeWords: text => String(text).split(/\s+/), getAssessmentElapsedSeconds: () => 480,
@@ -40,7 +44,8 @@ function reader(overrides = {}) {
     officialAssessmentId: '1',
     currentMaterialLanguage: 'Filipino', currentSttLanguageCode: 'fil-PH', syllableStitchingContext: '',
     updateAssessmentNavigationButtons() {}, updateSpeechProcessingControls() {},
-    resetSyllableStitching() {}, getCsrfToken: () => 'test', stopSpeechRecognition() {}, setSpeechStatus() {},
+    resetSyllableStitching() {}, getCsrfToken: () => 'test', stopSpeechRecognition() {},
+    startSpeechRecognition() {}, setSpeechStatus() {},
     handleSpeechResult: data => scores.push(data),
     FormData, AbortController, console: {warn() {}, log() {}},
     ...overrides,
@@ -51,8 +56,10 @@ function reader(overrides = {}) {
     section('function calculateScores()', 'const matchedWords')
       .replace('function calculateScores()', 'function storyDurationForTest()') + 'return durationSeconds; }\n' +
     section('function currentSpeechContext()', 'function recordParagraphWordResult(') +
-    section('async function sendAudioChunk(', 'function handleSpeechResult('), context);
+    section('async function sendAudioChunk(', 'function handleSpeechResult(') +
+    section('btnToggleMic?.addEventListener("click",', 'if (btnTestMic)'), context);
   return {context, attributes, scores, completions: () => completions,
+    clickMic: () => micClick(), activeIntervals: () => [...timers.values()].filter(timer => timer.interval).length,
     duration: () => vm.runInContext('storyDurationForTest()', context),
     tick(ms) {
       const end = now + ms;
@@ -86,6 +93,80 @@ test('official story duration uses its own timer for 45, 125, and 179 seconds', 
     r.tick(11 * 60 * 1000);
     assert.equal(r.duration(), seconds);
   }
+});
+
+test('mute freezes the displayed countdown immediately and unmute resumes from 2:29', async () => {
+  const r = reader(), c = r.context;
+  c.startStoryReadingTimer();
+  r.tick(30000);
+  await r.clickMic();
+  assert.equal(r.attributes['aria-valuenow'], '149');
+  assert.equal(r.attributes['data-paused'], 'true');
+  const frozen = r.visual();
+  r.tick(20000);
+  assert.equal(r.visual(), frozen);
+  assert.equal(c.storyReadingElapsedMs(), 30000);
+  await r.clickMic();
+  assert.equal(r.attributes['aria-valuenow'], '149');
+  assert.equal(r.attributes['data-paused'], 'false');
+  r.tick(1000);
+  assert.equal(c.storyReadingElapsedMs(), 31000);
+  assert.equal(r.activeIntervals(), 1);
+});
+
+test('multiple mute cycles exclude paused time and keep one countdown interval', async () => {
+  const r = reader(), c = r.context;
+  c.startStoryReadingTimer();
+  r.tick(40000);
+  await r.clickMic();
+  r.tick(15000);
+  await r.clickMic();
+  r.tick(20000);
+  await r.clickMic();
+  r.tick(30000);
+  assert.equal(c.storyReadingElapsedMs(), 60000);
+  assert.equal(r.attributes['aria-valuenow'], '119');
+  await r.clickMic();
+  assert.equal(c.storyReadingElapsedMs(), 60000);
+  assert.equal(r.activeIntervals(), 1);
+});
+
+test('completion while muted records active time and late unmute cannot restart it', async () => {
+  const r = reader(), c = r.context;
+  c.startStoryReadingTimer();
+  r.tick(90000);
+  await r.clickMic();
+  r.tick(45000);
+  c.recordStoryReadingDuration();
+  c.clearStoryReadingTimer();
+  await r.clickMic();
+  r.tick(200000);
+  assert.equal(r.duration(), 90);
+  assert.equal(r.completions(), 0);
+  assert.equal(r.activeIntervals(), 0);
+});
+
+test('mute preserves a processing pause across the response and the 179-second deadline', async () => {
+  const r = reader(), c = r.context;
+  c.startStoryReadingTimer();
+  r.tick(178000);
+  await r.clickMic();
+  c.pendingAudioChunk = {blob: 'pending'};
+  r.tick(45000);
+  await r.clickMic();
+  assert.equal(c.storyReadingElapsedMs(), 178000);
+  assert.equal(r.attributes['data-paused'], 'true');
+  c.pendingAudioChunk = null;
+  c.syncStoryReadingTimerProcessing();
+  r.tick(999);
+  assert.equal(r.completions(), 0);
+  r.tick(1);
+  assert.equal(r.completions(), 1);
+  assert.equal(r.duration(), 179);
+  await r.clickMic();
+  r.tick(10000);
+  assert.equal(r.duration(), 179);
+  assert.equal(r.completions(), 1);
 });
 
 test('segments and processing pauses cannot turn story time into 8 or 11 minutes', () => {
