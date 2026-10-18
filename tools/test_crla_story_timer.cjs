@@ -39,7 +39,8 @@ function reader(overrides = {}) {
     currentSelectedStory: {title: 'Story One'}, spokenTranscript: '',
     normalizeWords: text => String(text).split(/\s+/), getAssessmentElapsedSeconds: () => 480,
     getCurrentDisplayText: () => 'Si Ana ay masaya.', isAdvancingItem: false,
-    isRecording: true, isMuted: false, currentStoryState: 'story_reading', currentAssessmentBranch: 'story',
+    isRecording: true, isMuted: false, recognitionActive: false, crlaLiveSpeech: null, crlaLiveContext: null,
+    sameCrlaStreamItem: () => false, currentStoryState: 'story_reading', currentAssessmentBranch: 'story',
     mode: 'paragraph', isOfficialAssessmentLaunch: true, isCrla: true, sentenceDebugEnabled: false,
     officialAssessmentId: '1',
     currentMaterialLanguage: 'Filipino', currentSttLanguageCode: 'fil-PH', syllableStitchingContext: '',
@@ -129,6 +130,24 @@ test('multiple mute cycles exclude paused time and keep one countdown interval',
   await r.clickMic();
   assert.equal(c.storyReadingElapsedMs(), 60000);
   assert.equal(r.activeIntervals(), 1);
+});
+
+test('live stream evaluation pauses and resumes the Story Reading timer with audio capture', () => {
+  const r = reader(), c = r.context;
+  c.startStoryReadingTimer();
+  r.tick(5000);
+  c.crlaLiveSpeech = {capturePaused: true};
+  c.isSendingChunk = true;
+  c.syncStoryReadingTimerProcessing();
+  r.tick(12000);
+  assert.equal(c.storyReadingElapsedMs(), 5000);
+  assert.equal(r.attributes['data-paused'], 'true');
+  c.crlaLiveSpeech.capturePaused = false;
+  c.isSendingChunk = false;
+  c.syncStoryReadingTimerProcessing();
+  r.tick(1000);
+  assert.equal(c.storyReadingElapsedMs(), 6000);
+  assert.equal(r.attributes['data-paused'], 'false');
 });
 
 test('completion while muted records active time and late unmute cannot restart it', async () => {

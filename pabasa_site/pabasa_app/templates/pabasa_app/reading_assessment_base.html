@@ -516,16 +516,26 @@
             flex: 0 0 auto;
         }
 
+        .official-crla-status {
+            box-sizing: border-box;
+            width: 100%;
+            min-height: 3.5rem;
+        }
+
         .official-crla-status[hidden] { display: none !important; }
         .reader-shell.is-story-reading .official-crla-status:not([hidden]),
         .reader-shell.is-story-ready-state .official-crla-status:not([hidden]) {
             display: flex;
         }
-        .official-crla-status.is-status-active .helper-dot,
-        .official-crla-status.is-status-processing .helper-dot {
+        .official-crla-status.is-status-active .helper-dot {
             animation: pabasaHelperListening 0.85s ease-in-out infinite;
         }
         .official-crla-status.is-status-processing { color: var(--accent); }
+        .official-crla-status.is-status-processing .helper-dot { display: none; }
+        .reader-shell.is-hearing .official-crla-status.is-status-processing {
+            color: var(--accent);
+            animation: none;
+        }
 
         /* Official assessments have no persistent reading button, so the helper
            confirms when the microphone is actively hearing the learner. */
@@ -559,6 +569,54 @@
             z-index: 1;
             text-align: center;
             width: 100%;
+        }
+
+        .crla-processing-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 0.7rem;
+            padding: 1rem;
+            border-radius: inherit;
+            background: rgba(15, 45, 69, 0.65);
+            color: #fff;
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: clamp(1rem, 2.1vw, 1.25rem);
+            font-weight: 900;
+            line-height: 1.2;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .crla-processing-overlay[hidden] { display: none !important; }
+
+        .reader-card:has(> #crlaProcessingOverlay:not([hidden])) .word-stage > :is(
+            .reading-title, .story-ready-instruction, .story-reading-progress, .reading-word
+        ) {
+            opacity: 0.4;
+        }
+
+        .crla-processing-spinner {
+            box-sizing: border-box;
+            width: 30px;
+            height: 30px;
+            flex: 0 0 30px;
+            border: 3px solid rgba(255, 255, 255, 0.42);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: crlaProcessingSpin 0.8s linear infinite;
+        }
+
+        @keyframes crlaProcessingSpin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .crla-processing-spinner { animation-duration: 1.6s; }
         }
 
         .reading-title {
@@ -4170,7 +4228,7 @@
         body.is-crla-reader .reader-shell.is-story-reading .word-stage { gap: .25rem; padding-block: .15rem; }
         body.is-crla-reader .reader-shell.is-story-reading .reading-title { font-size: 1.1rem; }
         body.is-crla-reader .reader-shell.is-story-reading .reading-word { margin-top: .25rem; line-height: 1.35; }
-        body.is-crla-reader .reader-shell .official-crla-status { min-height: 1.5rem; font-size: .85rem; }
+        body.is-crla-reader .reader-shell .official-crla-status { min-height: 3.5rem; font-size: .85rem; }
         body.is-crla-reader .reader-footer.is-official-crla-nav :is(#btnStartReading, #btnStopReading, #btnReadAloud, #nextBtn) {
             min-height: 44px;
             padding-block: .4rem !important;
@@ -4562,6 +4620,12 @@
 
                     <button class="nav-btn nav-next d-none" id="nextBtn" type="button" aria-label="Next item">Next</button>
                 </div>
+                {% if crla_official_assessment_id %}
+                <div class="crla-processing-overlay" id="crlaProcessingOverlay" role="status" aria-live="polite" hidden>
+                    <span class="crla-processing-spinner" aria-hidden="true"></span>
+                    <span>Sandali lang...</span>
+                </div>
+                {% endif %}
             </article>
         </section>
 

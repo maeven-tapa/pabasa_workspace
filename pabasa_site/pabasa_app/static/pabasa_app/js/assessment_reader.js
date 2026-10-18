@@ -1608,7 +1608,7 @@
 
         function syncStoryReadingTimerProcessing() {
             if (storyReadingTimerStartedAt === null) return;
-            const shouldPause = Boolean(isMuted || (!crlaLiveSpeech && isSendingChunk) || pendingAudioChunk || crlaSpeechFailure || liveSessionPaused
+            const shouldPause = Boolean(isMuted || (!crlaLiveSpeech && isSendingChunk) || crlaLiveSpeech?.capturePaused || pendingAudioChunk || crlaSpeechFailure || liveSessionPaused
                 || liveSessionEnded || liveSessionEndRedirecting || isFinalizingReading || readAloudController);
             if (shouldPause && storyReadingTimerPausedAt === null) {
                 storyReadingTimerPausedAt = Date.now();
@@ -3899,24 +3899,27 @@
             if (!helper || !isOfficialAssessmentLaunch || !isCrla) return;
             const text = document.getElementById("readingHelperText");
             const dots = helper.querySelector(".helper-dot");
+            const processingOverlay = document.getElementById("crlaProcessingOverlay");
             const processing = Boolean(isSendingChunk || pendingAudioChunk || crlaLiveSpeech?.pending);
             const activelyListening = Boolean(
-                isRecording && !isMuted && recognitionActive
+                !processing && isRecording && !isMuted && recognitionActive
+                && !crlaLiveSpeech?.capturePaused
                 && (shell?.classList.contains("is-hearing") || speechFrameCount > 0)
             );
             const wrong = Boolean(readingWord?.querySelector(".is-wrong"));
             const correct = Boolean(readingWord?.querySelector(".is-read"));
             const retry = wrong && !processing && !itemLocked[currentIndex];
-            let status = `Read the ${getCurrentSectionLabel()}`;
+            let status = processing ? "" : `Read the ${getCurrentSectionLabel()}`;
             let animated = false;
-            if (activelyListening) { status = "Hearing you..."; animated = true; }
-            else if (processing) { status = "Processing..."; animated = true; }
+            if (processing) { animated = true; }
+            else if (activelyListening) { status = "Hearing you..."; animated = true; }
             else if (correct) status = "Great Job!";
             else if (retry) status = "Try to read again";
             else if (wrong) status = "Good try!";
             helper.hidden = false;
             helper.classList.toggle("is-status-active", animated);
             helper.classList.toggle("is-status-processing", processing && !activelyListening);
+            if (processingOverlay) processingOverlay.hidden = !processing;
             if (text) text.textContent = status;
             if (dots) dots.setAttribute("aria-hidden", "true");
         }
@@ -4030,13 +4033,18 @@
                     const context = currentSpeechContext();
                     isSendingChunk = true;
                     hasHeardSinceLastChunk = false;
-                    setSpeechStatus("Processing...", "Checking your reading. Please wait.");
                     if (currentStoryState === "story_reading") storyReadingHasAttempted = true;
                     updateAssessmentNavigationButtons();
                     updateSpeechProcessingControls();
                     const controller = new AbortController();
                     const timeout = setTimeout(() => controller.abort(), 15000);
+                    let evaluated = false;
                     try {
+                        await stream.pauseCapture();
+                        syncStoryReadingTimerProcessing();
+                        updateSpeechProcessingControls();
+                        if (crlaLiveSpeech !== stream || !sameCrlaStreamItem(context)) return;
+                        setSpeechStatus("Processing...", "Checking your reading. Please wait.");
                         const response = await fetch(isCrla ? '/api/reading/crla-stream/evaluate/' : '/api/reading/material-stream/evaluate/', {
                             method: "POST", credentials: "same-origin", signal: controller.signal,
                             headers: {"Content-Type": "application/json", "X-CSRFToken": getCsrfToken(),
@@ -4059,9 +4067,17 @@
                         } else resetSyllableStitching();
                         if (data.transcript) appendRawMicInput(window.SpeechDebug.format(data));
                         handleSpeechResult(data, context);
+                        evaluated = true;
                     } finally {
                         clearTimeout(timeout);
+                        if (evaluated && crlaLiveSpeech === stream && isRecording && !isMuted
+                            && !isAdvancingItem && !isFinalizingReading && !liveSessionPaused
+                            && !liveSessionEnded && !liveSessionEndRedirecting) {
+                            try { await stream.resumeCapture(); }
+                            catch (error) { stream.fail(error); }
+                        }
                         isSendingChunk = false;
+                        syncStoryReadingTimerProcessing();
                         updateAssessmentNavigationButtons();
                         updateSpeechProcessingControls();
                     }
@@ -8151,11 +8167,25 @@
             btnToggleMic.classList.toggle("btn-outline-danger", isMuted);
             btnToggleMic.classList.toggle("btn-outline-dark", !isMuted);
             if (isMuted) {
-                try { if (crlaLiveSpeech) await flushCurrentSpeechChunk(); }
-                catch (error) { setSpeechStatus("Live speech interrupted.", error.message); }
-                stopSpeechRecognition();
+                // A provider final has already closed the current audio segment.
+                // Keep its in-flight evaluation alive and leave capture paused.
+                if (!crlaLiveSpeech?.capturePaused) {
+                    try { if (crlaLiveSpeech) await flushCurrentSpeechChunk(); }
+                    catch (error) { setSpeechStatus("Live speech interrupted.", error.message); }
+                    stopSpeechRecognition();
+                }
+            } else if (isRecording) {
+                if (crlaLiveSpeech?.active && crlaLiveSpeech.capturePaused && !isSendingChunk
+                    && !isAdvancingItem && sameCrlaStreamItem(crlaLiveContext)) {
+                    try {
+                        await crlaLiveSpeech.resumeCapture();
+                        syncStoryReadingTimerProcessing();
+                        updateSpeechProcessingControls();
+                    } catch (error) {
+                        crlaLiveSpeech.fail(error);
+                    }
+                } else if (!recognitionActive) startSpeechRecognition();
             }
-            else if (isRecording) startSpeechRecognition();
         });
 
         if (btnTestMic) {

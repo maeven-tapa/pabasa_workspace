@@ -61,9 +61,34 @@ const reader = fs.readFileSync(process.env.CRLA_READER_SOURCE_PATH || path.join(
         },
         state() { return {stage: currentStoryState, advancing: isAdvancingItem, finalizing: isFinalizingReading,
             speechFailure: crlaSpeechFailure, recording: isRecording, starting: crlaStreamStarting,
+            muted: isMuted, sending: isSendingChunk,
+            capturePaused: Boolean(crlaLiveSpeech?.capturePaused), streamActive: Boolean(crlaLiveSpeech?.active),
             elapsed: storyReadingElapsedMs(), timerPaused: storyReadingTimerPausedAt !== null,
+            microphoneTrackActive: window.__speechFixture.tracks.some(track => !track.stopped),
             text: getCurrentDisplayText(), questions: currentStoryQuestions.length,
-            evidence: strictStoryEvidence(), saved: readStudentEndState()}; }
+            evidence: strictStoryEvidence(), saved: readStudentEndState()}; },
+        statusProbe({processing, hearing, live, capturePaused = false}) {
+            const previous = {recording: isRecording, muted: isMuted, recognition: recognitionActive,
+                sending: isSendingChunk, pending: pendingAudioChunk, stream: crlaLiveSpeech,
+                frames: speechFrameCount, hearingClass: shell?.classList.contains("is-hearing")};
+            isRecording = true; isMuted = false; recognitionActive = true;
+            isSendingChunk = Boolean(processing); pendingAudioChunk = null;
+            crlaLiveSpeech = live ? {pending: Boolean(processing), capturePaused: Boolean(capturePaused)} : null;
+            speechFrameCount = hearing ? 3 : 0;
+            shell?.classList.toggle("is-hearing", Boolean(hearing));
+            renderOfficialCrlaStatus();
+            const result = {
+                helperText: document.getElementById("readingHelperText")?.textContent || "",
+                overlayVisible: !document.getElementById("crlaProcessingOverlay")?.hidden,
+                overlayText: document.getElementById("crlaProcessingOverlay")?.textContent.trim() || "",
+            };
+            isRecording = previous.recording; isMuted = previous.muted; recognitionActive = previous.recognition;
+            isSendingChunk = previous.sending; pendingAudioChunk = previous.pending; crlaLiveSpeech = previous.stream;
+            speechFrameCount = previous.frames;
+            shell?.classList.toggle("is-hearing", Boolean(previous.hearingClass));
+            renderOfficialCrlaStatus();
+            return result;
+        }
     };
         loadItems();`);
 const transport = fs.readFileSync(path.join(jsRoot, 'crla_speech_stream.js'), 'utf8');
@@ -122,6 +147,7 @@ async function scenario(browser, sample, name) {
                 createMediaStreamSource() { return {connect: target => target, disconnect() {}}; }
                 createGain() { return {gain: {}, connect() {}, disconnect() {}}; }
                 createAnalyser() { return {fftSize: 1024, getByteTimeDomainData: samples => samples.fill(128)}; }
+                async suspend() {}
                 async resume() {}
                 async close() {}
             }
@@ -147,6 +173,7 @@ async function scenario(browser, sample, name) {
             if (url.pathname === '/api/reading/crla-stream/evaluate/') {
                 const token = route.request().postDataJSON().final_token;
                 evaluated.push(token);
+                if (name === 'automatic') await new Promise(resolve => setTimeout(resolve, 1200));
                 return route.fulfill({json: sample.responses[token]});
             }
             // Preview stories store progress in sessionStorage; never call a student write endpoint.
@@ -171,6 +198,47 @@ async function scenario(browser, sample, name) {
         const failure = name.endsWith('failure');
         if (failure) await page.evaluate(() => { window.__speechFixture.failFinish = true; });
         await emit(skipping ? 'partial' : name === 'ending_miscue' ? name : 'correct');
+        if (name === 'automatic') {
+            await page.waitForFunction(() => document.getElementById('speechStatus').textContent === 'Processing...'
+                && window.__readerTest.state().capturePaused);
+            const fallbackStatus = await page.evaluate(() => window.__readerTest.statusProbe({
+                processing: true, hearing: true, live: false,
+            }));
+            assert.equal(fallbackStatus.helperText, '', 'fallback processing does not duplicate a top status');
+            assert.equal(fallbackStatus.overlayVisible, true, 'fallback evaluation displays the reading-area overlay');
+            assert.equal(fallbackStatus.overlayText, 'Sandali lang...', 'overlay uses the short Filipino instruction');
+            const liveStatus = await page.evaluate(() => window.__readerTest.statusProbe({
+                processing: true, hearing: true, live: true, capturePaused: true,
+            }));
+            assert.equal(liveStatus.helperText, '', 'live processing does not duplicate a top status');
+            assert.equal(liveStatus.overlayVisible, true, 'live processing displays the same overlay');
+            const listeningStatus = await page.evaluate(() => window.__readerTest.statusProbe({
+                processing: false, hearing: true, live: false,
+            }));
+            assert.equal(listeningStatus.helperText, 'Hearing you...', 'genuine listening status remains available');
+            assert.equal(listeningStatus.overlayVisible, false, 'overlay is removed outside processing');
+            const processing = await page.evaluate(() => window.__readerTest.state());
+            assert.equal(processing.recording, true);
+            assert.equal(processing.streamActive, true, 'the live stream stays available without accepting audio frames');
+            assert.equal(processing.microphoneTrackActive, true, 'the authorized microphone stream is reused');
+            assert.equal(processing.timerPaused, true, 'Story Reading processing time is excluded');
+            const frozenElapsed = processing.elapsed;
+            await page.waitForTimeout(100);
+            const stillProcessing = await page.evaluate(() => window.__readerTest.state());
+            assert.equal(stillProcessing.elapsed, frozenElapsed, 'the Story Reading timer stays paused during processing');
+            await page.locator('#btnToggleMic').click();
+            const mutedProcessing = await page.evaluate(() => window.__readerTest.state());
+            assert.equal(mutedProcessing.muted, true);
+            assert.equal(mutedProcessing.capturePaused, true, 'Mute keeps pending processing capture closed');
+            assert.equal(mutedProcessing.recording, true, 'Mute does not discard the submitted evaluation');
+            assert.equal(mutedProcessing.microphoneTrackActive, true, 'Mute does not release the authorized stream');
+            await page.locator('#btnToggleMic').click();
+            const unmutedProcessing = await page.evaluate(() => window.__readerTest.state());
+            assert.equal(unmutedProcessing.muted, false);
+            if (unmutedProcessing.sending) {
+                assert.equal(unmutedProcessing.capturePaused, true, 'capture stays paused until the response arrives');
+            }
+        }
         await page.waitForFunction(() => window.__readerTest.state().advancing ||
             (!window.__readerTest.state().starting && !document.getElementById('nextBtn').disabled));
         if (skipping) {

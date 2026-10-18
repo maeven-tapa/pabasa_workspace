@@ -35,10 +35,11 @@ async function transportTest() {
         disconnect() {}
     }
     class Audio {
-        constructor() { this.audioWorklet = {addModule: async () => {}}; }
+        constructor() { this.state = 'running'; this.audioWorklet = {addModule: async () => {}}; }
         createMediaStreamSource() { return {connect: target => target, disconnect() {}}; }
         createGain() { return {gain: {}, connect() {}, disconnect() {}}; }
-        async resume() {}
+        async suspend() { this.state = 'suspended'; }
+        async resume() { this.state = 'running'; }
         async close() {}
     }
     const context = {window: {location: {href: 'https://test/reader/'}, AudioContext: Audio,
@@ -46,10 +47,15 @@ async function transportTest() {
         URL, Blob, DataView, AbortController, setTimeout: (callback, ms) => ms > 200000 ? 0 : setTimeout(callback, ms), clearTimeout,
         fetch: async () => ({ok: true, json: async () => ({success: true, ticket: 'ticket', path: '/ws/reading/crla/'})})};
     vm.runInNewContext(fs.readFileSync(path.join(js, 'crla_speech_stream.js'), 'utf8'), context);
-    let release;
-    const stream = new context.window.CrlaSpeechStream({csrf: () => 'csrf', fields: {material_id: 12},
+    let release, stream;
+    stream = new context.window.CrlaSpeechStream({csrf: () => 'csrf', fields: {material_id: 12},
         onInterim: text => interims.push(text),
-        onFinal: async message => { if (message.id === 'first') await new Promise(resolve => { release = resolve; }); finals.push(message.id); },
+        onFinal: async message => {
+            await stream.pauseCapture();
+            if (message.id === 'first') await new Promise(resolve => { release = resolve; });
+            finals.push(message.id);
+            await stream.resumeCapture();
+        },
         onError: error => errors.push(error.message)});
     await stream.start({});
     const startupWave = Buffer.from(await stream.wavBlob([new Uint8Array([1, 2, 3, 4]).buffer]).arrayBuffer());
@@ -65,12 +71,15 @@ async function transportTest() {
     firstSocket.message({type: 'final', id: 'second'});
     await tick();
     assert.equal(stream.pending, true);
+    assert.equal(stream.capturePaused, true, 'final evaluation pauses the live capture graph');
     stream.sendAudio(new ArrayBuffer(6400));
-    assert.ok(firstSocket.sent.some(data => data instanceof ArrayBuffer), 'capture continues during final evaluation');
+    assert.equal(firstSocket.sent.some(data => data instanceof ArrayBuffer && data.byteLength === 6400), false,
+        'audio is not sent while the final is being evaluated');
     release();
     await stream.queue;
     assert.deepEqual(finals, ['first', 'second']);
     assert.equal(stream.pending, false);
+    assert.equal(stream.capturePaused, false, 'capture resumes after final evaluation');
     const rotating = stream.rotate();
     stream.sendAudio(new ArrayBuffer(256));
     await rotating;
@@ -89,6 +98,12 @@ async function transportTest() {
     interrupted.sendAudio(new ArrayBuffer(10));
     assert.equal(interrupted.active, false);
     assert.equal(errors.length, 1, 'overflow must be explicit instead of silently losing speech');
+
+    const pausedFinish = new context.window.CrlaSpeechStream({csrf: () => 'csrf', fields: {}, onFinal() {}, onInterim() {}, onError: error => errors.push(error.message)});
+    await pausedFinish.start({});
+    await pausedFinish.pauseCapture();
+    await pausedFinish.finish();
+    assert.equal(pausedFinish.active, false, 'finalization closes a paused stream without waiting for a suspended worklet flush');
 }
 
 function pcmTest() {
@@ -114,14 +129,78 @@ function pcmTest() {
     }
 }
 
+function statusTest() {
+    const source = fs.readFileSync(path.join(js, 'assessment_reader.js'), 'utf8');
+    const template = fs.readFileSync(path.join(__dirname,
+        '../pabasa_site/pabasa_app/templates/pabasa_app/reading_assessment_base.html'), 'utf8');
+    const stageEnd = template.indexOf('</section>', template.indexOf('<section class="word-stage"'));
+    const overlayIndex = template.indexOf('id="crlaProcessingOverlay"');
+    const articleStart = template.lastIndexOf('<article class="reader-card', overlayIndex);
+    const articleEnd = template.indexOf('</article>', overlayIndex);
+    assert.ok(stageEnd >= 0 && overlayIndex > stageEnd && articleStart >= 0 && articleEnd > overlayIndex,
+        'overlay is a card-level child outside the word-stage');
+    assert.match(template, /\.reader-card\s*\{[\s\S]*?border-radius:\s*clamp\(24px, 4vw, 34px\);[\s\S]*?overflow:\s*hidden;/,
+        'the existing reading card supplies rounded boundaries and clipping');
+    assert.match(template, /\.crla-processing-overlay\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset:\s*0;[\s\S]*?border-radius:\s*inherit;[\s\S]*?background:\s*rgba\(15, 45, 69, 0\.65\);[\s\S]*?color:\s*#fff;[\s\S]*?pointer-events:\s*none;/,
+        'overlay covers the full rounded reading card without blocking controls');
+    assert.match(template, /\.reader-card:has\(> #crlaProcessingOverlay:not\(\[hidden\]\)\) \.word-stage > :is\([\s\S]*?\.reading-word[\s\S]*?opacity:\s*0\.4;/,
+        'visible processing fades reading text and its word highlighting');
+    assert.match(template, /\.crla-processing-spinner\s*\{[\s\S]*?width:\s*30px;[\s\S]*?height:\s*30px;[\s\S]*?border:\s*3px solid rgba\(255, 255, 255, 0\.42\);[\s\S]*?border-top-color:\s*#fff;/,
+        '30px spinner uses white colors that contrast with the navy overlay');
+    assert.doesNotMatch(template, /Sandali lang! Hintaying matapos bago magsalita muli\./,
+        'the longer helper instruction has been removed');
+    const start = source.indexOf('        function renderOfficialCrlaStatus() {');
+    const end = source.indexOf('\n        function syncPhraseMicrophoneButton()', start);
+    assert.ok(start >= 0 && end > start, 'the official CRLA status renderer is available');
+    const elements = {
+        status: {textContent: ''}, dot: {setAttribute() {}}, overlay: {hidden: true},
+        helper: {hidden: true, classList: {toggle() {}}, querySelector: selector => ({
+            '.helper-dot': elements.dot,
+        })[selector]},
+    };
+    const context = vm.createContext({
+        document: {
+            querySelector: () => elements.helper,
+            getElementById: id => id === 'crlaProcessingOverlay' ? elements.overlay : elements.status,
+        },
+        isOfficialAssessmentLaunch: true, isCrla: true,
+        isSendingChunk: false, pendingAudioChunk: null, crlaLiveSpeech: null,
+        isRecording: true, isMuted: false, recognitionActive: true,
+        shell: {classList: {contains: name => name === 'is-hearing'}}, speechFrameCount: 3,
+        readingWord: null, itemLocked: [], currentIndex: 0, getCurrentSectionLabel: () => 'Word',
+    });
+    vm.runInContext(source.slice(start, end), context);
+    const render = vm.runInContext('renderOfficialCrlaStatus', context);
+
+    context.isSendingChunk = true;
+    render();
+    assert.equal(elements.status.textContent, '', 'top helper does not duplicate the overlay message');
+    assert.equal(elements.overlay.hidden, false, 'overlay appears during fallback evaluation');
+    context.isSendingChunk = false;
+    context.crlaLiveSpeech = {pending: true, capturePaused: true};
+    render();
+    assert.equal(elements.status.textContent, '', 'live pending state does not duplicate overlay text');
+    assert.equal(elements.overlay.hidden, false, 'overlay remains visible for a pending live final');
+    context.crlaLiveSpeech = null;
+    render();
+    assert.equal(elements.status.textContent, 'Hearing you...', 'normal live speech still reports detected audio');
+    assert.equal(elements.overlay.hidden, true, 'overlay disappears after evaluation');
+    context.speechFrameCount = 0;
+    context.shell.classList.contains = () => false;
+    render();
+    assert.equal(elements.status.textContent, 'Read the Word', 'idle state returns to its assessment prompt');
+}
+
 async function readerTest() {
     const source = fs.readFileSync(path.join(js, 'assessment_reader.js'), 'utf8');
     const extracted = source.slice(source.indexOf('        function canStreamCrla()'), source.indexOf('        async function startSpeechRecognition()'));
-    let stream, calls = 0, scoring = 0, fallback = 0, recovered = 0;
+    let stream, calls = 0, scoring = 0, fallback = 0, recovered = 0, timerSyncs = 0, releaseEvaluation, holdEvaluation = false;
     const preview = {};
     class Stream {
         constructor(options) { this.options = options; this.active = true; stream = this; }
         async start() {}
+        async pauseCapture() { this.capturePaused = true; }
+        async resumeCapture() { this.capturePaused = false; }
         stop() { this.active = false; }
     }
     const context = vm.createContext({
@@ -130,11 +209,12 @@ async function readerTest() {
         crlaStreamStarting: false, stoppingSpeechRecognition: false, isRecording: true, isMuted: false, isFinalizingReading: false,
         sentenceCountdownTimer: null,
         crlaLiveSpeech: null, crlaLiveContext: null, crlaStreamingUnavailable: false, crlaSpeechFailure: false,
+        isSendingChunk: false,
         isOfficialAssessmentLaunch: true, isCrla: true, mode: 'word', officialAssessmentId: '12',
         customMaterialData: null, isTemplateActivity: false,
         currentIndex: 0, itemResultVersion: 1, isAdvancingItem: false, currentSyllableIndex: 0,
         items: ['bata', 'bato'], getCurrentDisplayText: () => context.items[context.currentIndex],
-        liveSessionEnded: false, liveSessionEndRedirecting: false,
+        liveSessionPaused: false, liveSessionEnded: false, liveSessionEndRedirecting: false,
         currentMaterialLanguage: 'Filipino', currentAssessmentBranch: 'words', currentStoryState: '',
         currentSttLanguageCode: '', syllableStitchingContext: '', syllableStitchingContextAt: 0, syllableStitchingWindowMs: 15000,
         currentSpeechContext: () => ({index: context.currentIndex, version: context.itemResultVersion,
@@ -142,13 +222,15 @@ async function readerTest() {
         isCurrentSpeechContext: c => c.index === context.currentIndex && c.version === context.itemResultVersion && c.syllableIndex === context.currentSyllableIndex,
         getCsrfToken: () => '', mediaStream: {}, sentenceWordResults: [],
         updateAssessmentNavigationButtons() {}, updateSpeechProcessingControls() {},
-        setSpeechStatus() {}, appendRawMicInput() {}, resetSyllableStitching() {}, stopSpeechRecognition() {},
+        syncStoryReadingTimerProcessing() { timerSyncs++; },
+        setSpeechStatus: message => { context.lastStatus = message; }, appendRawMicInput() {}, resetSyllableStitching() {}, stopSpeechRecognition() {},
         startSpeechChunkRecorder: () => { fallback++; },
         sendAudioChunk: async (blob, item) => { assert.equal(item.itemText, 'bato'); assert.equal(blob.size, 8); recovered++; },
         handleSpeechResult: () => { scoring++; context.currentSyllableIndex++; },
         Date, setTimeout, clearTimeout, AbortController,
         fetch: async url => {
             assert.equal(url, '/api/reading/crla-stream/evaluate/'); calls++;
+            if (holdEvaluation) await new Promise(resolve => { releaseEvaluation = resolve; });
             return {ok: true, json: async () => ({success: true, transcript: 'bata', language_code: 'fil-PH'})};
         },
     });
@@ -160,9 +242,19 @@ async function readerTest() {
     stream.options.onInterim('ba');
     assert.equal(preview.textContent, 'Hearing: ba');
     assert.equal(scoring, 0);
-    await stream.options.onFinal({final_token: 'signed'});
+    holdEvaluation = true;
+    const firstEvaluation = stream.options.onFinal({final_token: 'signed'});
+    await tick();
+    assert.equal(stream.capturePaused, true, 'capture is suspended while the evaluation request is pending');
+    assert.equal(context.lastStatus, 'Processing...', 'Processing is displayed only after capture is suspended');
+    assert.equal(context.isSendingChunk, true);
+    releaseEvaluation();
+    await firstEvaluation;
+    holdEvaluation = false;
     assert.equal(scoring, 1);
     assert.equal(preview.hidden, true);
+    assert.equal(stream.capturePaused, false, 'capture resumes only after evaluation completes');
+    assert.ok(timerSyncs >= 2, 'the Story Reading timer synchronizes to capture pause and resume');
     await stream.options.onFinal({final_token: 'signed2'});
     assert.equal(scoring, 2, 'cursor changes within the same item remain eligible');
     const completedStream = stream;
@@ -195,7 +287,8 @@ async function readerTest() {
 
 (async () => {
     pcmTest();
+    statusTest();
     await transportTest();
     await readerTest();
-    console.log('PASS: continuous PCM capture, interim-only display, ordered/deduplicated finals, rotation, final flush, stale-item rejection, and clip fallback');
+    console.log('PASS: PCM capture, interim-only display, serialized finals, rotation/finalization, stale-item rejection, fallback, and CRLA Processing/listening status priority');
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -5,6 +5,7 @@
         constructor(options) {
             this.options = options;
             this.active = true;
+            this.capturePaused = false;
             this.queuedFinals = 0;
             this.flushing = false;
             this.queue = Promise.resolve();
@@ -102,7 +103,7 @@
                 this.silent.gain.value = 0;
                 this.node.port.onmessage = event => {
                     if (event.data.flushed) { this.resolveFlushed?.(); return; }
-                    if (!this.active || !event.data.audio) return;
+                    if (!this.active || this.capturePaused || !event.data.audio) return;
                     this.sendAudio(event.data.audio);
                 };
                 this.source.connect(this.node).connect(this.silent).connect(this.audioContext.destination);
@@ -129,6 +130,7 @@
             return new Blob([header, ...frames], {type: 'audio/wav'});
         }
         sendAudio(audio) {
+            if (!this.active || this.capturePaused) return;
             if (this.rotating) {
                 if (this.backlog.length >= 50) { this.fail(new Error('Live speech connection is too slow.')); return; }
                 this.backlog.push(audio);
@@ -136,6 +138,21 @@
                 if (this.socket.bufferedAmount > 128000) { this.fail(new Error('Live speech connection is too slow.')); return; }
                 this.socket.send(audio);
             }
+        }
+        async pauseCapture() {
+            if (!this.active || !this.audioContext || this.capturePaused) return;
+            this.capturePaused = true;
+            try {
+                await this.audioContext.suspend();
+            } catch (error) {
+                this.capturePaused = false;
+                throw error;
+            }
+        }
+        async resumeCapture() {
+            if (!this.active || !this.audioContext || !this.capturePaused) return;
+            await this.audioContext.resume();
+            this.capturePaused = false;
         }
         scheduleRotation() {
             clearTimeout(this.rotation);
@@ -173,7 +190,7 @@
             if (this.rotating) throw new Error('Please wait for the speech connection to finish reconnecting.');
             this.flushing = true;
             try {
-                if (this.node) {
+                if (this.node && !this.capturePaused) {
                     let timeout;
                     await Promise.race([
                         new Promise(resolve => { this.resolveFlushed = resolve; this.node.port.postMessage('flush'); }),
