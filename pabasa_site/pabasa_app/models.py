@@ -1077,7 +1077,7 @@ class Assessment(models.Model):
 
 
 class AssessmentRequest(models.Model):
-    STATUS_CHOICES = [("pending", "Pending"), ("approved", "Approved"), ("declined", "Declined")]
+    STATUS_CHOICES = [("pending", "Pending"), ("approved", "Approved"), ("declined", "Declined"), ("cancelled", "Cancelled")]
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="assessment_requests")
     section = models.ForeignKey("Section", on_delete=models.CASCADE, related_name="assessment_requests")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
@@ -1088,6 +1088,7 @@ class AssessmentRequest(models.Model):
     term = models.PositiveSmallIntegerField(null=True, blank=True)
     official_phase = models.CharField(max_length=20, null=True, blank=True)
     official_material = models.ForeignKey("Material", on_delete=models.SET_NULL, null=True, blank=True, related_name="assessment_requests")
+    live_session = models.ForeignKey("LiveAssessmentSession", on_delete=models.SET_NULL, null=True, blank=True, related_name="assessment_requests")
 
     class Meta:
         db_table = "assessment_requests"

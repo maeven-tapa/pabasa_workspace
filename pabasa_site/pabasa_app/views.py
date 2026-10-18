@@ -9291,9 +9291,23 @@ def _current_crla_assessment_request(student, section, statuses=None):
         school_calendar=calendar, term=scope.get('term'),
         official_phase=phase, official_material=material,
     )
-    if statuses is not None:
-        query = query.filter(status__in=tuple(statuses))
-    return query.order_by('-requested_at', '-id').first()
+    latest = query.order_by('-requested_at', '-id').first()
+    if statuses is not None and latest and latest.status not in statuses:
+        return None
+    if latest and latest.status == 'approved':
+        if latest.live_session_id:
+            if latest.live_session.status == 'cancelled':
+                return None
+        else:
+            # Older approvals have no session FK. A cancelled waiting session
+            # clears its roster, so only a remaining matching roster can keep
+            # such an approval active.
+            sessions = LiveAssessmentSession.objects.filter(
+                section=section, material_id=latest.official_material_id,
+            ).exclude(status='cancelled').only('student_ids')
+            if not any(str(student.id) in {str(value) for value in (session.student_ids or [])} for session in sessions):
+                return None
+    return latest
 
 
 def _student_has_approved_assessment_request(student, section):
@@ -12291,11 +12305,22 @@ def student_assessment_access_status(request):
         and _section_assessment_week_status(section) == 'during'
     )
     assessment_live = assessment_week_enabled and _section_has_live_assessment(section)
+    request_approved = _student_has_approved_assessment_request(student, section)
+    week_status = _section_assessment_week_status(section)
+    missed_crla = bool(_current_term_missed_crla_context(student))
+    completed = _student_completed_section_assessment(student, section)
+    if (week_status == 'after' or (week_status == 'none' and missed_crla)) and not completed and not request_approved:
+        workflow_stage = 'assessment_not_taken'
+    elif assessment_week_enabled or request_approved:
+        workflow_stage = 'assessment_week_locked'
+    else:
+        workflow_stage = 'other'
     return JsonResponse({
         'success': True,
         'assessment_week_enabled': assessment_week_enabled,
         'assessment_live': assessment_live,
-        'request_approved': _student_has_approved_assessment_request(student, section),
+        'request_approved': request_approved,
+        'workflow_stage': workflow_stage,
     })
 
 @csrf_protect
@@ -12570,6 +12595,8 @@ def approve_assessment_request(request, request_id):
             item.reviewed_at = system_now()
             item.save(update_fields=['status', 'reviewed_by', 'reviewed_at'])
             session = _ensure_assessment_request_live_session(teacher, item.section, item.student)
+            item.live_session = session
+            item.save(update_fields=['live_session'])
     except ValidationError as exc:
         item.status, item.reviewed_by, item.reviewed_at = 'pending', None, None
         return JsonResponse({'success': False, 'error': str(exc)}, status=409)
@@ -12671,10 +12698,19 @@ def assessment(request):
         # section-wide CRLA assessment-week branches below.
         assessment_week_section = None
     section_week_status = _section_assessment_week_status(selected_section) if selected_section else 'none'
+    missed_crla_context = _current_term_missed_crla_context(user) if selected_section else None
+    if section_week_status == 'none' and missed_crla_context:
+        section_week_status = 'after'
+    assessment_week_active = bool(
+        selected_section and selected_section.assessment_week_enabled
+        and section_week_status == 'during'
+    )
+    if not assessment_week_active:
+        assessment_week_section = None
     current_term_crla_completed = bool(learning_context.get('crla_completed'))
     assessment_week_live = bool(
         selected_section
-        and selected_section.assessment_week_enabled
+        and assessment_week_active
         and _section_has_live_assessment(selected_section)
     )
     section_assessment_completed = _student_completed_section_assessment(user, selected_section)
@@ -12724,7 +12760,7 @@ def assessment(request):
                 'workflow_message': 'Keep up the great work. You can continue practicing whenever you like.',
             })
             return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
-    if user and getattr(user, 'role', '') == 'student' and selected_section and section_week_status in {'before', 'during'} and selected_section.assessment_week_enabled and (not assessment_week_live or not student_live_assessment) and not section_assessment_completed and not has_completed_official_crla and not aral_week_mode:
+    if user and getattr(user, 'role', '') == 'student' and selected_section and assessment_week_active and (not assessment_week_live or not student_live_assessment) and not section_assessment_completed and not has_completed_official_crla and not aral_week_mode:
         context = _dashboard_context(request, 'student')
         context.update({
             'stage': 'assessment_week_locked',
@@ -12802,8 +12838,7 @@ def assessment(request):
         user
         and getattr(user, 'role', '') == 'student'
         and selected_section
-        and selected_section.assessment_week_enabled
-        and section_week_status in {'before', 'during'}
+        and assessment_week_active
         and not section_assessment_completed
         and not has_completed_official_crla
         and not aral_week_mode
@@ -12963,8 +12998,7 @@ def assessment(request):
         user
         and getattr(user, 'role', '') == 'student'
         and selected_section
-        and selected_section.assessment_week_enabled
-        and section_week_status == 'during'
+        and assessment_week_active
         and official_crla_material
         and not current_term_crla_completed
         and not has_active_teacher_live_crla
@@ -13214,10 +13248,11 @@ def assessment(request):
     if (
         stage == 'assessment_week_locked'
         and selected_section
-        and (selected_section.assessment_week_enabled or approved_assessment_request)
+        and (assessment_week_active or approved_assessment_request)
     ):
         context.update({
-            'assessment_week_enabled': True,
+            'assessment_week_enabled': assessment_week_active,
+            'approved_request_waiting': bool(approved_assessment_request and not assessment_week_active),
             'assessment_week_section': selected_section,
             'workflow_title': 'Assessment Week is ON',
             'workflow_subtitle': selected_section.class_name,
@@ -30216,9 +30251,11 @@ def live_assessment_session_action(request, session_id):
         if session.status != 'waiting':
             return JsonResponse({'success': False, 'error': 'Only a waiting session can be cancelled'}, status=400)
 
+        cancelled_student_ids = []
         def apply_cancel(current):
             if current.status != 'waiting':
                 return None
+            cancelled_student_ids[:] = [int(value) for value in (current.student_ids or []) if str(value).isdigit()]
             # Cancellation is a setup discard: do not retain the temporary
             # roster, batches, student state, or any resumable timing data.
             current.status = 'cancelled'
@@ -30233,7 +30270,28 @@ def live_assessment_session_action(request, session_id):
             _append_live_session_activity(current, 'Teacher cancelled the waiting live assessment session.')
             return {'status', 'student_ids', 'student_count', 'student_states', 'batch_assignments', 'current_batch', 'total_batches', 'start_at', 'ends_at', 'activity_log'}
 
-        session, mutation_error = _mutate_live_session_state(session.id, apply_cancel)
+        with transaction.atomic():
+            session, mutation_error = _mutate_live_session_state(session.id, apply_cancel)
+            if session and session.status == 'cancelled':
+                completed_student_ids = Assessment.objects.filter(
+                    student_id__in=cancelled_student_ids,
+                    attempt_status='completed', completed_at__isnull=False,
+                ).values_list('student_id', flat=True)
+                AssessmentRequest.objects.filter(
+                    live_session=session, status='approved',
+                ).exclude(student_id__in=completed_student_ids).update(status='cancelled')
+                # Sessions created before approvals were linked still carry the
+                # approved students in their roster until this cancellation.
+                # Match only approvals issued while that session was waiting.
+                if cancelled_student_ids and session.section_id:
+                    AssessmentRequest.objects.filter(
+                        live_session__isnull=True,
+                        student_id__in=cancelled_student_ids,
+                        section_id=session.section_id,
+                        official_material_id=session.material_id,
+                        status='approved',
+                        reviewed_at__gte=session.created_at - timedelta(seconds=5),
+                    ).exclude(student_id__in=completed_student_ids).update(status='cancelled')
         if not session:
             return JsonResponse({'success': False, 'error': mutation_error or 'Unable to cancel session'}, status=409)
     elif action == 'abandon':

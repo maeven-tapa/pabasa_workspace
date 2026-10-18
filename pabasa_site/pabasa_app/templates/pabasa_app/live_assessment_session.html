@@ -710,6 +710,17 @@
         #liveAssessmentModal.live-assessment-end-modal .modal-footer { justify-content: center !important; padding: 0 1.5rem 1.2rem !important; gap: .7rem !important; }
         #liveAssessmentModal.live-assessment-end-modal .modal-footer .btn { min-width: 7.5rem; padding: .6rem 1rem; border-radius: 10px; font-size: .92rem; font-weight: 700; }
         #liveAssessmentModal.live-assessment-end-modal .modal-footer .btn-danger { background: #dc3545; border-color: #dc3545; color: #fff; }
+        #liveAssessmentModal.live-assessment-leave-modal .modal-content { background: #fff !important; border: 1px solid #d6dee6 !important; border-radius: 18px !important; color: #102746 !important; box-shadow: 0 24px 70px rgba(15,45,69,.2) !important; }
+        #liveAssessmentModal.live-assessment-leave-modal .modal-header { padding: 1.25rem 1.5rem .5rem !important; }
+        #liveAssessmentModal.live-assessment-leave-modal .modal-title { color: #102746 !important; }
+        #liveAssessmentModal.live-assessment-leave-modal #liveAssessmentModalClose { color: #304a63 !important; font-size: 1.5rem !important; line-height: 1; }
+        #liveAssessmentModal.live-assessment-leave-modal #liveAssessmentModalClose:hover,
+        #liveAssessmentModal.live-assessment-leave-modal #liveAssessmentModalClose:focus-visible { background: #edf2f6 !important; color: #102746 !important; }
+        #liveAssessmentModal.live-assessment-leave-modal .modal-body { color: #64748b !important; }
+        #liveAssessmentModal.live-assessment-leave-modal .modal-footer { padding: 0 1.5rem 1.35rem !important; }
+        #liveAssessmentModal.live-assessment-leave-modal .modal-footer .btn { border-radius: 10px; padding: .6rem 1rem; font-weight: 700; }
+        #liveAssessmentModal.live-assessment-leave-modal .modal-footer .btn-outline-secondary { background: #fff !important; border-color: #cbd5e1 !important; color: #102746 !important; }
+        #liveAssessmentModal.live-assessment-leave-modal .modal-footer .btn-danger { background: #dc3545 !important; border-color: #dc3545 !important; color: #fff !important; }
         #liveAssessmentModal.live-assessment-save-exit-modal .modal-content { background: #fff !important; border: 1px solid #cbd8e2 !important; border-radius: 18px !important; color: #102746 !important; box-shadow: 0 24px 70px rgba(15,45,69,.2) !important; }
         #liveAssessmentModal.live-assessment-save-exit-modal .modal-header { position: relative; justify-content: center !important; padding: 1.15rem 3.25rem .55rem !important; text-align: center; }
         #liveAssessmentModal.live-assessment-save-exit-modal .modal-title { color: #102746 !important; font-size: 1.3rem !important; line-height: 1.3; }
@@ -1324,7 +1335,7 @@
                 liveModal.style.display = 'none';
                 document.body.style.overflow = '';
                 liveModal.setAttribute('aria-hidden', 'true');
-                liveModal.classList.remove('live-assessment-start-modal', 'live-assessment-cancel-modal', 'live-assessment-end-modal', 'live-assessment-save-exit-modal', 'live-assessment-save-transition-modal');
+                liveModal.classList.remove('live-assessment-start-modal', 'live-assessment-cancel-modal', 'live-assessment-end-modal', 'live-assessment-leave-modal', 'live-assessment-save-exit-modal', 'live-assessment-save-transition-modal');
                 // remove keydown handler
                 if (activeKeydownHandler) { document.removeEventListener('keydown', activeKeydownHandler); activeKeydownHandler = null; }
                 // remove backdrop handler
@@ -2230,6 +2241,7 @@
             return;
         }
 
+        liveModal.classList.add('live-assessment-leave-modal');
         const confirmed = await showModal({
             title: 'Leave Live Session?',
             body: 'You’re leaving this live session without cancelling it. The current session will remain separate from the Cancel Session workflow.',
@@ -2240,12 +2252,8 @@
         });
         if (!confirmed) return;
 
-        window.__pabasaLiveCrlaFinalizing = true;
-        const result = await sendAction('abandon');
-        if (result) {
-            await window.PabasaCrlaRecovery?.deleteDraft(crlaRecoveryContext).catch(() => {});
-            window.location.href = '{% url "students" %}';
-        }
+        stopPolling();
+        window.location.href = '{% url "students" %}';
     });
 
     let participantData = [];
