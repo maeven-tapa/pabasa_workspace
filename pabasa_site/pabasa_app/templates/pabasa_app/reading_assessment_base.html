@@ -1664,13 +1664,12 @@
         #learnerExperiencePage .rating-option:hover, #learnerExperiencePage .rating-option:focus-visible { background:#f5fbff; border-color:#9ac9df; outline:none; transform:translateY(-3px); }
         #learnerExperiencePage .rating-option:focus-visible { box-shadow: 0 0 0 3px rgba(35, 75, 59, 0.25); }
         #learnerExperiencePage .rating-option.is-selected { background: #fff0bd; border-color: #e4b83f; box-shadow: 0 0 0 3px rgba(228, 184, 63, .28), 0 10px 18px rgba(35,75,59,.12); transform: translateY(-5px) scale(1.025); }
-        #learnerExperiencePage .rating-pip { display:block; position:relative; width:min(100%,clamp(110px,15dvh,138px)); aspect-ratio:1; overflow:hidden; -webkit-mask-image:linear-gradient(to right,transparent 10%,#000 14%,#000 86%,transparent 90%); mask-image:linear-gradient(to right,transparent 10%,#000 14%,#000 86%,transparent 90%); }
-        #learnerExperiencePage .rating-pip img { position:absolute; display:block; height:146%; width:auto; max-width:none; top:54%; left:50%; transform:translate(var(--pip-shift),-50%); pointer-events:none; }
-        #learnerExperiencePage .rating-option[data-rating="1"] { --pip-shift:-10%; }
-        #learnerExperiencePage .rating-option[data-rating="2"] { --pip-shift:-30%; }
-        #learnerExperiencePage .rating-option[data-rating="3"] { --pip-shift:-51%; }
-        #learnerExperiencePage .rating-option[data-rating="4"] { --pip-shift:-70%; }
-        #learnerExperiencePage .rating-option[data-rating="5"] { --pip-shift:-88%; }
+        #learnerExperiencePage .rating-pip { display:block; flex:none; width:min(100%,clamp(110px,15dvh,138px)); aspect-ratio:3 / 4; background-image:url("{% static 'pabasa_app/images/learner_experience/pip_reactions.png' %}"); background-position:var(--pip-position) center; background-repeat:no-repeat; background-size:500% auto; }
+        #learnerExperiencePage .rating-option[data-rating="1"] { --pip-position:0%; }
+        #learnerExperiencePage .rating-option[data-rating="2"] { --pip-position:25%; }
+        #learnerExperiencePage .rating-option[data-rating="3"] { --pip-position:50%; }
+        #learnerExperiencePage .rating-option[data-rating="4"] { --pip-position:75%; }
+        #learnerExperiencePage .rating-option[data-rating="5"] { --pip-position:100%; }
         #learnerExperiencePage .rating-label { color:#234b3b; font-family:"Fredoka","Nunito",sans-serif; font-size:clamp(.95rem,1.2vw,1.08rem); font-weight:400; line-height:1.25; }
         #learnerExperiencePage .rating-number { color:#53746a; font-family:"Fredoka","Nunito",sans-serif; font-size:1rem; font-weight:400; line-height:1; }
         #learnerExperiencePage .continue-button { background:#e4b83f; border:0; border-radius:999px; box-shadow:0 8px 16px rgba(10,30,20,.2); color:#234b3b; cursor:pointer; font:400 clamp(1.15rem,2.4vh,1.45rem) "Fredoka","Nunito",sans-serif; min-height:3.5rem; min-width:280px; padding:.65rem 3.5rem; transition:filter 180ms ease,transform 180ms ease,box-shadow 180ms ease; }
@@ -4834,7 +4833,7 @@
                 <div class="rating-form" role="radiogroup" aria-label="Pakiramdam sa pagbasa">
                     {% for rating in "12345" %}
                     <button class="rating-option" type="button" role="radio" aria-checked="false" data-rating="{{ rating }}">
-                        <span class="rating-pip" aria-hidden="true"><img src="{% static 'pabasa_app/images/learner_experience/pip_reactions.png' %}" alt="" width="2172" height="724"></span>
+                        <span class="rating-pip" aria-hidden="true"></span>
                         <span class="rating-label">{% if rating == '1' %}Nahirapan ako{% elif rating == '2' %}Medyo nahirapan ako{% elif rating == '3' %}Okay lang{% elif rating == '4' %}Madali lang{% else %}Ang saya ko!{% endif %}</span>
                         <span class="rating-number">{{ rating }}</span>
                     </button>

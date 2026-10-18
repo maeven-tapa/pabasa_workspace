@@ -123,13 +123,21 @@
             transform: translateY(-4px);
         }
 
-        .rating-pip { display:block; position:relative; width:min(100%,145px); aspect-ratio:1; overflow:hidden; -webkit-mask-image:linear-gradient(to right,transparent,#000 9%,#000 91%,transparent); mask-image:linear-gradient(to right,transparent,#000 9%,#000 91%,transparent); }
-        .rating-pip img { position:absolute; display:block; height:165%; width:auto; max-width:none; top:50%; left:50%; transform:translate(var(--pip-shift),-50%); pointer-events:none; }
-        .rating-option[data-rating="1"] { --pip-shift:-10%; }
-        .rating-option[data-rating="2"] { --pip-shift:-30%; }
-        .rating-option[data-rating="3"] { --pip-shift:-51%; }
-        .rating-option[data-rating="4"] { --pip-shift:-70%; }
-        .rating-option[data-rating="5"] { --pip-shift:-88%; }
+        .rating-pip {
+            display: block;
+            flex: none;
+            width: min(100%, 130px);
+            aspect-ratio: 3 / 4;
+            background-image: url("{% static 'pabasa_app/images/learner_experience/pip_reactions.png' %}");
+            background-position: var(--pip-position) center;
+            background-repeat: no-repeat;
+            background-size: 500% auto;
+        }
+        .rating-option[data-rating="1"] { --pip-position: 0%; }
+        .rating-option[data-rating="2"] { --pip-position: 25%; }
+        .rating-option[data-rating="3"] { --pip-position: 50%; }
+        .rating-option[data-rating="4"] { --pip-position: 75%; }
+        .rating-option[data-rating="5"] { --pip-position: 100%; }
 
         .rating-label {
             color: var(--ink);
@@ -196,7 +204,7 @@
             <div class="rating-form" role="radiogroup" aria-label="How did the reading feel for you?">
                 {% for rating in "12345" %}
                 <button class="rating-option" type="button" role="radio" aria-checked="false" data-rating="{{ rating }}">
-                    <span class="rating-pip" aria-hidden="true"><img src="{% static 'pabasa_app/images/learner_experience/pip_reactions.png' %}" alt="" width="2172" height="724"></span>
+                    <span class="rating-pip" aria-hidden="true"></span>
                     <span class="rating-label">{% if rating == '1' %}Nahirapan ako{% elif rating == '2' %}Medyo nahirapan ako{% elif rating == '3' %}Okay lang{% elif rating == '4' %}Madali lang{% else %}Ang saya ko!{% endif %}</span>
                     <span class="rating-number">{{ rating }} / 5</span>
                 </button>
