@@ -727,6 +727,33 @@
             animation: pabasaWordError 0.5s ease both;
         }
 
+        body.is-crla-reader :is(.reader-paragraph, .reader-sentence) .reading-word {
+            position: relative;
+            isolation: isolate;
+        }
+
+        .crla-story-highlight-layer {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        :is(.reader-paragraph, .reader-sentence) .crla-story-sentence {
+            fill: #ddebff;
+            stroke: #2563eb;
+            stroke-width: 2px;
+        }
+
+        .reader-sentence .reading-word .is-unread-word,
+        .reader-paragraph .reading-word .is-unread-word {
+            background: transparent;
+            color: inherit;
+        }
+
         .reading-word .word-gap {
             display: inline-block;
             width: 0.28em;
@@ -3287,6 +3314,15 @@
             background: rgba(196, 28, 59, 0.24) !important;
             color: #ff6b7a !important;
         }
+        body.dark-theme :is(.reader-paragraph, .reader-sentence) .crla-story-sentence {
+            fill: rgba(56, 189, 248, 0.22);
+            stroke: #7dd3fc;
+        }
+        body.dark-theme .reader-sentence .reading-word .is-unread-word,
+        body.dark-theme .reader-paragraph .reading-word .is-unread-word {
+            background: transparent !important;
+            color: inherit !important;
+        }
         body.dark-theme .summary-tile span {
             color: #94a3b8 !important;
         }
@@ -4086,40 +4122,55 @@
             margin-top: 0 !important;
             padding-bottom: 0 !important;
         }
-        body.is-crla-reader .reader-shell.is-story-selection .reader-card { height: fit-content; grid-template-rows: minmax(0, 1fr); }
+        body.is-crla-reader .reader-shell.is-story-selection .reader-stage {
+            display: block;
+            overflow-y: auto;
+            min-height: 0;
+        }
+        body.is-crla-reader .reader-shell.is-story-selection .reader-card {
+            height: auto;
+            max-height: none;
+            min-height: 0;
+            margin-inline: auto;
+            grid-template-rows: auto;
+        }
         body.is-crla-reader .reader-shell.is-story-selection .official-crla-status { display: none !important; }
         body.is-crla-reader #storySelectionPanel {
             height: auto !important;
-            max-height: 100%;
+            max-height: none;
             align-self: center;
             min-height: 0 !important;
             padding: 0 !important;
             gap: .5rem;
-            grid-template-rows: auto minmax(0, 1fr);
+            grid-template-rows: auto auto;
         }
         body.is-crla-reader #storySelectionPanel .story-selection-head { gap: .2rem; }
         body.is-crla-reader #storySelectionPanel .story-selection-head::before { display: none; }
         body.is-crla-reader .story-selection-subtitle { margin: 0; font-size: .85rem; }
-        body.is-crla-reader #storySelectionGrid.story-selection-grid { margin: 0 !important; gap: .5rem !important; }
+        body.is-crla-reader #storySelectionGrid.story-selection-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+            margin: 0 !important;
+            gap: .75rem !important;
+        }
         body.is-crla-reader #storySelectionPanel .story-choice-card {
-            display: grid !important;
-            grid-template-columns: clamp(52px, 14vw, 88px) minmax(0, 1fr);
-            grid-template-rows: auto minmax(0, 1fr) auto;
-            min-height: 0;
+            display: flex !important;
+            flex-direction: column !important;
+            height: auto !important;
         }
         body.is-crla-reader #storySelectionPanel .story-choice-banner {
-            grid-column: 1;
-            grid-row: 1 / -1;
             min-height: 0;
+            width: 100%;
             height: auto;
-            aspect-ratio: auto;
+            max-height: 220px;
+            aspect-ratio: 16 / 9;
+            flex-shrink: 0;
         }
         body.is-crla-reader #storySelectionPanel .story-choice-badges { display: none; }
-        body.is-crla-reader #storySelectionPanel .story-choice-card h3 { padding: .5rem .5rem .2rem; font-size: 1rem; }
-        body.is-crla-reader #storySelectionPanel .story-choice-preview { padding: 0 .5rem; }
+        body.is-crla-reader #storySelectionPanel .story-choice-card h3 { padding: .65rem .75rem .2rem; font-size: 1.05rem; }
+        body.is-crla-reader #storySelectionPanel .story-choice-preview { padding: 0 .75rem; }
         body.is-crla-reader #storySelectionPanel .story-choice-preview p { font-size: .85rem; line-height: 1.3; max-height: 2.6em; }
         body.is-crla-reader #storySelectionPanel .story-choice-preview::after { display: none; }
-        body.is-crla-reader #storySelectionPanel .story-choice-actions { min-height: 0; margin: 0; padding: .4rem; }
+        body.is-crla-reader #storySelectionPanel .story-choice-actions { min-height: 0; margin: 0; padding: .65rem .75rem .75rem; }
         body.is-crla-reader #storySelectionPanel .story-choice-actions .btn { min-height: 44px; padding: .3rem; font-size: .85rem; }
         body.is-crla-reader .reader-shell:has(#crlaQuestionPanel:not(.d-none)) .reader-card {
             grid-template-rows: minmax(0, 1fr);
@@ -4590,7 +4641,7 @@
                         </div>
                         <div class="story-question-card"><p class="story-question-label">Question</p><div class="story-question-body" id="crlaQuestionText"></div></div>
                         {% block crla_answer_area %}<div class="story-answer-card" aria-live="polite" aria-atomic="true"><p class="story-answer-label">Your spoken answer</p><div class="story-answer-text is-empty" id="crlaAnswerInput">Your spoken answer will appear here.</div><p class="story-answer-feedback d-none" id="crlaAnswerFeedback" role="status"></p></div>{% endblock %}
-                        <div class="story-question-nav"><button class="btn story-question-finish-reading-btn story-call-mic" id="crlaQuestionStartReadingBtn" type="button" aria-label="Sumagot" title="Sumagot" disabled>🎙 Sumagot</button><button class="btn btn-primary" id="crlaQuestionNextBtn" type="button" aria-label="Susunod" title="Susunod" disabled>Susunod <i class="bi bi-arrow-right" aria-hidden="true"></i></button></div>
+                        <div class="story-question-nav"><button class="btn story-question-finish-reading-btn story-call-mic" id="crlaQuestionStartReadingBtn" type="button" aria-label="Sumagot" title="Sumagot" disabled><i class="bi bi-mic-fill" aria-hidden="true"></i> Sumagot</button><button class="btn btn-primary" id="crlaQuestionNextBtn" type="button" aria-label="Susunod" title="Susunod" disabled>Susunod <i class="bi bi-arrow-right" aria-hidden="true"></i></button></div>
                         <div class="story-completion-card d-none" id="crlaQuestionCompletion"><div class="story-results-mark" aria-hidden="true">A</div><div class="story-results-kicker">CRLA Results</div><div class="story-results-heading"><h3>🎉 You did it!</h3><p>Great work finishing your comprehension questions.</p></div><button class="btn btn-primary story-results-action" id="crlaQuestionFinishBtn" type="button">Back to Assessment <span aria-hidden="true">→</span></button></div>
                     </div>
                 </section>{% endif %}

@@ -29,6 +29,21 @@
     min-width: 0;
     margin-left: 0 !important;
   }
+  body:has(.waiting-room-page.is-assessment-complete) .mobile-dashboard-topbar {
+    display: none !important;
+  }
+  body:has(.waiting-room-page.is-assessment-complete) .dashboard-page-wrap {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+  body:has(.waiting-room-page.is-assessment-complete) .dashboard-content-wrap {
+    padding: 0 !important;
+  }
+  .waiting-room-page.is-assessment-complete {
+    min-height: var(--dashboard-normalized-viewport-height);
+  }
   .waiting-room-page {
     width: 100%;
     max-width: 100%;
@@ -385,9 +400,16 @@
       return;
     }
 
-    setText('wrStatus', state.status === 'waiting'
-      ? 'Handa na'
-      : state.status?.charAt(0).toUpperCase() + state.status?.slice(1));
+    const studentCompleted = ['completed', 'submitted'].includes(String(state.viewer_student_state?.status || '').toLowerCase());
+    setText('wrStatus', state.status === 'ended'
+      ? 'Ended'
+      : studentCompleted && state.status !== 'cancelled'
+        ? 'Completed'
+        : state.status === 'waiting'
+          ? 'Handa na'
+          : state.status?.charAt(0).toUpperCase() + state.status?.slice(1));
+    document.querySelector('.waiting-room-page')?.classList.toggle('is-assessment-complete',
+      studentCompleted && !state.reader_url && !['waiting', 'ended', 'cancelled'].includes(state.status));
 
     if (state.status === 'waiting') {
       setText('waitingMessage', 'Hintayin muna si Teacher');
@@ -409,7 +431,7 @@
       return;
     }
 
-    if (['completed', 'submitted'].includes(String(state.viewer_student_state?.status || '').toLowerCase())) {
+    if (studentCompleted) {
       if (state.reader_url) {
         stopPolling();
         redirectToReader(state.reader_url);

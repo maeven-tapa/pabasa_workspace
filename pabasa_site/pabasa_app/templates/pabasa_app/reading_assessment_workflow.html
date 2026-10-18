@@ -127,13 +127,8 @@
     }
 
     .assessment-waiting-loader img {
-        /* The asset includes 34px of transparent padding for its shadow. */
-        position: absolute;
-        top: -34px;
-        left: -34px;
-        width: 224px;
-        height: 224px;
-        max-width: none;
+        width: 100%;
+        height: 100%;
         display: block;
     }
 
@@ -324,7 +319,7 @@
                     <div class="assessment-waiting-loader" role="status" aria-label="Preparing your assessment">
                         <picture>
                             <source media="(prefers-reduced-motion: reduce)" srcset="{% static 'pabasa_app/animations/assessment-waiting-spinner-still.png' %}">
-                            <img src="{% static 'pabasa_app/animations/assessment-waiting-spinner.gif' %}" width="224" height="224" alt="">
+                            <img src="{% static 'pabasa_app/animations/assessment-waiting-spinner.gif' %}" width="156" height="156" alt="">
                         </picture>
                     </div>
                     <div class="workflow-copy assessment-waiting-copy">

@@ -1010,13 +1010,13 @@
             if (title.includes("kakaibang") || title.includes("jeepney")) {
                 const illustrated = isCrla && title === "isang kakaibang araw";
                 return { category: "Everyday", duration: "4 min read", level: "Level 1",
-                    thumbnail: illustrated ? "crla_story_banners/isang-kakaibang-araw-v1.png" : "reading9.jpg",
+                    thumbnail: illustrated ? "crla_story_banners/isang-kakaibang-araw-v1.webp" : "reading9.jpg",
                     illustrated, description: "A cheerful clown juggling five balls inside a jeepney while passengers clap." };
             }
             if (title.includes("pagong") || title.includes("kuneho")) {
                 const illustrated = isCrla && title === "ang pagong at ang kuneho";
                 return { category: "Fable", duration: "3 min read", level: "Level 1",
-                    thumbnail: illustrated ? "crla_story_banners/ang-pagong-at-ang-kuneho-v1.png" : "reading8.jpg",
+                    thumbnail: illustrated ? "crla_story_banners/ang-pagong-at-ang-kuneho-v1.webp" : "reading8.jpg",
                     illustrated, description: "A tortoise and a rabbit preparing for a race while forest animals watch." };
             }
             return { category: "Adventure", duration: "3 min read", level: "Level 1", thumbnail: "reading7.jpg" };
@@ -1879,7 +1879,7 @@
             if (crlaAnswerFeedback) crlaAnswerFeedback.classList.add("d-none");
             if (crlaQuestionStartReadingBtn) {
                 crlaQuestionStartReadingBtn.classList.remove("is-recording");
-                crlaQuestionStartReadingBtn.textContent = "🎙 Sumagot";
+                crlaQuestionStartReadingBtn.innerHTML = '<i class="bi bi-mic-fill" aria-hidden="true"></i> Sumagot';
             }
             crlaQuestionStartReadingBtn?.classList.toggle("d-none", !currentStoryQuestions.length);
             const progress = document.getElementById("crlaQuestionProgressFill");
@@ -2095,7 +2095,7 @@
                 crlaSpeechAttemptActive = false; crlaSpeechRecognition = null;
                 completeCRLASpokenAttempt("", questionIndex);
             };
-            if (crlaAnswerFeedback) { crlaAnswerFeedback.textContent = "Listening… Speak your answer once."; crlaAnswerFeedback.classList.remove("d-none"); }
+            if (crlaAnswerFeedback) { crlaAnswerFeedback.textContent = ""; crlaAnswerFeedback.classList.add("d-none"); }
             crlaQuestionStartReadingBtn.disabled = true;
             crlaQuestionStartReadingBtn.classList.add("is-recording");
             crlaQuestionStartReadingBtn.textContent = "Listening…";
@@ -5702,6 +5702,8 @@
                 renderTextParts(titleText, readingTitle);
             }
             renderTextParts(bodyText || displayText, readingWord);
+            groupCrlaReadingHighlight(readingTitle);
+            groupCrlaReadingHighlight(readingWord);
             if (progressFill && typeof data.progress === "number") {
                 progressFill.style.width = `${((currentIndex + (data.progress / 100)) / items.length) * 100}%`;
             }
@@ -5713,7 +5715,6 @@
 
         function markCrlaNextWord(word) {
             if (!usesCrlaNextWordHighlight()) return;
-            word.classList.add("is-next-word");
             word.setAttribute("aria-current", "true");
         }
 
@@ -5721,9 +5722,131 @@
             if (!usesCrlaNextWordHighlight()) return;
             word.classList.add("is-unread-word");
             if (isNext) {
-                word.classList.add("is-current");
                 markCrlaNextWord(word);
             }
+        }
+
+        let crlaStoryHighlightFrame = null;
+        function scheduleCrlaStoryHighlight() {
+            if (crlaStoryHighlightFrame !== null) return;
+            crlaStoryHighlightFrame = window.requestAnimationFrame(() => {
+                crlaStoryHighlightFrame = null;
+                if (!readerCard || !readingWord) return;
+                let layer = readingWord.querySelector(".crla-story-highlight-layer");
+                const words = isCrla && (mode === "paragraph" || mode === "sentence") && !readingWord.hidden
+                    ? Array.from(readingWord.querySelectorAll(".is-story-active, .is-sentence-active")) : [];
+                if (!words.length) {
+                    if (layer) layer.style.display = "none";
+                    return;
+                }
+                if (!layer) {
+                    layer = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                    layer.classList.add("crla-story-highlight-layer");
+                    layer.setAttribute("aria-hidden", "true");
+                    layer.setAttribute("focusable", "false");
+                    layer.setAttribute("preserveAspectRatio", "none");
+                    readingWord.appendChild(layer);
+                }
+                layer.style.display = "block";
+                const bounds = layer.getBoundingClientRect();
+                layer.setAttribute("viewBox", `0 0 ${layer.clientWidth || 1} ${layer.clientHeight || 1}`);
+                const scaleX = bounds.width / (layer.clientWidth || 1);
+                const scaleY = bounds.height / (layer.clientHeight || 1);
+                const lines = [];
+                words.forEach((word) => {
+                    const rect = word.getBoundingClientRect();
+                    if (!rect.width || !rect.height) return;
+                    const range = document.createRange();
+                    range.selectNodeContents(word);
+                    const textRect = range.getBoundingClientRect();
+                    const last = lines[lines.length - 1];
+                    if (last && Math.abs(last.top - rect.top) < 2) {
+                        last.right = Math.max(last.right, rect.right);
+                        last.textTop = Math.min(last.textTop, textRect.top);
+                        last.textBottom = Math.max(last.textBottom, textRect.bottom);
+                    } else {
+                        lines.push({ left: rect.left, top: rect.top, right: rect.right,
+                            height: rect.height, textTop: textRect.top, textBottom: textRect.bottom });
+                    }
+                });
+                // An absolute layer follows the passage without participating
+                // in layout. Text bounds exclude the extra line-height space.
+                layer.replaceChildren(...lines.map((line) => {
+                    const box = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                    box.classList.add("crla-story-sentence");
+                    const height = Math.max(1, Math.min(
+                        (line.textBottom - line.textTop) / scaleY + 6,
+                        line.height / scaleY - 2
+                    ));
+                    const centerY = ((line.textTop + line.textBottom) / 2 - bounds.top) / scaleY;
+                    box.setAttribute("x", (line.left - bounds.left) / scaleX - 2);
+                    box.setAttribute("y", centerY - height / 2);
+                    box.setAttribute("width", (line.right - line.left) / scaleX + 4);
+                    box.setAttribute("height", height);
+                    box.setAttribute("rx", "10");
+                    return box;
+                }));
+            });
+        }
+
+        function groupCrlaStorySentence(container) {
+            if (container !== readingWord) return;
+            scheduleCrlaStoryHighlight();
+            const text = container.textContent;
+            // Follow the existing speech cursor without changing advancement.
+            const unread = container.querySelector(".is-unread-word");
+            if (!unread) return;
+            // Segment the displayed text, including closing quotation marks.
+            // Dialogue tags belong to the preceding quotation even when the
+            // quotation ends in an exclamation mark or question mark.
+            const segments = typeof Intl.Segmenter === "function"
+                ? Array.from(new Intl.Segmenter("fil", { granularity: "sentence" }).segment(text),
+                    ({ segment, index }) => ({ text: segment, start: index, end: index + segment.length }))
+                : Array.from(text.matchAll(/[^.!?]+[.!?]*["'\u201d\u2019)\]]*\s*/g),
+                    (match) => ({ text: match[0], start: match.index, end: match.index + match[0].length }));
+            const sentences = [];
+            segments.forEach((segment) => {
+                if (sentences.length && /^(?:sabi|wika|sambit|tanong|sagot|sigaw|bulong|dagdag|tugon|ani|said|asked|replied|shouted|whispered|exclaimed)\b/i.test(segment.text.trimStart())) {
+                    sentences[sentences.length - 1].end = segment.end;
+                } else {
+                    sentences.push({ ...segment });
+                }
+            });
+            let offset = 0;
+            const nodes = Array.from(container.childNodes).map((node) => {
+                const start = offset;
+                offset += node.textContent.length;
+                return { node, start, end: offset };
+            });
+            const unreadStart = nodes.find(({ node }) => node === unread)?.start;
+            const active = sentences.find(({ start, end }) => start <= unreadStart && unreadStart < end);
+            if (!active) return;
+            // Box only the unread remainder, stopping at this sentence's end.
+            const selected = nodes.filter(({ node, start, end }) => end > unreadStart && start < active.end
+                && !(node.nodeType === Node.TEXT_NODE && !node.textContent.trim()
+                    && (start === unreadStart || end === active.end)));
+            if (!selected.length) return;
+            selected.forEach(({ node }) => {
+                if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains("is-unread-word")) {
+                    node.classList.add("is-story-active");
+                }
+            });
+        }
+
+        function groupCrlaReadingHighlight(container) {
+            if (!container || !isCrla) return;
+            if (mode === "paragraph") {
+                groupCrlaStorySentence(container);
+                return;
+            }
+            if (mode !== "sentence") return;
+            if (container !== readingWord) return;
+            // Draw around the unread words without wrapping or moving text nodes.
+            // Their positions and the speech provider's word indices stay fixed.
+            container.querySelectorAll(".is-unread-word").forEach((word) => {
+                word.classList.add("is-sentence-active");
+            });
+            scheduleCrlaStoryHighlight();
         }
 
         function renderCrlaStoryStartHint() {
@@ -5749,6 +5872,8 @@
             };
             if (titleText && readingTitle) renderParts(titleText, readingTitle);
             renderParts(bodyText || displayText, readingWord);
+            groupCrlaReadingHighlight(readingTitle);
+            groupCrlaReadingHighlight(readingWord);
         }
 
         function renderPhraseWordGuide(displayText, activeWordIndex = 0) {
@@ -5855,6 +5980,7 @@
                 });
                 readableWordIndex += 1;
             });
+            groupCrlaReadingHighlight(readingWord);
             readingWord.hidden = false;
         }
 
@@ -5958,6 +6084,8 @@
                 renderTextParts(titleText, readingTitle);
             }
             renderTextParts(bodyText || displayText, readingWord);
+            groupCrlaReadingHighlight(readingTitle);
+            groupCrlaReadingHighlight(readingWord);
             if (progressFill && typeof data.progress === "number") {
                 progressFill.style.width = `${((currentIndex + (data.progress / 100)) / items.length) * 100}%`;
             }
@@ -6076,6 +6204,7 @@
             if (!isCrla || crlaReadingFitFrame !== null) return;
             crlaReadingFitFrame = window.requestAnimationFrame(() => {
                 crlaReadingFitFrame = null;
+                scheduleCrlaStoryHighlight();
                 if (!readingWord) return;
                 if (currentStoryState === "story_reading" && counter) counter.textContent = storySegmentCounterLabel();
                 readingWord.style.removeProperty("font-size");
@@ -8838,10 +8967,19 @@
             });
         }
         if (isCrla && readingWord) {
+            const highlightObserver = new ResizeObserver(scheduleCrlaStoryHighlight);
+            highlightObserver.observe(readingWord);
+            highlightObserver.observe(readingWord.closest(".word-stage"));
+            readerCard?.addEventListener("scroll", scheduleCrlaStoryHighlight, true);
             const fitObserver = new ResizeObserver(scheduleCrlaReadingFit);
             fitObserver.observe(shell.querySelector(".reader-footer"));
             fitObserver.observe(readerTop);
-            const textObserver = new MutationObserver(scheduleCrlaReadingFit);
+            const textObserver = new MutationObserver((records) => {
+                // Drawing the overlay must not trigger another drawing/layout cycle.
+                if (records.some(record => !record.target.closest?.(".crla-story-highlight-layer"))) {
+                    scheduleCrlaReadingFit();
+                }
+            });
             textObserver.observe(readingWord.closest(".word-stage"), {childList: true, subtree: true, characterData: true});
             window.addEventListener("resize", scheduleCrlaReadingFit);
             document.fonts.ready.then(scheduleCrlaReadingFit);
