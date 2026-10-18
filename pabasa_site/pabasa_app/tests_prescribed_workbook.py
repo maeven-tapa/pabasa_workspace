@@ -1083,6 +1083,27 @@ class PrescribedWorkbookFlowTests(TestCase):
         self.assertEqual(untouched.current_index, 3)
         self.assertEqual(untouched.state['revision'], 7)
 
+    def test_dashboard_derives_gawain1_status_from_authoritative_word_state(self):
+        key = 'aral-l22-g1-c-syllable-builder'
+        StudentActivityProgress.objects.create(
+            student=self.student, activity_key=key,
+            school_calendar=None, term=None, current_index=18,
+            completed_items=1, correct_items=1, total_items=1,
+            activity_completed=True,
+            state={
+                'index': 18, 'read_aloud_completed': True,
+                'found_words': ['cactus'], 'completed': True,
+            },
+        )
+        response = self.client.get(reverse('assessment'))
+        self.assertEqual(response.status_code, 200)
+        entry = response.context['prescribed_activity_progress'][key]
+        self.assertEqual(entry['completed_items'], 1)
+        self.assertEqual(entry['total_items'], 8)
+        self.assertFalse(entry['activity_completed'])
+        self.assertFalse(entry['state']['completed'])
+        self.assertEqual(entry['state']['index'], 18)
+
     def test_active_catalog_has_exact_workbook_sessions_8_to_11(self):
         active = active_prescribed_activities()
         groups = {

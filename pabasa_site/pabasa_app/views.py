@@ -13297,6 +13297,7 @@ def assessment(request):
             raise
 
     if stage == 'original':
+        from .prescribed_workbook import L22_C_ACCEPTED_BUILDS, normalize_l22_c_state
         prescribed_keys = tuple(PRESCRIBED_ACTIVITIES.keys())
         progress_rows = StudentActivityProgress.objects.filter(
             student_id=getattr(user, 'id', None),
@@ -13318,6 +13319,16 @@ def assessment(request):
                     'state': row.state if isinstance(row.state, dict) else {},
                 }
                 for row in progress_rows if row.activity_key in prescribed_keys
+            }
+        g1_entry = context['prescribed_activity_progress'].get('aral-l22-g1-c-syllable-builder')
+        if g1_entry:
+            g1_state = normalize_l22_c_state(dict(g1_entry.get('state') or {}))
+            context['prescribed_activity_progress']['aral-l22-g1-c-syllable-builder'] = {
+                **g1_entry,
+                'completed_items': len(g1_state.get('found_words', [])),
+                'total_items': len(L22_C_ACCEPTED_BUILDS),
+                'activity_completed': bool(g1_state.get('completed')),
+                'state': g1_state,
             }
         # Gawain 6 is term-scoped when it is written by the prescribed
         # activity endpoint.  Do not let a legacy/unscoped row rehydrate a
