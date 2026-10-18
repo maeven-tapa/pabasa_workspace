@@ -2407,6 +2407,14 @@ def _assessment_score_payload(data):
 def _practice_score_payload(data):
     """Build a lightweight practice score payload from student reading actions."""
     raw = data.get('scores') if isinstance(data.get('scores'), dict) else data
+    from math import isfinite
+    for key in ('correct_responses', 'incorrect_responses', 'correct', 'incorrect', 'items_completed',
+                'total_practice_items', 'total_read_words', 'total_skipped_words', 'score',
+                'reading_time_seconds', 'duration_seconds', 'attempt_number'):
+        value = raw.get(key)
+        if value is not None and value != '':
+            if isinstance(value, (bool, dict, list)) or not isfinite(float(value)):
+                raise ValueError('Invalid practice metrics.')
     correct_responses = int(raw.get('correct_responses', raw.get('correct', 0)) or 0)
     incorrect_responses = int(raw.get('incorrect_responses', raw.get('incorrect', 0)) or 0)
     items_completed = int(raw.get('items_completed') or 0)
@@ -26330,6 +26338,20 @@ def _material_practice_completion(material, student_user):
     return completion if isinstance(completion, dict) else {}
 
 def _record_material_practice_completion(material, student_user, attempt_payload):
+    # Every learner writes into this shared JSON object. Reload under a database
+    # row lock so a stale request cannot erase a classmate or a better result.
+    with transaction.atomic():
+        locked_material = Material.objects.select_for_update(of=('self',)).get(pk=material.pk)
+        completion = _merge_material_practice_completion(locked_material, student_user, attempt_payload)
+        material.content_json = locked_material.content_json
+        material.updated_at = locked_material.updated_at
+    from .achievements import record_learning_dates, refresh_student_achievements, _local_date
+    record_learning_dates(student_user.pk, {_local_date(system_now())})
+    refresh_student_achievements(student_user)
+    return completion
+
+
+def _merge_material_practice_completion(material, student_user, attempt_payload):
     content_json = dict(getattr(material, 'content_json', None) or {})
     completions = dict(content_json.get('student_completions') or {})
     existing_completion = completions.get(str(student_user.id)) or {}
@@ -26368,9 +26390,6 @@ def _record_material_practice_completion(material, student_user, attempt_payload
     content_json['student_completions'] = completions
     material.content_json = content_json
     material.save(update_fields=['content_json', 'updated_at'])
-    from .achievements import record_learning_dates, refresh_student_achievements, _local_date
-    record_learning_dates(student_user.pk, {_local_date(system_now())})
-    refresh_student_achievements(student_user)
     return completion
 
 
@@ -26383,6 +26402,8 @@ def award_hunt_mode_stars(request):
         return blocked
     try:
         data = json.loads(request.body or '{}')
+        if not isinstance(data, dict):
+            raise ValueError('Invalid Hunt award request.')
         session_student_id = int(request.session.get('user_id') or 0)
         posted_student_id = int(data.get('student_id') or 0)
         if not session_student_id or posted_student_id != session_student_id:
@@ -26394,9 +26415,17 @@ def award_hunt_mode_stars(request):
         if not attempt_id or len(attempt_id) > 64 or award_type not in {'word', 'completion'}:
             return JsonResponse({'success': False, 'error': 'Invalid Hunt award request.'}, status=400)
 
+        from .crla_stream import authorize_material
+        try:
+            authorize_material(request, material_id, 'practice')
+        except PermissionError:
+            return JsonResponse({'success': False, 'error': 'This practice level is not available for your account.'}, status=403)
         with transaction.atomic():
             student = User.objects.select_for_update().get(pk=session_student_id, role='student')
-            material = Material.objects.select_for_update(of=("self",)).get(pk=material_id, type='practice')
+            material = Material.objects.select_for_update(of=("self",)).get(
+                pk=material_id, type='practice', is_active=True, status='published',
+                is_system_owned=True, source_type='shared', teacher__isnull=True, section__isnull=True,
+            )
             content_json = dict(material.content_json or {})
             if str(content_json.get('mode') or '').lower() != 'hunt':
                 return JsonResponse({'success': False, 'error': 'The selected level is not Hunt Mode.'}, status=400)
@@ -26450,7 +26479,7 @@ def award_hunt_mode_stars(request):
             'available_stars': student.available_stars,
             'attempt_stars': attempt_stars,
         })
-    except (TypeError, ValueError, Material.DoesNotExist, User.DoesNotExist):
+    except (TypeError, ValueError, OverflowError, Material.DoesNotExist, User.DoesNotExist):
         return JsonResponse({'success': False, 'error': 'Invalid Hunt level or score data.'}, status=400)
 
 def _serialize_student_practice_material(material, student_user=None):
@@ -27661,7 +27690,13 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             }, separators=(',', ':')),
         }
     else:
-        score_payload = _practice_score_payload(data) if is_practice else _assessment_score_payload(data)
+        if is_practice:
+            try:
+                score_payload = _practice_score_payload(data)
+            except (TypeError, ValueError, OverflowError):
+                return JsonResponse({'success': False, 'error': 'Invalid practice metrics.'}, status=400)
+        else:
+            score_payload = _assessment_score_payload(data)
     if is_crla_assessment:
         canonical_classification = canonical_crla_classification(
             score_payload.get('crla_classification') or score_payload.get('classification')
@@ -29878,9 +29913,22 @@ def live_assessment_student_state_update(request, session_id):
         # A retry must validate against the newest teacher/system state.  A
         # stale heartbeat after skip, completion, pause, end, or batch advance
         # is intentionally a successful no-op.
-        if not _live_student_update_is_allowed(current, user_id):
+        current_student_state = (current.student_states or {}).get(str(user_id), {}) or {}
+        requested_save_ack = (
+            state_values.get('save_acknowledged') is True
+            and current.status in {'started', 'paused'}
+            and str(current.batch_assignments.get(str(user_id), 0)) == str(current.current_batch)
+            and current_student_state.get('participation_status') == 'save_requested'
+            and str(current_student_state.get('status') or '').lower() not in {'completed', 'skipped', 'missed'}
+        )
+        if not _live_student_update_is_allowed(current, user_id) and not requested_save_ack:
             return None
-        _update_live_student_state(current, user_id, state_values)
+        accepted_values = dict(state_values)
+        if current.status == 'paused':
+            # A teacher-requested final snapshot may finish during Pause. It
+            # saves evidence without authorizing the student to resume reading.
+            accepted_values['status'] = current_student_state.get('status', 'paused')
+        _update_live_student_state(current, user_id, accepted_values)
         if state_values.get('save_acknowledged') is True:
             saved_state = (current.student_states or {}).get(str(user_id), {})
             if saved_state.get('participation_status') == 'save_requested':
@@ -30123,6 +30171,10 @@ def live_assessment_session_action(request, session_id):
         if session.status not in ['started', 'paused']:
             return JsonResponse({'success': False, 'error': 'Only an active or paused session can be closed and saved'}, status=400)
 
+        # Older sessions can have an authorized roster without a stored batch
+        # map. Resolve the same automatic batches used by state/start before
+        # choosing the current participants; an empty map is not an empty class.
+        _ensure_live_session_batches(session)
         raw_student_ids = data.get('student_ids') if isinstance(data.get('student_ids'), list) else None
         if raw_student_ids is None and data.get('student_id') is not None:
             raw_student_ids = [data.get('student_id')]
@@ -30144,6 +30196,12 @@ def live_assessment_session_action(request, session_id):
         def apply_close_and_save(current):
             if current.status not in ['started', 'paused']:
                 return None
+            batch_fields = ('batch_assignments', 'batch_size', 'current_batch', 'total_batches')
+            previous_batches = {field: getattr(current, field) for field in batch_fields}
+            _ensure_live_session_batches(current)
+            changed_batch_fields = {
+                field for field in batch_fields if getattr(current, field) != previous_batches[field]
+            }
             states = current.student_states or {}
             changed = False
             saved_student_ids = []
@@ -30164,7 +30222,7 @@ def live_assessment_session_action(request, session_id):
                     str(current_state.get('status') or '').lower() in {'completed', 'skipped'}
                     or bool(student and _official_crla_completed_result_for_material(student, current.material))
                 )
-                if is_completed:
+                if is_completed or current_state.get('participation_status') == 'saved':
                     continue
 
                 # Request one final student-side snapshot before marking the
@@ -30180,14 +30238,14 @@ def live_assessment_session_action(request, session_id):
                 saved_student_ids.append(student_id)
                 _action_state_trace('close_and_save_after', student_id, current_state, before_states)
 
-            if not saved_student_ids:
-                return None
+            if not saved_student_ids or not changed:
+                return changed_batch_fields or None
             current.student_states = states
             _append_live_session_activity(
                 current,
                 f'Teacher closed and saved Live CRLA progress for {len(saved_student_ids)} student(s).',
             )
-            return {'activity_log'}
+            return {'activity_log', *changed_batch_fields}
 
         session, mutation_error = _mutate_live_session_state(session.id, apply_close_and_save)
         if not session:
@@ -30233,12 +30291,11 @@ def live_assessment_session_action(request, session_id):
             )
             if current.status != 'paused' and not (current.status == 'started' and current_has_saved_participants):
                 return None
-            was_started_with_saved_participants = current.status == 'started'
             if current.status == 'paused':
                 current.status = 'started'
             states = current.student_states or {}
             for student_key, student_state in states.items():
-                if was_started_with_saved_participants and student_state.get('participation_status') == 'saved':
+                if student_state.get('participation_status') == 'saved':
                     student_state['participation_status'] = 'active'
                 if student_state.get('status') == 'paused':
                     student_state['status'] = student_state.pop('previous_status', 'reading')
@@ -37761,8 +37818,13 @@ def record_assessment_completion(request):
     """Handles notification when student completes reading material."""
     request_timing_start = time.perf_counter()
     try:
-        logger.warning("DEBUG: record_assessment_completion HIT")
         data = json.loads(request.body)
+        if not isinstance(data, dict):
+            raise ValueError('Completion must be an object.')
+    except (TypeError, ValueError, UnicodeDecodeError):
+        return JsonResponse({'success': False, 'error': 'Invalid completion request.'}, status=400)
+    try:
+        logger.warning("DEBUG: record_assessment_completion HIT")
         if str(data.get('activity_type') or '').strip().lower() == 'practice':
             blocked = _teacher_access_practice_block(request, json_response=True)
             if blocked:
@@ -37806,6 +37868,8 @@ def record_assessment_completion(request):
             data['material_id'] = normalized_material_id
             material = Material.objects.filter(id=normalized_material_id).first()
             if material and material.type == 'practice':
+                if data.get('student_id') is not None and str(data['student_id']) != str(student_user.pk):
+                    return JsonResponse({'success': False, 'error': 'Sign in to the account that completed this practice.'}, status=403)
                 blocked = _teacher_access_practice_block(request, json_response=True)
                 if blocked:
                     return blocked

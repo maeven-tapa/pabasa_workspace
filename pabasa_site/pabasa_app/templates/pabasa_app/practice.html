@@ -1158,4 +1158,38 @@
         }
     })();
 </script>
+<script src="{% static 'pabasa_app/js/practice_completion_queue.js' %}?v=1"></script>
+<script>
+    (() => {
+        const studentId = Number("{{ request.session.user_id|default:'' }}");
+        if (!studentId || !window.PracticeCompletionQueue) return;
+        const notice = document.createElement('div');
+        notice.className = 'alert alert-info';
+        notice.setAttribute('role', 'status');
+        const message = document.createElement('span');
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.className = 'btn btn-sm btn-primary ms-2';
+        retry.textContent = 'Retry Save';
+        notice.append(message, retry);
+        const queue = window.PracticeCompletionQueue.create({
+            studentId, storage: localStorage, fetch: (...args) => fetch(...args),
+            csrf: () => document.querySelector('[name=csrfmiddlewaretoken]')?.value
+                || decodeURIComponent(document.cookie.split('; ').find(value => value.startsWith('csrftoken='))?.slice(10) || ''),
+            delay: ms => new Promise(resolve => window.setTimeout(resolve, ms)),
+            onStatus(status, detail) {
+                message.textContent = status === 'saved' ? 'Your practice result is saved. Refresh to see your updated progress.'
+                    : status === 'saving' ? 'Saving your previous practice result...'
+                    : detail || 'Your practice result is waiting to be saved.';
+                retry.hidden = status !== 'pending';
+            },
+        });
+        if (queue.pending()) {
+            document.getElementById('gameGrid')?.before(notice);
+            retry.addEventListener('click', () => queue.flush());
+            window.addEventListener('online', () => queue.flush());
+            queue.flush();
+        }
+    })();
+</script>
 {% endblock %}

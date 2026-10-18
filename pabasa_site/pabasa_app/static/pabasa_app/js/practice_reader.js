@@ -66,6 +66,7 @@
     const practiceNextLevelBtn = document.getElementById("practiceNextLevelBtn");
     const nextLevelAvailabilityMessage = document.getElementById("nextLevelAvailabilityMessage");
     let completionSubmitted = false;
+    let practiceCompletionQueue = null;
     let huntAwardSubmitted = false;
     let huntAwardPromise = null;
     let huntServerStarTotals = null;
@@ -118,6 +119,7 @@
     let huntPoints = 0;
     let huntAttemptId = (window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`);
     const huntAwardRequests = new Map();
+    const huntAwardPayloads = new Map();
     let huntLevelStars = 0;
     const huntFlightBird = document.getElementById("huntFlightBird");
     const huntProgressLabel = document.getElementById("huntProgressLabel");
@@ -459,6 +461,8 @@
 
     function postHuntAward(payload) {
         const key = payload.award_type === "word" ? `word:${payload.word_index}` : "completion";
+        huntAwardPayloads.set(key, { student_id: Number(window.PABASA_USER_ID || 0), level_id: materialId,
+            attempt_id: huntAttemptId, ...payload });
         if (huntAwardRequests.has(key)) return huntAwardRequests.get(key);
         const request = fetch('/api/practice/hunt/award-stars/', {
             method: 'POST', credentials: 'same-origin',
@@ -628,6 +632,9 @@
             }
         } catch (error) {
             console.warn("PABASA [Practice]: Speech-to-text failed", error);
+            // Network/provider/auth failures need an explicit restart. Keep the
+            // same item and avoid thirty continuous recorders retrying an outage.
+            stopContinuousRecognitionByUser();
             speechFeedback(error.message || "Speech recognition is unavailable. Please try again.", false);
             restoreSpeechButton();
         } finally {
@@ -746,11 +753,11 @@
             speechStopTimer = window.setTimeout(stopPracticeSpeechRecording, practiceRecordingWindowMs(targetText));
         } catch (error) {
             console.warn("PABASA [Practice]: Microphone unavailable", error);
+            huntListeningDesired = false;
             speechFeedback("Microphone access is required for speech checking.", false);
             restoreSpeechButton();
             releaseSpeechStream();
             updateReadingToggleButton();
-            if (huntListeningDesired) scheduleContinuousRecognition(isFreeMode ? scrollCurrentIndex : currentIndex, 700);
         } finally { speechCaptureStarting = false; }
     }
 
@@ -2365,6 +2372,17 @@
                 : 0,
         };
 
+        if (practiceCompletionQueue) {
+            const job = { id: `${materialId}:${huntAttemptId}`, payload: completionPayload,
+                awards: isHuntMode ? [...huntAwardPayloads.values()].filter(award => award.award_type === 'word') : [],
+                huntCompletion: isHuntMode ? { student_id: Number(window.PABASA_USER_ID || 0), level_id: materialId,
+                    attempt_id: huntAttemptId, award_type: 'completion', total_points: metrics.huntPoints,
+                    percentage: metrics.huntPercentage } : null };
+            return practiceCompletionQueue.enqueue(job).then(saved => {
+                completionSubmitted = saved;
+                return saved;
+            });
+        }
         return fetch('/record-assessment-completion/', {
             method: 'POST',
             headers: {
@@ -2540,6 +2558,7 @@
         huntPoints = 0;
         huntAttemptId = (window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`);
         huntAwardRequests.clear();
+        huntAwardPayloads.clear();
         huntLevelStars = 0;
         if (starCount && isHuntMode) starCount.textContent = "Stars Collected: 0";
         if (huntPointsDisplay) huntPointsDisplay.textContent = `Points: 0/${HUNT_MAX_POINTS}`;
@@ -2813,6 +2832,48 @@
         toggleFreeModeBodyLock(false);
     }
 
+    if (viewMode !== 'view' && Number(window.PABASA_USER_ID) > 0 && window.PracticeCompletionQueue) {
+        const statusBox = document.createElement('div');
+        statusBox.className = 'practice-save-status';
+        statusBox.setAttribute('role', 'status');
+        statusBox.setAttribute('aria-live', 'polite');
+        const statusText = document.createElement('p');
+        const retrySave = document.createElement('button');
+        retrySave.type = 'button';
+        retrySave.className = 'complete-secondary';
+        retrySave.textContent = 'Retry Save';
+        retrySave.hidden = true;
+        statusBox.append(statusText, retrySave);
+        document.querySelector('.practice-complete-actions')?.before(statusBox);
+        practiceCompletionQueue = window.PracticeCompletionQueue.create({
+            studentId: Number(window.PABASA_USER_ID), storage: localStorage,
+            fetch: (...args) => fetch(...args), csrf: practiceCsrfToken,
+            delay: ms => new Promise(resolve => window.setTimeout(resolve, ms)),
+            onStatus(status, message) {
+                statusText.textContent = status === 'saved' ? 'Your practice result is saved.'
+                    : status === 'saving' ? 'Saving your practice result...'
+                    : message || 'Your result is waiting to be saved. Check your connection and retry.';
+                retrySave.hidden = status !== 'pending';
+            },
+            onSaved(data, job) {
+                markMaterialSeen(data.material_id || job.payload.material_id);
+                window.dispatchEvent(new CustomEvent('pabasa:practice-completed', {
+                    detail: { materialId: data.material_id || job.payload.material_id },
+                }));
+            },
+            onHuntTotals(data, job) {
+                if (String(job.payload.material_id) === String(materialId) && job.huntCompletion.attempt_id === huntAttemptId) {
+                    huntServerStarTotals = data;
+                    huntLevelStars = Number(data.attempt_stars || 0);
+                    updateHuntServerStarDisplays();
+                }
+                window.dispatchEvent(new CustomEvent('pabasa:stars-updated', { detail: data }));
+            },
+        });
+        retrySave.addEventListener('click', () => practiceCompletionQueue.flush());
+        window.addEventListener('online', () => practiceCompletionQueue.flush());
+        if (practiceCompletionQueue.pending()) practiceCompletionQueue.flush();
+    }
     updatePracticeLanguageLabels();
     loadItems();
 })();

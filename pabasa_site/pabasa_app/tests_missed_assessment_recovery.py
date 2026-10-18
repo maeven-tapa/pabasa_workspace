@@ -170,7 +170,9 @@ class MissedAssessmentRecoveryTests(TestCase):
         response = self.client.get(reverse('assessment'))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['stage'], 'assessment_week_locked')
-        self.assertContains(response, 'Please wait while your teacher prepares the assessment.')
+        self.assertTrue(response.context['approved_request_waiting'])
+        self.assertContains(response, 'REQUEST APPROVED')
+        self.assertContains(response, 'Your request was approved. Please wait for your teacher to start the live assessment.')
         # The shared page JavaScript contains the request label as a client
         # string; the rendered recovery branch must not expose its button.
         self.assertNotContains(response, 'id="requestAssessmentButton"')

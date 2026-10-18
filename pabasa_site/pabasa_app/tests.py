@@ -4876,8 +4876,8 @@ class HuntScoringRuleTests(TestCase):
         self.assertIn("/api/practice/hunt/award-stars/", source)
         self.assertIn("if (huntAwardSubmitted)", source)
         self.assertIn('id="huntPointsDisplay">Points: 0/10', template)
-        self.assertIn('Available Stars: {{ student_available_stars|default:0 }}', template)
-        self.assertIn('starCount.textContent = `Available Stars: ${data.available_stars}`', source)
+        self.assertIn('id="starCount">Stars Collected: 0', template)
+        self.assertIn('starCount.textContent = `Stars Collected: ${huntLevelStars}`', source)
 
     def test_frontend_normalizes_prefixed_material_ids_and_accepts_legacy_game_types(self):
         source = (Path(__file__).resolve().parent / "static" / "pabasa_app" / "js" / "practice_reader.js").read_text(encoding="utf-8")
@@ -4890,7 +4890,8 @@ class HuntScoringRuleTests(TestCase):
         template = (Path(__file__).resolve().parent / "templates" / "pabasa_app" / "practice_reader_base.html").read_text(encoding="utf-8")
         self.assertIn("hunt-treasure-map.svg", template)
         self.assertIn("body.dark-theme .practice-hunt-shell .hunt-card", template)
-        self.assertIn("background-image:linear-gradient", template)
+        self.assertIn("body.dark-theme .practice-hunt-shell .hunt-map-art", template)
+        self.assertIn("filter:brightness(.72)", template)
 
 
 class StudentSignupCustomIdTests(TestCase):
@@ -9613,7 +9614,7 @@ class PracticeReaderMaterialTests(TestCase):
         session.save()
 
     def test_word_reader_receives_active_published_practice_items(self):
-        Material.objects.create(
+        Material.objects.create(type='practice', source_type='shared', is_system_owned=True,
             title="Easy syllables",
             item_type="word",
             content_text="HA\nhe\nhi\nho\nhu",
@@ -9622,7 +9623,7 @@ class PracticeReaderMaterialTests(TestCase):
             difficulty_level="easy",
             is_active=True,
         )
-        Material.objects.create(
+        Material.objects.create(type='practice', source_type='shared', is_system_owned=True,
             title="Draft syllables",
             item_type="word",
             content_text="draft",
@@ -9640,7 +9641,7 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertNotContains(response, "Draft syllables")
 
     def test_word_reader_parses_comma_separated_content_text_when_json_items_missing(self):
-        Material.objects.create(
+        Material.objects.create(type='practice', source_type='shared', is_system_owned=True,
             title="Comma syllables",
             item_type="word",
             content_text="HA, he, hi, ho, hu",
@@ -9656,7 +9657,7 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertContains(response, '"items": ["HA", "he", "hi", "ho", "hu"]', html=False)
 
     def test_practice_completion_records_student_done_status(self):
-        material = Material.objects.create(
+        material = Material.objects.create(source_type='shared', is_system_owned=True,
             title="Completion syllables",
             item_type="word",
             content_text="HA\nhe",
@@ -9692,7 +9693,7 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertEqual(material.status, "published")
 
     def test_practice_completion_saves_detailed_results_metrics(self):
-        material = Material.objects.create(
+        material = Material.objects.create(source_type='shared', is_system_owned=True,
             title="Scored practice",
             item_type="word",
             content_text="HA\nhe",
@@ -9738,7 +9739,7 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertEqual(completion["total_skipped_words"], 0)
 
     def test_color_mode_replay_never_reduces_saved_stars(self):
-        material = Material.objects.create(
+        material = Material.objects.create(source_type='shared', is_system_owned=True,
             title="Color score protection",
             item_type="word",
             content_text="HA\nhe\nhi\nho\nhu",
@@ -9766,57 +9767,72 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertEqual(completion["stars_earned"], 50)
 
     def _hunt_material(self, level="level_1"):
-        return Material.objects.create(
+        return Material.objects.create(source_type='shared', is_system_owned=True,
             title=f"Hunt {level}", item_type="word", content_text="one\ntwo\nthree\nfour\nfive",
             content_json={"mode": "hunt", "difficulty": "easy", "level": level},
             type="practice", status="published", difficulty_level="easy", is_active=True,
         )
 
-    def _award_hunt(self, material, points):
-        stars = 3 if points >= 8 else 2 if points >= 5 else 1
+    def _award_hunt(self, material, points, attempt_id="test-attempt"):
+        remaining = points
+        for index, word in enumerate(material.content_text.splitlines()):
+            word_points = min(2, remaining)
+            remaining -= word_points
+            response = self.client.post(reverse("award_hunt_mode_stars"), data=json.dumps({
+                "student_id": self.student.id, "level_id": material.id, "attempt_id": attempt_id,
+                "award_type": "word", "word_index": index,
+                "transcript": word if word_points else "different",
+                "confidence": .95 if word_points != 1 else .6,
+            }), content_type="application/json")
+            self.assertEqual(response.status_code, 200)
         return self.client.post(reverse("award_hunt_mode_stars"), data=json.dumps({
-            "student_id": self.student.id, "level_id": f"practice-{material.id}",
-            "total_points": points, "percentage": points * 10, "earned_stars": stars,
+            "student_id": self.student.id, "level_id": material.id, "attempt_id": attempt_id,
+            "award_type": "completion", "total_points": points, "percentage": points * 10,
         }), content_type="application/json")
 
     def test_hunt_star_first_completion(self):
         payload = self._award_hunt(self._hunt_material(), 5).json()
-        self.assertEqual((payload["earned_stars"], payload["star_delta"], payload["best_stars"]), (2, 2, 2))
-        self.assertEqual((payload["total_stars_earned"], payload["available_stars"]), (2, 2))
+        self.assertEqual((payload["earned_stars"], payload["star_delta"], payload["attempt_stars"]), (2, 2, 7))
+        self.assertEqual((payload["total_stars_earned"], payload["available_stars"]), (7, 7))
 
-    def test_hunt_star_improved_replay(self):
+    def test_hunt_star_improved_new_attempt(self):
         material = self._hunt_material()
         self._award_hunt(material, 5)
-        payload = self._award_hunt(material, 8).json()
-        self.assertEqual((payload["star_delta"], payload["best_stars"], payload["available_stars"]), (1, 3, 3))
+        payload = self._award_hunt(material, 8, "second-attempt").json()
+        self.assertEqual((payload["star_delta"], payload["attempt_stars"], payload["available_stars"]), (3, 11, 18))
 
     def test_hunt_star_equal_replay(self):
         material = self._hunt_material()
         self._award_hunt(material, 5)
-        payload = self._award_hunt(material, 7).json()
-        self.assertEqual((payload["star_delta"], payload["best_stars"], payload["available_stars"]), (0, 2, 2))
+        payload = self._award_hunt(material, 5).json()
+        self.assertEqual((payload["star_delta"], payload["attempt_stars"], payload["available_stars"]), (0, 7, 7))
+        self.assertTrue(payload["duplicate"])
 
-    def test_hunt_star_lower_replay(self):
+    def test_hunt_star_lower_new_attempt(self):
         material = self._hunt_material()
         self._award_hunt(material, 8)
-        payload = self._award_hunt(material, 2).json()
-        self.assertEqual((payload["star_delta"], payload["best_stars"], payload["available_stars"]), (0, 3, 3))
+        payload = self._award_hunt(material, 2, "second-attempt").json()
+        self.assertEqual((payload["star_delta"], payload["attempt_stars"], payload["available_stars"]), (1, 3, 14))
 
     def test_hunt_stars_are_independent_per_level(self):
         first = self._hunt_material("level_1")
         second = self._hunt_material("level_2")
         self._award_hunt(first, 5)
         payload = self._award_hunt(second, 8).json()
-        self.assertEqual((payload["star_delta"], payload["total_stars_earned"], payload["available_stars"]), (3, 5, 5))
+        self.assertEqual((payload["star_delta"], payload["total_stars_earned"], payload["available_stars"]), (3, 18, 18))
 
     def test_hunt_star_endpoint_requires_authenticated_student(self):
         material = self._hunt_material()
         self.client.logout()
-        response = self._award_hunt(material, 5)
+        response = self.client.post(reverse('award_hunt_mode_stars'), data=json.dumps({
+            'student_id': self.student.id, 'level_id': material.pk,
+            'attempt_id': 'signed-out', 'award_type': 'word', 'word_index': 0,
+            'transcript': 'one', 'confidence': .95,
+        }), content_type='application/json')
         self.assertIn(response.status_code, {302, 401, 403})
 
     def test_practice_results_route_redirects_to_shared_practice_flow(self):
-        material = Material.objects.create(
+        material = Material.objects.create(source_type='shared', is_system_owned=True,
             title="Results practice",
             item_type="word",
             content_text="HA\nhe",
@@ -9848,7 +9864,7 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertEqual(response.url, reverse("practice"))
 
     def test_progression_page_renders_unlock_states_for_game_levels(self):
-        Material.objects.create(
+        Material.objects.create(source_type='shared', is_system_owned=True,
             title="Free Easy Level 1",
             item_type="word",
             content_text="sun",
@@ -9871,7 +9887,7 @@ class PracticeReaderMaterialTests(TestCase):
             difficulty_level="easy",
             is_active=True,
         )
-        Material.objects.create(
+        Material.objects.create(source_type='shared', is_system_owned=True,
             title="Free Easy Level 2",
             item_type="word",
             content_text="moon",
@@ -9894,10 +9910,13 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertContains(response, "Level 1")
         self.assertContains(response, "Level 2")
         self.assertContains(response, "Free Mode • Easy")
-        self.assertContains(response, "Complete Easy Level 1 to unlock this level.")
+        levels = response.context['game_progression']['sections'][0]['levels']
+        self.assertEqual(levels[0]['state'], 'completed')
+        self.assertEqual(levels[1]['state'], 'unlocked')
+        self.assertEqual(levels[1]['locked_reason'], '')
 
     def test_progression_page_uses_dynamic_unlock_copy_across_difficulties(self):
-        Material.objects.create(
+        Material.objects.create(source_type='shared', is_system_owned=True,
             title="Free Medium Level 1",
             item_type="word",
             content_text="sun",
@@ -9912,7 +9931,7 @@ class PracticeReaderMaterialTests(TestCase):
             difficulty_level="medium",
             is_active=True,
         )
-        Material.objects.create(
+        Material.objects.create(source_type='shared', is_system_owned=True,
             title="Free Medium Level 2",
             item_type="word",
             content_text="moon",
@@ -9927,7 +9946,7 @@ class PracticeReaderMaterialTests(TestCase):
             difficulty_level="medium",
             is_active=True,
         )
-        Material.objects.create(
+        Material.objects.create(source_type='shared', is_system_owned=True,
             title="Free Hard Level 1",
             item_type="word",
             content_text="star",
@@ -9948,7 +9967,7 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Free Mode • Medium")
         self.assertContains(response, "Free Mode • Hard")
-        self.assertContains(response, "Complete Easy Level 1 to unlock this level.")
+        self.assertEqual(response.context['game_progression']['sections'][0]['levels'][0]['state'], 'content_unavailable')
         self.assertContains(response, "Complete Medium Level 1 to unlock this level.")
         self.assertContains(response, "Complete all Easy levels to unlock this difficulty.")
         self.assertContains(response, "Complete all Medium levels to unlock this difficulty.")
@@ -10105,7 +10124,7 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertContains(response, "Total Skipped Words")
 
     def test_practice_hub_marks_only_completed_student_material_done(self):
-        material = Material.objects.create(
+        material = Material.objects.create(source_type='shared', is_system_owned=True,
             title="Done for one student",
             item_type="word",
             content_text="HA\nhe",
@@ -11157,11 +11176,13 @@ class LiveAssessmentCloseAndSaveTests(TestCase):
         session['user_role'] = 'teacher'
         session.save()
 
-    def make_session(self, status='started', student_state=None):
+    def make_session(self, status='started', student_state=None, with_batches=False):
         return LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex, teacher=self.teacher, material=self.material,
             student_ids=[self.student.id], student_count=1, status=status,
             countdown_seconds=0, start_at=timezone.now(),
+            batch_assignments={str(self.student.id): 1} if with_batches else {},
+            total_batches=1 if with_batches else 0,
             student_states={str(self.student.id): student_state or {
                 'status': 'reading', 'progress': 0.5, 'current_item': 'word-3',
                 'recovery_state': {'stage': 'words', 'crla_question_index': 3},
@@ -11174,17 +11195,58 @@ class LiveAssessmentCloseAndSaveTests(TestCase):
             json.dumps({'action': 'close_and_save'}), content_type='application/json',
         )
 
+    def acknowledge_save(self, session, recovery_state=None):
+        student_client = self.client_class()
+        login = student_client.session
+        login['user_id'] = self.student.id
+        login['user_role'] = 'student'
+        login.save()
+        response = student_client.post(
+            reverse('live_assessment_student_state_update', kwargs={'session_id': session.id}),
+            json.dumps({
+                'status': 'reading', 'save_acknowledged': True,
+                'recovery_state': recovery_state or {'stage': 'words', 'crla_question_index': 3},
+            }), content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        return student_client
+
     def test_close_and_save_preserves_recovery_and_session_membership(self):
         session = self.make_session()
         response = self.close_and_save(session)
         self.assertEqual(response.status_code, 200)
         session.refresh_from_db()
         state = session.student_states[str(self.student.id)]
-        self.assertEqual(state['participation_status'], 'saved')
-        self.assertEqual(state['connection_status'], 'disconnected')
+        self.assertEqual(state['participation_status'], 'save_requested')
+        self.assertEqual(state['connection_status'], 'connected')
         self.assertEqual(state['recovery_state']['crla_question_index'], 3)
         self.assertIn(self.student.id, session.student_ids)
         self.assertEqual(session.status, 'started')
+        self.assertEqual(session.batch_assignments, {str(self.student.id): 1})
+        self.assertEqual(session.total_batches, 1)
+        self.acknowledge_save(session, {'stage': 'words', 'crla_question_index': 4})
+        session.refresh_from_db()
+        state = session.student_states[str(self.student.id)]
+        self.assertEqual(state['participation_status'], 'saved')
+        self.assertEqual(state['connection_status'], 'disconnected')
+        self.assertEqual(state['recovery_state']['crla_question_index'], 4)
+
+    def test_repeated_close_and_save_does_not_reopen_acknowledged_student(self):
+        session = self.make_session(with_batches=True)
+        self.assertEqual(self.close_and_save(session).status_code, 200)
+        session.refresh_from_db()
+        pending_version = session.state_version
+        self.assertEqual(self.close_and_save(session).status_code, 200)
+        session.refresh_from_db()
+        self.assertEqual(session.state_version, pending_version)
+        self.acknowledge_save(session)
+        session.refresh_from_db()
+        before = json.loads(json.dumps(session.student_states))
+        version = session.state_version
+        self.assertEqual(self.close_and_save(session).status_code, 200)
+        session.refresh_from_db()
+        self.assertEqual(session.student_states, before)
+        self.assertEqual(session.state_version, version)
 
     def test_partial_recovery_update_preserves_temporary_completion_evidence(self):
         from .views import _update_live_student_state
@@ -11353,11 +11415,38 @@ class LiveAssessmentCloseAndSaveTests(TestCase):
         )
 
     def test_close_and_save_is_valid_when_paused(self):
-        session = self.make_session('paused', {'status': 'paused', 'recovery_state': {'stage': 'story_reading'}})
+        session = self.make_session('paused', {'status': 'paused', 'recovery_state': {'stage': 'story_reading'}}, with_batches=True)
         response = self.close_and_save(session)
         self.assertEqual(response.status_code, 200)
         session.refresh_from_db()
-        self.assertEqual(session.student_states[str(self.student.id)]['participation_status'], 'saved')
+        self.assertEqual(session.student_states[str(self.student.id)]['participation_status'], 'save_requested')
+        self.acknowledge_save(session, {'stage': 'story_reading', 'story_segment_index': 2})
+        session.refresh_from_db()
+        state = session.student_states[str(self.student.id)]
+        self.assertEqual(session.status, 'paused')
+        self.assertEqual(state['status'], 'paused')
+        self.assertEqual(state['participation_status'], 'saved')
+        self.assertEqual(state['recovery_state']['story_segment_index'], 2)
+        resume = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'resume'}), content_type='application/json',
+        )
+        self.assertEqual(resume.status_code, 200)
+        session.refresh_from_db()
+        state = session.student_states[str(self.student.id)]
+        self.assertEqual(session.status, 'started')
+        self.assertEqual(state['participation_status'], 'active')
+        self.assertEqual(state['recovery_state']['story_segment_index'], 2)
+
+    def test_unsolicited_save_ack_cannot_overwrite_paused_progress(self):
+        session = self.make_session('paused', {'status': 'paused', 'recovery_state': {'stage': 'words', 'crla_question_index': 3}})
+        self.acknowledge_save(session, {'stage': 'words', 'crla_question_index': 99})
+        session.refresh_from_db()
+        state = session.student_states[str(self.student.id)]
+        self.assertEqual(session.status, 'paused')
+        self.assertEqual(state['status'], 'paused')
+        self.assertNotIn('participation_status', state)
+        self.assertEqual(state['recovery_state']['crla_question_index'], 3)
 
     def test_close_and_save_rejects_invalid_session_states(self):
         for status in ('waiting', 'countdown', 'ended', 'cancelled'):
@@ -11375,7 +11464,7 @@ class LiveAssessmentCloseAndSaveTests(TestCase):
         self.assertEqual(state['status'], 'completed')
         self.assertNotEqual(state.get('participation_status'), 'saved')
 
-    def test_end_session_does_not_complete_unfinished_crla_attempt(self):
+    def test_end_session_discards_unfinished_transport_without_official_result(self):
         session = self.make_session()
         response = self.client.post(
             reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
@@ -11386,9 +11475,12 @@ class LiveAssessmentCloseAndSaveTests(TestCase):
         state = session.student_states[str(self.student.id)]
         self.assertEqual(session.status, 'ended')
         self.assertEqual(state['status'], 'missed')
-        self.assertEqual(state['current_item'], 'word-3')
-        self.assertEqual(state['progress'], 0.5)
-        self.assertEqual(state['recovery_state']['crla_question_index'], 3)
+        # End Session is terminal discard, unlike the recoverable Save & Exit.
+        # Preserve the September completed-result safeguard for unfinished work.
+        self.assertEqual(state['current_item'], '')
+        self.assertEqual(state['progress'], 0)
+        self.assertNotIn('recovery_state', state)
+        self.assertNotIn('completion_payload', state)
         self.assertFalse(Assessment.objects.filter(
             student=self.student, material=self.material,
             attempt_status='completed',
@@ -11412,7 +11504,7 @@ class LiveAssessmentCloseAndSaveTests(TestCase):
         )
         self.assertFalse(views._student_has_terminal_unfinished_live_crla(self.student, self.material))
 
-    def test_end_session_notifies_student_who_never_started(self):
+    def test_end_session_does_not_send_removed_missed_activity_notification(self):
         session = self.make_session(
             student_state={'status': 'waiting', 'progress': 0, 'current_item': ''},
         )
@@ -11421,7 +11513,12 @@ class LiveAssessmentCloseAndSaveTests(TestCase):
             json.dumps({'action': 'end'}), content_type='application/json',
         )
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(Notification.objects.filter(
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'ended')
+        self.assertEqual(session.student_states[str(self.student.id)]['status'], 'missed')
+        self.assertFalse(Assessment.objects.filter(student=self.student, attempt_status='completed').exists())
+        # This notice was explicitly removed on October 9 (56ece00b).
+        self.assertFalse(Notification.objects.filter(
             recipient=self.student,
             title='😔 Oops! You Missed a Reading Activity',
         ).exists())
@@ -11429,11 +11526,7 @@ class LiveAssessmentCloseAndSaveTests(TestCase):
     def test_stale_student_update_cannot_reactivate_saved_state(self):
         session = self.make_session()
         self.assertEqual(self.close_and_save(session).status_code, 200)
-        student_client = self.client_class()
-        student_session = student_client.session
-        student_session['user_id'] = self.student.id
-        student_session['user_role'] = 'student'
-        student_session.save()
+        student_client = self.acknowledge_save(session)
         response = student_client.post(
             reverse('live_assessment_student_state_update', kwargs={'session_id': session.id}),
             json.dumps({'status': 'reading', 'progress': 0.9}),
