@@ -772,6 +772,14 @@ class WorkbookStateTests(SimpleTestCase):
 
     def test_lesson22_gawain1_requires_all_unique_words_before_completion(self):
         a = get_activity('aral-l22-g1-c-syllable-builder')
+        self.assertEqual(tuple(L22_C_ACCEPTED_BUILDS), (
+            'cactus', 'Cebu', 'Cagayan', 'Cardo', 'cabinet', 'Celeste', 'computer',
+        ))
+        self.assertEqual(a['building_word_total'], 7)
+        self.assertNotIn('com', L22_C_ACCEPTED_BUILDS)
+        renderer = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
+        self.assertIn("(state.found_words||[]).length===Number(a.building_word_total||0)", renderer)
+        self.assertIn('aria-label="Mga Tamang Salita"', renderer)
         s = initial_state()
         s.update(index=len(a['items']), read_aloud_started=True, read_aloud_completed=True,
                  reading_phase='complete', found_words=['cactus'])
@@ -825,7 +833,9 @@ class WorkbookStateTests(SimpleTestCase):
         apply_event(a, s, {'action': 'reading_started'})
         apply_event(a, s, {'action': 'reading_attempt'}, True)
         apply_event(a, s, {'action': 'build_word', 'parts': ['item-5']})
-        self.assertEqual(s['found_words'], ['com'])
+        self.assertEqual(s['found_words'], [])
+        self.assertEqual(s['pending_words'], [{'word': 'com', 'parts': ['item-5']}])
+        self.assertEqual(s['building_attempts'], 1)
 
     def test_lesson22_gawain1_advances_only_the_verified_current_syllable(self):
         a = get_activity('aral-l22-g1-c-syllable-builder')
@@ -1099,7 +1109,7 @@ class PrescribedWorkbookFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         entry = response.context['prescribed_activity_progress'][key]
         self.assertEqual(entry['completed_items'], 1)
-        self.assertEqual(entry['total_items'], 8)
+        self.assertEqual(entry['total_items'], 7)
         self.assertFalse(entry['activity_completed'])
         self.assertFalse(entry['state']['completed'])
         self.assertEqual(entry['state']['index'], 18)
@@ -1229,6 +1239,27 @@ class PrescribedWorkbookFlowTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         state = response.json()['state']
         self.assertEqual(state['found_words'], ['cactus'])
+        response = self.client.post(progress_url, json.dumps({'action': 'finish', 'revision': state['revision']}), content_type='application/json')
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertIn('Bumuo muna ng lahat', response.json()['error'])
+        progress = StudentActivityProgress.objects.get(student=self.student, activity_key=key)
+        self.assertFalse(progress.activity_completed)
+        self.assertFalse(progress.state['completed'])
+        for parts in (
+            ['item-2', 'item-4'],       # Cebu
+            ['item-3', 'item-7', 'item-10'],  # Cagayan
+            ['item-11', 'item-12'],     # Cardo
+            ['item-3', 'item-13', 'item-15'],  # cabinet
+            ['item-17', 'item-18', 'item-16'],  # Celeste
+            ['item-5'],                 # com
+            ['item-5', 'item-6', 'item-9'],  # computer
+        ):
+            response = self.client.post(progress_url, json.dumps({
+                'action': 'build_word', 'parts': parts, 'revision': state['revision'],
+            }), content_type='application/json')
+            self.assertEqual(response.status_code, 200, response.content)
+            state = response.json()['state']
+        self.assertEqual(state['found_words'], list(L22_C_ACCEPTED_BUILDS))
         response = self.client.post(progress_url, json.dumps({'action': 'finish', 'revision': state['revision']}), content_type='application/json')
         self.assertEqual(response.status_code, 200, response.content)
         progress = StudentActivityProgress.objects.get(student=self.student, activity_key=key)

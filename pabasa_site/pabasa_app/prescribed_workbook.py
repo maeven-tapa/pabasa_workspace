@@ -20,7 +20,6 @@ L22_C_ACCEPTED_BUILDS = {
     'Cardo': ('Car', 'do'),
     'cabinet': ('ca', 'bi', 'net'),
     'Celeste': ('Ce', 'les', 'te'),
-    'com': ('com',),
     'computer': ('com', 'pu', 'ter'),
 }
 
