@@ -313,6 +313,7 @@
         let storyReadingHasAttempted = false;
         let itemResultVersion = 0;
         let isAdvancingItem = false;
+        let crlaNavigationInFlight = false;
         let currentSyllableIndex = 0;
         let currentMaterialLanguage = "";
         let currentSttLanguageCode = "";
@@ -752,6 +753,7 @@
                     success: true,
                     temporary_live_state: true,
                     student_end_assessment_state: savedState,
+                    live_session: session,
                 } : null);
             }
             if (savedState.stage) {
@@ -1753,8 +1755,8 @@
             updateFooterForStoryState("story_comprehension");
         }
 
-        async function persistCRLAComprehensionState(extra = {}) {
-            const persisted = await updateStudentEndState({
+        async function persistCRLAComprehensionState(extra = {}, options = {}) {
+            const persisted = await (options.navigation ? saveCrlaNavigationState : updateStudentEndState)({
                 stage: "story_comprehension",
                 selected_story: currentSelectedStory?.title || "",
                 selected_story_content: currentSelectedStory?.content || "",
@@ -1782,6 +1784,7 @@
                     elapsed_seconds: Math.round(elapsedSeconds),
                     current_item: currentStoryQuestions[currentStoryQuestionIndex]?.question || "",
                     connection_status: "connected",
+                    recovery_state: { crla_question_index: persisted.student_end_assessment_state.crla_question_index },
                 });
             }
             return persisted;
@@ -2531,6 +2534,25 @@
             }
         }
 
+        async function saveCrlaNavigationState(patch) {
+            // A failed Skip must remain on the same item, including after a
+            // refresh. Publish the cursor locally only after server acceptance.
+            const saved = await updateStudentEndState(patch, {
+                optimisticLocalStorage: false, deferLocalStorage: true,
+            });
+            if (!saved || saved.success === false) {
+                throw new Error('We could not save this step. Please try Skip again.');
+            }
+            if (saved.live_session) await handleLiveSessionState(saved.live_session);
+            if (liveSessionEnded || liveSessionEndRedirecting || liveSessionPaused) return null;
+            const confirmed = saved.student_end_assessment_state;
+            if (confirmed && typeof confirmed === 'object' && !Array.isArray(confirmed)) {
+                if (isCurrentLiveAssessment()) liveStudentEndState = confirmed;
+                try { localStorage.setItem(getStudentEndStateKey(), JSON.stringify(confirmed)); } catch (error) {}
+            }
+            return saved;
+        }
+
         async function skipCrlaReadingItem() {
             const isStoryReading = currentStoryState === "story_reading" && currentSelectedStory;
             const isStandardReading = currentAssessmentUiMode === "standard";
@@ -2538,56 +2560,92 @@
                 ? currentPageIndex >= getCurrentPageCount() - 1
                 : currentIndex >= items.length - 1 && currentPageIndex >= getCurrentPageCount() - 1;
             if (!isCrla || (!isStoryReading && !isStandardReading)) return false;
-            if (isAdvancingItem || isFinalizingReading || crlaLiveSpeech?.flushing) return true;
-            if (crlaLiveSpeech) {
-                if (nextBtn) nextBtn.disabled = true;
-                const context = currentSpeechContext();
-                try { await flushCurrentSpeechChunk(); }
-                catch (error) {
-                    setSpeechStatus("Speech result is still unresolved.", error.message);
-                    return true;
-                } finally {
-                    stoppingSpeechRecognition = false;
-                    syncStoryReadingTimerProcessing();
-                    updateAssessmentNavigationButtons();
-                    updateSpeechProcessingControls();
-                }
-                if (!sameCrlaStreamItem(context) || itemLocked[currentIndex]) return true;
-            }
-
-            // Skip is navigation. Preserve captured results and never invent
-            // a locked, zero-score answer for an item the learner did not read.
-            isAdvancingItem = true;
+            if (isAdvancingItem || crlaNavigationInFlight || isFinalizingReading || crlaLiveSpeech?.flushing
+                || liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) return true;
+            crlaNavigationInFlight = true;
             if (nextBtn) nextBtn.disabled = true;
-            clearSentenceItemTimer();
-            if (autoAdvanceTimer) {
-                window.clearTimeout(autoAdvanceTimer);
-                autoAdvanceTimer = null;
-            }
-            itemResultVersion += 1;
-            pendingAudioChunk = null;
+            try {
+                if (crlaLiveSpeech || mediaRecorder?.state === 'recording') {
+                    if (nextBtn) nextBtn.disabled = true;
+                    const context = currentSpeechContext();
+                    try {
+                        await flushCurrentSpeechChunk();
+                        if (liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) return true;
+                        const speechSettled = await waitForPendingSpeech();
+                        if (liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) return true;
+                        if (!speechSettled) {
+                            setSpeechStatus('Speech result is still unresolved.', 'Resume the microphone to finish checking this recording.');
+                            return true;
+                        }
+                    }
+                    catch (error) {
+                        setSpeechStatus("Speech result is still unresolved.", error.message);
+                        return true;
+                    } finally {
+                        stoppingSpeechRecognition = false;
+                        syncStoryReadingTimerProcessing();
+                        updateAssessmentNavigationButtons();
+                        updateSpeechProcessingControls();
+                    }
+                    if (!sameCrlaStreamItem(context) || itemLocked[currentIndex]
+                        || liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) return true;
+                }
 
-            if (isStoryReading) {
-                await persistSkippedStorySegment();
-                await stopReading({ allowIdleStoryCompletion: true, allowCompletedStorySegment: true });
-            } else if (!isOnFinalRenderedItem) {
-                await updateStudentEndState({ crla_question_index: currentIndex + 1 });
-                transitionToItem(currentIndex + 1, "Next item loaded.", "Keep reading clearly.");
-            } else {
-                isRecording = false;
-                stopSpeechRecognition();
-                await showCompletion(true);
+                // Skip is navigation. Preserve captured results and never invent
+                // a locked, zero-score answer for an item the learner did not read.
+                isAdvancingItem = true;
+                if (nextBtn) nextBtn.disabled = true;
+                clearSentenceItemTimer();
+                if (autoAdvanceTimer) {
+                    window.clearTimeout(autoAdvanceTimer);
+                    autoAdvanceTimer = null;
+                }
+                itemResultVersion += 1;
+                pendingAudioChunk = null;
+
+                if (isStoryReading) {
+                    if (!isOnFinalRenderedItem) {
+                        const previousSegmentIndex = currentPageIndex;
+                        if (!await persistSkippedStorySegment(previousSegmentIndex + 1)) return true;
+                        currentPageIndex = previousSegmentIndex + 1;
+                        currentStorySegmentIndex = currentPageIndex;
+                        resetStorySegmentState(previousSegmentIndex, currentPageIndex, 'manual_next');
+                        updateUI();
+                        renderStoryReadingState(currentSelectedStory);
+                        logStorySegmentInitialization('manual_next');
+                        animateCurrentItem();
+                    } else {
+                        if (!await persistSkippedStorySegment()) return true;
+                        await stopReading({ allowIdleStoryCompletion: true, allowCompletedStorySegment: true });
+                    }
+                } else if (!isOnFinalRenderedItem) {
+                    if (!await saveCrlaNavigationState({ crla_question_index: currentIndex + 1 })) return true;
+                    transitionToItem(currentIndex + 1, "Next item loaded.", "Keep reading clearly.");
+                } else {
+                    isRecording = false;
+                    stopSpeechRecognition();
+                    await showCompletion(true);
+                }
+            } catch (error) {
+                setSpeechStatus('We could not save this step.', 'Please try Skip again. Your captured reading is kept.');
+            } finally {
+                crlaNavigationInFlight = false;
+                isAdvancingItem = false;
+                stoppingSpeechRecognition = false;
+                syncStoryReadingTimerProcessing();
+                updateAssessmentNavigationButtons();
+                updateSpeechProcessingControls();
             }
             return true;
         }
 
-        function persistSkippedStorySegment() {
+        function persistSkippedStorySegment(nextSegmentIndex = currentPageIndex) {
             const state = readStudentEndState();
             const skipped = Array.isArray(state.story_skipped_segments) ? state.story_skipped_segments : [];
             finalizeStorySegment(currentPageIndex);
-            return updateStudentEndState({
+            return (isCrla ? saveCrlaNavigationState : updateStudentEndState)({
                 stage: "story_reading",
-                story_segment_index: currentPageIndex,
+                story_segment_index: nextSegmentIndex,
                 story_skipped_segments: Array.from(new Set([...skipped, currentPageIndex])),
                 ...strictStoryEvidence(),
             });
@@ -4321,12 +4379,12 @@
                 || currentStoryState === "story_reading"
             );
             if (prevBtn) {
-                prevBtn.disabled = isAdvancingItem || isFinalizingReading || speechResponsePending || (isReviewMode
+                prevBtn.disabled = isAdvancingItem || crlaNavigationInFlight || isFinalizingReading || speechResponsePending || (isReviewMode
                     ? !(hasPreviousPage || hasPreviousItem)
                     : (!isRecording || !(hasPreviousPage || hasPreviousItem)));
             }
             if (nextBtn) {
-                nextBtn.disabled = isAdvancingItem || isFinalizingReading || (isOfficialCrlaStoryReading
+                nextBtn.disabled = isAdvancingItem || crlaNavigationInFlight || isFinalizingReading || (isOfficialCrlaStoryReading
                     ? isStorySkipBusy
                     : speechResponsePending) || (isReviewMode
                     ? (onLastItem && isLastPage)
@@ -7119,7 +7177,7 @@
                         ? persistedRecoveryState.branch
                         : currentAssessmentBranch,
                     stage: recoveryStage,
-                    crla_question_index: currentIndex,
+                    crla_question_index: recoveryStage === 'story_comprehension' ? currentStoryQuestionIndex : currentIndex,
                     live_item_scores: itemScores,
                     live_item_branch: currentAssessmentBranch,
                     live_item_locked: itemLocked,
@@ -7394,6 +7452,8 @@
             // workflow so Assessment Week/availability routing is reused.
             stopLiveSessionHeartbeat();
             stopLiveSessionPolling();
+            stopSpeechRecognition();
+            stopReadAloud();
             if (liveSessionEndRedirectTimer) {
                 window.clearInterval(liveSessionEndRedirectTimer);
                 liveSessionEndRedirectTimer = null;
@@ -7416,6 +7476,7 @@
             pauseMenu.setAttribute('aria-modal', 'true');
             pauseMenu.setAttribute('aria-labelledby', 'liveSessionEndedTitle');
             const isSavedTransition = transition.kind === 'saved';
+            const isSkippedTransition = transition.kind === 'skipped';
             const destination = isSavedTransition
                 ? `/dashboard/live-assessment/${encodeURIComponent(liveSessionId)}/waiting/`
                 : '/dashboard/assessment/';
@@ -7423,8 +7484,8 @@
                 <div aria-hidden="true" style="display:flex;align-items:center;justify-content:center;width:4.25rem;height:4.25rem;margin:0 auto 1rem;border-radius:1.25rem;background:linear-gradient(145deg,#dff3ff,#eef8ff);color:#2875b8;font-size:2.15rem;box-shadow:0 10px 22px rgba(40,117,184,.16);">
                     <i class="bi bi-book-half"></i>
                 </div>
-                <h2 class="pause-title" id="liveSessionEndedTitle" style="margin-bottom:.65rem;font-size:clamp(1.35rem,4vw,1.8rem);">${isSavedTransition ? 'Your teacher saved the session' : "Your teacher ended today's session"}</h2>
-                <p class="pause-subtitle" style="margin-bottom:.35rem;font-size:1.05rem;">${isSavedTransition ? 'Your reading work is safe.' : "That's okay! Your reading work is safe."}</p>
+                <h2 class="pause-title" id="liveSessionEndedTitle" style="margin-bottom:.65rem;font-size:clamp(1.35rem,4vw,1.8rem);">${isSkippedTransition ? 'Your teacher will follow up with you' : isSavedTransition ? 'Your teacher saved the session' : "Your teacher ended today's session"}</h2>
+                <p class="pause-subtitle" style="margin-bottom:.35rem;font-size:1.05rem;">${isSkippedTransition ? 'Please wait for your teacher before trying again.' : isSavedTransition ? 'Your reading work is safe.' : "That's okay! Your reading work is safe."}</p>
                 <p class="pause-subtitle" style="margin-bottom:1.35rem;font-size:.98rem;">${isSavedTransition ? "We're taking you to the Waiting Room." : "We're taking you back to your Reading Assessment."}</p>
                 <div style="padding:1rem .75rem 1.15rem;border-radius:1.25rem;background:linear-gradient(145deg,rgba(235,247,255,.95),rgba(248,252,255,.98));border:1px solid rgba(92,161,214,.24);">
                     <p class="pause-subtitle mb-2" style="font-size:.9rem;font-weight:700;letter-spacing:.03em;">${isSavedTransition ? 'Going to the Waiting Room' : 'Going back in'}</p>
@@ -7435,8 +7496,6 @@
                 </div>
             `;
             disableReaderInteractions(true);
-            stopSpeechRecognition();
-            stopReadAloud();
             if (liveCountdownTimer && !liveCountdownStarted) {
                 clearLiveCountdown();
                 hideLiveCountdown();
@@ -7505,6 +7564,11 @@
                 || {};
             const participationStatus = String(viewerStudentState.participation_status || '').toLowerCase();
             const studentStatus = String(viewerStudentState.status || '').toLowerCase();
+            if (['skipped', 'missed'].includes(studentStatus)) {
+                liveSessionEnded = true;
+                showLiveSessionEnded({ kind: 'skipped' });
+                return;
+            }
             if (
                 participationStatus === 'save_requested'
                 && !liveSaveFlushInFlight
@@ -8463,12 +8527,21 @@
                     // Leave the unanswered result null. Only the cursor moves.
                 }
                 if (questionIndex < currentStoryQuestions.length - 1) {
+                    const saved = await persistCRLAComprehensionState(
+                        { crla_question_index: questionIndex + 1 }, { navigation: true },
+                    );
+                    if (!saved) throw new Error('We could not save this question. Please try Next again.');
+                    if (liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) return;
                     currentStoryQuestionIndex += 1;
                     renderCRLAQuestion();
-                    await persistCRLAComprehensionState();
                     return;
                 }
                 await finishCRLAComprehension();
+            } catch (error) {
+                if (crlaAnswerFeedback) {
+                    crlaAnswerFeedback.textContent = 'We could not save this question. Please try Next again.';
+                    crlaAnswerFeedback.classList.remove('d-none');
+                }
             } finally {
                 crlaQuestionTransitioning = false;
                 syncCRLAQuestionButtons();
@@ -8527,6 +8600,7 @@
                 return;
             }
             if (currentStoryState === "story_reading" && currentSelectedStory) {
+                if (await skipCrlaReadingItem()) return;
                 if (currentPageIndex < getCurrentPageCount() - 1) {
                     if (isAdvancingItem) return;
                     if (crlaLiveSpeech) {
@@ -8553,7 +8627,6 @@
                     logStorySegmentInitialization("manual_next");
                     animateCurrentItem();
                 } else {
-                    if (await skipCrlaReadingItem()) return;
                     stopReading();
                 }
                 return;

@@ -678,7 +678,11 @@ class AssessmentWorkflowBranchingTests(TestCase):
         self.assertIn("currentStoryResults[questionIndex] === null", next_handler)
         self.assertIn("crlaSpeechRecognition?.abort()", next_handler)
         self.assertNotIn('completeCRLASpokenAttempt(', next_handler)
-        self.assertIn("await persistCRLAComprehensionState();", next_handler)
+        self.assertIn("const saved = await persistCRLAComprehensionState(", next_handler)
+        self.assertIn("{ crla_question_index: questionIndex + 1 }, { navigation: true }", next_handler)
+        self.assertIn("if (!saved) throw new Error(", next_handler)
+        self.assertLess(next_handler.index("await persistCRLAComprehensionState("),
+                        next_handler.index("currentStoryQuestionIndex += 1"))
         self.assertIn("await finishCRLAComprehension();", next_handler)
 
     def test_official_crla_navigation_hides_only_crla_back_controls(self):
