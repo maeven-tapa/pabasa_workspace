@@ -154,6 +154,13 @@ class Lesson22Gawain1AudioTests(SimpleTestCase):
         self.assertIn("!wasReadComplete&&state.read_aloud_completed&&!state.completed", self.js)
         self.assertIn("builder.map(id=>piecesById[id]||'').join('')||(l22G1?'':'Pipiliin mong salita ay lalabas dito.')", self.js)
 
+    def test_gawain1_word_builder_buttons_resync_after_selection_and_erase(self):
+        renderer = self.js.split('function renderCBuilder()', 1)[1].split('function startCReading', 1)[0]
+        self.assertIn("if(check)check.disabled=!builder.length||buildingLocked", renderer)
+        self.assertIn("builder=[];draft({builder});paint();content.querySelectorAll('[data-tile]').forEach(t=>t.classList.remove('is-picked'))", renderer)
+        self.assertIn("if(busy)return", self.js)
+        self.assertIn("check.onclick=()=>perform({action:'build_word',parts:builder})", renderer)
+
     def test_gawain1_startup_owner_is_independent_and_instruction_replay_remains(self):
         self.assertIn("if(!startupNarrationStarted){startupNarrationStarted=true;playStartup();}", self.js)
         self.assertIn("playPrescribedAudio(l22StartupTtsText,true)", self.js)

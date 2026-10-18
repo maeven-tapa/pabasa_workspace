@@ -809,7 +809,7 @@
         }).filter(Boolean));
       });
     });
-    const paint=()=>{const selected=document.getElementById('wb-selected-parts');if(!selected)return;selected.replaceChildren(...builder.map(id=>{const span=document.createElement('span');span.className='wb-selected-part';span.textContent=piecesById[id]||'';return span;}));const formed=document.getElementById('wb-formed-word');if(formed)formed.textContent=builder.map(id=>piecesById[id]||'').join('')||(l22G1?'':'Pipiliin mong salita ay lalabas dito.');};
+    const paint=()=>{const selected=document.getElementById('wb-selected-parts');if(!selected)return;selected.replaceChildren(...builder.map(id=>{const span=document.createElement('span');span.className='wb-selected-part';span.textContent=piecesById[id]||'';return span;}));const formed=document.getElementById('wb-formed-word');if(formed)formed.textContent=builder.map(id=>piecesById[id]||'').join('')||(l22G1?'':'Pipiliin mong salita ay lalabas dito.');const check=document.getElementById('wb-check');if(check)check.disabled=!builder.length||buildingLocked;};
     paint();
     if(readDone){
       document.getElementById('wb-erase').onclick=()=>{if(buildingLocked)return;builder=[];draft({builder});paint();content.querySelectorAll('[data-tile]').forEach(t=>t.classList.remove('is-picked'));};
