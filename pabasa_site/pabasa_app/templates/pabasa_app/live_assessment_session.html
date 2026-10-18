@@ -223,6 +223,9 @@
 
         .live-monitor-card .small { font-size: 0.88rem; }
         .live-monitor-card .fw-semibold { font-weight: 700; }
+        .batch-view-pagination { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 0.4rem; padding-top: 0.75rem; }
+        .batch-view-pagination .btn { border-radius: 0.7rem; min-width: 2.25rem; }
+        .batch-view-pagination .btn.active { background: #1d6fc5; border-color: #1d6fc5; color: #fff; }
 
         /* Page typography refinements for Live Assessment */
         .teacher-control {
@@ -1176,7 +1179,7 @@
                         <tbody id="studentsTableBody">
                             {% if student_profiles %}
                                 {% for student in student_profiles %}
-                                <tr data-student-id="{{ student.id }}">
+                                <tr data-student-id="{{ student.id }}" data-last-name="{{ student.last_name|default:'' }}" data-first-name="{{ student.first_name|default:'' }}" data-middle-initial="{{ student.middle_initial|default:'' }}">
                                     <td>
                                         <div class="d-flex align-items-center gap-2">
                                             <div class="avatar student-avatar rounded-circle bg-secondary text-white text-center">{{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}</div>
@@ -1206,6 +1209,7 @@
                         </tbody>
                     </table>
                 </div>
+                <nav id="batchViewPagination" class="batch-view-pagination d-none" aria-label="Student Monitor batches"></nav>
             </div>
         </div>
         <div class="col-12 col-lg-4 col-xl-3 order-2">
@@ -1995,16 +1999,11 @@
             renderParticipantList();
         } catch (e) {}
 
-        const batchIds = Array.isArray(session.current_batch_student_ids) ? session.current_batch_student_ids.map(String) : null;
-        const selectedIds = Array.from(new Set([...(batchIds || serverIds), ...Array.from(selectedStudentIds)]));
-        const monitorIds = summaryCurrentStatus === 'waiting' || !batchIds ? selectedIds : batchIds;
-        updateMonitorRows(session, monitorIds);
+        renderMonitorBatch(session, serverIds);
 
         const batchPanel = document.getElementById('batchProgressPanel');
         if (batchPanel && session.total_batches) {
             batchPanel.classList.remove('d-none');
-            setText('#batchLabel', `Batch ${session.current_batch} of ${session.total_batches}`);
-            setText('#batchProgressText', `${session.current_batch_completed} / ${session.current_batch_total} completed`);
             setText('#overallProgressText', `Overall: ${session.overall_completed} / ${session.student_count} students assessed`);
             const transition = document.getElementById('batchTransition');
             const nextButton = document.getElementById('startNextBatchBtn');
@@ -2260,6 +2259,60 @@
     const selectedStudentIds = new Set(JSON.parse('{{ live_session.student_ids|escapejs }}'));
     let selectionHydratedFromServer = false;
     let lastSessionState = null;
+    let viewedBatch = 1;
+    const monitorProfiles = new Map(Array.from(document.querySelectorAll('#studentsTableBody tr[data-student-id]'), (row) => [row.dataset.studentId, {
+        last_name: row.dataset.lastName,
+        first_name: row.dataset.firstName,
+        middle_initial: row.dataset.middleInitial,
+    }]));
+
+    function renderMonitorBatch(session, participantIds) {
+        const total = Math.max(1, Number(session.total_batches) || 1);
+        viewedBatch = Math.min(Math.max(viewedBatch, 1), total);
+        const assignments = session.batch_assignments || {};
+        (session.available_students || []).forEach((profile) => monitorProfiles.set(String(profile.id), profile));
+        const ids = participantIds.filter((id) => total === 1 || Number(assignments[String(id)]) === viewedBatch);
+        const namePart = (id, field) => String(monitorProfiles.get(String(id))?.[field] || '').toLocaleLowerCase();
+        ids.sort((left, right) => {
+            for (const field of ['last_name', 'first_name', 'middle_initial']) {
+                const order = namePart(left, field).localeCompare(namePart(right, field));
+                if (order) return order;
+            }
+            return Number(left) - Number(right);
+        });
+        updateMonitorRows(session, ids);
+        const tbody = document.getElementById('studentsTableBody');
+        ids.forEach((id) => {
+            const row = tbody?.querySelector(`tr[data-student-id="${id}"]`);
+            if (row) tbody.appendChild(row);
+        });
+        const completed = ids.filter((id) => ['completed', 'skipped'].includes(String(session.student_states?.[String(id)]?.status || '').toLowerCase())).length;
+        setText('#batchLabel', `Batch ${viewedBatch} of ${total}`);
+        setText('#batchProgressText', `${completed} / ${ids.length} completed`);
+        const pagination = document.getElementById('batchViewPagination');
+        if (!pagination) return;
+        pagination.classList.toggle('d-none', total < 2);
+        if (total < 2) { pagination.replaceChildren(); return; }
+        const button = (label, batch, active = false, ariaLabel = '') => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = `btn btn-sm ${active ? 'btn-primary active' : 'btn-outline-primary'}`;
+            item.textContent = label;
+            if (ariaLabel) item.setAttribute('aria-label', ariaLabel);
+            item.disabled = batch < 1 || batch > total;
+            if (active) item.setAttribute('aria-current', 'page');
+            item.addEventListener('click', () => {
+                viewedBatch = batch;
+                renderMonitorBatch(lastSessionState, (lastSessionState.student_ids || []).map(String));
+            });
+            return item;
+        };
+        pagination.replaceChildren(
+            button('<', viewedBatch - 1, false, 'Previous batch'),
+            ...Array.from({length: total}, (_, index) => button(String(index + 1), index + 1, index + 1 === viewedBatch)),
+            button('>', viewedBatch + 1, false, 'Next batch'),
+        );
+    }
 
     const participantList = document.getElementById('participantList');
     const participantEmptyState = document.getElementById('participantEmptyState');
