@@ -17,6 +17,7 @@ from pabasa_site.http_admission import HttpAdmission, provider_io
 from . import views
 
 urlpatterns = [path('api/reading/transcribe/', views.reading_transcribe_api),
+               path('api/lesson-1-gawain-1/transcribe/', views.lesson_1_gawain_1_transcribe_api),
                path('api/poll/', lambda request: JsonResponse({'success':True}))]
 
 
@@ -130,7 +131,7 @@ class HttpAdmissionTests(SimpleTestCase):
 
     @override_settings(ROOT_URLCONF=__name__, MIDDLEWARE=[], ALLOWED_HOSTS=['testserver'],
                        GOOGLE_CLOUD_PROJECT_ID='synthetic')
-    async def test_real_django_asgi_workers_release_slots_for_thirty_provider_waits(self):
+    async def assert_real_provider_waits(self, endpoint):
         admission = HttpAdmission()
         django_app = get_asgi_application()
         release = threading.Event()
@@ -150,9 +151,10 @@ class HttpAdmissionTests(SimpleTestCase):
 
         async def request(recording):
             if recording:
-                source = RequestFactory().post('/api/reading/transcribe/',{
+                source = RequestFactory().post(endpoint,{
                     'audio':SimpleUploadedFile('synthetic.webm',b'audio',content_type='audio/webm'),
-                    'target_text':'bata','mode':'reading','language':'Filipino'})
+                    'target_text':'bata','mode':'reading','language':'Filipino',
+                    'activity_key':'lesson-1-gawain-1'})
                 body = source.body
                 headers = [(b'content-type',source.META['CONTENT_TYPE'].encode()),
                            (b'content-length',str(len(body)).encode())]
@@ -163,7 +165,7 @@ class HttpAdmissionTests(SimpleTestCase):
                 (b'x-pabasa-stt-provider',b'google'),(b'x-pabasa-stt-model',b'chirp_3')]
             communicator = ApplicationCommunicator(application,{
                 'type':'http','http_version':'1.1','method':'POST' if recording else 'GET',
-                'path':'/api/reading/transcribe/' if recording else '/api/poll/',
+                'path':endpoint if recording else '/api/poll/',
                 'query_string':b'','headers':headers,'scheme':'https',
                 'server':('testserver',443),'client':('127.0.0.1',1)})
             await communicator.send_input({'type':'http.request','body':body})
@@ -188,3 +190,9 @@ class HttpAdmissionTests(SimpleTestCase):
                 release.set()
                 results = await asyncio.gather(*tasks)
             self.assertEqual(results,[200]*30)
+
+    async def test_real_django_asgi_workers_release_slots_for_thirty_provider_waits(self):
+        await self.assert_real_provider_waits('/api/reading/transcribe/')
+
+    async def test_thirty_dedicated_prescribed_speech_requests_leave_polling_available(self):
+        await self.assert_real_provider_waits('/api/lesson-1-gawain-1/transcribe/')

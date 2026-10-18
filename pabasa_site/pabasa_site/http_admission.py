@@ -56,6 +56,17 @@ def provider_io(*, enabled=True):
                 raise asyncio.CancelledError()
 
 
+@contextmanager
+def database_free_provider_io():
+    """Return DB access while a validated request waits on external speech I/O."""
+    from django.db import connection
+    enabled = not connection.in_atomic_block
+    if enabled:
+        connection.close()
+    with provider_io(enabled=enabled):
+        yield
+
+
 class HttpAdmission:
     def __init__(self, pool_size=6):
         # Leave room for the single follow-up worker and speech authorization.

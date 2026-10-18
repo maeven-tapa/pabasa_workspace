@@ -168,6 +168,8 @@ STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'pabasa_app.static_assets.CompactAppDirectoriesFinder',
 ]
+MEDIA_ROOT = os.environ.get('DJANGO_MEDIA_ROOT', '')
+
 STORAGES = {
     'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
     'staticfiles': {'BACKEND': 'pabasa_app.static_assets.CompactStaticFilesStorage'},

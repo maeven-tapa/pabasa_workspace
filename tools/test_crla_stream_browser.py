@@ -84,8 +84,17 @@ class GoogleStream:
                     continue
                 frames.append(bytes(request.audio))
                 count += 1
-                is_final = (count >= 5 and not final_sent
-                            and len(clients) >= int(os.environ.get('CRLA_TEST_CLIENTS', '1')))
+                if count == 5:
+                    # A finite synthetic clip can end before all Chrome contexts
+                    # finish starting. Keep this fake provider response pending
+                    # until every capture connects; do not depend on another
+                    # audio frame arriving after the concurrency barrier.
+                    deadline = time.monotonic() + 45
+                    while len(clients) < int(os.environ.get('CRLA_TEST_CLIENTS', '1')):
+                        if time.monotonic() >= deadline:
+                            raise AssertionError('Concurrent browser captures did not all connect')
+                        await asyncio.sleep(.05)
+                is_final = count >= 5 and not final_sent
                 if count == 2 or is_final:
                     final_sent = final_sent or is_final
                     yield cloud_speech.StreamingRecognizeResponse(results=[{
@@ -105,9 +114,14 @@ async def test_application(scope, receive, send):
             body += message.get('body', b'')
             if not message.get('more_body'):
                 break
-        progress_requests.append(json.loads(body))
+        payload=json.loads(body)
+        progress_requests.append(payload)
         content = json.dumps({'success': True, 'progress': {'state': {
-            'phase': 'reading', 'item_index': 0, 'verse_index': 1, 'attempts': 0, 'selected': []}}}).encode()
+            'phase': 'reading', 'item_index': 0,
+            'verse_index':1 if payload.get('action')=='verse_read' else 0,
+            'verse_syllable_index':payload.get('current_syllable_index',0),
+            'verse_word_index':5 if payload.get('action')=='verse_progress' else 0,
+            'attempts': 0, 'selected': []}}}).encode()
         await send({'type': 'http.response.start', 'status': 200, 'headers': [(b'content-type', b'application/json')]})
         await send({'type': 'http.response.body', 'body': content})
         return
@@ -177,12 +191,14 @@ document.getElementById('start').onclick=async()=>{
 <script id="prescribed-activity-data" type="application/json">''' + json.dumps(fixture) + '''</script>
 <script>
 window.results=[];window.interims=[];window.errors=[];window.evaluations=0;
-window.addEventListener('basahin:state',e=>{if(e.detail.state==='interim')interims.push(e.detail.transcript);});
 const originalMic=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
 navigator.mediaDevices.getUserMedia=async options=>{const stream=await originalMic(options);window.mic=stream;return stream;};
-const originalRead=Basahin.read;
-window.Basahin={...Basahin,read:async (...args)=>{try{const result=await originalRead(...args);results.push(result);return result;}
-  catch(e){errors.push(e.message);throw e;}}};
+const originalCreate=Basahin.create;
+window.Basahin={...Basahin,create:options=>originalCreate({...options,
+  onInterim:text=>{interims.push(text);return options.onInterim?.(text);},
+  onResult:async(result,blob)=>{results.push({...result,audio_blob:blob});return options.onResult?.(result,blob);},
+  onError:error=>{errors.push(error.message);return options.onError?.(error);}
+})};
 const originalFetch=window.fetch;
 window.fetch=async (url,options)=>{
   if(url==='/api/reading/transcribe/') {
@@ -249,7 +265,7 @@ const {chromium}=require('playwright');
   const prescribed=process.env.CRLA_TEST_PRESCRIBED==='1';
   const english=process.env.CRLA_TEST_ENGLISH==='1';
   const args=['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding'];
-  if(prescribed)args.push('--use-file-for-fake-audio-capture='+process.env.CRLA_TEST_SYNTHETIC+'%noloop');
+  if(prescribed)args.push('--use-file-for-fake-audio-capture='+process.env.CRLA_TEST_SYNTHETIC);
   if(liveGoogle)args.push('--use-file-for-fake-audio-capture='+require('node:path').join(process.env.TEMP,'pabasa-crla-stream-test.wav'));
   const clientCount=Number(process.env.CRLA_TEST_CLIENTS || 1);
   const browsers=await Promise.all(Array.from({length:Math.ceil(clientCount/10)}, () => chromium.launch({executablePath:process.env.CRLA_CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args})));
@@ -266,14 +282,16 @@ const {chromium}=require('playwright');
     await Promise.all(pages.map(async ({page,context,pageErrors}) => {
     await page.click(english?'#record-verse':'#start');
     await page.waitForFunction(()=>window.results.length>=1||window.errors.length>0,{},{timeout:60000});
-    if(english)await page.waitForFunction(()=>document.querySelector('.lesson27-prompt')?.textContent.includes('verse 2'),{},{timeout:5000});
+    if(english)try{await page.waitForFunction(()=>document.querySelector('.lesson27-prompt')?.textContent.includes('verse 2'),{},{timeout:20000});}
+    catch(error){throw new Error(JSON.stringify(await page.evaluate(()=>({prompt:document.querySelector('.lesson27-prompt')?.textContent,errors,results:results.map(r=>({complete:r.complete,cursor:r.current_syllable_index})),evaluations}))))}
     const state=await page.evaluate(async()=>{
       if(window.live)await live.finish();
       const tracksEnded=mic.getTracks().every(track=>track.readyState==='ended');
       mic.getTracks().forEach(track=>track.stop());
       return {interims,results:results.map(x=>({complete:x.complete,correct_word_count:x.correct_word_count,cursor:x.current_syllable_index,targetCount:x.target_syllable_count,stt_model:x.stt_model,audioBytes:x.audio_blob?.size})),errors,tracksEnded,evaluations:window.evaluations};
     });
-    if(pageErrors.length||state.errors.length||(!liveGoogle&&state.interims.length!==(prescribed?2:1))||!state.results[0].complete||state.results[0].correct_word_count!==(liveGoogle?6:english?5:4))throw new Error(JSON.stringify({state,pageErrors}));
+    const provisionalOk=liveGoogle||(english?state.interims.includes('The cat'):state.interims.length===(prescribed?2:1));
+    if(pageErrors.length||state.errors.length||!provisionalOk||!state.results[0].complete||state.results[0].correct_word_count!==(liveGoogle?6:english?5:4))throw new Error(JSON.stringify({state,pageErrors}));
     if(prescribed&&(!state.tracksEnded||state.evaluations!==1||!state.results[0].audioBytes))throw new Error('Prescribed recording lifecycle failed: '+JSON.stringify(state));
     console.log('PASS: '+(prescribed?'Basahin -> ':'')+'Chrome microphone -> AudioWorklet PCM -> real Uvicorn WebSocket -> '+(liveGoogle?'live Google':'mock Google')+' -> signed final -> shared HTTP evaluator; '+(prescribed?'one completed attempt':state.results[0].correct_word_count+' words scored')+', '+state.interims.length+' provisional updates');
     await context.close();
@@ -294,8 +312,11 @@ const {chromium}=require('playwright');
                     assert len(clients) == int(os.environ['CRLA_TEST_CLIENTS'])
                     print('PASS: all concurrent capture streams connected before any final result')
             if english_prescribed:
-                assert progress_requests == [{'action': 'verse_read', 'item_index': 0, 'verse_index': 0, 'success': True}]
-                print('PASS: actual English Read button streams en-PH and saves exactly one completed verse')
+                count=int(os.environ.get('CRLA_TEST_CLIENTS','1'))
+                assert len(progress_requests)==2*count
+                assert [p for p in progress_requests if p['action']=='verse_read'] == [{'action': 'verse_read', 'item_index': 0, 'verse_index': 0, 'success': True}]*count
+                assert all(p['item_index']==p['verse_index']==0 and p['current_syllable_index']>0 for p in progress_requests if p['action']=='verse_progress')
+                print('PASS: actual English Read button streams en-PH and saves exactly one completed verse per client')
             print('PASS: streaming integration completed with database access forbidden')
         finally:
             server.should_exit = True

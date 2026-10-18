@@ -65,7 +65,8 @@ OCR_ENGINE_UNAVAILABLE_MESSAGE = (
 )
 from .background_work import queue_after_commit
 from .utils.crla_results import has_completed_official_crla_result
-from pabasa_site.http_admission import provider_io
+from pabasa_site.http_admission import database_free_provider_io, provider_io
+from .prescribed_recordings import analyze_reading_attempt, recording_response, remove_replaced_recording
 from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_items
 from .class_materials import ClassMaterialsProgress, listing_summary, supplementary_launch_url
 from .email_branding import email_logo_html
@@ -12300,47 +12301,76 @@ def student_assessment_access_status(request):
 @csrf_protect
 @require_http_methods(['POST'])
 def session_5_lesson_14_gawain_4_recording(request):
-    """Persist the latest per-item reading evidence for Session 5 Gawain 4."""
+    """Commit reading evidence before queuing optional acoustic diagnostics."""
+    import math
     student = _active_prescribed_student(request)
     if not student:
         return JsonResponse({'success': False, 'error': 'Student authorization is required.'}, status=403)
     try:
         item_index = int(request.POST.get('item_index', -1))
-    except (TypeError, ValueError):
-        item_index = -1
-    activity = prescribed_activity('session-5-lesson-14-gawain-4') or {}
-    items = activity.get('items') or []
-    audio = request.FILES.get('audio')
-    if not audio or item_index not in range(len(items)):
-        return JsonResponse({'success': False, 'error': 'A valid reading recording is required.'}, status=400)
-    raw_attempt_id = str(request.POST.get('attempt_id') or '').strip()
-    try:
+        duration = float(request.POST.get('duration_seconds') or 0)
+        if not math.isfinite(duration) or not 0 <= duration <= 3600:
+            raise ValueError('Invalid duration.')
+        raw_attempt_id = str(request.POST.get('attempt_id') or '').strip()
         attempt_id = uuid.UUID(raw_attempt_id) if raw_attempt_id else None
-    except ValueError:
-        return JsonResponse({'success': False, 'error': 'Invalid attempt ID.'}, status=400)
+    except (ValueError, TypeError, OverflowError):
+        return JsonResponse({'success': False, 'error': 'A valid item, duration and attempt ID are required.'}, status=400)
+    activity_key = 'session-5-lesson-14-gawain-4'
+    items = (prescribed_activity(activity_key) or {}).get('items') or []
+    audio = request.FILES.get('audio')
+    if not audio or not getattr(audio, 'size', 0) or audio.size > 12 * 1024 * 1024 or item_index not in range(len(items)):
+        return JsonResponse({'success': False, 'error': 'A valid reading recording is required.'}, status=400)
     transcript = str(request.POST.get('transcript') or '')[:4000]
     raw_transcript = str(request.POST.get('raw_transcript') or transcript)[:4000]
     match_value = request.POST.get('stt_match')
     stt_match = None if match_value in ('', 'null', 'None', None) else match_value.lower() == 'true'
-    # The legacy target page advances its DOM before the wrapper uploads the
-    # returned blob. For a confirmed match, safely repair that one-step race
-    # only when the transcript identifies the preceding item exactly.
     if stt_match and item_index > 0:
         normalize = lambda value: re.sub(r'[^a-z0-9]', '', str(value or '').lower())
         if normalize(transcript) == normalize(items[item_index - 1].get('text')):
             item_index -= 1
     expected = str(items[item_index].get('text') or '')
-    student_lifecycle = _current_learning_context(student)
+    lifecycle = _current_learning_context(student)
+    try:
+        word_metadata = json.loads(request.POST.get('word_metadata') or '[]')
+    except (TypeError, ValueError):
+        word_metadata = []
     with transaction.atomic():
+        # Lock an existing parent even on the first upload. Missing child rows
+        # cannot serialize first writers with select_for_update alone.
+        User.objects.select_for_update().get(pk=student.pk)
         row = StudentActivityRecordingSubmission.objects.select_for_update().filter(
-            student=student, activity_key='session-5-lesson-14-gawain-4', item_index=item_index,
+            student=student, activity_key=activity_key, item_index=item_index,
         ).first()
-        if row and row.audio_file:
-            row.audio_file.delete(save=False)
+        attempt = None
+        if attempt_id:
+            last_number = PrescribedReadingAttempt.objects.filter(
+                student=student, activity_key=activity_key, item_index=item_index,
+            ).order_by('-attempt_number').values_list('attempt_number', flat=True).first() or 0
+            # Reserve the globally unique ID before writing or replacing files.
+            # get_or_create also resolves a simultaneous cross-account collision.
+            attempt, created = PrescribedReadingAttempt.objects.get_or_create(attempt_id=attempt_id, defaults={
+                'student':student, 'school_calendar':lifecycle.get('school_calendar'), 'term':lifecycle.get('term'),
+                'activity_key':activity_key, 'item_index':item_index, 'attempt_number':last_number + 1,
+                'expected_text':expected, 'audio_file':'', 'audio_mime_type':getattr(audio, 'content_type', '') or '',
+                'duration_seconds':duration or None, 'recognized_transcript':transcript, 'stt_match':stt_match,
+                'stt_provider':str(request.POST.get('stt_provider') or '')[:40],
+                'stt_model':str(request.POST.get('stt_model') or '')[:80],
+                'stt_word_metadata':word_metadata if isinstance(word_metadata, list) else [],
+                'classification':'PENDING_REVIEW', 'classification_source':'stt', 'review_status':'pending',
+                'audio_analysis_status':'pending', 'audio_analysis_version':'shadow-1',
+            })
+            if not created:
+                if (attempt.student_id != student.pk or attempt.activity_key != activity_key or attempt.item_index != item_index):
+                    return JsonResponse({'success': False, 'error': 'Attempt ownership validation failed.'}, status=403)
+                if not row:
+                    return JsonResponse({'success': False, 'error': 'This recording was reset. Record a new attempt.'}, status=409)
+                return JsonResponse({'success':True, 'already_saved':True, 'submission_id':row.pk,
+                                     'item_index':item_index, 'review_status':row.review_status})
+        old_name = row.audio_file.name if row and row.audio_file else ''
         if not row:
-            row = StudentActivityRecordingSubmission(student=student, activity_key='session-5-lesson-14-gawain-4', item_index=item_index)
+            row = StudentActivityRecordingSubmission(student=student, activity_key=activity_key, item_index=item_index)
         row.audio_file = audio
-        row.duration_seconds = int(request.POST.get('duration_seconds') or 0) or None
+        row.duration_seconds = int(round(duration)) or None
         row.expected_text = expected
         row.recognized_transcript = transcript
         row.stt_match = stt_match
@@ -12348,50 +12378,15 @@ def session_5_lesson_14_gawain_4_recording(request):
         row.classification_source = 'stt'
         row.review_status = 'pending'
         row.status = 'submitted'
-        row.teacher_score = None
-        row.checked_by = None
-        row.checked_at = None
+        row.teacher_score = row.checked_by = row.checked_at = None
         row.save()
-        try:
-            audio.seek(0)
-            audio_bytes = audio.read()
-            audio.seek(0)
-            audio_features = extract_audio_features(audio_bytes, mime_type=getattr(audio, 'content_type', '') or '', item_index=item_index)
-            analysis_status, analysis_error = 'complete', ''
-        except AudioAnalysisError as exc:
-            audio_features, analysis_status, analysis_error = None, 'failed', str(exc)[:80]
-        except Exception:
-            audio_features, analysis_status, analysis_error = None, 'failed', 'analysis_failed'
-        if attempt_id:
-            lifecycle = _current_learning_context(student)
-            existing_attempt = PrescribedReadingAttempt.objects.filter(attempt_id=attempt_id).first()
-            if existing_attempt and (existing_attempt.student_id != student.id or existing_attempt.activity_key != 'session-5-lesson-14-gawain-4' or existing_attempt.item_index != item_index):
-                return JsonResponse({'success': False, 'error': 'Attempt ownership validation failed.'}, status=403)
-            if not existing_attempt:
-                attempt_number = PrescribedReadingAttempt.objects.filter(
-                    student=student, activity_key='session-5-lesson-14-gawain-4', item_index=item_index,
-                ).count() + 1
-                try:
-                    duration = float(request.POST.get('duration_seconds') or 0) or None
-                except (TypeError, ValueError):
-                    duration = None
-                try:
-                    word_metadata = json.loads(request.POST.get('word_metadata') or '[]')
-                except (TypeError, ValueError, json.JSONDecodeError):
-                    word_metadata = []
-                PrescribedReadingAttempt.objects.create(
-                    attempt_id=attempt_id, student=student, school_calendar=lifecycle.get('school_calendar'), term=lifecycle.get('term'),
-                    activity_key='session-5-lesson-14-gawain-4', item_index=item_index,
-                    attempt_number=attempt_number, expected_text=expected,
-                    audio_file=row.audio_file.name, audio_mime_type=getattr(audio, 'content_type', '') or '',
-                    duration_seconds=duration, recognized_transcript=transcript, stt_match=stt_match,
-                    stt_provider=str(request.POST.get('stt_provider') or '')[:40], stt_model=str(request.POST.get('stt_model') or '')[:80],
-                    stt_word_metadata=word_metadata if isinstance(word_metadata, list) else [],
-                    classification='PENDING_REVIEW', classification_source='stt', review_status='pending',
-                    audio_features=audio_features, audio_analysis_status=analysis_status,
-                    audio_analysis_error=analysis_error, audio_analysis_version='shadow-1',
-                )
-    return JsonResponse({'success': True, 'submission_id': row.id, 'item_index': item_index, 'review_status': row.review_status})
+        if attempt:
+            attempt.audio_file = row.audio_file.name
+            attempt.save(update_fields=['audio_file'])
+            queue_after_commit(lambda identifier=attempt.attempt_id: analyze_reading_attempt(identifier), label='prescribed_audio_analysis')
+        if old_name and old_name != row.audio_file.name:
+            queue_after_commit(lambda name=old_name: remove_replaced_recording(name), label='replaced_prescribed_recording')
+    return JsonResponse({'success':True, 'submission_id':row.pk, 'item_index':item_index, 'review_status':row.review_status})
 
 
 @login_required(role='teacher')
@@ -12468,9 +12463,7 @@ def teacher_session_5_lesson_14_gawain_4_audio(request, submission_id):
     allowed = {str(value) for value in _teacher_session4_student_ids(teacher)}
     if not submission or str(submission.student_id) not in allowed or not submission.audio_file:
         return HttpResponseForbidden('Recording unavailable.')
-    response = FileResponse(submission.audio_file.open('rb'), content_type=mimetypes.guess_type(submission.audio_file.name)[0] or 'audio/webm')
-    response['Content-Disposition'] = 'inline'
-    return response
+    return recording_response(submission.audio_file)
 
 @login_required(role='teacher')
 @require_http_methods(['GET'])
@@ -14876,6 +14869,16 @@ def _normalized_prescribed_candidate_match(activity, raw_candidate):
     if target not in items_by_id or word not in set(activity.get('word_bank') or []):
         raise ValueError('Pumili ng salita at larawan sa gawain.')
     return target, word
+
+
+def _prescribed_json_error(request):
+    if request.content_type == 'application/json':
+        try:
+            if not isinstance(json.loads(request.body or '{}'), dict):
+                raise ValueError('Expected an object.')
+        except (ValueError, TypeError, json.JSONDecodeError):
+            return JsonResponse({'success': False, 'error': 'Invalid activity request.'}, status=400)
+    return None
 
 
 def _active_prescribed_student(request):
@@ -17464,6 +17467,9 @@ def prescribed_activity_progress(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Prescribed activities are not currently available.'}, status=403)
     if not _student_can_open_prescribed_activity(student, activity_key):
         return JsonResponse({'success': False, 'error': 'Complete the previous activity first.'}, status=403)
+    payload_error = _prescribed_json_error(request)
+    if payload_error is not None:
+        return payload_error
     if activity_key == 'lesson-16-gawain-3':
         try:
             data = json.loads(request.body or '{}')
@@ -20815,6 +20821,9 @@ def prescribed_activity_complete(request, activity_key):
         return JsonResponse({'success': False, 'error': 'Prescribed activities are not currently available.'}, status=403)
     if not _student_can_open_prescribed_activity(student, activity_key):
         return JsonResponse({'success': False, 'error': 'Complete the previous activity first.'}, status=403)
+    payload_error = _prescribed_json_error(request)
+    if payload_error is not None:
+        return payload_error
     if activity_key in {'aral-s9-a1-family-drawing', 'aral-s9-a2-helping-drawing'}:
         progress = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
         state = progress.state if progress and isinstance(progress.state, dict) else {}
@@ -21770,13 +21779,14 @@ def aral_template_activity_complete(request, activity_slug):
             if streamed is not None:
                 transcript, model_used, fallback_reason = streamed, 'chirp_3', ''
             else:
-                transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
-                    audio.read(), api_key, language_code=language_code,
-                    phrase_hints=list(dict.fromkeys(target_phrase_hints(passage, language_code))),
-                    model=model, project_id=project_id, location=location,
-                    mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
-                    credentials_file=credentials_file,
-                )
+                with database_free_provider_io():
+                    transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
+                        audio.read(), api_key, language_code=language_code,
+                        phrase_hints=list(dict.fromkeys(target_phrase_hints(passage, language_code))),
+                        model=model, project_id=project_id, location=location,
+                        mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
+                        credentials_file=credentials_file,
+                    )
         except Exception:
             logger.exception('Dedicated fluency transcription failed')
             return JsonResponse({
@@ -22555,9 +22565,7 @@ def teacher_lesson29_trace_say_audio(request, submission_id):
     } if teacher else set()
     if not submission or str(submission.student_id).strip() not in allowed or not submission.audio_file:
         return HttpResponseForbidden('Recording unavailable.')
-    response = FileResponse(submission.audio_file.open('rb'), content_type=mimetypes.guess_type(submission.audio_file.name)[0] or 'audio/webm')
-    response['Content-Disposition'] = 'inline'
-    return response
+    return recording_response(submission.audio_file)
 
 
 def _teacher_session4_student_ids(teacher):
@@ -22676,12 +22684,7 @@ def teacher_session_4_gawain_1_audio(request, submission_id):
     teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
     if not submission or str(submission.student_id) not in {str(value) for value in _teacher_session4_student_ids(teacher)} or not submission.audio_file:
         return HttpResponseForbidden('Recording unavailable.')
-    response = FileResponse(
-        submission.audio_file.open('rb'),
-        content_type=mimetypes.guess_type(submission.audio_file.name)[0] or 'audio/webm',
-    )
-    response['Content-Disposition'] = 'inline'
-    return response
+    return recording_response(submission.audio_file)
 
 
 @login_required(role='teacher')
@@ -22786,12 +22789,7 @@ def teacher_lesson_13_gawain_1_audio(request, submission_id):
     allowed_ids = {str(value) for value in _teacher_session4_student_ids(teacher)}
     if not submission or str(submission.student_id) not in allowed_ids or not submission.audio_file:
         return HttpResponseForbidden('Recording unavailable.')
-    response = FileResponse(
-        submission.audio_file.open('rb'),
-        content_type=mimetypes.guess_type(submission.audio_file.name)[0] or 'audio/webm',
-    )
-    response['Content-Disposition'] = 'inline'
-    return response
+    return recording_response(submission.audio_file)
 
 
 @login_required(role='teacher')
@@ -22898,12 +22896,7 @@ def teacher_session_4_gawain_2_audio(request, submission_id):
     teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
     if not submission or str(submission.student_id) not in {str(value) for value in _teacher_session4_student_ids(teacher)} or not submission.audio_file:
         return HttpResponseForbidden('Recording unavailable.')
-    response = FileResponse(
-        submission.audio_file.open('rb'),
-        content_type=mimetypes.guess_type(submission.audio_file.name)[0] or 'audio/webm',
-    )
-    response['Content-Disposition'] = 'inline'
-    return response
+    return recording_response(submission.audio_file)
 
 
 @login_required(role='teacher')
@@ -22965,9 +22958,7 @@ def teacher_lesson_1_gawain_1_audio(request, submission_id):
     allowed = {entry.get('student_id') for section in Section.objects.filter(teacher=teacher, is_active=True) for entry in section.get_enrolled_students(active_only=True) if entry.get('student_id')} if teacher else set()
     if not submission or submission.student_id not in allowed or not submission.audio_file:
         return HttpResponseForbidden('Recording unavailable.')
-    response = FileResponse(submission.audio_file.open('rb'), content_type=mimetypes.guess_type(submission.audio_file.name)[0] or 'audio/webm')
-    response['Content-Disposition'] = 'inline'
-    return response
+    return recording_response(submission.audio_file)
 
 
 @login_required(role='teacher')
@@ -24972,13 +24963,14 @@ def transcribe_story_answer_api(request):
     model = getattr(settings, 'GOOGLE_STT_MODEL', 'chirp_3').strip()
     credentials_file = str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or '')
     try:
-        transcript, model_used, _ = transcribe_audio_bytes_with_model(
-            audio.read(), api_key, language_code=language_code,
-            phrase_hints=target_phrase_hints(expected_answer, language_code), model=model,
-            project_id=project_id, location=location,
-            mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
-            credentials_file=credentials_file,
-        )
+        with database_free_provider_io():
+            transcript, model_used, _ = transcribe_audio_bytes_with_model(
+                audio.read(), api_key, language_code=language_code,
+                phrase_hints=target_phrase_hints(expected_answer, language_code), model=model,
+                project_id=project_id, location=location,
+                mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
+                credentials_file=credentials_file,
+            )
         return JsonResponse({'success': True, 'transcript': str(transcript or '').strip(), 'stt_model': model_used})
     except Exception as exc:
         logger.exception('Story answer transcription failed')
@@ -25035,13 +25027,14 @@ def word_decoding_transcribe_api(request):
         if streamed is not None:
             transcript, model_used = streamed, 'chirp_3'
         else:
-            transcript, model_used, _ = transcribe_audio_bytes_with_model(
-                audio.read(), api_key, language_code=language_code,
-                phrase_hints=target_phrase_hints(target_word, language_code),
-                model=model, project_id=project_id, location=location,
-                mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
-                credentials_file=credentials_file,
-            )
+            with database_free_provider_io():
+                transcript, model_used, _ = transcribe_audio_bytes_with_model(
+                    audio.read(), api_key, language_code=language_code,
+                    phrase_hints=target_phrase_hints(target_word, language_code),
+                    model=model, project_id=project_id, location=location,
+                    mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
+                    credentials_file=credentials_file,
+                )
         return JsonResponse({
             'success': True,
             'transcript': str(transcript or '').strip(),
@@ -25143,7 +25136,8 @@ def lesson_1_gawain_1_transcribe_api(request):
 
     if uses_knowlez_stt(request):
         try:
-            transcript, model_used, _ = transcribe_knowlez_audio(audio, 'fil-PH')
+            with database_free_provider_io():
+                transcript, model_used, _ = transcribe_knowlez_audio(audio, 'fil-PH')
             return JsonResponse({
                 'success': True, 'raw_transcript': transcript, 'transcript': transcript,
                 'stt_model': model_used, 'stt_provider': 'knowlez', 'language_code': 'fil-PH',
@@ -25158,14 +25152,15 @@ def lesson_1_gawain_1_transcribe_api(request):
             if streamed is not None:
                 transcript, model_used, fallback_reason = streamed, 'chirp_3', ''
             else:
-                transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
-                    audio.read(), getattr(settings, 'GOOGLE_STT_API_KEY', '').strip(),
-                    language_code='fil-PH', model=selected_model,
-                    project_id=getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', '').strip(),
-                    location=_chirp_location(selected_model),
-                    credentials_file=str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or ''),
-                    word_details=words, allow_fallback=False,
-                )
+                with database_free_provider_io():
+                    transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
+                        audio.read(), getattr(settings, 'GOOGLE_STT_API_KEY', '').strip(),
+                        language_code='fil-PH', model=selected_model,
+                        project_id=getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', '').strip(),
+                        location=_chirp_location(selected_model),
+                        credentials_file=str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or ''),
+                        word_details=words, allow_fallback=False,
+                    )
             return JsonResponse({
                 'success': True, 'raw_transcript': transcript, 'transcript': transcript,
                 'stt_model': model_used, 'stt_provider': 'google', 'language_code': 'fil-PH',
