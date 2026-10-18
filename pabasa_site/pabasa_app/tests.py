@@ -12477,6 +12477,91 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertCountEqual(data["students"][0]["classes"], ["Reading One", "Reading Two"])
         self.assertCountEqual(data["students"][0]["section_ids"], [self.section_a.id, self.section_b.id])
 
+    def test_enrolled_students_use_surname_name_and_order(self):
+        calendar = SchoolCalendar.objects.create(
+            school_year='2026-2027', current_term=1, is_active=True,
+        )
+        self.section_a.school_calendar = calendar
+        self.section_a.save(update_fields=['school_calendar', 'updated_at'])
+        students = [
+            ('Dona', 'Palacios', 'V'),
+            ('Third', 'Basco', 'A'),
+            ('Caroline', 'dorongon', 'A'),
+            ('Amiel', 'Padasay', 'P'),
+            ('Anna', 'basco', 'Z'),
+            ('Anna', 'Basco', 'A'),
+        ]
+        for index, (first, last, middle) in enumerate(students):
+            student = User.objects.create(
+                custom_id=f'STD-CLASS-SORT-{index}', role='student',
+                first_name=first, last_name=last, middle_initial=middle,
+                suffix='', sex='female', birth_month=1, birth_day=1,
+                birth_year=2013, email=f'class-sort-{index}@example.com',
+                password_hash=make_password('student-password'),
+            )
+            self.section_a.add_student(student)
+        views.Enrollment.objects.filter(section=self.section_a).update(school_calendar=calendar)
+
+        rows, _, _ = views._class_management_roster(
+            self.section_a, {'id': calendar.id, 'term': None},
+        )
+        self.assertEqual([row['name'] for row in rows], [
+            'Basco, Anna A.', 'basco, Anna Z.', 'Basco, Third A.',
+            'dorongon, Caroline A.', 'Padasay, Amiel P.', 'Palacios, Dona V.',
+        ])
+        response = self.client.get(reverse('get_teacher_students_api'), {
+            'sync': 'management', 'section_id': self.section_a.id,
+        })
+        self.assertEqual(response.status_code, 200)
+        first = response.json()['students'][0]
+        self.assertIn('Basco, Anna A.', first['row_html'])
+        self.assertIn('Basco, Anna A.', first['card_html'])
+        self.assertIn('data-sort-name="Basco"', first['row_html'])
+
+    def test_directory_orders_by_surname_then_first_and_middle_name(self):
+        calendar = SchoolCalendar.objects.create(
+            school_year='2026-2027', current_term=1, is_active=True,
+        )
+        self.section_a.school_calendar = calendar
+        self.section_a.save(update_fields=['school_calendar', 'updated_at'])
+        names = [
+            ('Dona', 'Palacios', ''),
+            ('Third', 'Basco', ''),
+            ('Caroline', 'dorongon', ''),
+            ('Amiel', 'Padasay', ''),
+            ('Anna', 'Basco', 'Z'),
+            ('Anna', 'basco', 'A'),
+            ('NoSurname', '', ''),
+        ]
+        for index, (first, last, middle) in enumerate(names):
+            student = User.objects.create(
+                custom_id=f'STD-SORT-{index}', role='student',
+                first_name=first, last_name=last, middle_initial=middle,
+                suffix='', sex='female', birth_month=1, birth_day=1,
+                birth_year=2013, email=f'sort-{index}@example.com',
+                password_hash=make_password('student-password'),
+            )
+            self.section_a.add_student(student)
+
+        views.Enrollment.objects.filter(section=self.section_a).update(school_calendar=calendar)
+
+        expected = [
+            ('Anna', 'A'), ('Anna', 'Z'), ('Third', ''),
+            ('Caroline', ''), ('Amiel', ''), ('Dona', ''),
+            ('NoSurname', ''),
+        ]
+        for term, phase in ((None, None), (1, 'pretest'),
+                            (2, 'midtest'), (3, 'posttest')):
+            rows, _, _ = views._teacher_student_roster_payload(
+                self.teacher, section=self.section_a,
+                crla_term=term, crla_phase=phase,
+            )
+            self.assertEqual(
+                [(row['first_name'], row['middle_initial']) for row in rows], expected,
+                msg=f'Unexpected student order for term {term}',
+            )
+            self.assertEqual(rows[0]['last_name'], 'basco')
+
     def test_teacher_overview_counts_unique_students_across_classes(self):
         response = self.client.get(reverse("get_teacher_overview"))
 

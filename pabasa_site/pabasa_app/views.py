@@ -3081,6 +3081,9 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
 
         sdata.update({
             'name': f"{user.first_name} {user.last_name}".strip() or sdata.get('name', ''),
+            'first_name': user.first_name or '',
+            'last_name': user.last_name or '',
+            'middle_initial': user.middle_initial or '',
             'email': user.email or sdata.get('email', ''),
             'custom_id': user.custom_id or sdata.get('custom_id', ''),
             'crla_classification': reading_level if (official_result or aral_exited) else '',
@@ -3130,6 +3133,14 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
 
         level_counts[reading_level if official_result else 'Pending'] += 1
         results.append(sdata)
+
+    results.sort(key=lambda student: (
+        not bool(str(student.get('last_name') or '').strip()),
+        str(student.get('last_name') or '').strip().casefold(),
+        str(student.get('first_name') or '').strip().casefold(),
+        str(student.get('middle_initial') or '').strip().casefold(),
+        student['id'],
+    ))
 
     active_this_week = len({
         sid for sid, attempts in attempt_history.items()
@@ -32168,6 +32179,15 @@ def _class_management_calendar(teacher, section):
     }
 
 
+def _class_management_student_name(student):
+    last_name = str(student.last_name or '').strip()
+    first_name = str(student.first_name or '').strip()
+    middle_initial = str(student.middle_initial or '').strip().rstrip('.')
+    given_name = ' '.join(part for part in (first_name, f'{middle_initial}.' if middle_initial else '') if part)
+    name = f'{last_name}, {given_name}' if last_name and given_name else last_name or given_name
+    return ' '.join(part for part in (name, str(student.suffix or '').strip()) if part) or student.custom_id or 'Student'
+
+
 def _class_management_roster(section, calendar_context):
     """Year-scoped membership with finalized reading labels for the active term.
 
@@ -32205,7 +32225,10 @@ def _class_management_roster(section, calendar_context):
         student = enrollment.student
         level = official_levels.get(student.pk, 'Pending')
         data = {
-            'id': student.pk, 'name': _display_user_name(student),
+            'id': student.pk, 'name': _class_management_student_name(student),
+            'first_name': student.first_name or '',
+            'last_name': student.last_name or '',
+            'middle_initial': student.middle_initial or '',
             'pabasa_id': student.custom_id or '', 'email': student.email or '',
             'reading_level': level, 'joined_at': _format_joined_date(enrollment.joined_at.isoformat()),
             'outcome_label': enrollment.get_outcome_display(),
@@ -32214,6 +32237,13 @@ def _class_management_roster(section, calendar_context):
         data['sync_version'] = hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
         data['enrollment'] = enrollment
         students.append(data)
+    students.sort(key=lambda row: (
+        not bool(str(row['last_name']).strip()),
+        str(row['last_name']).strip().casefold(),
+        str(row['first_name']).strip().casefold(),
+        str(row['middle_initial']).strip().casefold(),
+        row['id'],
+    ))
     version = hashlib.sha256(json.dumps([
         (student['id'], student['sync_version']) for student in students
     ]).encode()).hexdigest()

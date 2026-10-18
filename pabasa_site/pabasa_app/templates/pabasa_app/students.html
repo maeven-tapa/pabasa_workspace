@@ -1928,8 +1928,17 @@ function getStudentDirectoryDisplayName(student) {
     return fallbackId || 'Unnamed Student';
 }
 
+function getStudentDirectoryCardName(student) {
+    const lastName = String(student?.last_name || '').trim();
+    const firstName = String(student?.first_name || '').trim();
+    if (lastName && firstName) return `${lastName}, ${firstName}`;
+    return lastName || firstName || getStudentDirectoryDisplayName(student);
+}
+
 function buildStudentDirectoryProjection(sourceStudents) {
     const normalizedStudents = normalizeStudentPayload(sourceStudents);
+    const compareNameField = (a, b, field) => String(a?.[field] || '').trim()
+        .localeCompare(String(b?.[field] || '').trim(), undefined, { sensitivity: 'base' });
 
     return normalizedStudents
         .map(student => ({
@@ -1938,7 +1947,15 @@ function buildStudentDirectoryProjection(sourceStudents) {
             level: resolveStudentReadingLevel(student),
             allClasses: toStudentClassList(student)
         }))
-        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }));
+        .sort((a, b) => {
+            const aHasSurname = Boolean(String(a.last_name || '').trim());
+            const bHasSurname = Boolean(String(b.last_name || '').trim());
+            if (aHasSurname !== bHasSurname) return aHasSurname ? -1 : 1;
+            return compareNameField(a, b, 'last_name')
+                || compareNameField(a, b, 'first_name')
+                || compareNameField(a, b, 'middle_initial')
+                || String(a.id || a.student_id || '').localeCompare(String(b.id || b.student_id || ''));
+        });
 }
 
 function getLatestStudentDirectoryData(sourceStudents) {
@@ -2430,7 +2447,7 @@ function renderStudentDirectory(sourceStudents) {
     );
 
     const cards = pageStudents.map(student => {
-        const name = student.name || `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unnamed Student';
+        const name = getStudentDirectoryCardName(student);
         const hasExitedAral = student.aral_exited === true;
         const levelText = hasExitedAral ? 'Reading At Grade Level' : resolveStudentReadingLevel(student);
         student.level = levelText;

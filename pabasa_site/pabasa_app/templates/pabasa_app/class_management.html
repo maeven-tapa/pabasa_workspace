@@ -1722,6 +1722,16 @@ document.addEventListener('DOMContentLoaded', function () {
         const sortKey = sortSelect.value;
         const visible = rows.filter(row => (row.dataset.search || '').toLocaleLowerCase().includes(query));
         const compare = (a, b) => {
+            if (sortKey === 'name') {
+                const aLast = (a.dataset.sortName || '').trim();
+                const bLast = (b.dataset.sortName || '').trim();
+                const nameOrder = (Boolean(bLast) - Boolean(aLast))
+                    || aLast.localeCompare(bLast, undefined, { sensitivity: 'base' })
+                    || (a.dataset.sortFirst || '').localeCompare(b.dataset.sortFirst || '', undefined, { sensitivity: 'base' })
+                    || (a.dataset.sortMiddle || '').localeCompare(b.dataset.sortMiddle || '', undefined, { sensitivity: 'base' })
+                    || Number(a.dataset.studentId) - Number(b.dataset.studentId);
+                return nameOrder * (descending ? -1 : 1);
+            }
             const dataKey = `sort${sortKey[0].toUpperCase()}${sortKey.slice(1)}`;
             return (a.dataset[dataKey] || '').localeCompare(b.dataset[dataKey] || '', undefined, { numeric: true, sensitivity: 'base' }) * (descending ? -1 : 1);
         };
