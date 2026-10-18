@@ -166,6 +166,7 @@ function statusTest() {
         isOfficialAssessmentLaunch: true, isCrla: true,
         isSendingChunk: false, pendingAudioChunk: null, crlaLiveSpeech: null,
         isRecording: true, isMuted: false, recognitionActive: true,
+        currentAssessmentBranch: 'words',
         shell: {classList: {contains: name => name === 'is-hearing'}}, speechFrameCount: 3,
         readingWord: null, itemLocked: [], currentIndex: 0, getCurrentSectionLabel: () => 'Word',
     });
@@ -188,7 +189,80 @@ function statusTest() {
     context.speechFrameCount = 0;
     context.shell.classList.contains = () => false;
     render();
+    assert.equal(elements.status.textContent, 'Listening...', 'active capture with no detected speech reports Listening');
+    context.currentAssessmentBranch = 'rhymes';
+    context.recognitionActive = false;
+    render();
+    assert.equal(elements.status.textContent, 'Read the Rhyme', 'the rhyme branch shows its singular reading prompt');
+    for (const [branch, section, label] of [
+        ['words', 'Word', 'Read the Word'],
+        ['sentences', 'Sentence', 'Read the Sentence'],
+        ['story', 'Story', 'Read the Story'],
+    ]) {
+        context.currentAssessmentBranch = branch;
+        context.getCurrentSectionLabel = () => section;
+        render();
+        assert.equal(elements.status.textContent, label, `${branch} branch starts with its reading prompt`);
+    }
+    context.currentAssessmentBranch = 'words';
+    context.recognitionActive = true;
+    context.isSendingChunk = true;
+    render();
+    assert.equal(elements.status.textContent, '', 'microphone activity cannot replace genuine Processing');
+    assert.equal(elements.overlay.hidden, false, 'the overlay remains visible during genuine Processing');
+    context.isSendingChunk = false;
+    context.recognitionActive = false;
+    context.currentAssessmentBranch = 'words';
+    context.getCurrentSectionLabel = () => 'Word';
+    render();
     assert.equal(elements.status.textContent, 'Read the Word', 'idle state returns to its assessment prompt');
+}
+
+async function fallbackSilenceTest() {
+    const source = fs.readFileSync(path.join(js, 'assessment_reader.js'), 'utf8');
+    const start = source.indexOf('        function startSpeechChunkRecorder() {');
+    const end = source.indexOf('        function finishCurrentAudioChunk(force = false)', start);
+    assert.ok(start >= 0 && end > start, 'fallback recorder lifecycle is available');
+    const submitted = [];
+    class Recorder {
+        constructor(stream) { this.stream = stream; this.state = 'inactive'; this.mimeType = 'audio/webm'; }
+        start() { this.state = 'recording'; }
+        requestData() {}
+        stop() { this.state = 'inactive'; }
+    }
+    const context = vm.createContext({
+        window: {MediaRecorder: Recorder}, MediaRecorder: Recorder, Blob,
+        mediaStream: {}, stoppingSpeechRecognition: false, isMuted: false, isRecording: true,
+        isAdvancingItem: false, sentenceCountdownTimer: null, mediaRecorder: null,
+        canStreamCrla: () => false, currentSpeechContext: () => ({itemText: 'bata'}),
+        pickAudioMimeType: () => '',
+        isOfficialAssessmentLaunch: true, mode: 'word', currentIndex: 0,
+        sentenceWordResults: [],
+        isCurrentSpeechContext: () => true,
+        sendAudioChunk: async blob => submitted.push(blob),
+        hasHeardSinceLastChunk: false,
+        audioAnalyser: {}, lastHeardAt: 0, speechChunkMs: 10000, Date,
+    });
+    vm.runInContext(source.slice(start, end), context);
+    const sendCheckStart = source.indexOf('        function shouldSendAudioChunk() {');
+    const sendCheckEnd = source.indexOf('        function isSpeechResponsePending()', sendCheckStart);
+    vm.runInContext(source.slice(sendCheckStart, sendCheckEnd), context);
+    const startRecorder = vm.runInContext('startSpeechChunkRecorder', context);
+    const stopWithChunk = async () => {
+        const recorder = context.mediaRecorder;
+        recorder.ondataavailable({data: new Blob(['audio frame'])});
+        recorder.stop();
+        await recorder.onstop();
+    };
+
+    startRecorder();
+    await stopWithChunk();
+    assert.equal(submitted.length, 0, 'a nonempty silent MediaRecorder chunk is not submitted when VAD has no speech evidence');
+
+    context.hasHeardSinceLastChunk = true;
+    await stopWithChunk();
+    assert.equal(submitted.length, 1, 'a MediaRecorder chunk is submitted when the existing VAD detects speech');
+    assert.equal(context.hasHeardSinceLastChunk, false, 'speech evidence is consumed once per fallback chunk');
 }
 
 async function readerTest() {
@@ -209,7 +283,7 @@ async function readerTest() {
         crlaStreamStarting: false, stoppingSpeechRecognition: false, isRecording: true, isMuted: false, isFinalizingReading: false,
         sentenceCountdownTimer: null,
         crlaLiveSpeech: null, crlaLiveContext: null, crlaStreamingUnavailable: false, crlaSpeechFailure: false,
-        isSendingChunk: false,
+        isSendingChunk: false, hasHeardSinceLastChunk: false,
         isOfficialAssessmentLaunch: true, isCrla: true, mode: 'word', officialAssessmentId: '12',
         customMaterialData: null, isTemplateActivity: false,
         currentIndex: 0, itemResultVersion: 1, isAdvancingItem: false, currentSyllableIndex: 0,
@@ -221,7 +295,7 @@ async function readerTest() {
             syllableIndex: context.currentSyllableIndex, itemText: context.items[context.currentIndex]}),
         isCurrentSpeechContext: c => c.index === context.currentIndex && c.version === context.itemResultVersion && c.syllableIndex === context.currentSyllableIndex,
         getCsrfToken: () => '', mediaStream: {}, sentenceWordResults: [],
-        updateAssessmentNavigationButtons() {}, updateSpeechProcessingControls() {},
+        updateAssessmentNavigationButtons() {}, updateSpeechProcessingControls() {}, renderOfficialCrlaStatus() {},
         syncStoryReadingTimerProcessing() { timerSyncs++; },
         setSpeechStatus: message => { context.lastStatus = message; }, appendRawMicInput() {}, resetSyllableStitching() {}, stopSpeechRecognition() {},
         startSpeechChunkRecorder: () => { fallback++; },
@@ -271,24 +345,31 @@ async function readerTest() {
     await stream.options.onFinal({final_token: 'stale'});
     assert.equal(calls, 2, 'finals from the previous item never reach scoring');
     Stream.prototype.start = async function () { this.fallbackAudio = new Blob(['captured']); throw new Error('unavailable'); };
+    context.hasHeardSinceLastChunk = true;
     await vm.runInContext('startCrlaLiveSpeech()', context);
     assert.equal(fallback, 1);
     assert.equal(recovered, 1, 'startup audio is evaluated before fallback recording resumes');
     assert.equal(context.crlaStreamingUnavailable, true);
+
+    context.hasHeardSinceLastChunk = false;
+    await vm.runInContext('startCrlaLiveSpeech()', context);
+    assert.equal(fallback, 2, 'fallback recorder is ready after live startup fails');
+    assert.equal(recovered, 1, 'silent startup PCM is not submitted for evaluation');
 
     Stream.prototype.start = async function () { throw Object.assign(new Error('assessment access changed'), {status: 403}); };
     context.crlaStreamingUnavailable = false;
     context.crlaSpeechFailure = false;
     await vm.runInContext('startCrlaLiveSpeech()', context);
     assert.equal(context.crlaStreamingUnavailable, true, 'a refused live ticket switches to clip capture');
-    assert.equal(fallback, 2, 'clip capture continues after a refused live ticket');
+    assert.equal(fallback, 3, 'clip capture continues after a refused live ticket');
     assert.equal(context.crlaLiveSpeech, null, 'clip fallback must release the stopped stream so flush drains the recorder');
 }
 
 (async () => {
     pcmTest();
     statusTest();
+    await fallbackSilenceTest();
     await transportTest();
     await readerTest();
-    console.log('PASS: PCM capture, interim-only display, serialized finals, rotation/finalization, stale-item rejection, fallback, and CRLA Processing/listening status priority');
+    console.log('PASS: PCM capture, interim-only display, serialized finals, rotation/finalization, stale-item rejection, silent-startup rejection, fallback, and branch-aware CRLA status lifecycle');
 })().catch(error => { console.error(error); process.exitCode = 1; });

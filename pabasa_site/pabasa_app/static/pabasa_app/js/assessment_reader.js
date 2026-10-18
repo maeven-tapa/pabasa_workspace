@@ -3901,24 +3901,34 @@
             const dots = helper.querySelector(".helper-dot");
             const processingOverlay = document.getElementById("crlaProcessingOverlay");
             const processing = Boolean(isSendingChunk || pendingAudioChunk || crlaLiveSpeech?.pending);
-            const activelyListening = Boolean(
+            const activelyCapturing = Boolean(
                 !processing && isRecording && !isMuted && recognitionActive
                 && !crlaLiveSpeech?.capturePaused
+            );
+            const speechDetected = Boolean(
+                activelyCapturing
                 && (shell?.classList.contains("is-hearing") || speechFrameCount > 0)
             );
             const wrong = Boolean(readingWord?.querySelector(".is-wrong"));
             const correct = Boolean(readingWord?.querySelector(".is-read"));
             const retry = wrong && !processing && !itemLocked[currentIndex];
-            let status = processing ? "" : `Read the ${getCurrentSectionLabel()}`;
+            const sectionLabel = getCurrentSectionLabel();
+            const prompt = currentAssessmentBranch === "rhymes"
+                ? "Read the Rhyme"
+                : `Read the ${sectionLabel}`;
+            let status = processing ? "" : prompt;
             let animated = false;
             if (processing) { animated = true; }
-            else if (activelyListening) { status = "Hearing you..."; animated = true; }
+            else if (activelyCapturing) {
+                status = speechDetected ? "Hearing you..." : "Listening...";
+                animated = speechDetected;
+            }
             else if (correct) status = "Great Job!";
             else if (retry) status = "Try to read again";
             else if (wrong) status = "Good try!";
             helper.hidden = false;
             helper.classList.toggle("is-status-active", animated);
-            helper.classList.toggle("is-status-processing", processing && !activelyListening);
+            helper.classList.toggle("is-status-processing", processing);
             if (processingOverlay) processingOverlay.hidden = !processing;
             if (text) text.textContent = status;
             if (dots) dots.setAttribute("aria-hidden", "true");
@@ -4112,7 +4122,10 @@
                 crlaLiveSpeech = null;
                 crlaStreamingUnavailable = true;
                 setSpeechStatus("Listening with recorded speech…", "Live connection unavailable; your recording will still be checked.", true);
-                if (stream.fallbackAudio && isCurrentSpeechContext(itemContext)) {
+                // Worklet startup buffers PCM before the socket is ready. Those
+                // frames may be silence, so only submit them when the existing
+                // meter has observed speech for this item.
+                if (stream.fallbackAudio && hasHeardSinceLastChunk && isCurrentSpeechContext(itemContext)) {
                     await sendAudioChunk(stream.fallbackAudio, itemContext);
                 }
                 startSpeechChunkRecorder();
@@ -4146,6 +4159,7 @@
                 speechChunkTimer = window.setInterval(finishCurrentAudioChunk, 250);
                 recognitionActive = Boolean(mediaStream);
                 resetRawMicInput("Waiting for speech...");
+                renderOfficialCrlaStatus();
                 if (!crlaLiveSpeech) setSpeechStatus("Listening with Google Speech...", "Read the text on screen. Correct syllables will highlight as they are confirmed.", true);
             } catch (error) {
                 if (captureVersion !== speechRecognitionVersion) return;
