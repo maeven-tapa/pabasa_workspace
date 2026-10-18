@@ -470,6 +470,64 @@ class CrlaExportResultTests(TestCase):
             **extra,
         )
 
+    def test_persisted_story_durations_export_per_student_without_changing_template(self):
+        teacher = self.make_user("CRLA-DURATION-T", "teacher", "Timer", "Teacher")
+        cases = (
+            ("CRLA-DURATION-S1", "Ana", 1, 45, (0, 45)),
+            ("CRLA-DURATION-S2", "Ben", 2, 125, (2, 5)),
+            ("CRLA-DURATION-S3", "Cara", 1, 179, (2, 59)),
+        )
+        students = [self.make_user(code, "student", name, "Reader") for code, name, *_ in cases]
+        section = test_section_create(
+            class_code="G2-DURATION", class_name="Grade 2 Duration", teacher=teacher,
+            students=[{"student_id": student.id, "is_active": True} for student in students],
+        )
+        for student in students:
+            section.add_student(student)
+        root = Assessment.objects.create(
+            teacher=teacher, section=section, title="CRLA Duration", code="CRLA-DURATION-ROOT",
+            assessment_type="paragraph", status="published",
+        )
+        material = Material.objects.create(
+            assessment=root, section=section, teacher=teacher, code="CRLA-DURATION-MATERIAL",
+            item_type="paragraph", type="assessment", assessment_kind="crla",
+        )
+        for student, (_, _, story, duration, _) in zip(students, cases):
+            Assessment.objects.create(
+                teacher=teacher, section=section, material=material, source_assessment=root,
+                student=student, title="Completed story", code=f"CRLA-DURATION-{student.id}",
+                assessment_type="paragraph", status="published", attempt_status="completed",
+                completed_at=timezone.now(), duration_seconds=duration,
+                crla_classification="Transitioning Reader",
+                crla_score_data={
+                    "task1_score": 8, "task2_type": "Task 2H / Sentences", "task2_score": 7,
+                    "story_number": story, "story_total_words": 96, "words_read": 72,
+                    "miscues": 24, "duration_seconds": duration,
+                    "passage_accuracy_percent": 75, "comprehension_correct": 3,
+                },
+            )
+
+        template = load_workbook(Path(settings.BASE_DIR) / "templates" / "CRLA3_Grade2TagalogScoresheet_v3.xlsx")
+        previous = None
+        for _ in range(2):
+            workbook = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)
+            sheet = workbook["G2 MT Reading Scoresheet"]
+            rows = {sheet[f"C{row}"].value: row for row in range(11, 14)}
+            for _, name, story, _, expected in cases:
+                self.assertIn(f"{name} Reader", rows)
+                row = rows[f"{name} Reader"]
+                self.assertEqual(sheet[f"K{row}"].value, story)
+                self.assertEqual((sheet[f"N{row}"].value, sheet[f"O{row}"].value), expected)
+                for column in ("N", "O"):
+                    self.assertEqual(sheet[f"{column}{row}"].style_id, template["G2 MT Reading Scoresheet"][f"{column}{row}"].style_id)
+                for column in ("I", "J", "P", "Q"):
+                    self.assertTrue(sheet[f"{column}{row}"].value.startswith("="))
+                    self.assertEqual(sheet[f"{column}{row}"].style_id, template["G2 MT Reading Scoresheet"][f"{column}{row}"].style_id)
+            observed = tuple(tuple(sheet.cell(row, column).value for column in range(2, 23)) for row in range(11, 14))
+            if previous is not None:
+                self.assertEqual(observed, previous)
+            previous = observed
+
     def test_export_uses_persisted_completed_sentence_count_not_miscues(self):
         teacher = self.make_user("CRLA-MISCUE-T", "teacher", "Mia", "Lopez")
         student = self.make_user("CRLA-MISCUE-S", "student", "Toni", "Cruz")

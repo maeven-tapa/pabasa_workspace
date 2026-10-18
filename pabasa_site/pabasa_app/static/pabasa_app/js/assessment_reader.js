@@ -364,6 +364,7 @@
         let storyReadingCountdownId = null;
         let storyReadingTimerStartedAt = null;
         let storyReadingTimerPausedAt = null;
+        let storyReadingRecordedDurationSeconds = null;
         let storyReadingTimerExpired = false;
         let storyReadingCountdownActive = false;
         const storyReadingDurationMs = 179000;
@@ -1536,6 +1537,7 @@
 
         function resetStoryReadingTimerUi() {
             clearStoryReadingTimer();
+            storyReadingRecordedDurationSeconds = null;
             storyReadingTimerExpired = false;
             if (storyReadingTimerProgress) storyReadingTimerProgress.style.strokeDashoffset = "0";
             storyReadingTimer?.setAttribute("aria-valuenow", "179");
@@ -1549,6 +1551,12 @@
             if (storyReadingTimerStartedAt === null) return 0;
             return Math.max(0, Math.min(storyReadingDurationMs,
                 (storyReadingTimerPausedAt ?? now) - storyReadingTimerStartedAt));
+        }
+
+        function recordStoryReadingDuration() {
+            if (storyReadingTimerStartedAt !== null) {
+                storyReadingRecordedDurationSeconds = storyReadingElapsedMs() / 1000;
+            }
         }
 
         function storyReadingTimerRecoveryState() {
@@ -1586,6 +1594,7 @@
                     scheduleStoryReadingTimerExpiry();
                     return;
                 }
+                recordStoryReadingDuration();
                 clearStoryReadingTimer();
                 if (storyReadingTimerProgress) storyReadingTimerProgress.style.strokeDashoffset = "1000";
                 storyReadingTimer?.setAttribute("aria-valuenow", "0");
@@ -1616,6 +1625,7 @@
         function startStoryReadingTimer(startedAt = Date.now()) {
             updateStoryReadingTimerGeometry();
             clearStoryReadingTimer();
+            storyReadingRecordedDurationSeconds = null;
             storyReadingTimerExpired = false;
             storyReadingTimerStartedAt = startedAt;
             storyReadingTimer?.setAttribute("aria-hidden", "false");
@@ -3041,6 +3051,12 @@
                     const restoredStory = currentStoryChoices.find(item => String(item.title || "").trim().toLowerCase() === persistedStoryTitle);
                     if (restoredStory) {
                         currentSelectedStory = restoredStory;
+                        if (["story_comprehension", "learner_experience"].includes(workflowStage)) {
+                            const savedDuration = Number(persistedEndState.duration_seconds);
+                            storyReadingRecordedDurationSeconds = persistedEndState.duration_seconds != null
+                                && Number.isFinite(savedDuration) && savedDuration >= 0 && savedDuration <= 179
+                                ? savedDuration : null;
+                        }
                         const persistedSegmentIndex = Number.parseInt(persistedEndState.story_segment_index, 10);
                         currentStorySegmentIndex = Number.isFinite(persistedSegmentIndex) ? Math.max(0, persistedSegmentIndex) : 0;
                         if (workflowStage === "story_comprehension") {
@@ -3077,6 +3093,9 @@
                                 && isCrlaStorySegmentResolved(currentPageIndex)) {
                                 if (currentPageIndex >= getCurrentPageCount() - 1) {
                                     const recordedElapsed = Number(persistedEndState.story_reading_elapsed_ms);
+                                    if (persistedEndState.story_reading_elapsed_ms != null && Number.isFinite(recordedElapsed)) {
+                                        storyReadingRecordedDurationSeconds = Math.max(0, Math.min(storyReadingDurationMs, recordedElapsed)) / 1000;
+                                    }
                                     if (!isCurrentLiveAssessment() && startTime === null
                                         && Number.isFinite(recordedElapsed) && recordedElapsed > 0) {
                                         startTime = Date.now() - Math.min(storyReadingDurationMs, recordedElapsed);
@@ -3397,7 +3416,11 @@
             const targetText = items.join(" ");
             const targetWords = normalizeWords(targetText);
             const spokenWords = normalizeWords(spokenTranscript);
-            const elapsedSeconds = Number(getAssessmentElapsedSeconds());
+            const storyElapsedSeconds = storyReadingTimerStartedAt !== null
+                ? storyReadingElapsedMs() / 1000
+                : storyReadingRecordedDurationSeconds;
+            const elapsedSeconds = Number(isOfficialAssessmentLaunch && isCrla && currentSelectedStory
+                ? storyElapsedSeconds : getAssessmentElapsedSeconds());
             const durationSeconds = Number.isFinite(elapsedSeconds) && elapsedSeconds > 0
                 ? elapsedSeconds
                 : null;
@@ -7915,6 +7938,7 @@
                     return;
                 }
                 if (liveSessionEnded || liveSessionEndRedirecting) return;
+                if (currentStoryState === "story_reading") recordStoryReadingDuration();
                 clearStoryReadingTimer();
                 isRecording = false;
                 stopSpeechRecognition();

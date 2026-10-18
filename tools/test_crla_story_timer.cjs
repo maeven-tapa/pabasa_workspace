@@ -32,6 +32,8 @@ function reader(overrides = {}) {
     isSendingChunk: false, pendingAudioChunk: null, crlaLiveSpeech: null, crlaSpeechFailure: false,
     readAloudController: null,
     currentIndex: 0, currentSyllableIndex: 0, itemResultVersion: 0, items: ['Si Ana ay masaya.'],
+    currentSelectedStory: {title: 'Story One'}, spokenTranscript: '',
+    normalizeWords: text => String(text).split(/\s+/), getAssessmentElapsedSeconds: () => 480,
     getCurrentDisplayText: () => 'Si Ana ay masaya.', isAdvancingItem: false,
     isRecording: true, isMuted: false, currentStoryState: 'story_reading', currentAssessmentBranch: 'story',
     mode: 'paragraph', isOfficialAssessmentLaunch: true, isCrla: true, sentenceDebugEnabled: false,
@@ -46,9 +48,12 @@ function reader(overrides = {}) {
   vm.runInContext(
     section('let storyReadingTimerId = null;', 'let liveServerTimeOffsetMs') +
     section('function clearStoryReadingTimer()', 'function startStoryReadingCountdown()') +
+    section('function calculateScores()', 'const matchedWords')
+      .replace('function calculateScores()', 'function storyDurationForTest()') + 'return durationSeconds; }\n' +
     section('function currentSpeechContext()', 'function recordParagraphWordResult(') +
     section('async function sendAudioChunk(', 'function handleSpeechResult('), context);
   return {context, attributes, scores, completions: () => completions,
+    duration: () => vm.runInContext('storyDurationForTest()', context),
     tick(ms) {
       const end = now + ms;
       for (;;) {
@@ -68,6 +73,59 @@ function reader(overrides = {}) {
 }
 async function settle() { for (let turn = 0; turn < 12; turn++) await Promise.resolve(); }
 const success = () => ({ok: true, status: 200, text: async () => JSON.stringify({success: true, language_code: 'fil-PH'})});
+
+test('official story duration uses its own timer for 45, 125, and 179 seconds', () => {
+  for (const seconds of [45, 125, 179]) {
+    const r = reader(), c = r.context;
+    c.startStoryReadingTimer();
+    r.tick(seconds * 1000);
+    assert.equal(r.duration(), seconds);
+    c.recordStoryReadingDuration();
+    c.clearStoryReadingTimer();
+    assert.equal(r.duration(), seconds);
+    r.tick(11 * 60 * 1000);
+    assert.equal(r.duration(), seconds);
+  }
+});
+
+test('segments and processing pauses cannot turn story time into 8 or 11 minutes', () => {
+  const r = reader({getAssessmentElapsedSeconds: () => 660}), c = r.context;
+  c.startStoryReadingTimer();
+  r.tick(30000);
+  c.isSendingChunk = true;
+  c.syncStoryReadingTimerProcessing();
+  r.tick(8 * 60 * 1000);
+  assert.equal(r.duration(), 30);
+  c.isSendingChunk = false;
+  c.syncStoryReadingTimerProcessing();
+  r.tick(95000);
+  assert.equal(r.duration(), 125);
+  c.recordStoryReadingDuration();
+  c.recordStoryReadingDuration();
+  c.clearStoryReadingTimer();
+  c.recordStoryReadingDuration();
+  assert.equal(r.duration(), 125);
+});
+
+test('starting the other official story replaces the previous story duration', () => {
+  const r = reader(), c = r.context;
+  c.startStoryReadingTimer();
+  r.tick(45000);
+  c.recordStoryReadingDuration();
+  c.clearStoryReadingTimer();
+  assert.equal(r.duration(), 45);
+  c.currentSelectedStory = {title: 'Story Two'};
+  c.startStoryReadingTimer();
+  r.tick(125000);
+  assert.equal(r.duration(), 125);
+});
+
+test('non-story scores keep assessment elapsed time and a missing story timer cannot invent time', () => {
+  const r = reader(), c = r.context;
+  assert.equal(r.duration(), null);
+  c.currentSelectedStory = null;
+  assert.equal(r.duration(), 480);
+});
 
 test('read aloud freezes the visual and deadline, then resumes without charging narration time', () => {
   const r = reader(), c = r.context;
