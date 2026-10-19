@@ -27,11 +27,9 @@
         max-height: 100%;
         overflow: hidden;
     }
-
-    body {
-        background:
-            linear-gradient(135deg, rgba(8, 24, 38, 0.45), rgba(8, 24, 38, 0.28)),
-            url("{% static 'pabasa_app/images/read.jpg' %}") center / cover fixed no-repeat !important;
+    body.auth-layout {
+        background: url("{% static 'pabasa_app/images/log-in_sign-up.png' %}") center / cover no-repeat !important;
+        background-attachment: scroll !important;
     }
 
     .account-card {

@@ -329,11 +329,10 @@
     .teacher-upcoming-table td { color:#29465a; padding:.68rem .25rem; border-bottom:1px solid rgba(16,70,110,.08); vertical-align:top; overflow-wrap:anywhere; }
     .teacher-upcoming-table th:first-child,.teacher-upcoming-table td:first-child { width:38%; }
     .teacher-upcoming-table th:last-child,.teacher-upcoming-table td:last-child { width:62%; }
-    .teacher-upcoming-table tbody tr { height:3.55rem; }
-    .teacher-upcoming-table tbody td { height:3.55rem; }
-    .teacher-upcoming-content { min-height:11.2rem; }
-    .teacher-upcoming-empty { color:#6b7d8f; font-size:.88rem; margin:0; padding:.3rem 0; min-height:11.2rem; }
-    .teacher-upcoming-pagination { align-items:center; display:flex; justify-content:center; gap:.45rem; margin-top:auto; min-height:2.35rem; padding-top:.7rem; }
+    .teacher-upcoming-table tbody tr[aria-hidden="true"] { display:none; }
+    .teacher-upcoming-content { min-width:0; }
+    .teacher-upcoming-empty { color:#6b7d8f; font-size:.88rem; margin:0; padding:.3rem 0; }
+    .teacher-upcoming-pagination { align-items:center; display:flex; justify-content:center; gap:.45rem; flex-wrap:wrap; margin-top:.35rem; min-height:2.35rem; padding-top:.35rem; }
     .teacher-upcoming-pagination button { background:transparent; border:1px solid rgba(16,70,110,.14); border-radius:8px; color:#10466e; font-size:.84rem; font-weight:900; min-height:2rem; padding:.32rem .6rem; }
     .teacher-upcoming-pagination button.active { background:#10466e; color:#fff; }
     .teacher-upcoming-pagination button:disabled { color:#b8c5ce; cursor:not-allowed; }
@@ -365,7 +364,7 @@
     .teacher-gantt-day.is-today .teacher-gantt-day-number { display:inline-flex; align-items:center; justify-content:center; min-width:1.45rem; height:1.45rem; padding:0 .2rem; border-radius:50%; background:#168b91; color:#fff; }
     .teacher-gantt-lanes { position:relative; flex:1 1 auto; min-height:0; align-content:start; grid-auto-rows:minmax(1.35rem,1fr); padding:.2rem 0 .3rem; }
     .teacher-gantt-bar { height:1.45rem; min-width:0; margin:0 2px; border-radius:7px; padding:.2rem .4rem; color:#fff; font-size:.7rem; line-height:1; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; z-index:2; }
-    @media (max-width: 991.98px) { .teacher-dashboard-columns { grid-template-columns:1fr; } .teacher-calendar-card { position:static; } .teacher-calendar-grid { height:auto; grid-template-rows:none; } .teacher-calendar-grid > div { min-height:2.8rem; } .teacher-upcoming-empty { min-height:0; } }
+    @media (max-width: 991.98px) { .teacher-dashboard-columns { grid-template-columns:1fr; } .teacher-calendar-card { position:static; } .teacher-calendar-grid { height:auto; grid-template-rows:none; } .teacher-calendar-grid > div { min-height:2.8rem; } .teacher-calendar-column > .teacher-upcoming-card { flex:0 0 auto; } .teacher-calendar-column > .teacher-upcoming-card .teacher-upcoming-pagination { margin-top:.35rem; } }
     @media (max-width: 575.98px) {
         .teacher-aral-form #teacherAralWeekday > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
@@ -1371,6 +1370,14 @@
             grid-column: 2;
             grid-row: 1;
             align-self: stretch;
+        }
+
+        .teacher-calendar-column > .teacher-upcoming-card {
+            flex: 1 1 auto;
+        }
+
+        .teacher-calendar-column > .teacher-upcoming-card .teacher-upcoming-pagination {
+            margin-top: auto;
         }
     }
 
