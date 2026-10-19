@@ -108,13 +108,13 @@ const fixtures=JSON.parse(rendered.stdout);
    }
    return route.fulfill({status:404,body:''});
   });
-  await page.addInitScript(({real,holdNarration})=>{
+  await page.addInitScript(({real,holdNarration,nativeEndPause})=>{
    window.clips=[];window.readingFields=[];window.readingOptions=[];window.played=[];window.holdPrompt=false;
    window.holdNarration=holdNarration;
    navigator.mediaDevices.enumerateDevices=async()=>[];
    window.Audio=class extends EventTarget{
-    constructor(url){super();this.url=decodeURIComponent(url);}
-    play(){window.played.push(this.url);if(window.holdPrompt&&this.url.includes('rest of the sentence'))window.promptAudio=this;else if(window.holdNarration&&this.url.startsWith('blob:'))window.heldNarration=this;else queueMicrotask(()=>this.dispatchEvent(new Event('ended')));return Promise.resolve();}
+    constructor(url){super();this.url=decodeURIComponent(url);this.ended=false;}
+    play(){this.ended=false;window.played.push(this.url);if(window.holdPrompt&&this.url.includes('rest of the sentence'))window.promptAudio=this;else if(window.holdNarration&&this.url.startsWith('blob:'))window.heldNarration=this;else queueMicrotask(()=>{this.ended=true;if(nativeEndPause)this.dispatchEvent(new Event('pause'));this.dispatchEvent(new Event('ended'));});return Promise.resolve();}
     pause(){this.dispatchEvent(new Event('pause'));}
    };
    if(real){
@@ -131,7 +131,7 @@ const fixtures=JSON.parse(rendered.stdout);
      window.activeReader=reader;return reader;
     },async read(){return window.clips.shift();}};
    }
-  },{real,holdNarration:Boolean(options.holdNarration)});
+  },{real,holdNarration:Boolean(options.holdNarration),nativeEndPause:fixture.key==='lesson-31-gawain-2'});
   await page.goto('http://localhost:9876/activity/');
   if(fullControls&&!options.manualStart){await page.click('[id$="-go"]');await page.waitForFunction(()=>!document.querySelector('[id$="-start"]').hidden===false);}
   else if(fullControls){/* Keep the real Start gate visible for startup checks. */}
@@ -162,7 +162,7 @@ const fixtures=JSON.parse(rendered.stdout);
     assert.equal(h.state().current_item??h.state().current_line,1);
     assert.equal(h.saves.filter(save=>save.action==='sentence_continuation').length,1);
     if(fixture.key==='lesson-31-gawain-2'){
-     await h.page.waitForSelector('.choices');assert.equal(h.narrations.at(-1),fixture.cases[1].text);
+     await h.page.waitForSelector('.choices .choice:not(:disabled)');assert.equal(h.narrations.at(-1),fixture.cases[1].text);
      assert.equal(h.saves.filter(save=>save.action==='sentence_played').length,1);
     }else if(fixture.key==='lesson-31-gawain-3')assert.equal(await h.page.locator('#read-word').count(),1);
     else if(fixture.key==='lesson-29-gawain-1')assert.equal(await h.page.locator('.prescribed-reading-sentence').count(),0);
@@ -221,9 +221,10 @@ const fixtures=JSON.parse(rendered.stdout);
  }
  if(!visualOnly){
   const fixture=fixtures.find(value=>value.key==='lesson-31-gawain-2');
+  const choosingInstruction = "Now, let's choose the word to fill in the blank.";
   const listeningClip=index=>{const clip=structuredClone(fixture.cases[index]);clip.state.phase='sentence_listen';clip.state.placed_word='';return clip;};
   async function finishNarration(page,nextCount){
-   await page.evaluate(()=>{const audio=window.heldNarration;window.heldNarration=null;audio.dispatchEvent(new Event('ended'));});
+   await page.evaluate(()=>{const audio=window.heldNarration;window.heldNarration=null;audio.ended=true;audio.dispatchEvent(new Event('pause'));audio.dispatchEvent(new Event('ended'));});
    if(nextCount)await page.waitForFunction(count=>window.played.length===count,nextCount);
   }
   // A resumed listening phase must remain behind Start. Each real audio end
@@ -232,38 +233,63 @@ const fixtures=JSON.parse(rendered.stdout);
   assert.equal(startup.narrations.length,0);assert.equal(startup.saves.length,0);
   await startup.page.click('#lesson31a2-go');await startup.page.waitForFunction(()=>window.heldNarration);
   assert.equal(startup.narrations.length,1);assert.equal(startup.state().phase,'sentence_listen');
+  assert.equal(await startup.page.locator('.choices .choice:disabled').count(),5);
+  assert.equal(await startup.page.locator('.status').isVisible(),false);
+  assert.equal(await startup.page.locator('.choices .choice').evaluateAll(buttons=>buttons.every(button=>!button.draggable)),true);
+  await startup.page.locator('.choices .choice').first().evaluate(button=>button.click());
+  assert.equal(startup.saves.length,0);
   await finishNarration(startup.page,2);
+  assert.equal(startup.narrations.at(-1),choosingInstruction);
   assert.equal(startup.saves.length,0);assert.equal(await startup.page.locator('#retry-sentence').isEnabled(),false);
   await finishNarration(startup.page,3);
   assert.equal(startup.narrations.at(-1),fixture.cases[0].text);assert.equal(startup.saves.length,0);
-  await finishNarration(startup.page);await startup.page.waitForSelector('.choices');
+  await finishNarration(startup.page);await startup.page.waitForSelector('.choices .choice:not(:disabled)');
   assert.equal(startup.state().phase,'dragging');assert.equal(startup.saves.length,1);
+  assert.equal(await startup.page.locator('.choices .choice:not(:disabled)').count(),5);
+  assert.equal(await startup.page.locator('.choices .choice').evaluateAll(buttons=>buttons.every(button=>button.draggable)),true);
+  // The same sentence stays replayable after unlocking, without saving again
+  // or replaying the choosing instruction. Controls recover after cancellation.
+  await startup.page.click('#retry-sentence');await startup.page.waitForFunction(()=>window.heldNarration);
+  assert.equal(startup.narrations.at(-1),fixture.cases[0].text);
+  assert.equal(await startup.page.locator('.choices .choice:disabled').count(),5);
+  assert.equal(startup.saves.length,1);
+  await finishNarration(startup.page);await startup.page.waitForSelector('.choices .choice:not(:disabled)');
+  assert.equal(startup.saves.length,1);
+  assert.equal(startup.narrations.filter(text=>text===choosingInstruction).length,1);
+  await startup.page.click('#retry-sentence');await startup.page.waitForFunction(()=>window.heldNarration);
+  await startup.page.click('#lesson31a2-mic-toggle');
+  await startup.page.waitForSelector('.choices .choice:not(:disabled)');
+  assert.equal(startup.saves.length,1);
   assert.deepEqual(startup.errors,[]);await startup.page.close();
   // A failed sentence request stays in its phase without automatic retries.
   // The learner's retry starts a fresh attempt, with one phase save on success.
-  const failure=await open(fixture,listeningClip(1),undefined,false,true,{failNarrationAt:2});
+  const failure=await open(fixture,listeningClip(1),undefined,false,true,{failNarrationAt:3});
   await failure.page.waitForFunction(()=>document.querySelector('.status').textContent.includes('Audio unavailable'));
+  assert.equal(await failure.page.locator('.status.bad').isVisible(),false);
+  assert.equal(await failure.page.locator('.choices .choice:disabled').count(),5);
   await failure.page.evaluate(()=>new Promise(resolve=>setTimeout(resolve,150)));
-  assert.equal(failure.narrations.length,2);assert.equal(failure.saves.length,0);
+  assert.equal(failure.narrations.length,3);assert.equal(failure.saves.length,0);
   assert.equal(failure.state().phase,'sentence_listen');
-  await failure.page.click('#retry-sentence');await failure.page.waitForSelector('.choices');
-  assert.equal(failure.narrations.length,3);assert.equal(failure.saves.length,1);
+  await failure.page.click('#retry-sentence');await failure.page.waitForSelector('.choices .choice:not(:disabled)');
+  assert.equal(failure.narrations.length,4);assert.equal(failure.saves.length,1);
   assert.deepEqual(failure.errors,[]);await failure.page.close();
   // Pausing a playing sentence cannot unlock dragging; resume must replay it.
   const pause=await open(fixture,listeningClip(1),undefined,false,true,{holdNarration:true});
   await pause.page.waitForFunction(()=>window.heldNarration);await finishNarration(pause.page,2);
+  assert.equal(pause.narrations.at(-1),choosingInstruction);
+  await finishNarration(pause.page,3);
   await pause.page.click('#lesson31a2-audio-settings-btn');
   assert.equal(pause.state().phase,'sentence_listen');assert.equal(pause.saves.length,0);
-  await pause.page.click('#lesson31a2-resume');await pause.page.waitForFunction(()=>window.played.length===3);
+  await pause.page.click('#lesson31a2-resume');await pause.page.waitForFunction(()=>window.played.length===4);
   assert.equal(pause.saves.length,0);assert.equal(pause.narrations.at(-1),fixture.cases[1].text);
-  await finishNarration(pause.page);await pause.page.waitForSelector('.choices');
+  await finishNarration(pause.page);await pause.page.waitForSelector('.choices .choice:not(:disabled)');
   assert.equal(pause.saves.length,1);assert.deepEqual(pause.errors,[]);await pause.page.close();
   // Finishing the choice-reading gate still narrates the first sentence.
   const choiceClip=listeningClip(0);choiceClip.state.phase='reading_choices';choiceClip.state.choice_index=fixture.data.word_choices.length-1;
   const choice=await open(fixture,choiceClip,undefined,false,true);
   await choice.page.waitForFunction(()=>document.querySelector('#read')&&!document.querySelector('#read').disabled);
   await choice.page.evaluate(word=>window.clips.push({raw_transcript:word}),fixture.data.word_choices.at(-1));
-  await choice.page.click('#read');await choice.page.waitForSelector('.choices');
+  await choice.page.click('#read');await choice.page.waitForSelector('.choices .choice:not(:disabled)');
   assert.equal(choice.narrations.at(-1),fixture.cases[0].text);
   assert.equal(choice.saves.filter(save=>save.action==='sentence_played').length,1);
   assert.deepEqual(choice.errors,[]);await choice.page.close();
@@ -275,16 +301,19 @@ const fixtures=JSON.parse(rendered.stdout);
   await next.read(nextClip.clips[2]);await next.page.waitForFunction(()=>window.played.length===2);
   assert.equal(next.state().current_item,1);assert.equal(next.state().phase,'sentence_listen');
   await finishNarration(next.page,3);
+  assert.equal(next.narrations.at(-1),choosingInstruction);
+  assert.equal(await next.page.locator('.choices .choice:not(:disabled)').count(),0);
+  await finishNarration(next.page,4);
   assert.equal(next.narrations.at(-1),fixture.cases[1].text);
   assert.equal(next.saves.filter(save=>save.action==='sentence_played').length,0);
-  await finishNarration(next.page);await next.page.waitForSelector('.choices');
+  await finishNarration(next.page);await next.page.waitForSelector('.choices .choice:not(:disabled)');
   assert.equal(next.saves.filter(save=>save.action==='sentence_played').length,1);
   assert.deepEqual(next.errors,[]);await next.page.close();
   // Pause after playback, while its save response is still pending. Resume
   // shares that save; a late acknowledgement must render the drag choices.
   for(const releaseWhilePaused of [false,true]){
    const delayed=await open(fixture,listeningClip(1),undefined,false,true,{holdPlaybackSave:true});
-   await delayed.page.waitForFunction(()=>window.played.length===2);
+   await delayed.page.waitForFunction(()=>window.played.length===3);
    for(let attempt=0;attempt<100&&!delayed.saves.some(save=>save.action==='sentence_played');attempt++)await delayed.page.waitForTimeout(10);
    assert.ok(delayed.saves.some(save=>save.action==='sentence_played'));
    await delayed.page.click('#lesson31a2-audio-settings-btn');
@@ -292,11 +321,11 @@ const fixtures=JSON.parse(rendered.stdout);
    await delayed.page.click('#lesson31a2-resume');
    if(!releaseWhilePaused){
     await delayed.page.waitForTimeout(100);
-    assert.equal(delayed.narrations.length,2);assert.equal(await delayed.page.locator('.choices').count(),0);
+    assert.equal(delayed.narrations.length,3);assert.equal(await delayed.page.locator('.choices .choice:not(:disabled)').count(),0);
     delayed.releasePlayback();
    }
-   await delayed.page.waitForSelector('.choices');
-   assert.equal(delayed.narrations.length,2);
+   await delayed.page.waitForSelector('.choices .choice:not(:disabled)');
+   assert.equal(delayed.narrations.length,3);
    assert.equal(delayed.saves.filter(save=>save.action==='sentence_played').length,1);
    assert.deepEqual(delayed.errors,[]);await delayed.page.close();
   }
@@ -306,25 +335,25 @@ const fixtures=JSON.parse(rendered.stdout);
   for(let attempt=0;attempt<100&&!mutedSave.saves.some(save=>save.action==='sentence_played');attempt++)await mutedSave.page.waitForTimeout(10);
   assert.ok(mutedSave.saves.some(save=>save.action==='sentence_played'));
   await mutedSave.page.click('#lesson31a2-mic-toggle');mutedSave.releasePlayback();
-  await mutedSave.page.waitForSelector('.choices');
-  assert.equal(mutedSave.narrations.length,2);assert.equal(mutedSave.saves.length,1);
+  await mutedSave.page.waitForSelector('.choices .choice:not(:disabled)');
+  assert.equal(mutedSave.narrations.length,3);assert.equal(mutedSave.saves.length,1);
   assert.deepEqual(mutedSave.errors,[]);await mutedSave.page.close();
   // The server committed the save, but its acknowledgement was lost. Retry
   // sends the same receipt without replaying audio or rejecting the phase.
   const lost=await open(fixture,listeningClip(1),undefined,false,true,{losePlaybackAck:true});
   await lost.page.waitForFunction(()=>document.querySelector('.status').textContent.includes('retry'));
-  assert.equal(lost.state().phase,'dragging');assert.equal(await lost.page.locator('.choices').count(),0);
-  await lost.page.click('#retry-sentence');await lost.page.waitForSelector('.choices');
+  assert.equal(lost.state().phase,'dragging');assert.equal(await lost.page.locator('.choices .choice:not(:disabled)').count(),0);
+  await lost.page.click('#retry-sentence');await lost.page.waitForSelector('.choices .choice:not(:disabled)');
   const receipts=lost.saves.filter(save=>save.action==='sentence_played');
-  assert.equal(receipts.length,2);assert.deepEqual(receipts[0],receipts[1]);assert.equal(lost.narrations.length,2);
+  assert.equal(receipts.length,2);assert.deepEqual(receipts[0],receipts[1]);assert.equal(lost.narrations.length,3);
   assert.deepEqual(lost.errors,[]);await lost.page.close();
   // A failed save before any server commit is equally retryable. The sentence
   // has already finished playing, so retry only saves that completed playback.
   const unsaved=await open(fixture,listeningClip(1),undefined,false,true,{failPlaybackSaveOnce:true});
   await unsaved.page.waitForFunction(()=>document.querySelector('.status').textContent.includes('Could not save playback'));
   assert.equal(unsaved.state().phase,'sentence_listen');
-  await unsaved.page.click('#retry-sentence');await unsaved.page.waitForSelector('.choices');
-  assert.equal(unsaved.saves.length,2);assert.deepEqual(unsaved.saves[0],unsaved.saves[1]);assert.equal(unsaved.narrations.length,2);
+  await unsaved.page.click('#retry-sentence');await unsaved.page.waitForSelector('.choices .choice:not(:disabled)');
+  assert.equal(unsaved.saves.length,2);assert.deepEqual(unsaved.saves[0],unsaved.saves[1]);assert.equal(unsaved.narrations.length,3);
   assert.deepEqual(unsaved.errors,[]);await unsaved.page.close();
   // Leaving also flushes a pending playback receipt, like reading progress.
   const leaving=await open(fixture,listeningClip(1),undefined,false,true,{losePlaybackAck:true});

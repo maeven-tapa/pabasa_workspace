@@ -7,7 +7,7 @@ html body .page .stage{position:absolute;top:calc(50% + 46px);left:50%;width:min
 html body #app{width:min(100%,780px)}
 html body .eyebrow{margin-bottom:6px;padding:8px 22px;font-size:clamp(.85rem,1.4vw,1.15rem);letter-spacing:.02em}
 html body .title{font-size:clamp(2.2rem,4.2vw,3.8rem)}html body .instruction{margin:10px auto 6px}
-html body .item-label{margin:8px auto;color:var(--muted)}html body .word{width:fit-content;max-width:100%;margin:10px auto;padding:12px 24px;border-radius:24px;box-shadow:0 14px 28px #16465d20}
+html body .item-label{margin:8px auto;color:var(--muted)}html body .word{width:fit-content;max-width:100%;margin:10px auto;padding:12px 24px;border-radius:24px;box-shadow:0 14px 28px #16465d20;line-height:1.35}
 html body .choices[aria-label="Circle the matching word"]{gap:12px;margin:8px auto}
 html body .choices[aria-label="Circle the matching word"] .choice{min-width:108px;width:108px;height:108px;min-height:108px;padding:12px;border:0;border-radius:50%;background:transparent;color:var(--ink);box-shadow:none}
 html body .choices[aria-label="Circle the matching word"] .choice:hover:not(:disabled){background:#fff8dc;border:4px solid #efb947;color:var(--ink);transform:scale(1.04);box-shadow:0 0 0 5px #f5d47c55}

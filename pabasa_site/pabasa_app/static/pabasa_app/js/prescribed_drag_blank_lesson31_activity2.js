@@ -6,6 +6,7 @@
   let state = {...(data.progress?.state || {})};
   let busy = false, paused = false, muted = false, generation = 0, audio = null;
   let started = false, listening = null, pendingPlayback = null, playbackSave = null, disposed = false;
+  let choosingInstructionItem = null;
   function hydrate() {
     state.current_item = Number(state.current_item || 0);
     state.choice_index = Number(state.choice_index || 0);
@@ -46,9 +47,9 @@
   async function say(text) {
     if (busy || paused || !text) return false;
     const token = generation; busy = true;
-    const buttons = [...app.querySelectorAll('.actions button')];
-    const states = buttons.map(button => ({button, disabled:button.disabled}));
-    buttons.forEach(button => {button.disabled=true; button.classList.add('is-busy');});
+    const buttons = [...app.querySelectorAll('.actions button, .choices button')];
+    const states = buttons.map(button => ({button, disabled:button.disabled, draggable:button.draggable}));
+    buttons.forEach(button => {button.disabled=true; button.draggable=false; button.classList.add('is-busy');});
     let source = null, activeAudio = null;
     try {
       const response = await fetch(data.read_aloud_url, {method:'POST', credentials:'same-origin',
@@ -62,7 +63,8 @@
       const ended = await new Promise((resolve, reject) => {
         activeAudio.onended = () => resolve(true);
         activeAudio.addEventListener('ended', () => resolve(true), {once:true});
-        activeAudio.addEventListener('pause', () => resolve(false), {once:true});
+        // Native playback pauses at the end before firing "ended".
+        activeAudio.addEventListener('pause', () => {if (!activeAudio.ended) resolve(false);}, {once:true});
         activeAudio.addEventListener('error', () => reject(new Error('Audio playback failed.')), {once:true});
         activeAudio.play().catch(reject);
       });
@@ -70,7 +72,7 @@
     } finally {
       if (token === generation) {
         busy = false;
-        states.forEach(({button, disabled}) => {if (button.isConnected) {button.disabled=disabled; button.classList.remove('is-busy');}});
+        states.forEach(({button, disabled, draggable}) => {if (button.isConnected) {button.disabled=disabled; button.draggable=draggable; button.classList.remove('is-busy');}});
       }
       if (source) URL.revokeObjectURL(source);
       if (audio === activeAudio) audio = null;
@@ -89,8 +91,9 @@
       return;
     }
     const reading = state.phase === 'reading_sentence', dragging = state.phase === 'dragging';
+    const listeningToSentence = state.phase === 'sentence_listen';
     const placed = state.placed_word ? `<span class="blank correct">${escape(state.placed_word)}</span>` : '<span class="blank" id="blank"></span>';
-    app.innerHTML = `<div class="eyebrow">SESSION 15 · LESSON 31 · ACTIVITY 2</div><h1 class="title">Fill in the Blank</h1><p class="instruction">${state.phase==='sentence_listen'?'Listen to the sentence.':reading?'Read the whole sentence aloud.':'Drag the correct word to the blank.'}</p><div class="sentence ${reading?'prescribed-reading-sentence':''}">${reading?window.PrescribedSentenceReading.markup(item.sentence, Number(state.sentence_word_index || 0)):escape(item.before)+placed+escape(item.after)}</div>${dragging?`<div class="choices">${item.choices.map(word => `<button class="choice" draggable="true" data-w="${escape(word)}">${escape(word)}</button>`).join('')}</div>`:''}<p class="status ${kind}">${escape(message)}</p><div class="actions">${state.phase==='sentence_listen'?'<button class="button secondary" id="retry-sentence">🔊 Listen to the sentence</button>':''}${reading?`<button data-basahin-button data-basahin-language="English" class="button" id="sentence">Read</button><button class="button secondary" id="help" ${state.sentence_attempts>=3?'':'disabled'}>🔊 Listen</button>`:''}</div>${steps()}`;
+    app.innerHTML = `<div class="eyebrow">SESSION 15 · LESSON 31 · ACTIVITY 2</div><h1 class="title">Fill in the Blank</h1><p class="instruction">${listeningToSentence?'Listen to the sentence.':reading?'Read the whole sentence aloud.':'Drag the correct word to the blank.'}</p><div class="sentence ${reading?'prescribed-reading-sentence':''}">${reading?window.PrescribedSentenceReading.markup(item.sentence, Number(state.sentence_word_index || 0)):escape(item.before)+placed+escape(item.after)}</div>${dragging||listeningToSentence?`<div class="choices" aria-label="Word choices">${item.choices.map(word => `<button class="choice" type="button" draggable="${dragging}" data-w="${escape(word)}" ${dragging?'':'disabled'}>${escape(word)}</button>`).join('')}</div>`:''}<p class="status ${kind}" role="status">${escape(message || (listeningToSentence?'Listen to the sentence to unlock the word choices.':''))}</p><div class="actions">${listeningToSentence||dragging?'<button class="button secondary" id="retry-sentence">🔊 Listen to the sentence</button>':''}${reading?`<button data-basahin-button data-basahin-language="English" class="button" id="sentence">Read</button><button class="button secondary" id="help" ${state.sentence_attempts>=3?'':'disabled'}>🔊 Listen</button>`:''}</div>${steps()}`;
     if (dragging) {
       const blank = app.querySelector('#blank');
       app.querySelectorAll('[data-w]').forEach(button => {
@@ -102,7 +105,7 @@
     }
     window.Basahin.bindActivity(app.querySelector('#sentence'), () => record(item.sentence, 'read_sentence'));
     app.querySelector('#help')?.addEventListener('click', () => say(item.sentence).catch(error => render(error.message, 'bad')));
-    app.querySelector('#retry-sentence')?.addEventListener('click', () => listenToSentence(item));
+    app.querySelector('#retry-sentence')?.addEventListener('click', () => replaySentence(item));
   }
   async function listenToSentence(item) {
     if (!started || busy || paused || listening || state.phase !== 'sentence_listen') return;
@@ -113,7 +116,10 @@
       // Keep a finished playback pending across pause and network failures.
       // Resume/retry shares the in-flight save or repeats its exact receipt.
       if (!pendingPlayback) {
-        if (index===0 && (!await say("Now, let's choose the word to fill in the blank.") || !current())) return;
+        if (choosingInstructionItem !== index) {
+          if (!await say("Now, let's choose the word to fill in the blank.") || !current()) return;
+          choosingInstructionItem = index;
+        }
         if (!await say(item.sentence) || !current()) return;
         pendingPlayback = {action:'sentence_played', item_index:index, request_id:crypto.randomUUID()};
       }
@@ -124,6 +130,13 @@
       if (listening===owner) listening=null;
       if (current()) {const retry=app.querySelector('#retry-sentence'); if (retry) {retry.disabled=false; retry.classList.remove('is-busy');}}
     }
+  }
+  async function replaySentence(item) {
+    if (!started || busy || paused || disposed || listening) return;
+    if (state.phase === 'sentence_listen') return listenToSentence(item);
+    if (state.phase !== 'dragging') return;
+    try {await say(item.sentence);}
+    catch (error) {if (!paused && !disposed) render(error.message, 'bad');}
   }
   async function record(target, action, extra = {}) {
     if (busy || paused || muted) return;
@@ -191,6 +204,7 @@
   };
   function cancel() {
     generation++; sentenceReader.cancel(); window.Basahin?.cancelAll(); audio?.pause(); busy=false; listening=null;
+    if (started && !paused && !disposed && state.phase === 'dragging') render();
     const retry=app.querySelector('#retry-sentence'); if (retry) {retry.disabled=false; retry.classList.remove('is-busy');}
   }
   document.getElementById('lesson31a2-help-btn')?.addEventListener('click', cancel);
