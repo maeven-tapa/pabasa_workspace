@@ -467,6 +467,7 @@
         let ambientNoiseFloor = 0;
         let speechFrameCount = 0;
         let speechChunkStartedAt = 0;
+        let crlaProcessingAudioActive = false;
         // Multisyllable words need the same uninterrupted capture window as
         // longer reading modes. A short fixed chunk can stop after the first
         // syllable, and capture is paused while that chunk is sent to STT.
@@ -2630,7 +2631,7 @@
                     }
                 } else if (!isOnFinalRenderedItem) {
                     if (!await saveCrlaNavigationState({ crla_question_index: currentIndex + 1 })) return true;
-                    transitionToItem(currentIndex + 1, "Next item loaded.", "Keep reading clearly.");
+                    transitionToItem(currentIndex + 1, "Next item loaded.", "Patuloy na magbasa nang malinaw");
                 } else {
                     isRecording = false;
                     stopSpeechRecognition();
@@ -2671,7 +2672,7 @@
                 return;
             }
             if (currentIndex < items.length - 1) {
-                transitionToItem(currentIndex + 1, "Next item loaded.", "Keep reading clearly.");
+                transitionToItem(currentIndex + 1, "Next item loaded.", "Patuloy na magbasa nang malinaw");
             } else if (!isReviewMode) {
                 showCompletion(true);
             }
@@ -3877,7 +3878,7 @@
         function setSpeechStatus(message, detail = "", listening = false) {
             const panel = document.getElementById("speechPanel");
             const status = document.getElementById("speechStatus");
-            const transcriptText = detail || "No words recognized yet. Keep reading clearly.";
+            const transcriptText = detail || "No words recognized yet. Patuloy na magbasa nang malinaw";
             panel?.classList.toggle("is-listening", listening);
             shell?.classList.toggle("is-recording", Boolean(listening && isRecording && !isMuted));
             if (!listening || !isRecording || isMuted) shell?.classList.remove("is-hearing");
@@ -3900,6 +3901,7 @@
             const text = document.getElementById("readingHelperText");
             const dots = helper.querySelector(".helper-dot");
             const processingOverlay = document.getElementById("crlaProcessingOverlay");
+            const processingAudio = document.getElementById("crlaProcessingAudio");
             const processing = Boolean(isSendingChunk || pendingAudioChunk || crlaLiveSpeech?.pending);
             const activelyCapturing = Boolean(
                 !processing && isRecording && !isMuted && recognitionActive
@@ -3912,15 +3914,18 @@
             const wrong = Boolean(readingWord?.querySelector(".is-wrong"));
             const correct = Boolean(readingWord?.querySelector(".is-read"));
             const retry = wrong && !processing && !itemLocked[currentIndex];
-            const sectionLabel = getCurrentSectionLabel();
             const prompt = currentAssessmentBranch === "rhymes"
-                ? "Read the Rhyme"
-                : `Read the ${sectionLabel}`;
+                ? "Basahin ang salita"
+                : mode === "sentence"
+                    ? "Basahin ang pangungusap"
+                    : currentStoryState === "story_reading"
+                        ? "Basahin ang kuwento"
+                        : "Basahin ang salita";
             let status = processing ? "" : prompt;
             let animated = false;
             if (processing) { animated = true; }
             else if (activelyCapturing) {
-                status = speechDetected ? "Hearing you..." : "Listening...";
+                status = speechDetected ? "Naririnig..." : "Nakikinig...";
                 animated = speechDetected;
             }
             else if (correct) status = "Great Job!";
@@ -3930,7 +3935,36 @@
             helper.classList.toggle("is-status-active", animated);
             helper.classList.toggle("is-status-processing", processing);
             if (processingOverlay) processingOverlay.hidden = !processing;
-            if (text) text.textContent = status;
+            if (processingAudio) {
+                if (processing && !crlaProcessingAudioActive) {
+                    crlaProcessingAudioActive = true;
+                    processingAudio.currentTime = 0;
+                    processingAudio.play().catch(() => {});
+                } else if (!processing && crlaProcessingAudioActive) {
+                    crlaProcessingAudioActive = false;
+                    processingAudio.pause();
+                    processingAudio.currentTime = 0;
+                }
+            }
+            if (text) {
+                if (text.dataset.waveStatus !== status) {
+                    text.replaceChildren();
+                    if (status === "Naririnig...") {
+                        text.classList.add("helper-word-wave");
+                        Array.from(status).forEach((character, index) => {
+                            const letter = document.createElement("span");
+                            letter.className = "helper-wave-letter";
+                            letter.textContent = character;
+                            letter.style.setProperty("--wave-delay", `${0.36 + (index * 0.045)}s`);
+                            text.appendChild(letter);
+                        });
+                    } else {
+                        text.classList.remove("helper-word-wave");
+                        text.textContent = status;
+                    }
+                    text.dataset.waveStatus = status;
+                }
+            }
             if (dots) dots.setAttribute("aria-hidden", "true");
         }
 
@@ -4294,7 +4328,7 @@
             shell?.classList.remove("is-recording", "is-hearing");
             updateAssessmentNavigationButtons();
             updateSpeechProcessingControls();
-            setSpeechStatus("Speech check stopped.", spokenTranscript || "No speech transcript was captured.");
+            setSpeechStatus("Speech check stopped.", spokenTranscript || "Walang salitang nakuha.");
         }
 
         function startAudioMeter(stream) {
@@ -5226,7 +5260,7 @@
             pageCorrectWordCounts[currentIndex] = pageCounts;
             syncItemCorrectWordCount(currentIndex);
             const speechDetail = appendPunctuationHelper(
-                transcript ? `Words: ${transcript}` : "No words recognized yet. Keep reading clearly.",
+                transcript ? `Words: ${transcript}` : "No words recognized yet. Patuloy na magbasa nang malinaw",
                 correctWordsRead()
             );
             currentSyllableIndex = Math.max(currentSyllableIndex, proposedSyllableIndex);
@@ -5300,7 +5334,7 @@
                                 new_sentence_index: currentIndex + 1,
                                 reason: "completed_sentence_existing_advance_flow",
                             });
-                            transitionToItem(currentIndex + 1, "Next sentence loaded.", "Keep reading clearly.");
+                            transitionToItem(currentIndex + 1, "Next sentence loaded.", "Patuloy na magbasa nang malinaw");
                         }, 700);
                     }
                 }
@@ -5451,7 +5485,7 @@
                 } else {
                     window.setTimeout(() => {
                         if (!isRecording || context.version !== itemResultVersion) return;
-                        transitionToItem(currentIndex + 1, "Next item loaded.", "Keep reading clearly.");
+                        transitionToItem(currentIndex + 1, "Next item loaded.", "Patuloy na magbasa nang malinaw");
                     }, 700);
                 }
                 return;
@@ -5618,7 +5652,7 @@
                             stopSpeechRecognition();
                             showCompletion(true);
                         } else {
-                            transitionToItem(currentIndex + 1, "Moving to next item.", "Keep reading clearly.");
+                            transitionToItem(currentIndex + 1, "Moving to next item.", "Patuloy na magbasa nang malinaw");
                         }
                     }, 1200);
                 } else if (currentStoryState === "story_reading" && !isRecording) {
@@ -8790,7 +8824,7 @@
                     stopSpeechRecognition();
                 }
                 if (currentIndex < items.length - 1) {
-                    transitionToItem(currentIndex + 1, "Next sentence.", "Keep reading clearly.");
+                    transitionToItem(currentIndex + 1, "Next sentence.", "Patuloy na magbasa nang malinaw");
                 } else {
                     showCompletion(true);
                 }
