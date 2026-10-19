@@ -1,0 +1,1969 @@
+{
+  "release": {
+    "active_revision": "pabasa-01386-tey",
+    "latest_created_and_ready": true,
+    "traffic": 100,
+    "image": "asia-southeast1-docker.pkg.dev/project-2b0d295d-ee06-40a7-927/cloud-run-source-deploy/pabasa_workspace/pabasa@sha256:69d3ead00d12bcbd31659e4fdfb46b8d841eee9ef453734d7c016040ed66c2fb",
+    "schema_changed": false,
+    "image_present": true,
+    "runtime_identity_secrets_sql_and_storage_preserved": true,
+    "private_recording_bucket_preserved": true,
+    "rollback_revision": "pabasa-01379-kib",
+    "diagnostic_jobs_deleted": 16,
+    "test_tag_removed": true
+  },
+  "baseline_race": [
+    {
+      "round": 0,
+      "correctly_conflicted": 29,
+      "both_accepted_same_revision": 1,
+      "statuses": {
+        "409": 29,
+        "200": 31
+      }
+    },
+    {
+      "round": 1,
+      "correctly_conflicted": 30,
+      "both_accepted_same_revision": 0,
+      "statuses": {
+        "200": 30,
+        "409": 30
+      }
+    },
+    {
+      "round": 2,
+      "correctly_conflicted": 29,
+      "both_accepted_same_revision": 1,
+      "statuses": {
+        "200": 31,
+        "409": 29
+      }
+    }
+  ],
+  "final_race": [
+    {
+      "round": 0,
+      "correctly_conflicted": 30,
+      "both_accepted_same_revision": 0,
+      "statuses": {
+        "200": 30,
+        "409": 30
+      }
+    },
+    {
+      "round": 1,
+      "correctly_conflicted": 30,
+      "both_accepted_same_revision": 0,
+      "statuses": {
+        "200": 30,
+        "409": 30
+      }
+    },
+    {
+      "round": 2,
+      "correctly_conflicted": 30,
+      "both_accepted_same_revision": 0,
+      "statuses": {
+        "200": 30,
+        "409": 30
+      }
+    }
+  ],
+  "logs": {
+    "canaryclean": {
+      "revision": "pabasa-01385-rij",
+      "requests": 11190,
+      "expected": 11190,
+      "statuses": {
+        "200": 8550,
+        "400": 2580,
+        "403": 30,
+        "401": 30
+      },
+      "error_logs": 0,
+      "instances": 3,
+      "stream_types": {},
+      "non_stream_failure_logs": 0
+    },
+    "canaryuisafe": {
+      "revision": "pabasa-01386-tey",
+      "requests": 2670,
+      "expected": 2670,
+      "statuses": {
+        "200": 2160,
+        "400": 450,
+        "403": 30,
+        "401": 30
+      },
+      "error_logs": 0,
+      "instances": 3,
+      "stream_types": {},
+      "non_stream_failure_logs": 0
+    },
+    "publicfinal": {
+      "revision": "pabasa-01386-tey",
+      "requests": 2670,
+      "expected": 2670,
+      "statuses": {
+        "200": 2160,
+        "400": 450,
+        "403": 30,
+        "401": 30
+      },
+      "error_logs": 0,
+      "instances": 3,
+      "stream_types": {},
+      "non_stream_failure_logs": 0
+    },
+    "canaryoverlapfinal": {
+      "revision": "pabasa-01385-rij",
+      "requests": 360,
+      "expected": 360,
+      "statuses": {
+        "200": 270,
+        "409": 90
+      },
+      "error_logs": 0,
+      "instances": 3,
+      "stream_types": {},
+      "non_stream_failure_logs": 0
+    }
+  },
+  "scope": "30 synthetic students and six teachers: one checkpoint per active session (2–15), seven legacy chart completions, Session 1 recording/review and expired-login recovery. Public-routing smoke test; not the full 85-activity matrix.",
+  "matrix_image": "asia-southeast1-docker.pkg.dev/project-2b0d295d-ee06-40a7-927/cloud-run-source-deploy/pabasa_workspace/pabasa@sha256:57ef9d578bffbb5f4bc368a0601229c0329625355a493449ca5b82330f608484",
+  "matrix_revision": "pabasa-01385-rij",
+  "final_candidate": {
+    "test_id": "61287e7bdcc9",
+    "clients": 30,
+    "started_utc": "2026-10-19T02:23:00.111562+00:00",
+    "user_agent": "PABASA-authorized-aral-thirty-61287e7bdcc9",
+    "waves": [
+      {
+        "operation": "dashboard",
+        "count": 30,
+        "mean_ms": 4754.43,
+        "p95_ms": 7990.89,
+        "max_ms": 8696.31,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_checkpoint",
+        "count": 30,
+        "mean_ms": 173.14,
+        "p95_ms": 340.11,
+        "max_ms": 341.29,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_finish",
+        "count": 30,
+        "mean_ms": 352.84,
+        "p95_ms": 616.2,
+        "max_ms": 619.94,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_stale_save",
+        "count": 30,
+        "mean_ms": 126.12,
+        "p95_ms": 217.63,
+        "max_ms": 218.59,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_checkpoint",
+        "count": 30,
+        "mean_ms": 168.6,
+        "p95_ms": 272.08,
+        "max_ms": 309.75,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_finish",
+        "count": 30,
+        "mean_ms": 258.69,
+        "p95_ms": 477.29,
+        "max_ms": 479.57,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_stale_save",
+        "count": 30,
+        "mean_ms": 132.19,
+        "p95_ms": 257.98,
+        "max_ms": 262.62,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_checkpoint",
+        "count": 30,
+        "mean_ms": 176.19,
+        "p95_ms": 315.61,
+        "max_ms": 366.48,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_finish",
+        "count": 30,
+        "mean_ms": 276.06,
+        "p95_ms": 471.89,
+        "max_ms": 543.69,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_stale_save",
+        "count": 30,
+        "mean_ms": 115.21,
+        "p95_ms": 210.66,
+        "max_ms": 244.82,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_checkpoint",
+        "count": 30,
+        "mean_ms": 184.26,
+        "p95_ms": 367.85,
+        "max_ms": 391.74,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_finish",
+        "count": 30,
+        "mean_ms": 306.71,
+        "p95_ms": 573.85,
+        "max_ms": 589.11,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_stale_save",
+        "count": 30,
+        "mean_ms": 174.22,
+        "p95_ms": 396.89,
+        "max_ms": 398.79,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_checkpoint",
+        "count": 30,
+        "mean_ms": 165.62,
+        "p95_ms": 256.09,
+        "max_ms": 273.46,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_finish",
+        "count": 30,
+        "mean_ms": 238.91,
+        "p95_ms": 414.49,
+        "max_ms": 432.11,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_stale_save",
+        "count": 30,
+        "mean_ms": 144.43,
+        "p95_ms": 219.43,
+        "max_ms": 225.48,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_checkpoint",
+        "count": 30,
+        "mean_ms": 178.15,
+        "p95_ms": 324.13,
+        "max_ms": 377.52,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_finish",
+        "count": 30,
+        "mean_ms": 291.04,
+        "p95_ms": 544.26,
+        "max_ms": 733.47,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_stale_save",
+        "count": 30,
+        "mean_ms": 125.81,
+        "p95_ms": 215.39,
+        "max_ms": 216.97,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_checkpoint",
+        "count": 30,
+        "mean_ms": 161.84,
+        "p95_ms": 248.67,
+        "max_ms": 269.52,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_finish",
+        "count": 30,
+        "mean_ms": 317.35,
+        "p95_ms": 544.13,
+        "max_ms": 546.65,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_stale_save",
+        "count": 30,
+        "mean_ms": 125.79,
+        "p95_ms": 214.88,
+        "max_ms": 215.66,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "legacy_invalid_json",
+        "count": 30,
+        "mean_ms": 75.76,
+        "p95_ms": 142.7,
+        "max_ms": 142.86,
+        "failures": 0,
+        "statuses": {
+          "400": 30
+        }
+      },
+      {
+        "operation": "activity_start",
+        "count": 30,
+        "mean_ms": 822.81,
+        "p95_ms": 1452.14,
+        "max_ms": 1454.66,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "checkpoint_save",
+        "count": 30,
+        "mean_ms": 334.75,
+        "p95_ms": 565.74,
+        "max_ms": 577.84,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "activity_reload",
+        "count": 30,
+        "mean_ms": 823.68,
+        "p95_ms": 1467.46,
+        "max_ms": 1525.39,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "invalid_json",
+        "count": 30,
+        "mean_ms": 292.46,
+        "p95_ms": 501.84,
+        "max_ms": 506.89,
+        "failures": 0,
+        "statuses": {
+          "400": 30
+        }
+      },
+      {
+        "operation": "activity_start",
+        "count": 30,
+        "mean_ms": 752.55,
+        "p95_ms": 1252.0,
+        "max_ms": 1284.1,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "checkpoint_save",
+        "count": 30,
+        "mean_ms": 391.46,
+        "p95_ms": 812.56,
+        "max_ms": 907.08,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "activity_reload",
+        "count": 30,
+        "mean_ms": 880.18,
+        "p95_ms": 1657.7,
+        "max_ms": 1844.31,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "invalid_json",
+        "count": 30,
+        "mean_ms": 340.8,
+        "p95_ms": 647.58,
+        "max_ms": 649.62,
+        "failures": 0,
+        "statuses": {
+          "400": 30
+        }
+      },
+      {
+        "operation": "activity_start",
+        "count": 30,
+        "mean_ms": 903.5,
+        "p95_ms": 1823.66,
+        "max_ms": 1841.56,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "checkpoint_save",
+        "count": 30,
+        "mean_ms": 347.02,
+        "p95_ms": 598.42,
+        "max_ms": 621.92,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "activity_reload",
+        "count": 30,
+        "mean_ms": 864.12,
+        "p95_ms": 1694.75,
+        "max_ms": 1704.5,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "invalid_json",
+        "count": 30,
+        "mean_ms": 310.19,
+        "p95_ms": 534.56,
+        "max_ms": 537.32,
+        "failures": 0,
+        "statuses": {
+          "400": 30
+        }
+      },
+      {
+        "operation": "activity_start",
+        "count": 30,
+        "mean_ms": 776.97,
+        "p95_ms": 1331.64,
+        "max_ms": 1334.2,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "checkpoint_save",
+        "count": 30,
+        "mean_ms": 368.55,
+        "p95_ms": 774.31,
+        "max_ms": 778.68,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "activity_reload",
+        "count": 30,
+        "mean_ms": 786.78,
+        "p95_ms": 1409.97,
+        "max_ms": 1410.57,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "invalid_json",
+        "count": 30,
+        "mean_ms": 323.31,
+        "p95_ms": 579.72,
+        "max_ms": 680.02,
+        "failures": 0,
+        "statuses": {
+          "400": 30
+        }
+      },
+      {
+        "operation": "activity_start",
+        "count": 30,
+        "mean_ms": 932.53,
+        "p95_ms": 1463.89,
+        "max_ms": 1466.62,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "checkpoint_save",
+        "count": 30,
+        "mean_ms": 388.86,
+        "p95_ms": 778.95,
+        "max_ms": 812.94,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "activity_reload",
+        "count": 30,
+        "mean_ms": 830.54,
+        "p95_ms": 1369.69,
+        "max_ms": 1488.17,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "invalid_json",
+        "count": 30,
+        "mean_ms": 324.25,
+        "p95_ms": 559.7,
+        "max_ms": 561.16,
+        "failures": 0,
+        "statuses": {
+          "400": 30
+        }
+      },
+      {
+        "operation": "activity_start",
+        "count": 30,
+        "mean_ms": 765.3,
+        "p95_ms": 1350.67,
+        "max_ms": 1360.58,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "checkpoint_save",
+        "count": 30,
+        "mean_ms": 345.45,
+        "p95_ms": 655.83,
+        "max_ms": 664.0,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "activity_reload",
+        "count": 30,
+        "mean_ms": 835.83,
+        "p95_ms": 1298.85,
+        "max_ms": 1407.84,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "invalid_json",
+        "count": 30,
+        "mean_ms": 316.99,
+        "p95_ms": 505.69,
+        "max_ms": 595.95,
+        "failures": 0,
+        "statuses": {
+          "400": 30
+        }
+      },
+      {
+        "operation": "activity_start",
+        "count": 30,
+        "mean_ms": 428.67,
+        "p95_ms": 823.73,
+        "max_ms": 826.32,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "checkpoint_save",
+        "count": 30,
+        "mean_ms": 386.67,
+        "p95_ms": 775.57,
+        "max_ms": 783.93,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "activity_reload",
+        "count": 30,
+        "mean_ms": 416.74,
+        "p95_ms": 697.38,
+        "max_ms": 702.15,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "invalid_json",
+        "count": 30,
+        "mean_ms": 298.99,
+        "p95_ms": 511.95,
+        "max_ms": 532.1,
+        "failures": 0,
+        "statuses": {
+          "400": 30
+        }
+      },
+      {
+        "operation": "activity_start",
+        "count": 30,
+        "mean_ms": 358.55,
+        "p95_ms": 628.16,
+        "max_ms": 633.07,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "checkpoint_save",
+        "count": 30,
+        "mean_ms": 459.77,
+        "p95_ms": 998.99,
+        "max_ms": 1022.22,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "activity_reload",
+        "count": 30,
+        "mean_ms": 404.09,
+        "p95_ms": 719.23,
+        "max_ms": 784.94,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "invalid_json",
+        "count": 30,
+        "mean_ms": 328.98,
+        "p95_ms": 683.65,
+        "max_ms": 687.33,
+        "failures": 0,
+        "statuses": {
+          "400": 30
+        }
+      },
+      {
+        "operation": "activity_start",
+        "count": 30,
+        "mean_ms": 847.01,
+        "p95_ms": 1698.12,
+        "max_ms": 1712.37,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "checkpoint_save",
+        "count": 30,
+        "mean_ms": 360.53,
+        "p95_ms": 591.2,
+        "max_ms": 609.36,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "activity_reload",
+        "count": 30,
+        "mean_ms": 769.46,
+        "p95_ms": 1333.53,
+        "max_ms": 1333.65,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "invalid_json",
+        "count": 30,
+        "mean_ms": 295.82,
+        "p95_ms": 510.9,
+        "max_ms": 529.88,
+        "failures": 0,
+        "statuses": {
+          "400": 30
+        }
+      },
+      {
+        "operation": "activity_start",
+        "count": 30,
+        "mean_ms": 749.73,
+        "p95_ms": 1238.75,
+        "max_ms": 1238.86,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "checkpoint_save",
+        "count": 30,
+        "mean_ms": 398.53,
+        "p95_ms": 787.01,
+        "max_ms": 800.16,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "activity_reload",
+        "count": 30,
+        "mean_ms": 810.18,
+        "p95_ms": 1351.99,
+        "max_ms": 1369.16,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "invalid_json",
+        "count": 30,
+        "mean_ms": 325.16,
+        "p95_ms": 562.57,
+        "max_ms": 563.42,
+        "failures": 0,
+        "statuses": {
+          "400": 30
+        }
+      },
+      {
+        "operation": "activity_start",
+        "count": 30,
+        "mean_ms": 930.02,
+        "p95_ms": 1848.64,
+        "max_ms": 1853.86,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "checkpoint_save",
+        "count": 30,
+        "mean_ms": 615.6,
+        "p95_ms": 2149.6,
+        "max_ms": 2156.72,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "activity_reload",
+        "count": 30,
+        "mean_ms": 827.51,
+        "p95_ms": 1321.28,
+        "max_ms": 1330.09,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "invalid_json",
+        "count": 30,
+        "mean_ms": 347.52,
+        "p95_ms": 604.55,
+        "max_ms": 613.47,
+        "failures": 0,
+        "statuses": {
+          "400": 30
+        }
+      },
+      {
+        "operation": "activity_start",
+        "count": 30,
+        "mean_ms": 783.73,
+        "p95_ms": 1464.02,
+        "max_ms": 1493.6,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "checkpoint_save",
+        "count": 30,
+        "mean_ms": 559.85,
+        "p95_ms": 1201.27,
+        "max_ms": 1452.05,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "activity_reload",
+        "count": 30,
+        "mean_ms": 1116.78,
+        "p95_ms": 1808.96,
+        "max_ms": 1845.33,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "invalid_json",
+        "count": 30,
+        "mean_ms": 272.55,
+        "p95_ms": 452.37,
+        "max_ms": 452.5,
+        "failures": 0,
+        "statuses": {
+          "400": 30
+        }
+      },
+      {
+        "operation": "activity_start",
+        "count": 30,
+        "mean_ms": 766.43,
+        "p95_ms": 1596.48,
+        "max_ms": 1596.57,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "checkpoint_save",
+        "count": 30,
+        "mean_ms": 541.48,
+        "p95_ms": 1118.73,
+        "max_ms": 1244.22,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "activity_reload",
+        "count": 30,
+        "mean_ms": 1087.93,
+        "p95_ms": 1809.73,
+        "max_ms": 2010.69,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "invalid_json",
+        "count": 30,
+        "mean_ms": 315.46,
+        "p95_ms": 567.29,
+        "max_ms": 572.51,
+        "failures": 0,
+        "statuses": {
+          "400": 30
+        }
+      },
+      {
+        "operation": "activity_start",
+        "count": 30,
+        "mean_ms": 832.73,
+        "p95_ms": 1644.57,
+        "max_ms": 1860.44,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "checkpoint_save",
+        "count": 30,
+        "mean_ms": 524.2,
+        "p95_ms": 1378.61,
+        "max_ms": 1477.64,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "activity_reload",
+        "count": 30,
+        "mean_ms": 886.85,
+        "p95_ms": 1450.61,
+        "max_ms": 1455.04,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "invalid_json",
+        "count": 30,
+        "mean_ms": 308.5,
+        "p95_ms": 573.69,
+        "max_ms": 581.09,
+        "failures": 0,
+        "statuses": {
+          "400": 30
+        }
+      },
+      {
+        "operation": "session1_page",
+        "count": 30,
+        "mean_ms": 693.41,
+        "p95_ms": 1268.9,
+        "max_ms": 1330.91,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "session1_upload",
+        "count": 30,
+        "mean_ms": 3908.33,
+        "p95_ms": 6849.36,
+        "max_ms": 7557.29,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "session1_upload_replay",
+        "count": 30,
+        "mean_ms": 224.41,
+        "p95_ms": 430.06,
+        "max_ms": 490.17,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "playback",
+        "count": 30,
+        "mean_ms": 865.38,
+        "p95_ms": 1364.93,
+        "max_ms": 1412.85,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "foreign_recording_denied",
+        "count": 30,
+        "mean_ms": 140.53,
+        "p95_ms": 291.9,
+        "max_ms": 292.58,
+        "failures": 0,
+        "statuses": {
+          "403": 30
+        }
+      },
+      {
+        "operation": "session1_teacher_review",
+        "count": 30,
+        "mean_ms": 418.04,
+        "p95_ms": 782.43,
+        "max_ms": 784.63,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "session1_reload",
+        "count": 30,
+        "mean_ms": 732.08,
+        "p95_ms": 1518.95,
+        "max_ms": 1551.99,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "expired_save",
+        "count": 30,
+        "mean_ms": 53.5,
+        "p95_ms": 97.08,
+        "max_ms": 104.59,
+        "failures": 0,
+        "statuses": {
+          "401": 30
+        }
+      },
+      {
+        "operation": "login_recovery",
+        "count": 30,
+        "mean_ms": 4186.11,
+        "p95_ms": 6352.42,
+        "max_ms": 6949.05,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      {
+        "operation": "authenticated_reload",
+        "count": 30,
+        "mean_ms": 955.59,
+        "p95_ms": 1914.95,
+        "max_ms": 2094.98,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      }
+    ],
+    "aborted": false,
+    "scope": "30 synthetic students and six teachers: one checkpoint per active session (2–15), seven legacy chart completions, Session 1 recording/review and expired-login recovery. Public-routing smoke test; not the full 85-activity matrix.",
+    "fixture_state": "ARAL_ACTIVE",
+    "teachers": 6,
+    "classes": 6,
+    "http_started_utc": "2026-10-19T02:23:08.841916+00:00",
+    "session_smoke": true,
+    "recovery_only": false,
+    "activities": [
+      {
+        "key": "session-2-lesson-4-gawain-2",
+        "session": 2,
+        "kind": "restart",
+        "students_saved": 30,
+        "students_reloaded": 30
+      },
+      {
+        "key": "lesson7-gawain2b",
+        "session": 3,
+        "kind": "checkpoint",
+        "students_saved": 30,
+        "students_reloaded": 30
+      },
+      {
+        "key": "session-4-gawain-1",
+        "session": 4,
+        "kind": "checkpoint",
+        "students_saved": 30,
+        "students_reloaded": 30
+      },
+      {
+        "key": "lesson-13-gawain-1",
+        "session": 5,
+        "kind": "checkpoint",
+        "students_saved": 30,
+        "students_reloaded": 30
+      },
+      {
+        "key": "lesson-16-gawain-1",
+        "session": 6,
+        "kind": "checkpoint",
+        "students_saved": 30,
+        "students_reloaded": 30
+      },
+      {
+        "key": "session-7-lesson-19-gawain-1",
+        "session": 7,
+        "kind": "checkpoint",
+        "students_saved": 30,
+        "students_reloaded": 30
+      },
+      {
+        "key": "aral-l22-g1-c-syllable-builder",
+        "session": 8,
+        "kind": "checkpoint",
+        "students_saved": 30,
+        "students_reloaded": 30
+      },
+      {
+        "key": "aral-s9-a1-family-drawing",
+        "session": 9,
+        "kind": "checkpoint",
+        "students_saved": 30,
+        "students_reloaded": 30
+      },
+      {
+        "key": "lesson-26-gawain-1",
+        "session": 10,
+        "kind": "checkpoint",
+        "students_saved": 30,
+        "students_reloaded": 30
+      },
+      {
+        "key": "lesson-27-gawain-1",
+        "session": 11,
+        "kind": "checkpoint",
+        "students_saved": 30,
+        "students_reloaded": 30
+      },
+      {
+        "key": "lesson-28-gawain-1",
+        "session": 12,
+        "kind": "checkpoint",
+        "students_saved": 30,
+        "students_reloaded": 30
+      },
+      {
+        "key": "lesson-29-gawain-1",
+        "session": 13,
+        "kind": "checkpoint",
+        "students_saved": 30,
+        "students_reloaded": 30
+      },
+      {
+        "key": "lesson-30-gawain-1",
+        "session": 14,
+        "kind": "checkpoint",
+        "students_saved": 30,
+        "students_reloaded": 30
+      },
+      {
+        "key": "lesson-31-gawain-1",
+        "session": 15,
+        "kind": "checkpoint",
+        "students_saved": 30,
+        "students_reloaded": 30
+      }
+    ],
+    "saved_checkpoints": 420,
+    "reloads": 420,
+    "legacy_completed": 210,
+    "session1_recordings_completed": 30,
+    "expired_logins_recovered": 30,
+    "sessions_covered": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "all_thirty_preserved": true,
+    "http_finished_utc": "2026-10-19T02:24:51.875810+00:00",
+    "remaining_media": 0,
+    "temporary_media_references_removed": 30,
+    "temporary_media_deleted": 30,
+    "remaining_users": 0,
+    "remaining_sessions": 0,
+    "finished_utc": "2026-10-19T02:24:57.979783+00:00",
+    "operations": {
+      "activity_reload": {
+        "count": 420,
+        "mean_ms": 810.05,
+        "p95_ms": 1566.72,
+        "max_ms": 2010.69,
+        "failures": 0,
+        "statuses": {
+          "200": 420
+        }
+      },
+      "activity_start": {
+        "count": 420,
+        "mean_ms": 760.75,
+        "p95_ms": 1464.02,
+        "max_ms": 1860.44,
+        "failures": 0,
+        "statuses": {
+          "200": 420
+        }
+      },
+      "authenticated_reload": {
+        "count": 30,
+        "mean_ms": 955.59,
+        "p95_ms": 1914.95,
+        "max_ms": 2094.98,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      "checkpoint_save": {
+        "count": 420,
+        "mean_ms": 430.19,
+        "p95_ms": 927.72,
+        "max_ms": 2156.72,
+        "failures": 0,
+        "statuses": {
+          "200": 420
+        }
+      },
+      "dashboard": {
+        "count": 30,
+        "mean_ms": 4754.43,
+        "p95_ms": 7990.89,
+        "max_ms": 8696.31,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      "expired_save": {
+        "count": 30,
+        "mean_ms": 53.5,
+        "p95_ms": 97.08,
+        "max_ms": 104.59,
+        "failures": 0,
+        "statuses": {
+          "401": 30
+        }
+      },
+      "foreign_recording_denied": {
+        "count": 30,
+        "mean_ms": 140.53,
+        "p95_ms": 291.9,
+        "max_ms": 292.58,
+        "failures": 0,
+        "statuses": {
+          "403": 30
+        }
+      },
+      "invalid_json": {
+        "count": 420,
+        "mean_ms": 314.36,
+        "p95_ms": 562.57,
+        "max_ms": 687.33,
+        "failures": 0,
+        "statuses": {
+          "400": 420
+        }
+      },
+      "legacy_checkpoint": {
+        "count": 210,
+        "mean_ms": 172.54,
+        "p95_ms": 309.75,
+        "max_ms": 391.74,
+        "failures": 0,
+        "statuses": {
+          "200": 210
+        }
+      },
+      "legacy_finish": {
+        "count": 210,
+        "mean_ms": 291.66,
+        "p95_ms": 543.69,
+        "max_ms": 733.47,
+        "failures": 0,
+        "statuses": {
+          "200": 210
+        }
+      },
+      "legacy_invalid_json": {
+        "count": 30,
+        "mean_ms": 75.76,
+        "p95_ms": 142.7,
+        "max_ms": 142.86,
+        "failures": 0,
+        "statuses": {
+          "400": 30
+        }
+      },
+      "legacy_stale_save": {
+        "count": 210,
+        "mean_ms": 134.82,
+        "p95_ms": 250.78,
+        "max_ms": 398.79,
+        "failures": 0,
+        "statuses": {
+          "200": 210
+        }
+      },
+      "login_recovery": {
+        "count": 30,
+        "mean_ms": 4186.11,
+        "p95_ms": 6352.42,
+        "max_ms": 6949.05,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      "playback": {
+        "count": 30,
+        "mean_ms": 865.38,
+        "p95_ms": 1364.93,
+        "max_ms": 1412.85,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      "session1_page": {
+        "count": 30,
+        "mean_ms": 693.41,
+        "p95_ms": 1268.9,
+        "max_ms": 1330.91,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      "session1_reload": {
+        "count": 30,
+        "mean_ms": 732.08,
+        "p95_ms": 1518.95,
+        "max_ms": 1551.99,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      "session1_teacher_review": {
+        "count": 30,
+        "mean_ms": 418.04,
+        "p95_ms": 782.43,
+        "max_ms": 784.63,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      "session1_upload": {
+        "count": 30,
+        "mean_ms": 3908.33,
+        "p95_ms": 6849.36,
+        "max_ms": 7557.29,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      },
+      "session1_upload_replay": {
+        "count": 30,
+        "mean_ms": 224.41,
+        "p95_ms": 430.06,
+        "max_ms": 490.17,
+        "failures": 0,
+        "statuses": {
+          "200": 30
+        }
+      }
+    },
+    "stream_error_types": {},
+    "total_requests": 2670,
+    "failures": 0
+  },
+  "restart_only_cases": [
+    "session-2-lesson-4-gawain-2",
+    "lesson7-gawain2a",
+    "lesson7-gawain4a",
+    "lesson7-gawain4b",
+    "session-4-gawain-5",
+    "lesson-13-gawain-4",
+    "aral-l22-g5-f-word-search",
+    "aral-l23-g5-j-word-search",
+    "aral-l24-g6-z-word-search"
+  ],
+  "suite": {
+    "tests": 548,
+    "failures": [
+      "test_fluency_completion_calculates_cwpm_and_persists_transcript (pabasa_app.tests_aral_template_activities.DedicatedAralTemplateActivityTests.test_fluency_completion_calculates_cwpm_and_persists_transcript)",
+      "test_fluency_completion_ignores_non_fluency_completed_results (pabasa_app.tests_aral_template_activities.DedicatedAralTemplateActivityTests.test_fluency_completion_ignores_non_fluency_completed_results)",
+      "test_fluency_no_speech_does_not_create_false_completion (pabasa_app.tests_aral_template_activities.DedicatedAralTemplateActivityTests.test_fluency_no_speech_does_not_create_false_completion)",
+      "test_vocabulary_completion_is_server_scored_saved_and_idempotent (pabasa_app.tests_aral_template_activities.DedicatedAralTemplateActivityTests.test_vocabulary_completion_is_server_scored_saved_and_idempotent)",
+      "test_vocabulary_completion_rejects_incomplete_or_unmastered_answers (pabasa_app.tests_aral_template_activities.DedicatedAralTemplateActivityTests.test_vocabulary_completion_rejects_incomplete_or_unmastered_answers)",
+      "test_progress_requires_four_ordered_readings_then_resumes_and_completes (pabasa_app.tests_prescribed_lesson20_21_gawain4.PrescribedLesson2021Gawain4Tests.test_progress_requires_four_ordered_readings_then_resumes_and_completes)",
+      "test_restart_returns_activity_to_intro_and_clears_row_progress (pabasa_app.tests_prescribed_lesson20_21_gawain4.PrescribedLesson2021Gawain4Tests.test_restart_returns_activity_to_intro_and_clears_row_progress)",
+      "test_lesson22_boo_alias_advances_through_the_normal_correct_result_path (pabasa_app.tests_prescribed_workbook.PrescribedWorkbookFlowTests.test_lesson22_boo_alias_advances_through_the_normal_correct_result_path)",
+      "test_help_variant_is_scoped_and_modal_ids_are_unique (pabasa_app.tests_lesson13_gawain2.Lesson13Gawain2Tests.test_help_variant_is_scoped_and_modal_ids_are_unique)",
+      "test_gawain1_debug_expected_tracks_next_item_and_speech_target (pabasa_app.tests_prescribed_lesson19_matching_items.PrescribedLesson19MatchingItemsTests.test_gawain1_debug_expected_tracks_next_item_and_speech_target)",
+      "test_ntilde_pronunciation_is_scoped_to_current_target (pabasa_app.tests_prescribed_lesson23_gawain1.Lesson23Gawain1Tests.test_ntilde_pronunciation_is_scoped_to_current_target)",
+      "test_render_pipeline_is_wired_for_the_canonical_key (pabasa_app.tests_prescribed_lesson23_gawain1.Lesson23Gawain1Tests.test_render_pipeline_is_wired_for_the_canonical_key)",
+      "test_source_and_destination_instruction_audio_match (pabasa_app.tests_prescribed_lesson24_gawain5_startup.Lesson24Gawain5StartupTests.test_source_and_destination_instruction_audio_match)",
+      "test_existing_instruction_recording_is_identified_as_non_exact (pabasa_app.tests_prescribed_lesson24_gawain6_audio.Lesson24Gawain6AudioTests.test_existing_instruction_recording_is_identified_as_non_exact)",
+      "test_mapped_instruction_files_are_existing_files_and_fallback_activities_have_no_duplicate (pabasa_app.tests_prescribed_lesson24_startup.Lesson24StartupTests.test_mapped_instruction_files_are_existing_files_and_fallback_activities_have_no_duplicate)",
+      "test_session9_activity2_keeps_workbook_instruction_and_requires_drawing_and_courteous_word (pabasa_app.tests_prescribed_workbook.WorkbookStateTests.test_session9_activity2_keeps_workbook_instruction_and_requires_drawing_and_courteous_word)",
+      "test_valid_bb_pair_can_be_one_continuous_path (pabasa_app.tests_session4_gawain5_tracing.Session4Gawain5TracingValidationTests.test_valid_bb_pair_can_be_one_continuous_path)",
+      "test_all_activities_save_reload_gate_and_complete (pabasa_app.tests_prescribed_workbook_data.PrescribedWorkbookDataTests.test_all_activities_save_reload_gate_and_complete) (activity='aral-l23-g3-j-word-reading')",
+      "test_all_activities_save_reload_gate_and_complete (pabasa_app.tests_prescribed_workbook_data.PrescribedWorkbookDataTests.test_all_activities_save_reload_gate_and_complete) (activity='aral-l23-g4-j-syllabication')",
+      "test_all_activities_save_reload_gate_and_complete (pabasa_app.tests_prescribed_workbook_data.PrescribedWorkbookDataTests.test_all_activities_save_reload_gate_and_complete) (activity='aral-l24-g4-x-pictures')",
+      "test_all_activities_save_reload_gate_and_complete (pabasa_app.tests_prescribed_workbook_data.PrescribedWorkbookDataTests.test_all_activities_save_reload_gate_and_complete) (activity='aral-s9-a1-family-drawing')",
+      "test_all_activities_save_reload_gate_and_complete (pabasa_app.tests_prescribed_workbook_data.PrescribedWorkbookDataTests.test_all_activities_save_reload_gate_and_complete) (activity='aral-s9-a2-helping-drawing')",
+      "test_incomplete_drawing_fill_and_syllables_are_not_finished (pabasa_app.tests_prescribed_workbook_data.PrescribedWorkbookDataTests.test_incomplete_drawing_fill_and_syllables_are_not_finished)"
+    ],
+    "errors": [
+      "test_three_readings_three_listens_repeat_and_gate (pabasa_app.tests_prescribed_workbook.WorkbookStateTests.test_three_readings_three_listens_repeat_and_gate)",
+      "test_invalid_group_rejects_the_submission (pabasa_app.tests_session4_gawain5_tracing.Session4Gawain5TracingValidationTests.test_invalid_group_rejects_the_submission)",
+      "test_segmenter_accepts_the_endpoint_normalized_tuple_payload (pabasa_app.tests_session4_gawain5_tracing.Session4Gawain5TracingValidationTests.test_segmenter_accepts_the_endpoint_normalized_tuple_payload)",
+      "test_twelve_strokes_segment_into_three_bb_groups (pabasa_app.tests_session4_gawain5_tracing.Session4Gawain5TracingValidationTests.test_twelve_strokes_segment_into_three_bb_groups)",
+      "test_all_activities_save_reload_gate_and_complete (pabasa_app.tests_prescribed_workbook_data.PrescribedWorkbookDataTests.test_all_activities_save_reload_gate_and_complete) (activity='aral-l22-g1-c-syllable-builder')",
+      "test_all_activities_save_reload_gate_and_complete (pabasa_app.tests_prescribed_workbook_data.PrescribedWorkbookDataTests.test_all_activities_save_reload_gate_and_complete) (activity='aral-l22-g6-f-word-reading')",
+      "test_all_activities_save_reload_gate_and_complete (pabasa_app.tests_prescribed_workbook_data.PrescribedWorkbookDataTests.test_all_activities_save_reload_gate_and_complete) (activity='aral-l23-g2-n-word-reading')",
+      "test_all_activities_save_reload_gate_and_complete (pabasa_app.tests_prescribed_workbook_data.PrescribedWorkbookDataTests.test_all_activities_save_reload_gate_and_complete) (activity='aral-l23-g6-q-syllable-builder')",
+      "test_all_activities_save_reload_gate_and_complete (pabasa_app.tests_prescribed_workbook_data.PrescribedWorkbookDataTests.test_all_activities_save_reload_gate_and_complete) (activity='aral-l23-g7-q-word-reading')",
+      "test_all_activities_save_reload_gate_and_complete (pabasa_app.tests_prescribed_workbook_data.PrescribedWorkbookDataTests.test_all_activities_save_reload_gate_and_complete) (activity='aral-l24-g2-v-word-reading')",
+      "test_all_activities_save_reload_gate_and_complete (pabasa_app.tests_prescribed_workbook_data.PrescribedWorkbookDataTests.test_all_activities_save_reload_gate_and_complete) (activity='aral-l24-g3-x-repeat')",
+      "test_all_activities_save_reload_gate_and_complete (pabasa_app.tests_prescribed_workbook_data.PrescribedWorkbookDataTests.test_all_activities_save_reload_gate_and_complete) (activity='aral-l24-g3-x-word-reading')",
+      "test_all_activities_save_reload_gate_and_complete (pabasa_app.tests_prescribed_workbook_data.PrescribedWorkbookDataTests.test_all_activities_save_reload_gate_and_complete) (activity='aral-l24-g5-z-syllabication')",
+      "test_all_activities_save_reload_gate_and_complete (pabasa_app.tests_prescribed_workbook_data.PrescribedWorkbookDataTests.test_all_activities_save_reload_gate_and_complete) (activity='aral-l24-g6-z-word-search')",
+      "test_all_activities_save_reload_gate_and_complete (pabasa_app.tests_prescribed_workbook_data.PrescribedWorkbookDataTests.test_all_activities_save_reload_gate_and_complete) (activity='aral-l24-g7-z-word-reading')"
+    ],
+    "skipped": []
+  },
+  "runs": {
+    "candidate": {
+      "test_id": "31189499492d",
+      "clients": 30,
+      "teachers": 6,
+      "classes": 6,
+      "total_requests": 11190,
+      "failures": 0,
+      "saved_checkpoints": 2550,
+      "reloads": 2550,
+      "legacy_completed": 210,
+      "session1_recordings_completed": 30,
+      "expired_logins_recovered": 30,
+      "remaining_users": 0,
+      "remaining_sessions": 0,
+      "remaining_media": 0,
+      "operations": {
+        "activity_reload": {
+          "count": 2550,
+          "mean_ms": 1514.44,
+          "p95_ms": 3775.41,
+          "max_ms": 6333.55,
+          "failures": 0,
+          "statuses": {
+            "200": 2550
+          }
+        },
+        "activity_start": {
+          "count": 2550,
+          "mean_ms": 1501.83,
+          "p95_ms": 3790.69,
+          "max_ms": 44356.53,
+          "failures": 0,
+          "statuses": {
+            "200": 2550
+          }
+        },
+        "authenticated_reload": {
+          "count": 30,
+          "mean_ms": 630.36,
+          "p95_ms": 1007.12,
+          "max_ms": 1019.37,
+          "failures": 0,
+          "statuses": {
+            "200": 30
+          }
+        },
+        "checkpoint_save": {
+          "count": 2550,
+          "mean_ms": 869.57,
+          "p95_ms": 1949.87,
+          "max_ms": 4200.19,
+          "failures": 0,
+          "statuses": {
+            "200": 2550
+          }
+        },
+        "dashboard": {
+          "count": 30,
+          "mean_ms": 2929.28,
+          "p95_ms": 4913.7,
+          "max_ms": 5654.77,
+          "failures": 0,
+          "statuses": {
+            "200": 30
+          }
+        },
+        "expired_save": {
+          "count": 30,
+          "mean_ms": 76.35,
+          "p95_ms": 157.76,
+          "max_ms": 162.91,
+          "failures": 0,
+          "statuses": {
+            "401": 30
+          }
+        },
+        "foreign_recording_denied": {
+          "count": 30,
+          "mean_ms": 112.53,
+          "p95_ms": 193.18,
+          "max_ms": 204.49,
+          "failures": 0,
+          "statuses": {
+            "403": 30
+          }
+        },
+        "invalid_json": {
+          "count": 2550,
+          "mean_ms": 717.12,
+          "p95_ms": 1551.94,
+          "max_ms": 3074.56,
+          "failures": 0,
+          "statuses": {
+            "400": 2550
+          }
+        },
+        "legacy_checkpoint": {
+          "count": 210,
+          "mean_ms": 165.19,
+          "p95_ms": 283.6,
+          "max_ms": 321.36,
+          "failures": 0,
+          "statuses": {
+            "200": 210
+          }
+        },
+        "legacy_finish": {
+          "count": 210,
+          "mean_ms": 245.45,
+          "p95_ms": 447.44,
+          "max_ms": 554.1,
+          "failures": 0,
+          "statuses": {
+            "200": 210
+          }
+        },
+        "legacy_invalid_json": {
+          "count": 30,
+          "mean_ms": 65.31,
+          "p95_ms": 112.24,
+          "max_ms": 115.28,
+          "failures": 0,
+          "statuses": {
+            "400": 30
+          }
+        },
+        "legacy_stale_save": {
+          "count": 210,
+          "mean_ms": 117.52,
+          "p95_ms": 206.78,
+          "max_ms": 251.68,
+          "failures": 0,
+          "statuses": {
+            "200": 210
+          }
+        },
+        "login_recovery": {
+          "count": 30,
+          "mean_ms": 3470.36,
+          "p95_ms": 5759.61,
+          "max_ms": 6138.92,
+          "failures": 0,
+          "statuses": {
+            "200": 30
+          }
+        },
+        "playback": {
+          "count": 30,
+          "mean_ms": 811.45,
+          "p95_ms": 1394.12,
+          "max_ms": 1610.91,
+          "failures": 0,
+          "statuses": {
+            "200": 30
+          }
+        },
+        "session1_page": {
+          "count": 30,
+          "mean_ms": 4403.24,
+          "p95_ms": 6775.46,
+          "max_ms": 6775.58,
+          "failures": 0,
+          "statuses": {
+            "200": 30
+          }
+        },
+        "session1_reload": {
+          "count": 30,
+          "mean_ms": 2040.26,
+          "p95_ms": 3240.14,
+          "max_ms": 3241.06,
+          "failures": 0,
+          "statuses": {
+            "200": 30
+          }
+        },
+        "session1_teacher_review": {
+          "count": 30,
+          "mean_ms": 353.65,
+          "p95_ms": 547.65,
+          "max_ms": 584.6,
+          "failures": 0,
+          "statuses": {
+            "200": 30
+          }
+        },
+        "session1_upload": {
+          "count": 30,
+          "mean_ms": 3133.42,
+          "p95_ms": 4939.6,
+          "max_ms": 5019.3,
+          "failures": 0,
+          "statuses": {
+            "200": 30
+          }
+        },
+        "session1_upload_replay": {
+          "count": 30,
+          "mean_ms": 207.66,
+          "p95_ms": 349.53,
+          "max_ms": 369.74,
+          "failures": 0,
+          "statuses": {
+            "200": 30
+          }
+        }
+      },
+      "sessions_covered": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "started_utc": "2026-10-19T02:05:40.787433+00:00",
+      "finished_utc": "2026-10-19T02:18:45.750298+00:00"
+    },
+    "public": {
+      "test_id": "fba793478042",
+      "clients": 30,
+      "teachers": 6,
+      "classes": 6,
+      "total_requests": 2670,
+      "failures": 0,
+      "saved_checkpoints": 420,
+      "reloads": 420,
+      "legacy_completed": 210,
+      "session1_recordings_completed": 30,
+      "expired_logins_recovered": 30,
+      "remaining_users": 0,
+      "remaining_sessions": 0,
+      "remaining_media": 0,
+      "operations": {
+        "activity_reload": {
+          "count": 420,
+          "mean_ms": 863.9,
+          "p95_ms": 1789.92,
+          "max_ms": 2488.78,
+          "failures": 0,
+          "statuses": {
+            "200": 420
+          }
+        },
+        "activity_start": {
+          "count": 420,
+          "mean_ms": 819.67,
+          "p95_ms": 1633.66,
+          "max_ms": 2510.71,
+          "failures": 0,
+          "statuses": {
+            "200": 420
+          }
+        },
+        "authenticated_reload": {
+          "count": 30,
+          "mean_ms": 1124.51,
+          "p95_ms": 2268.97,
+          "max_ms": 2487.29,
+          "failures": 0,
+          "statuses": {
+            "200": 30
+          }
+        },
+        "checkpoint_save": {
+          "count": 420,
+          "mean_ms": 449.71,
+          "p95_ms": 1014.24,
+          "max_ms": 1545.84,
+          "failures": 0,
+          "statuses": {
+            "200": 420
+          }
+        },
+        "dashboard": {
+          "count": 30,
+          "mean_ms": 3311.29,
+          "p95_ms": 5638.49,
+          "max_ms": 6580.58,
+          "failures": 0,
+          "statuses": {
+            "200": 30
+          }
+        },
+        "expired_save": {
+          "count": 30,
+          "mean_ms": 49.51,
+          "p95_ms": 80.55,
+          "max_ms": 85.91,
+          "failures": 0,
+          "statuses": {
+            "401": 30
+          }
+        },
+        "foreign_recording_denied": {
+          "count": 30,
+          "mean_ms": 125.81,
+          "p95_ms": 232.86,
+          "max_ms": 232.94,
+          "failures": 0,
+          "statuses": {
+            "403": 30
+          }
+        },
+        "invalid_json": {
+          "count": 420,
+          "mean_ms": 399.41,
+          "p95_ms": 887.27,
+          "max_ms": 1338.81,
+          "failures": 0,
+          "statuses": {
+            "400": 420
+          }
+        },
+        "legacy_checkpoint": {
+          "count": 210,
+          "mean_ms": 248.7,
+          "p95_ms": 503.67,
+          "max_ms": 624.53,
+          "failures": 0,
+          "statuses": {
+            "200": 210
+          }
+        },
+        "legacy_finish": {
+          "count": 210,
+          "mean_ms": 351.58,
+          "p95_ms": 716.72,
+          "max_ms": 1098.17,
+          "failures": 0,
+          "statuses": {
+            "200": 210
+          }
+        },
+        "legacy_invalid_json": {
+          "count": 30,
+          "mean_ms": 99.89,
+          "p95_ms": 229.76,
+          "max_ms": 246.12,
+          "failures": 0,
+          "statuses": {
+            "400": 30
+          }
+        },
+        "legacy_stale_save": {
+          "count": 210,
+          "mean_ms": 154.71,
+          "p95_ms": 344.58,
+          "max_ms": 744.76,
+          "failures": 0,
+          "statuses": {
+            "200": 210
+          }
+        },
+        "login_recovery": {
+          "count": 30,
+          "mean_ms": 4097.97,
+          "p95_ms": 6941.76,
+          "max_ms": 7049.88,
+          "failures": 0,
+          "statuses": {
+            "200": 30
+          }
+        },
+        "playback": {
+          "count": 30,
+          "mean_ms": 832.96,
+          "p95_ms": 1416.45,
+          "max_ms": 1541.74,
+          "failures": 0,
+          "statuses": {
+            "200": 30
+          }
+        },
+        "session1_page": {
+          "count": 30,
+          "mean_ms": 818.08,
+          "p95_ms": 1576.17,
+          "max_ms": 1781.62,
+          "failures": 0,
+          "statuses": {
+            "200": 30
+          }
+        },
+        "session1_reload": {
+          "count": 30,
+          "mean_ms": 728.67,
+          "p95_ms": 1250.92,
+          "max_ms": 1252.03,
+          "failures": 0,
+          "statuses": {
+            "200": 30
+          }
+        },
+        "session1_teacher_review": {
+          "count": 30,
+          "mean_ms": 386.98,
+          "p95_ms": 679.46,
+          "max_ms": 705.61,
+          "failures": 0,
+          "statuses": {
+            "200": 30
+          }
+        },
+        "session1_upload": {
+          "count": 30,
+          "mean_ms": 3173.23,
+          "p95_ms": 5812.6,
+          "max_ms": 5826.0,
+          "failures": 0,
+          "statuses": {
+            "200": 30
+          }
+        },
+        "session1_upload_replay": {
+          "count": 30,
+          "mean_ms": 242.33,
+          "p95_ms": 427.7,
+          "max_ms": 481.36,
+          "failures": 0,
+          "statuses": {
+            "200": 30
+          }
+        }
+      },
+      "sessions_covered": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "started_utc": "2026-10-19T02:27:50.540848+00:00",
+      "finished_utc": "2026-10-19T02:29:58.671606+00:00"
+    }
+  }
+}

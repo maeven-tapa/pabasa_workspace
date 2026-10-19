@@ -60,7 +60,10 @@
   function adapter() {
     return window.__prescribedLeaveAdapters?.[prefix] || {
       // Activity progress is persisted at each completed answer or phase change.
-      saveCurrentProgress: () => Promise.resolve(),
+      saveCurrentProgress: async () => {
+        await window.PabasaWorkbookSaves?.flush();
+        await window.PabasaPrescribedPending?.flush();
+      },
       cleanup() {
         window.dispatchEvent(new Event('pagehide'));
       },
@@ -96,6 +99,7 @@
     hideError();
     try {
       await activityAdapter.saveCurrentProgress();
+      await window.PabasaPrescribedPending?.flush();
       await activityAdapter.cleanup();
       window.location.assign(backLink.href);
     } catch (saveError) {
