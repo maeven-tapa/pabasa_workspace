@@ -1294,6 +1294,11 @@
     }
 
     @media (min-width: 992px) {
+        #courseDetailModal.course-detail-page {
+            height: var(--dashboard-normalized-viewport-height);
+            min-height: 0;
+        }
+
         #courseDetailModal .modal-dialog.course-modal-dialog {
             position: fixed;
             top: 0;
@@ -4575,17 +4580,24 @@
         justify-content: space-between;
     }
 
+    .course-report-preview-head > div {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
     .course-report-preview-title {
         color: var(--dash-ink);
         font-size: 0.95rem;
         font-weight: 700;
         margin: 0;
+        overflow-wrap: anywhere;
     }
 
     .course-report-preview-meta {
         color: var(--dash-muted);
         font-size: 0.78rem;
         margin: 0.2rem 0 0;
+        overflow-wrap: anywhere;
     }
 
     .course-report-metric-grid {
@@ -4626,44 +4638,79 @@
         font-size: 0.86rem;
         line-height: 1.5;
         margin: 0;
+        overflow-wrap: anywhere;
         padding: 0.75rem;
     }
 
     .course-report-pill-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.35rem;
-        margin-top: 0.45rem;
+        display: grid;
+        gap: 0.4rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin-top: 0.55rem;
     }
 
     .course-report-pill {
         background: #f8faf9;
         border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 999px;
+        border-radius: 9px;
         color: var(--dash-ink);
-        display: inline-flex;
-        font-size: 0.74rem;
-        font-weight: 700;
-        gap: 0.25rem;
-        line-height: 1.2;
-        padding: 0.25rem 0.55rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.12rem;
+        line-height: 1.25;
+        min-width: 0;
+        padding: 0.4rem 0.55rem;
+        white-space: normal;
+    }
+
+    .course-report-pill-label {
+        color: var(--dash-muted);
+        font-size: 0.62rem;
+        font-weight: 800;
+        letter-spacing: 0.035em;
+        text-transform: uppercase;
+    }
+
+    .course-report-pill-value {
+        font-size: 0.76rem;
+        font-weight: 800;
+        overflow-wrap: anywhere;
     }
 
     .course-report-recipient {
-        overflow: hidden;
+        min-width: 0;
+    }
+
+    .course-report-recipient:has(.student-checkbox:checked) {
+        background: rgba(31, 111, 139, 0.07);
+        box-shadow: inset 3px 0 var(--dash-primary);
+    }
+
+    body.dark-theme #reportsPane .course-report-recipient:has(.student-checkbox:checked) {
+        background: rgba(56, 189, 248, 0.12) !important;
+        box-shadow: inset 3px 0 #38bdf8;
     }
 
     .course-report-recipient-row {
-        align-items: center;
+        align-items: flex-start;
         display: flex;
         gap: 0.85rem;
     }
 
     .course-report-recipient-check {
-        align-items: center;
+        align-items: flex-start;
         display: flex;
         flex: 0 0 auto;
         min-height: 44px;
+        margin: 0;
+        padding: 0.15rem 0 0;
+    }
+
+    .course-report-recipient-check .form-check-input {
+        flex: 0 0 1.25rem;
+        height: 1.25rem;
+        margin: 0;
+        width: 1.25rem;
     }
 
     .course-report-recipient-main {
@@ -4677,9 +4724,41 @@
         gap: 0.6rem;
         justify-content: space-between;
         min-width: 0;
+        flex-wrap: wrap;
     }
 
-    .course-report-recipient-name,
+    .course-report-recipient-name {
+        flex: 1 1 10rem;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .course-report-recipient-level {
+        align-items: center;
+        border-radius: 999px;
+        display: inline-flex;
+        flex: 0 1 auto;
+        font-size: 0.8rem;
+        font-weight: 800;
+        line-height: 1.2;
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        padding: 0.38rem 0.72rem;
+        white-space: normal;
+    }
+
+    #reportsPane .course-report-recipient-level.level-low { background: #fee2e2; color: #991b1b; }
+    #reportsPane .course-report-recipient-level.level-high { background: #ffedd5; color: #9a3412; }
+    #reportsPane .course-report-recipient-level.level-developing { background: #ede9fe; color: #5b21b6; }
+    #reportsPane .course-report-recipient-level.level-transitioning { background: #dbeafe; color: #1d4ed8; }
+    #reportsPane .course-report-recipient-level.level-grade { background: #dcfce7; color: #166534; }
+
+    .course-report-recipient-email {
+        margin-top: 0.15rem;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
     .course-report-recipient-meta,
     .course-report-recipient .small.text-secondary {
         overflow-wrap: anywhere;
@@ -4700,12 +4779,87 @@
         overflow: visible;
     }
 
-    #reportsPane #courseUnifiedStudentReportList {
-        max-height: min(52vh, 520px);
-        overflow-x: hidden;
-        overflow-y: auto;
+    #reportsPane .course-report-composer-card .course-report-composer-body {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
     }
 
+    #reportsPane #courseParentUpdateTabForm {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        gap: 0.9rem;
+        min-width: 0;
+    }
+
+    #reportsPane #courseParentUpdateTabForm .mb-3 {
+        margin-bottom: 0 !important;
+    }
+
+    #reportsPane .course-report-automated-report {
+        align-items: center;
+        background: #f6fafc;
+        border: 1px solid rgba(31, 111, 139, 0.14);
+        border-radius: 12px;
+        display: grid;
+        gap: 0.7rem;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        min-width: 0;
+        padding: 0.8rem;
+    }
+
+    .course-report-automated-icon {
+        color: var(--dash-primary);
+        font-size: 1.25rem;
+    }
+
+    .course-report-automated-copy {
+        min-width: 0;
+    }
+
+    .course-report-automated-copy strong {
+        color: var(--dash-ink);
+        display: block;
+        font-size: 0.82rem;
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+    }
+
+    .course-report-automated-copy p {
+        color: var(--dash-muted);
+        font-size: 0.75rem;
+        line-height: 1.4;
+        margin: 0.2rem 0 0;
+    }
+
+    .course-report-preview-pdf-btn {
+        min-height: 40px;
+        white-space: nowrap;
+    }
+
+    #reportsPane #courseParentUpdateTabForm textarea {
+        max-width: 100%;
+        min-height: 120px;
+        resize: vertical;
+    }
+
+    #reportsPane .course-report-submit-row {
+        justify-content: flex-end;
+        margin-top: auto;
+    }
+
+    #reportsPane #courseBtnSendParentUpdate {
+        align-self: flex-end;
+        min-height: 44px;
+    }
+
+    @media (max-width: 1199.98px) {
+        #reportsPane .course-report-layout > .col-lg-6 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+    }
 
     @media (min-width: 992px) {
         #courseDetailModal .course-modal-body {
@@ -4822,18 +4976,18 @@
         .course-report-pill-row {
             display: grid;
             gap: 0.45rem;
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             margin-top: 0.7rem;
         }
 
         .course-report-pill {
-            align-items: center;
+            align-items: flex-start;
             border-radius: 10px;
             font-size: 0.8rem;
             line-height: 1.35;
-            min-height: 44px;
+            min-height: 0;
             overflow-wrap: anywhere;
-            padding: 0.55rem 0.7rem;
+            padding: 0.45rem 0.55rem;
             white-space: normal;
         }
 
@@ -4906,6 +5060,15 @@
 
         #courseBtnSendParentUpdate {
             min-height: 44px;
+            width: 100%;
+        }
+
+        #reportsPane .course-report-automated-report {
+            grid-template-columns: auto minmax(0, 1fr);
+        }
+
+        #reportsPane .course-report-preview-pdf-btn {
+            grid-column: 2;
             width: 100%;
         }
 
@@ -7710,7 +7873,7 @@ document.addEventListener('DOMContentLoaded',()=>{
                                             <div class="mb-3 d-flex justify-content-between align-items-center">
                                                 <h6 class="mb-0">Reports & Updates</h6>
                                             </div>
-                                            <div class="row g-4" style="margin-bottom:0">
+                                            <div class="row g-4 course-report-layout" style="margin-bottom:0">
                                                 <div class="col-lg-6">
                                                     <div class="dash-card h-100 course-report-recipients-card">
                                                         <div class="card-header bg-transparent border-0 p-4 pb-0 d-flex justify-content-between align-items-center course-report-card-header">
@@ -7743,7 +7906,7 @@ document.addEventListener('DOMContentLoaded',()=>{
                                                                         <i class="bi bi-bar-chart text-primary"></i>
                                                                     </div>
                                                                 </div>
-                                                                <div class="mb-3">
+                                                                <div class="mb-3 course-report-type-section">
                                                                     <label class="form-label small fw-bold" for="courseParentUpdateTemplate">Update Type</label>
                                                                     <select class="form-select" id="courseParentUpdateTemplate" style="border-radius:10px;">
                                                                         <option value="general">Regular Progress Update</option>
@@ -7753,9 +7916,13 @@ document.addEventListener('DOMContentLoaded',()=>{
                                                                     </select>
                                                                 </div>
 
-                                                                <div class="mb-3" id="courseAutomatedReadingReportInfo">
-                                                                    <div class="form-text"><i class="bi bi-file-earmark-pdf me-1"></i><strong>Automated Reading Progress Report</strong><br>This report is generated from the student's CRLA and ARAL records.</div>
-                                                                    <button type="button" class="btn btn-sm mt-2 text-white" id="coursePreviewReadingReport" style="background:#1D748E; border-color:#1D748E; border-radius:8px;"><i class="bi bi-eye-fill me-1 text-white"></i> Preview PDF</button>
+                                                                <div class="mb-3 course-report-automated-report" id="courseAutomatedReadingReportInfo">
+                                                                    <i class="bi bi-file-earmark-pdf course-report-automated-icon" aria-hidden="true"></i>
+                                                                    <div class="course-report-automated-copy">
+                                                                        <strong>Automated Reading Progress Report</strong>
+                                                                        <p>This report uses the student's CRLA and ARAL records.</p>
+                                                                    </div>
+                                                                    <button type="button" class="btn btn-sm text-white course-report-preview-pdf-btn" id="coursePreviewReadingReport" style="background:#1D748E; border-color:#1D748E; border-radius:8px;"><i class="bi bi-eye-fill me-1 text-white" aria-hidden="true"></i> Preview PDF</button>
                                                                 </div>
 
                                                                 <div class="mb-3" id="courseParentAssessmentScheduleContainer" style="display:none;">
@@ -7770,7 +7937,7 @@ document.addEventListener('DOMContentLoaded',()=>{
                                                                     <div class="form-text mt-2">This will be included in the assessment notice email.</div>
                                                                 </div>
 
-                                                                <div class="mb-3">
+                                                                <div class="mb-3 course-report-note-section">
                                                                     <label class="form-label course-report-message-label" for="courseParentUpdateMessage">
                                                                         <span class="small fw-bold">Teacher Note — Optional</span>
                                                                     </label>
@@ -7779,7 +7946,7 @@ document.addEventListener('DOMContentLoaded',()=>{
                                                                     <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> Regular and support updates include the automated PDF.</div>
                                                                 </div>
 
-                                                                <div class="d-flex justify-content-end">
+                                                                <div class="d-flex justify-content-end course-report-submit-row">
                                                                     <button type="submit" class="btn btn-primary" id="courseBtnSendParentUpdate" style="border-radius:10px; min-height:44px; padding-inline:1.5rem;">
                                                                         <i class="bi bi-send me-1"></i> Send Update
                                                                     </button>
@@ -13852,14 +14019,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const studentUsername = studentName.toLowerCase().replace(/ /g, "_");
                     const settings = JSON.parse(localStorage.getItem("pabasa_profile_settings_" + studentUsername) || "{}");
                     const emailEnabled = settings.emailNotifications !== false && s.email;
-                    const accuracyText = s.accuracy !== undefined && s.accuracy !== null && s.accuracy !== '' ? `${escapeHtml(s.accuracy)}%` : 'No accuracy';
-                    const wpmText = s.wpm !== undefined && s.wpm !== null && s.wpm !== '' ? `${escapeHtml(s.wpm)} WPM` : 'No WPM';
+                    const accuracyText = s.accuracy !== undefined && s.accuracy !== null && s.accuracy !== '' ? `${escapeHtml(s.accuracy)}%` : '—';
+                    const wpmText = s.wpm !== undefined && s.wpm !== null && s.wpm !== '' ? escapeHtml(s.wpm) : '—';
                     const durationText = s.duration_seconds != null && s.duration_seconds !== '' && Number(s.duration_seconds) > 0 ? formatCourseReportDuration(s.duration_seconds) : 'No time';
                     const levelText = resolveCourseReadingLevel(s);
-                    const levelDisclaimer = s.adapted_reading_level_disclaimer || s.reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || 'This assessment result is based on the student\'s reading accuracy, fluency, pronunciation, and pacing during the assessment. The Reading Level and Overall Score reflect the student\'s current reading performance and may help identify strengths and areas for improvement.';
-                    const levelChipHtml = levelDisclaimer
-                        ? `<div class="d-flex flex-column align-items-end gap-1"><span class="level-chip" style="font-size: 0.7rem;">${escapeHtml(levelText)}</span><span class="small text-muted" style="max-width: 220px; text-align: right;">${escapeHtml(levelDisclaimer)}</span></div>`
-                        : `<span class="level-chip" style="font-size: 0.7rem;">${escapeHtml(levelText)}</span>`;
+                    const levelChipHtml = `<span class="badge rounded-pill level-chip course-report-recipient-level ${getCourseReportReadingLevelClass(levelText)}">${escapeHtml(levelText)}</span>`;
                     const item = document.createElement('div');
                     item.className = 'list-group-item p-3 border-0 border-bottom course-report-recipient';
                     item.innerHTML = `
@@ -13867,12 +14031,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             <div class="form-check course-report-recipient-check"><input class="form-check-input student-checkbox" type="checkbox" id="course_upd_student_${index}" value="${escapeHtml(s.id || '')}" ${!emailEnabled || !s.id ? 'disabled' : ''}></div>
                             <div class="course-report-recipient-main"><div class="course-report-recipient-head">
                                     <strong class="mb-0 course-report-recipient-name">${escapeHtml(displayName)}</strong>${levelChipHtml}
-                                </div><div class="small text-secondary mt-1">${s.email || '<span class="text-danger">No email</span>'} | Accuracy: <span class="fw-bold">${s.accuracy || '—'}%</span> | Speed: <span class="fw-bold">${s.wpm || 0} WPM</span></div>
+                                </div><div class="course-report-recipient-email small text-secondary">${s.email || '<span class="text-danger">No email</span>'}</div>
                                 <div class="course-report-pill-row">
-                                    <span class="course-report-pill"><i class="bi bi-bullseye"></i>${accuracyText}</span>
-                                    <span class="course-report-pill"><i class="bi bi-speedometer2"></i>${wpmText}</span>
-                                    <span class="course-report-pill"><i class="bi bi-stopwatch"></i>${escapeHtml(durationText)}</span>
-                                    <span class="course-report-pill"><i class="bi bi-calendar-check"></i>${escapeHtml(s.completed_at ? formatDateTime(s.completed_at) : 'No assessment')}</span>
+                                    <span class="course-report-pill"><span class="course-report-pill-label">Accuracy</span><strong class="course-report-pill-value">${accuracyText}</strong></span>
+                                    <span class="course-report-pill"><span class="course-report-pill-label">WPM</span><strong class="course-report-pill-value">${wpmText}</strong></span>
+                                    <span class="course-report-pill"><span class="course-report-pill-label">Duration</span><strong class="course-report-pill-value">${escapeHtml(durationText)}</strong></span>
+                                    <span class="course-report-pill"><span class="course-report-pill-label">Assessment date</span><strong class="course-report-pill-value">${escapeHtml(s.completed_at ? formatDateTime(s.completed_at) : 'No assessment')}</strong></span>
                                 </div>
                             </div>
                         </div>`;
@@ -13910,6 +14074,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 return helper.getReadingLevelLabel(student);
             }
             return String(student?.adapted_reading_level || student?.level || student?.reading_level || 'Level pending').trim() || 'Level pending';
+        }
+
+        function getCourseReportReadingLevelClass(level) {
+            const normalized = String(level || '').trim().toLowerCase();
+            if (normalized.includes('low') && normalized.includes('emerging')) return 'level-low';
+            if (normalized.includes('high') && normalized.includes('emerging')) return 'level-high';
+            if (normalized.includes('develop')) return 'level-developing';
+            if (normalized.includes('transition')) return 'level-transitioning';
+            if (normalized.includes('grade')) return 'level-grade';
+            return 'level-pending';
         }
 
         function resolveCourseAttemptReadingLevel(attempt, assessmentType) {
