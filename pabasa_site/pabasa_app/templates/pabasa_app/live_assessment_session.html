@@ -2542,14 +2542,23 @@
             const progressPercent = Number.isFinite(rawProgress)
                 ? (rawProgress >= 0 && rawProgress <= 1 ? Math.round(rawProgress * 100) : Math.round(rawProgress))
                 : 0;
+            const crlaStageLabel = st.crla_stage_label || crlaStageLabels[st.crla_stage] || '';
+            const isStoryStage = String(st.crla_stage || '').trim().toLowerCase() === 'story'
+                || String(crlaStageLabel).trim().toLowerCase() === 'story';
             const itemsTotal = Number(st.items_total) || 0;
             const itemsCompleted = Number(st.items_completed) || 0;
-            const percent = itemsTotal > 0 ? Math.round((itemsCompleted / itemsTotal) * 100) : progressPercent;
+            const reportedPercent = itemsTotal > 0 ? Math.round((itemsCompleted / itemsTotal) * 100) : progressPercent;
+            const percent = isStoryStage ? Math.max(0, Math.min(100, reportedPercent)) : reportedPercent;
             const progressTextValue = itemsTotal > 0
                 ? `${percent}% • ${itemsCompleted} / ${itemsTotal}`
                 : Number.isFinite(rawProgress)
                     ? `${progressPercent}%`
                     : '--';
+            const recoveryState = st.recovery_state && typeof st.recovery_state === 'object' ? st.recovery_state : {};
+            const hasStoryIdentity = Boolean(String(recoveryState.selected_story || '').trim());
+            const storyProgressIsValid = hasStoryIdentity
+                && Number.isInteger(itemsCompleted) && Number.isInteger(itemsTotal)
+                && itemsTotal > 0 && itemsCompleted >= 0 && itemsCompleted <= itemsTotal;
 
             if (statusLower === 'missed') {
                 if (progressBar) {
@@ -2576,10 +2585,11 @@
                 if (progressText) progressText.textContent = '0%';
                 if (elapsedCol) elapsedCol.textContent = '--';
             } else if (statusLower === 'reading') {
-                const crlaStageLabel = st.crla_stage_label || crlaStageLabels[st.crla_stage] || '';
-                const crlaProgressText = crlaStageLabel && itemsTotal > 0
-                    ? `${crlaStageLabel} · ${itemsCompleted} / ${itemsTotal}`
-                    : '--';
+                const crlaProgressText = isStoryStage
+                    ? (storyProgressIsValid ? `Story ${itemsCompleted}/${itemsTotal}` : 'Story —')
+                    : crlaStageLabel && itemsTotal > 0
+                        ? `${crlaStageLabel} · ${itemsCompleted} / ${itemsTotal}`
+                        : '--';
                 if (progressBar) {
                     progressBar.style.width = `${percent}%`;
                     progressBar.setAttribute('aria-valuenow', percent);
@@ -2786,9 +2796,16 @@
 
     syncCustomDropdownValue('countdown', 'countdownValue');
 
+    let pollInFlight = false;
     async function poll() {
-        const s = await fetchState();
-        if (s) updateFromState(s);
+        if (pollInFlight) return;
+        pollInFlight = true;
+        try {
+            const s = await fetchState();
+            if (s) updateFromState(s);
+        } finally {
+            pollInFlight = false;
+        }
     }
 
     function stopPolling() {

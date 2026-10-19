@@ -28764,6 +28764,46 @@ def _update_live_student_state(session, student_id, state_values):
         incoming_state['recovery_state'] = _merge_live_crla_evidence(
             existing_recovery_state, incoming_recovery_state,
         )
+
+    incoming_stage = str(incoming_state.get('crla_stage') or '').strip().lower()
+    existing_stage = str(student_record.get('crla_stage') or '').strip().lower()
+    incoming_recovery = incoming_state.get('recovery_state')
+    existing_recovery = student_record.get('recovery_state')
+    if not isinstance(incoming_recovery, dict):
+        incoming_recovery = existing_recovery
+    incoming_story = str(incoming_recovery.get('selected_story') or '').strip() if isinstance(incoming_recovery, dict) else ''
+    existing_story = str(existing_recovery.get('selected_story') or '').strip() if isinstance(existing_recovery, dict) else ''
+    incoming_recovery_stage = str(incoming_recovery.get('stage') or '').strip().lower() if isinstance(incoming_recovery, dict) else ''
+    if incoming_recovery_stage in {'story_selection', 'transition_to_story'}:
+        incoming_story = ''
+    def _nonnegative_count(value):
+        try:
+            return max(0, int(value))
+        except (TypeError, ValueError, OverflowError):
+            return 0
+
+    if incoming_stage == existing_stage == 'story' and incoming_story and incoming_story.casefold() == existing_story.casefold():
+        prior_total = _nonnegative_count(student_record.get('items_total'))
+        incoming_total = _nonnegative_count(incoming_state.get('items_total'))
+        total = prior_total or incoming_total
+        if total:
+            prior_completed = _nonnegative_count(student_record.get('items_completed'))
+            incoming_completed = _nonnegative_count(incoming_state.get('items_completed'))
+            completed = min(total, max(prior_completed, incoming_completed))
+            incoming_state['items_total'] = total
+            incoming_state['items_completed'] = completed
+            incoming_state['progress'] = completed / total
+    if incoming_stage == 'story':
+        total = _nonnegative_count(incoming_state.get('items_total'))
+        if not incoming_story or not total:
+            incoming_state['items_total'] = 0
+            incoming_state['items_completed'] = 0
+            incoming_state['progress'] = 0
+        else:
+            completed = min(total, _nonnegative_count(incoming_state.get('items_completed')))
+            incoming_state['items_total'] = total
+            incoming_state['items_completed'] = completed
+            incoming_state['progress'] = completed / total
     student_record.update(incoming_state)
     student_record['updated_at'] = system_now().isoformat()
     states[student_key] = student_record

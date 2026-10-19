@@ -4587,6 +4587,28 @@
                 .every(result => ["correct", "substitution", "omission", "miscue"].includes(result));
         }
 
+        function liveCrlaStoryProgressSnapshot() {
+            const story = currentSelectedStory;
+            const storyContent = String(story?.content || "").trim();
+            if (!story || !String(story.title || "").trim() || !storyContent) return null;
+            // Use the reader's existing segmentation so the monitor total can
+            // never drift from the pages the learner actually sees.
+            const pages = splitTextIntoDisplayPages(storyContent, "paragraph");
+            const total = pages.length;
+            if (!total || !pages.some(page => String(page || "").trim())) return null;
+            if (currentStoryState !== "story_reading") {
+                return { completed: 0, total };
+            }
+
+            const saved = readStudentEndState();
+            const skipped = new Set((Array.isArray(saved.story_skipped_segments) ? saved.story_skipped_segments : [])
+                .filter(index => Number.isInteger(index) && index >= 0 && index < total));
+            const completed = pages.reduce((count, _page, index) => (
+                count + (skipped.has(index) || isCrlaStorySegmentResolved(index) ? 1 : 0)
+            ), 0);
+            return { completed: Math.max(0, Math.min(total, completed)), total };
+        }
+
         function finalizeStoryReading() {
             if (!isStrictStoryReading()) return;
             (itemPages[0] || []).forEach((_, index) => finalizeStorySegment(index));
@@ -7359,6 +7381,18 @@
             if (!liveSessionId || !isCurrentLiveAssessment()) return null;
             if (!Object.keys(updateValues).length) return null;
             try {
+                if (isOfficialAssessmentLaunch && isCrla && currentAssessmentBranch === "story"
+                    && ["story_selection", "story_ready", "story_reading"].includes(currentStoryState)) {
+                    const storyProgress = liveCrlaStoryProgressSnapshot();
+                    const completed = storyProgress?.completed ?? 0;
+                    const total = storyProgress?.total ?? 0;
+                    updateValues = {
+                        ...updateValues,
+                        items_completed: completed,
+                        items_total: total,
+                        progress: total > 0 ? completed / total : 0,
+                    };
+                }
                 const liveStage = currentStoryState === "story_comprehension"
                     ? "comprehension"
                     : currentStoryState === "story_reading" || currentStoryState === "story_complete"

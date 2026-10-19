@@ -6576,20 +6576,27 @@ class LiveAssessmentStartTests(TestCase):
             ('words', 'Words', 3, 10),
             ('rhymes', 'Rhymes', 2, 5),
             ('sentences', 'Sentence', 4, 10),
-            ('story', 'Story', 1, 1),
+            ('story', 'Story', 1, 8),
             ('comprehension', 'Comprehension', 3, 5),
         ):
+            update = {
+                'status': 'reading',
+                'crla_stage': stage,
+                'crla_stage_label': label,
+                'items_completed': completed,
+                'items_total': total,
+                'progress': completed / total,
+                'connection_status': 'connected',
+            }
+            if stage == 'story':
+                update['recovery_state'] = {
+                    'stage': 'story_reading',
+                    'selected_story': 'Ang Pagong at ang Kuneho',
+                    'story_segment_index': 1,
+                }
             response = student_client.post(
                 update_url,
-                json.dumps({
-                    'status': 'reading',
-                    'crla_stage': stage,
-                    'crla_stage_label': label,
-                    'items_completed': completed,
-                    'items_total': total,
-                    'progress': completed / total,
-                    'connection_status': 'connected',
-                }),
+                json.dumps(update),
                 content_type='application/json',
             )
             self.assertEqual(response.status_code, 200)
@@ -6601,6 +6608,161 @@ class LiveAssessmentStartTests(TestCase):
             self.assertEqual(student_state['crla_stage_label'], label)
             self.assertEqual(student_state['items_completed'], completed)
             self.assertEqual(student_state['items_total'], total)
+
+    def test_live_story_progress_is_persisted_per_student_and_never_regresses(self):
+        students = [self.student]
+        for label in ('Beta', 'Gamma'):
+            students.append(User.objects.create(
+                custom_id=f"STD-{uuid.uuid4().hex[:8].upper()}",
+                role='student',
+                first_name=label,
+                last_name='Student',
+                sex='female',
+                birth_month=6,
+                birth_day=2,
+                birth_year=2012,
+                email=f'live-{label.lower()}-{uuid.uuid4().hex[:6]}@example.com',
+                password_hash=make_password('student-password'),
+                grade_level='Grade 2',
+            ))
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[student.id for student in students],
+            student_count=len(students),
+            status='started',
+            countdown_seconds=0,
+            start_at=timezone.now() - timedelta(seconds=10),
+            student_states={str(student.id): {'status': 'waiting', 'progress': 0} for student in students},
+        )
+        update_url = reverse('live_assessment_student_state_update', kwargs={'session_id': session.id})
+        assigned = (
+            (students[0], 'Ang Pagong at ang Kuneho', 3, 8),
+            (students[1], 'Isang Kakaibang Araw', 2, 4),
+            (students[2], 'Ang Pagong at ang Kuneho', 6, 8),
+        )
+
+        def student_client_for(student):
+            client = Client()
+            client_session = client.session
+            client_session.update({
+                'user_id': student.id,
+                'user_role': 'student',
+                'first_name': student.first_name,
+                'last_name': student.last_name,
+                'email': student.email,
+                'custom_id': student.custom_id,
+            })
+            client_session.save()
+            return client
+
+        clients = {student.id: student_client_for(student) for student, *_ in assigned}
+
+        def publish(student, story, completed, total):
+            return clients[student.id].post(
+                update_url,
+                json.dumps({
+                    'status': 'reading',
+                    'crla_stage': 'story',
+                    'crla_stage_label': 'Story',
+                    'items_completed': completed,
+                    'items_total': total,
+                    'progress': completed / total,
+                    'connection_status': 'connected',
+                    'recovery_state': {
+                        'stage': 'story_reading',
+                        'selected_story': story,
+                        'story_segment_index': completed,
+                        'story_word_results': {},
+                    },
+                }),
+                content_type='application/json',
+            )
+
+        state_url = reverse('live_assessment_session_state', kwargs={'session_id': session.id})
+        checkpoints = (
+            (students[0], 'Ang Pagong at ang Kuneho', 0, 8),
+            (students[0], 'Ang Pagong at ang Kuneho', 1, 8),
+            (students[0], 'Ang Pagong at ang Kuneho', 4, 8),
+            (students[0], 'Ang Pagong at ang Kuneho', 8, 8),
+            (students[1], 'Isang Kakaibang Araw', 0, 4),
+            (students[1], 'Isang Kakaibang Araw', 1, 4),
+            (students[1], 'Isang Kakaibang Araw', 3, 4),
+            (students[1], 'Isang Kakaibang Araw', 4, 4),
+            (students[2], 'Ang Pagong at ang Kuneho', 6, 8),
+        )
+        for student, story, completed, total in checkpoints:
+            response = publish(student, story, completed, total)
+            self.assertEqual(response.status_code, 200)
+            polled = self.client.get(state_url)
+            self.assertEqual(polled.status_code, 200)
+            state = polled.json()['session']['student_states'][str(student.id)]
+            self.assertEqual(state['items_completed'], completed)
+            self.assertEqual(state['items_total'], total)
+            self.assertEqual(state['recovery_state']['selected_story'], story)
+
+        # A duplicate and a delayed response cannot regress or double count.
+        self.assertEqual(publish(students[0], 'Ang Pagong at ang Kuneho', 3, 8).status_code, 200)
+        self.assertEqual(publish(students[0], 'Ang Pagong at ang Kuneho', 2, 8).status_code, 200)
+        polled = self.client.get(state_url)
+        self.assertEqual(polled.status_code, 200)
+        states = polled.json()['session']['student_states']
+        self.assertEqual((states[str(students[0].id)]['items_completed'], states[str(students[0].id)]['items_total']), (8, 8))
+        self.assertEqual((states[str(students[1].id)]['items_completed'], states[str(students[1].id)]['items_total']), (4, 4))
+        self.assertEqual((states[str(students[2].id)]['items_completed'], states[str(students[2].id)]['items_total']), (6, 8))
+
+    def test_live_story_progress_without_story_identity_has_no_invented_denominator(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='started',
+            countdown_seconds=0,
+            start_at=timezone.now() - timedelta(seconds=10),
+            student_states={str(self.student.id): {'status': 'waiting', 'progress': 0}},
+        )
+        student_client = Client()
+        student_session = student_client.session
+        student_session.update({'user_id': self.student.id, 'user_role': 'student'})
+        student_session.save()
+        response = student_client.post(
+            reverse('live_assessment_student_state_update', kwargs={'session_id': session.id}),
+            json.dumps({
+                'status': 'reading',
+                'crla_stage': 'story',
+                'crla_stage_label': 'Story',
+                'items_completed': 4,
+                'items_total': 8,
+                'progress': 0.5,
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        state = response.json()['session']['student_states'][str(self.student.id)]
+        self.assertEqual(state['items_completed'], 0)
+        self.assertEqual(state['items_total'], 0)
+        self.assertEqual(state['progress'], 0)
+
+    def test_story_monitor_uses_reader_segmentation_and_safe_dynamic_format(self):
+        root = Path(__file__).resolve().parent
+        reader = (root / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js').read_text(encoding='utf-8')
+        monitor = (root / 'templates' / 'pabasa_app' / 'live_assessment_session.html').read_text(encoding='utf-8')
+        self.assertIn('splitTextIntoDisplayPages(storyContent, "paragraph")', reader)
+        progress_helper = reader.split('function liveCrlaStoryProgressSnapshot()', 1)[1].split('\n        function finalizeStoryReading()', 1)[0]
+        self.assertIn('isCrlaStorySegmentResolved(index)', progress_helper)
+        self.assertIn('saved.story_skipped_segments', progress_helper)
+        self.assertIn('currentStoryState !== "story_reading"', progress_helper)
+        self.assertNotIn('currentPageIndex', progress_helper)
+        self.assertIn('items_total: total', reader)
+        self.assertIn('isCrla && currentAssessmentBranch === "story"', reader)
+        self.assertIn('`Story ${itemsCompleted}/${itemsTotal}`', monitor)
+        self.assertIn("'Story —'", monitor)
+        self.assertIn('if (pollInFlight) return;', monitor)
 
     def test_comprehension_monitor_progress_tracks_each_persisted_completed_question(self):
         """Teacher polling sees the persisted 0/6 through 6/6 question state."""
