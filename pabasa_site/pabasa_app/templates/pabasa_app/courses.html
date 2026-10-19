@@ -4771,9 +4771,7 @@
     }
 
     #reportsPane,
-    #reportsPane #courseReportSection,
-    #reportsPane .course-report-composer-card,
-    #reportsPane .course-report-composer-body {
+    #reportsPane #courseReportSection {
         height: auto;
         max-height: none;
         overflow: visible;
@@ -4787,7 +4785,6 @@
 
     #reportsPane #courseParentUpdateTabForm {
         display: flex;
-        flex: 1 1 auto;
         flex-direction: column;
         gap: 0.9rem;
         min-width: 0;
@@ -4845,20 +4842,12 @@
     }
 
     #reportsPane .course-report-submit-row {
-        justify-content: flex-end;
-        margin-top: auto;
+        justify-content: space-between;
     }
 
     #reportsPane #courseBtnSendParentUpdate {
         align-self: flex-end;
         min-height: 44px;
-    }
-
-    @media (max-width: 1199.98px) {
-        #reportsPane .course-report-layout > .col-lg-6 {
-            flex: 0 0 100%;
-            max-width: 100%;
-        }
     }
 
     @media (min-width: 992px) {
@@ -6581,6 +6570,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 </script>
 <style>.s7l19-letters>div{grid-template-columns:2rem 70px 1fr auto}.s7l19-tiles{display:flex;gap:.22rem;flex-wrap:wrap}.s7l19-tiles i{min-width:1.55rem;padding:.1rem .32rem;border:1px solid #7ba6b3;border-radius:.25rem;background:#fff;font-style:normal;text-align:center}.s7l19-letters strong{color:#278750}</style>
+<link rel="stylesheet" href="{% static 'pabasa_app/css/course_reports.css' %}?v=20261019-2">
 {% endblock %}
 
 {% block header %}
@@ -7868,23 +7858,27 @@ document.addEventListener('DOMContentLoaded',()=>{
                                         </div>
                                     </div>
 
-                                    <div class="tab-pane fade" id="reportsPane" role="tabpanel" aria-labelledby="reports-tab">
+                                    <div class="tab-pane fade" id="reportsPane" role="tabpanel" aria-labelledby="side-reports-tab">
                                         <div id="courseReportSection" class="mb-3">
                                             <div class="mb-3 d-flex justify-content-between align-items-center">
                                                 <h6 class="mb-0">Reports & Updates</h6>
                                             </div>
-                                            <div class="row g-4 course-report-layout" style="margin-bottom:0">
+                                            <div class="row g-4 course-report-layout">
                                                 <div class="col-lg-6">
-                                                    <div class="dash-card h-100 course-report-recipients-card">
+                                                    <div class="dash-card course-report-recipients-card" aria-labelledby="courseRecipientsHeading">
                                                         <div class="card-header bg-transparent border-0 p-4 pb-0 d-flex justify-content-between align-items-center course-report-card-header">
-                                                            <h6 class="fw-bold mb-0">Select Recipients</h6>
+                                                            <div>
+                                                                <h6 class="fw-bold mb-1" id="courseRecipientsHeading">Select Recipients</h6>
+                                                                <p class="course-report-description mb-0">Choose students to receive an update.</p>
+                                                            </div>
                                                             <div class="form-check">
-                                                                <input class="form-check-input" type="checkbox" id="courseSelectAllRecipients">
+                                                                <input class="form-check-input" type="checkbox" id="courseSelectAllRecipients" disabled>
                                                                 <label class="form-check-label small fw-bold" for="courseSelectAllRecipients">Select All</label>
                                                             </div>
                                                         </div>
+                                                        <div class="course-report-selection-summary" id="courseRecipientSelectionSummary" role="status">Loading students…</div>
                                                         <div class="card-body p-0">
-                                                            <div id="courseUnifiedStudentReportList" class="list-group list-group-flush">
+                                                            <div id="courseUnifiedStudentReportList" class="list-group list-group-flush" role="region" aria-label="Students available for updates" aria-busy="true" tabindex="0">
                                                                 <!-- Populated by JS -->
                                                             </div>
                                                         </div>
@@ -7892,20 +7886,17 @@ document.addEventListener('DOMContentLoaded',()=>{
                                                 </div>
 
                                                 <div class="col-lg-6">
-                                                    <div class="dash-card h-100 course-report-composer-card">
+                                                    <div class="dash-card course-report-composer-card" aria-labelledby="courseComposerHeading">
                                                         <div class="card-body p-4 course-report-composer-body">
-                                                            <h6 class="fw-bold mb-3">Update Composer</h6>
+                                                            <header class="course-report-composer-header">
+                                                                <span class="course-report-heading-icon" aria-hidden="true"><i class="bi bi-pencil-square"></i></span>
+                                                                <div>
+                                                                    <h6 class="fw-bold mb-1" id="courseComposerHeading">Update Composer</h6>
+                                                                    <p class="course-report-description mb-0">Share reading progress and helpful next steps with families.</p>
+                                                                </div>
+                                                            </header>
                                                             <form id="courseParentUpdateTabForm" action="#" method="post">
                                                                 {% csrf_token %}
-                                                                <div class="course-report-preview" id="courseSelectedStudentReportPreview" aria-live="polite">
-                                                                    <div class="course-report-preview-head">
-                                                                        <div>
-                                                                            <p class="course-report-preview-title">Select a student to preview the reading report.</p>
-                                                                            <p class="course-report-preview-meta">The selected recipient will receive teacher comments plus their personalized performance report.</p>
-                                                                        </div>
-                                                                        <i class="bi bi-bar-chart text-primary"></i>
-                                                                    </div>
-                                                                </div>
                                                                 <div class="mb-3 course-report-type-section">
                                                                     <label class="form-label small fw-bold" for="courseParentUpdateTemplate">Update Type</label>
                                                                     <select class="form-select" id="courseParentUpdateTemplate" style="border-radius:10px;">
@@ -7922,8 +7913,9 @@ document.addEventListener('DOMContentLoaded',()=>{
                                                                         <strong>Automated Reading Progress Report</strong>
                                                                         <p>This report uses the student's CRLA and ARAL records.</p>
                                                                     </div>
-                                                                    <button type="button" class="btn btn-sm text-white course-report-preview-pdf-btn" id="coursePreviewReadingReport" style="background:#1D748E; border-color:#1D748E; border-radius:8px;"><i class="bi bi-eye-fill me-1 text-white" aria-hidden="true"></i> Preview PDF</button>
+                                                                    <button type="button" class="btn btn-sm text-white course-report-preview-pdf-btn" id="coursePreviewReadingReport" aria-describedby="courseReportPreviewHint" disabled style="background:#1D748E; border-color:#1D748E; border-radius:8px;"><i class="bi bi-eye-fill me-1 text-white" aria-hidden="true"></i> Preview PDF</button>
                                                                 </div>
+                                                                <p class="form-text m-0" id="courseReportPreviewHint">Select one student to preview their PDF.</p>
 
                                                                 <div class="mb-3" id="courseParentAssessmentScheduleContainer" style="display:none;">
                                                                     <label class="form-label small fw-bold" for="courseParentAssessmentScheduledAt">Assessment Date & Time</label>
@@ -7939,15 +7931,29 @@ document.addEventListener('DOMContentLoaded',()=>{
 
                                                                 <div class="mb-3 course-report-note-section">
                                                                     <label class="form-label course-report-message-label" for="courseParentUpdateMessage">
-                                                                        <span class="small fw-bold">Teacher Note — Optional</span>
+                                                                        <span class="small fw-bold">Message <span class="text-muted fw-normal">(optional)</span></span>
                                                                     </label>
-                                                                    <div class="form-text course-report-template-tip">Tip: Use {name} for student name.</div>
-                                                                    <textarea class="form-control" id="courseParentUpdateMessage" rows="4" style="border-radius:10px;" placeholder="Add personalized notes..."></textarea>
-                                                                    <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> Regular and support updates include the automated PDF.</div>
+                                                                    <textarea class="form-control" id="courseParentUpdateMessage" rows="5" aria-describedby="courseMessageHelp courseMessageReportHelp" placeholder="Add a note about progress, encouragement, or practice at home…"></textarea>
+                                                                    <div class="form-text course-report-template-tip mt-2" id="courseMessageHelp">Use {name} to personalize each student's message.</div>
+                                                                    <div class="form-text mt-1" id="courseMessageReportHelp"><i class="bi bi-info-circle me-1" aria-hidden="true"></i> Regular and support updates include the automated PDF.</div>
                                                                 </div>
 
+                                                                <details class="course-report-details">
+                                                                    <summary>Review reading report details</summary>
+                                                                    <div class="course-report-preview" id="courseSelectedStudentReportPreview" aria-live="polite">
+                                                                        <div class="course-report-preview-head">
+                                                                            <div>
+                                                                                <p class="course-report-preview-title">Select a student to preview the reading report.</p>
+                                                                                <p class="course-report-preview-meta">The selected recipient will receive teacher comments plus their personalized performance report.</p>
+                                                                            </div>
+                                                                            <i class="bi bi-bar-chart text-primary" aria-hidden="true"></i>
+                                                                        </div>
+                                                                    </div>
+                                                                </details>
+                                                                <div id="courseUpdateStatus" class="course-report-send-status small" role="status" aria-live="polite" aria-atomic="true"></div>
                                                                 <div class="d-flex justify-content-end course-report-submit-row">
-                                                                    <button type="submit" class="btn btn-primary" id="courseBtnSendParentUpdate" style="border-radius:10px; min-height:44px; padding-inline:1.5rem;">
+                                                                    <div class="course-report-recipient-count" id="courseUpdateRecipientCount" role="status">0 students selected</div>
+                                                                    <button type="submit" class="btn btn-primary" id="courseBtnSendParentUpdate" aria-describedby="courseUpdateRecipientCount" disabled>
                                                                         <i class="bi bi-send me-1"></i> Send Update
                                                                     </button>
                                                                 </div>
@@ -13911,7 +13917,42 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return 'Continue steady home reading practice and review teacher-assigned materials to strengthen fluency and confidence.';
         }
 
+        function syncCourseReportControls() {
+            const list = document.getElementById('courseUnifiedStudentReportList');
+            const form = document.getElementById('courseParentUpdateTabForm');
+            const eligible = Array.from(list?.querySelectorAll('.student-checkbox:not(:disabled)') || []);
+            const selected = eligible.filter(cb => cb.checked).length;
+            const loading = list?.getAttribute('aria-busy') === 'true';
+            const sending = form?.getAttribute('aria-busy') === 'true';
+            const selectAll = document.getElementById('courseSelectAllRecipients');
+            if (selectAll) {
+                selectAll.disabled = loading || eligible.length === 0;
+                selectAll.checked = eligible.length > 0 && selected === eligible.length;
+                selectAll.indeterminate = selected > 0 && selected < eligible.length;
+            }
+            const count = document.getElementById('courseUpdateRecipientCount');
+            if (count) count.textContent = `${selected} student${selected === 1 ? '' : 's'} selected`;
+            const summary = document.getElementById('courseRecipientSelectionSummary');
+            if (summary) {
+                const total = list?.querySelectorAll('.student-checkbox').length || 0;
+                summary.textContent = loading ? 'Loading students…'
+                    : `${selected} of ${eligible.length} available students selected${total > eligible.length ? ` · ${total - eligible.length} unavailable for email` : ''}`;
+            }
+            const sendButton = document.getElementById('courseBtnSendParentUpdate');
+            if (sendButton) sendButton.disabled = loading || sending || selected === 0;
+            const previewButton = document.getElementById('coursePreviewReadingReport');
+            if (previewButton) previewButton.disabled = loading || sending || selected !== 1;
+        }
+
+        function setCourseUpdateStatus(message = '', tone = 'info') {
+            const status = document.getElementById('courseUpdateStatus');
+            if (!status) return;
+            status.textContent = message;
+            status.className = `course-report-send-status small${message ? ` alert alert-${tone}` : ''}`;
+        }
+
         function renderCourseReportPreview(courseId) {
+            syncCourseReportControls();
             const preview = document.getElementById('courseSelectedStudentReportPreview');
             if (!preview) return;
 
@@ -13969,9 +14010,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     </div>
                     <div class="d-flex flex-column align-items-end gap-1">
                         <span class="level-chip" style="font-size:0.72rem;">${escapeHtml(levelLabel)}</span>
-                        ${levelDisclaimer ? `<span class="small text-muted" style="max-width: 220px; text-align: right;">${escapeHtml(levelDisclaimer)}</span>` : ''}
                     </div>
                 </div>
+                ${levelDisclaimer ? `<details class="course-report-preview-disclaimer"><summary>About this reading level</summary><p>${escapeHtml(levelDisclaimer)}</p></details>` : ''}
                 <div class="course-report-metric-grid">
                     <div class="course-report-metric"><span>Accuracy</span><strong>${courseReportMetricValue(student.accuracy, '%')}</strong></div>
                     <div class="course-report-metric"><span>WPM</span><strong>${courseReportMetricValue(student.wpm, ' WPM')}</strong></div>
@@ -13992,7 +14033,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const selectAll = document.getElementById('courseSelectAllRecipients');
                 if (!listContainer) return;
 
-                listContainer.innerHTML = '';
+                listContainer.setAttribute('aria-busy', 'true');
+                listContainer.innerHTML = '<p class="text-center text-muted p-4 mb-0"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Loading students…</p>';
+                setCourseUpdateStatus();
                 if (selectAll) {
                     selectAll.checked = false;
                     if (!selectAll.dataset.bound) {
@@ -14003,9 +14046,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         });
                     }
                 }
+                syncCourseReportControls();
 
                 const courseStudents = await fetchStudentsForCourse(course);
                 courseReportStudentCache[String(courseId)] = courseStudents;
+                listContainer.innerHTML = '';
                 renderCourseReportPreview(courseId);
 
                 if (courseStudents.length === 0) {
@@ -14030,8 +14075,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         <div class="course-report-recipient-row">
                             <div class="form-check course-report-recipient-check"><input class="form-check-input student-checkbox" type="checkbox" id="course_upd_student_${index}" value="${escapeHtml(s.id || '')}" ${!emailEnabled || !s.id ? 'disabled' : ''}></div>
                             <div class="course-report-recipient-main"><div class="course-report-recipient-head">
-                                    <strong class="mb-0 course-report-recipient-name">${escapeHtml(displayName)}</strong>${levelChipHtml}
-                                </div><div class="course-report-recipient-email small text-secondary">${s.email || '<span class="text-danger">No email</span>'}</div>
+                                    <label for="course_upd_student_${index}" class="fw-bold mb-0 course-report-recipient-name">${escapeHtml(displayName)}</label>${levelChipHtml}
+                                </div><div class="course-report-recipient-email small text-secondary">${s.email ? escapeHtml(s.email) : '<span class="text-danger">No email</span>'}${settings.emailNotifications === false ? ' · Email notifications disabled' : ''}</div>
                                 <div class="course-report-pill-row">
                                     <span class="course-report-pill"><span class="course-report-pill-label">Accuracy</span><strong class="course-report-pill-value">${accuracyText}</strong></span>
                                     <span class="course-report-pill"><span class="course-report-pill-label">WPM</span><strong class="course-report-pill-value">${wpmText}</strong></span>
@@ -14051,6 +14096,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 }
                 courseReportStudentCache[String(courseId)] = [];
                 renderCourseReportPreview(courseId);
+            } finally {
+                document.getElementById('courseUnifiedStudentReportList')?.setAttribute('aria-busy', 'false');
+                syncCourseReportControls();
             }
         }
 
@@ -14401,9 +14449,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 templateSelect.onchange = () => {
                     messageArea.value = templates[templateSelect.value] || '';
                     toggleScheduleFields();
+                    setCourseUpdateStatus();
                 };
                 toggleScheduleFields();
                 messageArea.value = templates.general;
+                messageArea.oninput = () => setCourseUpdateStatus();
+                setCourseUpdateStatus();
+                syncCourseReportControls();
 
                 if (previewButton) previewButton.onclick = () => {
                     const checked = Array.from(document.querySelectorAll('#courseUnifiedStudentReportList .student-checkbox:checked')).map(cb => cb.value);
@@ -14414,6 +14466,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                 form.onsubmit = async (e) => {
                     e.preventDefault();
+                    if (form.getAttribute('aria-busy') === 'true') return;
                     const checked = Array.from(document.querySelectorAll('#courseUnifiedStudentReportList .student-checkbox:checked')).map(cb => cb.value);
                     if (checked.length === 0) return showToast('Please select at least one recipient.', 'error');
                     const message = (messageArea.value || '').trim();
@@ -14422,6 +14475,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
                     const originalButtonHtml = sendButton ? sendButton.innerHTML : '';
+                    form.setAttribute('aria-busy', 'true');
+                    syncCourseReportControls();
+                    setCourseUpdateStatus('Sending your update. Please wait…');
                     if (sendButton) {
                         sendButton.disabled = true;
                         sendButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
@@ -14453,15 +14509,22 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         const skippedCount = Array.isArray(data.skipped) ? data.skipped.length : 0;
                         const skipText = skippedCount ? ` (${skippedCount} skipped)` : '';
                         const reportText = data.report_included ? ' with reading reports' : '';
-                        showToast(`Update sent${reportText} to ${data.sent_count || checked.length} recipient(s)${skipText}.`, 'success');
+                        const sentCount = data.sent_count ?? checked.length;
+                        const statusMessage = sentCount > 0
+                            ? `Update sent${reportText} to ${sentCount} recipient(s)${skipText}.`
+                            : `No updates were sent${skipText}. Check recipient email availability and try again.`;
+                        setCourseUpdateStatus(statusMessage, sentCount > 0 ? 'success' : 'warning');
+                        showToast(statusMessage, sentCount > 0 ? 'success' : 'error');
                     } catch (err) {
                         console.warn('send course update failed', err);
+                        setCourseUpdateStatus(err.message || 'Failed to send update. Please try again.', 'danger');
                         showToast(err.message || 'Failed to send update', 'error');
                     } finally {
                         if (sendButton) {
-                            sendButton.disabled = false;
                             sendButton.innerHTML = originalButtonHtml || '<i class="bi bi-send me-1"></i> Send Update';
                         }
+                        form.setAttribute('aria-busy', 'false');
+                        syncCourseReportControls();
                     }
                     return;
                 };

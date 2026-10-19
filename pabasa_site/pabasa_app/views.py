@@ -4260,8 +4260,9 @@ def _send_course_update_to_student(
     reading_material_input='',
     record_note=True,
     note_type_prefix='course_update',
+    sections=None,
 ):
-    course_sections = list(course.sections.filter(is_active=True))
+    course_sections = list(sections) if sections is not None else list(course.sections.filter(is_active=True))
     if course_sections and not any(section.has_student(student, active_only=True) for section in course_sections):
         return {'success': False, 'reason': 'not_enrolled', 'student_id': student.id}
     if not student.email:
@@ -4365,8 +4366,10 @@ def _send_course_update_to_student(
         )
         include_attachment = True
 
+    course_title = course.title if course else course_sections[0].class_name
+    course_code = course.code if course else course_sections[0].class_code
     note_text = (
-        f"Course: {course.title} ({course.code})\n"
+        f"Course: {course_title} ({course_code})\n"
         f"Update Type: {update_type}\n"
         f"Recipient Email: {student.email}\n\n"
         f"Teacher Comments:\n"
@@ -31966,7 +31969,7 @@ def send_course_update(request):
     """Send a course progress update to selected enrolled students and store sent updates as notes."""
     try:
         data = json.loads(request.body or '{}')
-        course_id = data.get('course_id')
+        course_id = str(data.get('course_id') or '').strip()
         student_ids = data.get('student_ids') or []
         update_type = str(data.get('update_type') or 'general').strip()[:50]
         message_template = str(data.get('message') or '').strip()
@@ -31979,9 +31982,22 @@ def send_course_update(request):
         if not teacher_user:
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
-        course = Course.objects.filter(id=course_id, teacher=teacher_user, is_active=True).prefetch_related('sections').first()
-        if not course:
-            return JsonResponse({'success': False, 'error': 'Course not found'}, status=404)
+        course = None
+        course_sections = None
+        if course_id.startswith('section-'):
+            section_id = course_id.removeprefix('section-')
+            if not section_id.isdigit():
+                return JsonResponse({'success': False, 'error': 'Invalid class'}, status=400)
+            section = Section.objects.filter(id=int(section_id), teacher=teacher_user, is_active=True).first()
+            if not section:
+                return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
+            course_sections = [section]
+        elif course_id.isdigit():
+            course = Course.objects.filter(id=int(course_id), teacher=teacher_user, is_active=True).prefetch_related('sections').first()
+            if not course:
+                return JsonResponse({'success': False, 'error': 'Course not found'}, status=404)
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid course'}, status=400)
 
         selected_student_ids = []
         for raw_id in student_ids:
@@ -32014,6 +32030,7 @@ def send_course_update(request):
                 reading_material_input=reading_material_input,
                 record_note=True,
                 note_type_prefix='course_update',
+                sections=course_sections,
             )
             if result.get('success'):
                 sent.append(result)
