@@ -303,6 +303,7 @@
         let speechChunkTimer = null;
         let crlaLiveSpeech = null;
         let crlaLiveContext = null;
+        let liveSpeechCapturePausePromise = null;
         let crlaStreamStarting = false;
         let crlaStreamingUnavailable = false;
         let crlaSpeechFailure = false;
@@ -354,7 +355,12 @@
         let itemLocked = [];
         let itemScores = [];
         let autoAdvanceTimer = null;
+        let autoAdvanceTimerDeadline = null;
+        let autoAdvanceTimerCallback = null;
+        let pausedAutoAdvanceTimer = null;
         let sentenceItemTimer = null;
+        let sentenceItemTimerDeadline = null;
+        let pausedSentenceItemRemainingMs = null;
         let speechRecognitionVersion = 0;
         let sentenceCountdownTimer = null;
         let sentenceCountdownItemIndex = null;
@@ -367,7 +373,9 @@
         let storyReadingRecordedDurationSeconds = null;
         let storyReadingTimerExpired = false;
         let storyReadingCountdownActive = false;
+        let storyReadingFinalizationPendingAfterPause = false;
         const storyReadingDurationMs = 179000;
+        let deferredSpeechResult = null;
         let liveServerTimeOffsetMs = 0;
         const liveSessionId = isAdminPreview ? null : urlParams.get("live_session_id");
         const liveSessionStateUrl = liveSessionId ? `/api/live-assessment/session/${liveSessionId}/` : null;
@@ -387,6 +395,51 @@
         // time.
         let liveActiveElapsedSeconds = 0;
         let liveActiveIntervalStartedAt = null;
+
+        function clearAutoAdvanceTimer() {
+            if (autoAdvanceTimer !== null) window.clearTimeout(autoAdvanceTimer);
+            autoAdvanceTimer = null;
+            autoAdvanceTimerDeadline = null;
+            autoAdvanceTimerCallback = null;
+            pausedAutoAdvanceTimer = null;
+        }
+
+        function scheduleAutoAdvance(callback, delayMs) {
+            clearAutoAdvanceTimer();
+            autoAdvanceTimerCallback = callback;
+            const delay = Math.max(0, Number(delayMs) || 0);
+            autoAdvanceTimerDeadline = Date.now() + delay;
+            autoAdvanceTimer = window.setTimeout(() => {
+                autoAdvanceTimer = null;
+                autoAdvanceTimerDeadline = null;
+                const advance = autoAdvanceTimerCallback;
+                autoAdvanceTimerCallback = null;
+                if (liveSessionPaused) {
+                    pausedAutoAdvanceTimer = { callback: advance, remainingMs: 0 };
+                    return;
+                }
+                advance?.();
+            }, delay);
+        }
+
+        function pauseAutoAdvanceTimer() {
+            if (autoAdvanceTimer === null || !autoAdvanceTimerCallback) return;
+            pausedAutoAdvanceTimer = {
+                callback: autoAdvanceTimerCallback,
+                remainingMs: Math.max(0, autoAdvanceTimerDeadline - Date.now()),
+            };
+            window.clearTimeout(autoAdvanceTimer);
+            autoAdvanceTimer = null;
+            autoAdvanceTimerDeadline = null;
+            autoAdvanceTimerCallback = null;
+        }
+
+        function resumeAutoAdvanceTimer() {
+            if (liveSessionPaused || !pausedAutoAdvanceTimer) return;
+            const pending = pausedAutoAdvanceTimer;
+            pausedAutoAdvanceTimer = null;
+            scheduleAutoAdvance(pending.callback, pending.remainingMs);
+        }
 
         function getAssessmentElapsedSeconds(now = Date.now()) {
             if (!isCurrentLiveAssessment()) {
@@ -408,8 +461,9 @@
         function resumeLiveElapsedTimer(savedState) {
             const savedElapsed = Number(savedState?.elapsed_seconds);
             if (Number.isFinite(savedElapsed) && savedElapsed >= 0) {
-                // The server's temporary state is the recovery baseline.
-                liveActiveElapsedSeconds = savedElapsed;
+                // Same-page Pause/Resume already captured the precise local
+                // elapsed value. The server snapshot can be a heartbeat old.
+                liveActiveElapsedSeconds = Math.max(liveActiveElapsedSeconds, savedElapsed);
             }
             if (startTime && !liveSessionEnded) liveActiveIntervalStartedAt = Date.now();
         }
@@ -1896,8 +1950,20 @@
         let crlaSpeechAttemptActive = false;
         let crlaSpokenAttemptProcessing = false;
 
+        let crlaComprehensionAdvancePendingIndex = null;
+
+        async function advanceCRLAComprehensionAfterAttempt(questionIndex) {
+            if (currentStoryQuestionIndex !== questionIndex || liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) return;
+            if (currentStoryQuestionIndex < currentStoryQuestions.length - 1) {
+                currentStoryQuestionIndex += 1;
+                renderCRLAQuestion();
+                return;
+            }
+            await finishCRLAComprehension();
+        }
+
         async function completeCRLASpokenAttempt(transcript, questionIndex) {
-            if (crlaSpokenAttemptProcessing) return;
+            if (crlaSpokenAttemptProcessing || liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) return;
             crlaSpokenAttemptProcessing = true;
             try {
                 const answer = String(transcript || "").trim();
@@ -1914,12 +1980,13 @@
                 currentStoryResults[questionIndex] = Boolean(result);
                 await persistCRLAComprehensionState();
                 if (currentStoryQuestionIndex !== questionIndex) return;
-                if (currentStoryQuestionIndex < currentStoryQuestions.length - 1) {
-                    currentStoryQuestionIndex += 1;
-                    renderCRLAQuestion();
+                // A response which finishes while the teacher has paused is
+                // saved on this question, but cannot advance or finalize it.
+                if (liveSessionPaused) {
+                    crlaComprehensionAdvancePendingIndex = questionIndex;
                     return;
                 }
-                await finishCRLAComprehension();
+                await advanceCRLAComprehensionAfterAttempt(questionIndex);
             } finally {
                 crlaSpokenAttemptProcessing = false;
                 syncCRLAQuestionButtons();
@@ -1927,6 +1994,7 @@
         }
 
         async function finishCRLAComprehension() {
+            if (liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) return;
             stopReadAloud();
             const correctAnswers = currentStoryResults.filter(Boolean).length;
             const persisted = readStudentEndState();
@@ -1948,6 +2016,12 @@
                 if (crlaAnswerFeedback) { crlaAnswerFeedback.textContent = "We could not save your assessment. Please try again."; crlaAnswerFeedback.classList.remove("d-none"); }
                 return;
             }
+            if (liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) {
+                if (liveSessionPaused && currentStoryState === "story_comprehension") {
+                    crlaComprehensionAdvancePendingIndex = currentStoryQuestionIndex;
+                }
+                return;
+            }
             latestScores = {
                 ...(latestScores || {}),
                 story_read_percent: storyReadPercent,
@@ -1964,6 +2038,12 @@
                 total_questions: currentStoryQuestions.length,
             };
             const prepared = await showLearnerExperience();
+            if (liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) {
+                if (liveSessionPaused && currentStoryState === "story_comprehension") {
+                    crlaComprehensionAdvancePendingIndex = currentStoryQuestionIndex;
+                }
+                return;
+            }
             if (!prepared && crlaAnswerFeedback) {
                 crlaAnswerFeedback.textContent = "We could not prepare your results. Please try Continue again.";
                 crlaAnswerFeedback.classList.remove("d-none");
@@ -2062,6 +2142,20 @@
         learnerExperienceContinue?.addEventListener("click", () => {
             if (selectedLearnerExperienceRating) saveLearnerExperienceRating(selectedLearnerExperienceRating);
         });
+
+        function abortCRLASpokenAttemptForPause() {
+            if (!crlaSpeechAttemptActive && !crlaSpeechRecognition) return;
+            crlaSpeechAttemptActive = false;
+            const recognition = crlaSpeechRecognition;
+            crlaSpeechRecognition = null;
+            try { recognition?.abort(); } catch (error) {}
+            if (crlaQuestionStartReadingBtn) {
+                crlaQuestionStartReadingBtn.classList.remove("is-recording");
+                crlaQuestionStartReadingBtn.innerHTML = '<i class="bi bi-mic-fill" aria-hidden="true"></i> Sumagot';
+                crlaQuestionStartReadingBtn.setAttribute("aria-label", "Sumagot");
+                crlaQuestionStartReadingBtn.title = "Sumagot";
+            }
+        }
 
         function startCRLASpokenAttempt() {
             if (crlaQuestionNarrating || crlaQuestionTransitioning || crlaSpokenAttemptProcessing
@@ -2611,10 +2705,7 @@
                 isAdvancingItem = true;
                 if (nextBtn) nextBtn.disabled = true;
                 clearSentenceItemTimer();
-                if (autoAdvanceTimer) {
-                    window.clearTimeout(autoAdvanceTimer);
-                    autoAdvanceTimer = null;
-                }
+                clearAutoAdvanceTimer();
                 itemResultVersion += 1;
                 pendingAudioChunk = null;
 
@@ -4057,7 +4148,7 @@
 
         async function startCrlaLiveSpeech() {
             // Completion owns the current connection until its final audio is drained.
-            if (crlaStreamStarting || stoppingSpeechRecognition || !isRecording || isMuted
+            if (crlaStreamStarting || stoppingSpeechRecognition || !isRecording || isMuted || liveSessionPaused
                 || isAdvancingItem || isFinalizingReading || sentenceCountdownTimer) return;
             if (crlaLiveSpeech?.active && sameCrlaStreamItem(crlaLiveContext)) return;
             crlaLiveSpeech?.stop();
@@ -4141,6 +4232,10 @@
             try {
                 await stream.start(mediaStream);
                 if (crlaLiveSpeech === stream && stream.active) {
+                    if (liveSessionPaused) {
+                        await stream.pauseCapture();
+                        return;
+                    }
                     crlaSpeechFailure = false;
                     setSpeechStatus("Listening live with Google Speech…", "Words appear as you speak. Reading is checked when each phrase is confirmed.", true);
                 }
@@ -4194,8 +4289,9 @@
                 if (canStreamCrla()) await startCrlaLiveSpeech();
                 else startSpeechChunkRecorder();
                 if (captureVersion !== speechRecognitionVersion) return;
-                speechChunkTimer = window.setInterval(finishCurrentAudioChunk, 250);
                 recognitionActive = Boolean(mediaStream);
+                if (liveSessionPaused) return;
+                startLiveSpeechChunkTimer();
                 resetRawMicInput("Waiting for speech...");
                 renderOfficialCrlaStatus();
                 if (!crlaLiveSpeech) setSpeechStatus("Listening with Google Speech...", "Read the text on screen. Correct syllables will highlight as they are confirmed.", true);
@@ -4207,7 +4303,7 @@
         }
 
         function startSpeechChunkRecorder() {
-            if (!mediaStream || stoppingSpeechRecognition || isMuted || !isRecording || isAdvancingItem
+            if (!mediaStream || stoppingSpeechRecognition || isMuted || !isRecording || liveSessionPaused || isAdvancingItem
                 || sentenceCountdownTimer || mediaRecorder) return;
             if (canStreamCrla()) { startCrlaLiveSpeech(); return; }
             const recorderContext = currentSpeechContext();
@@ -4249,10 +4345,12 @@
                     hasHeardSinceLastChunk = false;
                     // Pause microphone capture until this spoken chunk has a final
                     // Cloud response. This prevents overlapping, unscored speech.
-                    await sendAudioChunk(new Blob(chunks, { type: recorderMimeType }), recorderContext);
+                    const blob = new Blob(chunks, { type: recorderMimeType });
+                    if (liveSessionPaused) pendingAudioChunk = { blob, context: recorderContext };
+                    else await sendAudioChunk(blob, recorderContext);
                 }
 
-                if (!stoppingSpeechRecognition && isRecording && !isMuted && !isAdvancingItem
+                if (!stoppingSpeechRecognition && isRecording && !isMuted && !liveSessionPaused && !isAdvancingItem
                     && mediaStream === recorderStream && !mediaRecorder) {
                     startSpeechChunkRecorder();
                 }
@@ -4262,6 +4360,7 @@
         }
 
         function finishCurrentAudioChunk(force = false) {
+            if (liveSessionPaused) return;
             if (canStreamCrla()) {
                 if (!force && !stoppingSpeechRecognition && !crlaStreamStarting && !crlaSpeechFailure
                     && !isAdvancingItem && !isFinalizingReading
@@ -4333,6 +4432,64 @@
             updateAssessmentNavigationButtons();
             updateSpeechProcessingControls();
             setSpeechStatus("Speech check stopped.", spokenTranscript || "Walang salitang nakuha.");
+        }
+
+        function startLiveSpeechChunkTimer() {
+            if (!speechChunkTimer) {
+                speechChunkTimer = window.setInterval(finishCurrentAudioChunk, 250);
+            }
+        }
+
+        function pauseLiveSpeechCapture() {
+            if (speechChunkTimer) {
+                window.clearInterval(speechChunkTimer);
+                speechChunkTimer = null;
+            }
+            if (crlaLiveSpeech?.active && !crlaLiveSpeech.capturePaused) {
+                try {
+                    liveSpeechCapturePausePromise = Promise.resolve(crlaLiveSpeech.pauseCapture()).catch(error => {
+                        console.warn("PABASA: Could not pause live speech capture", error);
+                    });
+                } catch (error) {
+                    console.warn("PABASA: Could not pause live speech capture", error);
+                    liveSpeechCapturePausePromise = null;
+                }
+            }
+            mediaStream?.getAudioTracks().forEach(track => { track.enabled = false; });
+            if (mediaRecorder?.state === "recording") {
+                try { mediaRecorder.pause(); }
+                catch (error) { console.warn("PABASA: Could not pause speech recorder", error); }
+            }
+        }
+
+        async function resumeLiveSpeechCapture() {
+            if (!isRecording || isMuted || liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) return;
+            if (liveSpeechCapturePausePromise) {
+                await liveSpeechCapturePausePromise;
+                liveSpeechCapturePausePromise = null;
+            }
+            if (mediaStream && recognitionActive) {
+                mediaStream.getAudioTracks().forEach(track => { track.enabled = true; });
+                if (crlaLiveSpeech?.active) {
+                    if (crlaLiveSpeech.capturePaused && !isSendingChunk) {
+                        try { await crlaLiveSpeech.resumeCapture(); }
+                        catch (error) { crlaLiveSpeech.fail(error); return; }
+                    }
+                    if (!isSendingChunk) startLiveSpeechChunkTimer();
+                    syncStoryReadingTimerProcessing();
+                    updateSpeechProcessingControls();
+                    return;
+                }
+                if (mediaRecorder?.state === "paused") {
+                    try { mediaRecorder.resume(); }
+                    catch (error) { console.warn("PABASA: Could not resume speech recorder", error); }
+                } else if (!mediaRecorder && !isSendingChunk && !stoppingSpeechRecognition) {
+                    startSpeechChunkRecorder();
+                }
+                startLiveSpeechChunkTimer();
+                return;
+            }
+            if (!recognitionActive) await startSpeechRecognition();
         }
 
         function startAudioMeter(stream) {
@@ -4982,6 +5139,10 @@
 
         async function sendAudioChunk(blob, context = currentSpeechContext()) {
             if (!context.itemText || !isCurrentSpeechContext(context)) return;
+            if (liveSessionPaused) {
+                pendingAudioChunk = { blob, context };
+                return;
+            }
             if (isSendingChunk) {
                 pendingAudioChunk = { blob, context };
                 updateAssessmentNavigationButtons();
@@ -5151,13 +5312,14 @@
                 }
             } finally {
                 isSendingChunk = false;
-                if (pendingAudioChunk && isRecording && !isMuted && isCurrentSpeechContext(pendingAudioChunk.context)) {
+                if (pendingAudioChunk && isRecording && !isMuted && !liveSessionPaused
+                    && isCurrentSpeechContext(pendingAudioChunk.context)) {
                     const nextChunk = pendingAudioChunk.blob;
                     const nextContext = pendingAudioChunk.context;
                     pendingAudioChunk = null;
                     sendAudioChunk(nextChunk, nextContext);
                 } else {
-                    pendingAudioChunk = null;
+                    if (!liveSessionPaused) pendingAudioChunk = null;
                     syncStoryReadingTimerProcessing();
                     updateAssessmentNavigationButtons();
                     updateSpeechProcessingControls();
@@ -5174,6 +5336,10 @@
 
         function handleSpeechResult(data, context = currentSpeechContext()) {
             if (!isCurrentSpeechContext(context)) return;
+            if (liveSessionPaused) {
+                deferredSpeechResult = { data, context };
+                return;
+            }
             
             // CRLA Official Assessment: Check if item is already locked
             // Official assessments allow only ONE scoring attempt per item
@@ -5353,7 +5519,7 @@
                         stopSpeechRecognition();
                         showCompletion(true);
                     } else {
-                        window.setTimeout(() => {
+                        scheduleAutoAdvance(() => {
                             if (!isRecording || context.version !== itemResultVersion) return;
                             sentenceDebug("[SENTENCE DEBUG][ADVANCE]", {
                                 previous_sentence_index: currentIndex,
@@ -5486,7 +5652,7 @@
                         currentPageIndex,
                         pageCount: getCurrentPageCount(),
                     });
-                    window.setTimeout(() => {
+                    scheduleAutoAdvance(() => {
                         if (!isRecording || context.version !== itemResultVersion) return;
                         if (currentPageIndex < getCurrentPageCount() - 1) {
                             const previousSegmentIndex = currentPageIndex;
@@ -5509,7 +5675,7 @@
                     stopSpeechRecognition();
                     showCompletion(true);
                 } else {
-                    window.setTimeout(() => {
+                    scheduleAutoAdvance(() => {
                         if (!isRecording || context.version !== itemResultVersion) return;
                         transitionToItem(currentIndex + 1, "Next item loaded.", "Patuloy na magbasa nang malinaw");
                     }, 700);
@@ -5623,10 +5789,7 @@
 
             if (Number(data.matched || 0) > 0) {
                 // Clear any pending auto-advance for official assessments
-                if (autoAdvanceTimer) {
-                    window.clearTimeout(autoAdvanceTimer);
-                    autoAdvanceTimer = null;
-                }
+                clearAutoAdvanceTimer();
                 setSpeechStatus(
                     `Matched ${correctWordsRead()} word${Number(correctWordsRead()) === 1 ? "" : "s"}.`,
                     `${speechDetail}${data.formatted_syllables ? " | Syllables: " + data.formatted_syllables : ""}${storyInsertionNote ? ` ${storyInsertionNote}` : ""}`,
@@ -5643,9 +5806,7 @@
                 if (isStrictAssessmentMode && !itemLocked[currentIndex] && transcript && Number(data.matched || 0) === 0
                     && !(isOfficialAssessmentLaunch && mode === "sentence")) {
                     // Preserve original retry behavior for unmatched non-miscue responses.
-                    if (autoAdvanceTimer) {
-                        window.clearTimeout(autoAdvanceTimer);
-                    }
+                    clearAutoAdvanceTimer();
                     setSpeechStatus("Not quite right.", `Expected: ${data.next_word || "the next word"}. You read: ${transcript}`, false);
                     if (mode === "word") {
                         renderIncorrectWordFeedback(data, activeWordIndex, previousCorrectWords);
@@ -5657,7 +5818,7 @@
                         activeWordIndex,
                     });
                     
-                    autoAdvanceTimer = window.setTimeout(() => {
+                    scheduleAutoAdvance(() => {
                         if (!isRecording || itemLocked[currentIndex]) return;
                         
                         itemLocked[currentIndex] = true;
@@ -6208,10 +6369,11 @@
             // if present, one queued final chunk. Never finalize after the old
             // 3.5-second wait while spoken evidence is still being checked.
             const started = Date.now();
-            while ((isSendingChunk || pendingAudioChunk || crlaLiveSpeech?.pending) && !liveSessionEnded && !liveSessionEndRedirecting && Date.now() - started < maxMs) {
+            while ((isSendingChunk || pendingAudioChunk || crlaLiveSpeech?.pending) && !liveSessionPaused
+                && !liveSessionEnded && !liveSessionEndRedirecting && Date.now() - started < maxMs) {
                 await new Promise(resolve => window.setTimeout(resolve, 100));
             }
-            return !isSendingChunk && !pendingAudioChunk && !crlaLiveSpeech?.pending && !crlaSpeechFailure;
+            return !liveSessionPaused && !isSendingChunk && !pendingAudioChunk && !crlaLiveSpeech?.pending && !crlaSpeechFailure;
         }
 
         function syncCrlaProgress() {
@@ -6462,10 +6624,7 @@
         function transitionToItem(nextIndex, statusMessage = "", detail = "") {
             if (nextIndex < 0 || nextIndex >= items.length || nextIndex === currentIndex) return;
             // CRLA Official Assessment: Clear auto-advance timer when transitioning
-            if (autoAdvanceTimer) {
-                window.clearTimeout(autoAdvanceTimer);
-                autoAdvanceTimer = null;
-            }
+            clearAutoAdvanceTimer();
             clearSentenceItemTimer();
             if (sentenceCountdownTimer) clearOfficialSentenceItemCountdown();
             currentIndex = nextIndex;
@@ -6503,15 +6662,30 @@
         }
 
         function clearSentenceItemTimer() {
-            if (sentenceItemTimer) {
+            if (sentenceItemTimer !== null) {
                 window.clearTimeout(sentenceItemTimer);
                 sentenceItemTimer = null;
             }
+            sentenceItemTimerDeadline = null;
+            pausedSentenceItemRemainingMs = null;
+        }
+
+        function pauseSentenceItemTimer() {
+            if (sentenceItemTimer === null) return;
+            pausedSentenceItemRemainingMs = Math.max(0, sentenceItemTimerDeadline - Date.now());
+            window.clearTimeout(sentenceItemTimer);
+            sentenceItemTimer = null;
+            sentenceItemTimerDeadline = null;
         }
 
         async function advanceSentenceAfterTimeout() {
             if (!isOfficialAssessmentLaunch || mode !== "sentence" || !isRecording || itemLocked[currentIndex]) return;
             sentenceItemTimer = null;
+            sentenceItemTimerDeadline = null;
+            if (liveSessionPaused) {
+                pausedSentenceItemRemainingMs = 0;
+                return;
+            }
             const context = currentSpeechContext();
             // Stop capturing at the reading deadline, but let audio recorded
             // before it finish scoring rather than treating provider latency
@@ -6523,9 +6697,23 @@
                 setSpeechStatus("Speech result is still unresolved.", error.message);
                 return;
             }
+            if (liveSessionPaused) {
+                stoppingSpeechRecognition = false;
+                pausedSentenceItemRemainingMs = 0;
+                return;
+            }
             if (!await waitForPendingSpeech()) {
                 stoppingSpeechRecognition = false;
+                if (liveSessionPaused) {
+                    pausedSentenceItemRemainingMs = 0;
+                    return;
+                }
                 setSpeechStatus("Speech result is still unresolved.", "Resume the microphone to finish checking this sentence.");
+                return;
+            }
+            if (liveSessionPaused) {
+                stoppingSpeechRecognition = false;
+                pausedSentenceItemRemainingMs = 0;
                 return;
             }
             if (liveSessionEnded || liveSessionEndRedirecting || !isRecording) return;
@@ -6560,13 +6748,23 @@
         }
 
         function startSentenceItemTimer() {
-            clearSentenceItemTimer();
-            if (!isOfficialAssessmentLaunch || mode !== "sentence" || !isRecording || itemLocked[currentIndex]
+            if (sentenceItemTimer !== null) {
+                window.clearTimeout(sentenceItemTimer);
+                sentenceItemTimer = null;
+            }
+            sentenceItemTimerDeadline = null;
+            if (!isOfficialAssessmentLaunch || mode !== "sentence" || !isRecording || liveSessionPaused || itemLocked[currentIndex]
                 || sentenceCountdownTimer) return;
-            sentenceItemTimer = window.setTimeout(advanceSentenceAfterTimeout, sentenceItemLimitMs);
+            const delay = pausedSentenceItemRemainingMs === null
+                ? sentenceItemLimitMs
+                : Math.max(0, pausedSentenceItemRemainingMs);
+            pausedSentenceItemRemainingMs = null;
+            sentenceItemTimerDeadline = Date.now() + delay;
+            sentenceItemTimer = window.setTimeout(advanceSentenceAfterTimeout, delay);
         }
 
         async function showCompletion(isFullCompletion) {
+            if (liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) return;
             traceOfficialCrlaCompletion('showCompletion.entry', { isFullCompletion });
             traceEndSession('showCompletion.enter', {
                 isFullCompletion,
@@ -6774,6 +6972,7 @@
                     next_stage: "completed",
                 };
                 if (!isMyMaterials) await updateStudentEndState(learnerExperienceState);
+                if (liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) return;
                 renderLearnerExperienceState();
                 return;
             }
@@ -6791,6 +6990,7 @@
                     local_state: (() => { try { return JSON.parse(localStorage.getItem(getStudentEndStateKey()) || '{}'); } catch (error) { return {}; } })(),
                 });
                 persistedBranchState = await updateStudentEndState(branchState);
+                if (liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) return;
                 traceLiveCrlaState('showCompletion.persist_branch_state_immediate', {
                     branchState,
                     persistedBranchState,
@@ -7384,6 +7584,7 @@
         async function publishLiveSessionStateNow(updateValues = {}) {
             if (!liveSessionId || !isCurrentLiveAssessment()) return null;
             if (!Object.keys(updateValues).length) return null;
+            if (liveSessionPaused && updateValues.status !== 'paused' && updateValues.save_acknowledged !== true) return null;
             try {
                 if (isOfficialAssessmentLaunch && isCrla && currentAssessmentBranch === "story"
                     && ["story_selection", "story_ready", "story_reading"].includes(currentStoryState)) {
@@ -7654,9 +7855,13 @@
             if (crlaQuestionNarrating) {
                 stopReadAloud();
                 crlaQuestionNarrationNeedsResume = true;
+            } else if (readAloudController) stopReadAloud();
+            if (currentStoryState === "story_comprehension") {
+                abortCRLASpokenAttemptForPause();
+                syncCRLAQuestionButtons();
             }
-            if (currentStoryState === "story_comprehension") syncCRLAQuestionButtons();
             syncStoryReadingTimerProcessing();
+            pauseLiveSpeechCapture();
             if (pauseOverlay) pauseOverlay.classList.remove('d-none');
             if (pauseMenu) pauseMenu.classList.remove('d-none');
             // Hide interactive buttons for students — teacher controls resume/end
@@ -7669,8 +7874,10 @@
             if (subtitle) subtitle.textContent = 'Please wait until your teacher resumes the live assessment.';
             disableReaderInteractions(true);
             if (pauseBtn) pauseBtn.classList.add('d-none');
-            if (isRecording && recognitionActive) {
-                stopSpeechRecognition();
+            if (currentStoryState === "story_ready" && storyReadingCountdownActive) {
+                clearStoryReadingTimer();
+                storyReadingCountdownOverlay?.classList.add("d-none");
+                storyReadingInstructionOverlay?.classList.remove("d-none");
             }
             if (liveCountdownTimer && !liveCountdownStarted) {
                 clearLiveCountdown();
@@ -7885,10 +8092,35 @@
             }
             if (state.status === 'paused') {
                 if (!liveSessionPaused) {
+                    const pausedStudentState = (state.student_states || {})[currentStudentId] || {};
+                    const savedElapsed = Number(pausedStudentState.elapsed_seconds);
+                    if (Number.isFinite(savedElapsed) && savedElapsed >= 0) {
+                        liveActiveElapsedSeconds = Math.max(liveActiveElapsedSeconds, savedElapsed);
+                    }
                     pauseLiveElapsedTimer();
                     liveSessionPaused = true;
                     liveSessionEnded = false;
+                    pauseAutoAdvanceTimer();
+                    pauseSentenceItemTimer();
                     showLiveSessionPaused();
+                    const isComprehension = currentStoryState === "story_comprehension";
+                    const completed = isComprehension
+                        ? currentStoryResults.filter(result => result === true || result === false).length
+                        : Math.max(0, currentIndex);
+                    const total = isComprehension
+                        ? Math.max(1, currentStoryQuestions.length)
+                        : Math.max(1, items.length);
+                    publishLiveSessionState({
+                        status: 'paused',
+                        items_completed: completed,
+                        items_total: total,
+                        progress: Math.min(1, completed / total),
+                        elapsed_seconds: Math.round(getAssessmentElapsedSeconds()),
+                        current_item: isComprehension
+                            ? (currentStoryQuestions[currentStoryQuestionIndex]?.question || '')
+                            : (items[currentIndex] || ''),
+                        connection_status: 'connected',
+                    });
                 }
                 return;
             }
@@ -7902,17 +8134,44 @@
                 syncStoryReadingTimerProcessing();
                 const restoredStudentState = (state.student_states || {})[currentStudentId] || {};
                 resumeLiveElapsedTimer(restoredStudentState);
-                if (restoredStudentState.recovery_state && state.reader_url) {
-                    // Reload from the server-authoritative temporary workflow
-                    // snapshot. This is a direct restore, not a replay of
-                    // completed items or a new branch calculation.
-                    traceLiveCrlaRedirect('resume_reader_redirect', { destination: state.reader_url, reason: 'started_session_with_recovery_state' });
-                    window.location.replace(state.reader_url);
-                    return;
-                }
                 hideLiveSessionPaused();
-                if (isRecording && !recognitionActive && !isMuted) {
-                    startSpeechRecognition();
+                if (crlaComprehensionAdvancePendingIndex !== null) {
+                    const completedQuestionIndex = crlaComprehensionAdvancePendingIndex;
+                    crlaComprehensionAdvancePendingIndex = null;
+                    await advanceCRLAComprehensionAfterAttempt(completedQuestionIndex);
+                }
+                const pendingResult = deferredSpeechResult;
+                deferredSpeechResult = null;
+                if (pendingResult && isCurrentSpeechContext(pendingResult.context)) {
+                    handleSpeechResult(pendingResult.data, pendingResult.context);
+                }
+                if (pausedSentenceItemRemainingMs !== null) startSentenceItemTimer();
+                resumeAutoAdvanceTimer();
+                if (pendingAudioChunk && isCurrentSpeechContext(pendingAudioChunk.context)) {
+                    const pendingChunk = pendingAudioChunk;
+                    pendingAudioChunk = null;
+                    sendAudioChunk(pendingChunk.blob, pendingChunk.context);
+                } else if (pendingAudioChunk) pendingAudioChunk = null;
+                if (storyReadingFinalizationPendingAfterPause && currentStoryState === "story_reading") {
+                    storyReadingFinalizationPendingAfterPause = false;
+                    stopReading({ allowCompletedStorySegment: true });
+                } else {
+                    await resumeLiveSpeechCapture();
+                }
+                if (currentStoryState === "story_comprehension") {
+                    const totalQuestions = Math.max(1, currentStoryQuestions.length);
+                    const completedQuestions = currentStoryResults
+                        .filter(result => result === true || result === false).length;
+                    await publishLiveSessionState({
+                        status: "reading",
+                        items_completed: completedQuestions,
+                        items_total: totalQuestions,
+                        progress: completedQuestions / totalQuestions,
+                        elapsed_seconds: Math.round(getAssessmentElapsedSeconds()),
+                        current_item: currentStoryQuestions[currentStoryQuestionIndex]?.question || "",
+                        connection_status: "connected",
+                        recovery_state: { crla_question_index: currentStoryQuestionIndex },
+                    });
                 }
             }
             if (state.status === 'ended' || state.status === 'completed') {
@@ -8047,7 +8306,7 @@
         };
 
         const startReading = ({ fromStoryReadingCountdown = false } = {}) => {
-            if (isReviewMode) return;
+            if (isReviewMode || liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) return;
             if (isOfficialSentenceBranch() && sentenceCountdownTimer) return;
             if (isCrla && currentStoryState === "story_ready" && currentSelectedStory && !fromStoryReadingCountdown) {
                 storyReadingInstructionOverlay?.classList.remove("d-none");
@@ -8135,6 +8394,12 @@
         };
 
         const stopReading = async ({ allowIdleStoryCompletion = false, allowCompletedStorySegment = false } = {}) => {
+            if (liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) {
+                if (liveSessionPaused && allowCompletedStorySegment && currentStoryState === "story_reading") {
+                    storyReadingFinalizationPendingAfterPause = true;
+                }
+                return;
+            }
             const isCompletedOfficialCrlaStorySegment = allowCompletedStorySegment
                 && isOfficialAssessmentLaunch
                 && isCrla
@@ -8151,10 +8416,7 @@
             try {
                 clearSentenceItemTimer();
                 // CRLA Official Assessment: Cleanup auto-advance timer
-                if (autoAdvanceTimer) {
-                    window.clearTimeout(autoAdvanceTimer);
-                    autoAdvanceTimer = null;
-                }
+                clearAutoAdvanceTimer();
                 stoppingSpeechRecognition = true;
                 if (crlaLiveSpeech || (mediaRecorder && mediaRecorder.state === "recording")) {
                     try {
@@ -8165,7 +8427,20 @@
                 }
                 if (!await waitForPendingSpeech()) {
                     stoppingSpeechRecognition = false;
+                    if (liveSessionPaused) {
+                        if (allowCompletedStorySegment && currentStoryState === "story_reading") {
+                            storyReadingFinalizationPendingAfterPause = true;
+                        }
+                        return;
+                    }
                     setSpeechStatus("Speech result is still unresolved.", "Resume the microphone before finishing this reading.");
+                    return;
+                }
+                if (liveSessionPaused) {
+                    stoppingSpeechRecognition = false;
+                    if (allowCompletedStorySegment && currentStoryState === "story_reading") {
+                        storyReadingFinalizationPendingAfterPause = true;
+                    }
                     return;
                 }
                 if (liveSessionEnded || liveSessionEndRedirecting) return;
@@ -8197,6 +8472,7 @@
                         comprehension_total: currentStoryQuestions.length,
                         total_questions: currentStoryQuestions.length,
                     });
+                    if (liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) return;
                     if (isCrla) renderCRLAComprehensionState(currentSelectedStory.title, {
                         story_read_percent: storyMetrics.accuracy,
                         passage_accuracy_percent: storyMetrics.accuracy,

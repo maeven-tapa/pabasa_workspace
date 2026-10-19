@@ -30095,7 +30095,16 @@ def live_assessment_student_state_update(request, session_id):
             and current_student_state.get('participation_status') == 'save_requested'
             and str(current_student_state.get('status') or '').lower() not in {'completed', 'skipped', 'missed'}
         )
-        if not _live_student_update_is_allowed(current, user_id) and not requested_save_ack:
+        paused_snapshot_allowed = (
+            current.status == 'paused'
+            and user_id in (current.student_ids or [])
+            and str(current.batch_assignments.get(str(user_id), 0)) == str(current.current_batch)
+            and str(state_values.get('status') or '').lower() == 'paused'
+            and str(current_student_state.get('status') or '').lower() == 'paused'
+            and str(current_student_state.get('participation_status') or '').lower() != 'saved'
+            and str(current_student_state.get('status') or '').lower() not in {'completed', 'skipped', 'missed'}
+        )
+        if not _live_student_update_is_allowed(current, user_id) and not requested_save_ack and not paused_snapshot_allowed:
             return None
         accepted_values = dict(state_values)
         if current.status == 'paused':
@@ -30152,6 +30161,32 @@ def live_assessment_session_action(request, session_id):
     if not _is_live_crla_material(session.material):
         return JsonResponse({'success': False, 'error': 'Live Assessment is available only for the official CRLA assessment.'}, status=400)
 
+    def _session_action_payload(current):
+        reader_url = ''
+        if current.status in {'countdown', 'started'} and current.start_at:
+            reader_url = _build_live_assessment_action_url(
+                current.material,
+                current.id,
+                current.start_at.isoformat(),
+                current.countdown_seconds,
+            )
+        return {
+            'id': current.id,
+            'status': current.status,
+            'start_at': current.start_at.isoformat() if current.start_at else None,
+            'countdown_seconds': current.countdown_seconds,
+            'student_count': current.student_count,
+            'student_ids': current.student_ids or [],
+            'material_title': current.material.title if current.material else '',
+            'course_title': current.course.title if current.course else '',
+            'reader_url': reader_url,
+            'ends_at': current.ends_at.isoformat() if current.ends_at else None,
+            'student_states': current.student_states or {},
+            'activity_log': current.activity_log or [],
+            'available_students': [],
+            **_live_session_batch_payload(current),
+        }
+
     def _action_state_trace(label, student_id, state, all_before=None):
         state = state if isinstance(state, dict) else {}
         recovery = state.get('recovery_state') if isinstance(state.get('recovery_state'), dict) else {}
@@ -30200,6 +30235,13 @@ def live_assessment_session_action(request, session_id):
         action=action,
         payload_keys=sorted(list(data.keys())) if isinstance(data, dict) else [],
     )
+    if action == 'pause' and session.status == 'paused':
+        return JsonResponse({'success': True, 'session': _session_action_payload(session)})
+    if action == 'resume' and session.status == 'started' and not any(
+        isinstance(student_state, dict) and student_state.get('participation_status') == 'saved'
+        for student_state in (session.student_states or {}).values()
+    ):
+        return JsonResponse({'success': True, 'session': _session_action_payload(session)})
     selected_student_ids = data.get('selected_student_ids') if isinstance(data.get('selected_student_ids'), list) else None
     batch_mode = str(data.get('batch_mode') or 'automatic').strip().lower()
     manual_batch_assignments = data.get('batch_assignments')
@@ -30770,15 +30812,6 @@ def live_assessment_session_action(request, session_id):
     else:
         return JsonResponse({'success': False, 'error': 'Invalid action'}, status=400)
 
-    reader_url = ''
-    if session.status in {'countdown', 'started'} and session.start_at:
-        reader_url = _build_live_assessment_action_url(
-            session.material,
-            session.id,
-            session.start_at.isoformat(),
-            session.countdown_seconds,
-        )
-
     _trace_live_end_flow(
         'action_endpoint_before_response',
         session,
@@ -30788,22 +30821,7 @@ def live_assessment_session_action(request, session_id):
     )
     return JsonResponse({
         'success': True,
-        'session': {
-            'id': session.id,
-            'status': session.status,
-            'start_at': session.start_at.isoformat() if session.start_at else None,
-            'countdown_seconds': session.countdown_seconds,
-            'student_count': session.student_count,
-            'student_ids': session.student_ids or [],
-            'material_title': session.material.title if session.material else '',
-            'course_title': session.course.title if session.course else '',
-            'reader_url': reader_url,
-            'ends_at': session.ends_at.isoformat() if session.ends_at else None,
-            'student_states': session.student_states or {},
-            'activity_log': session.activity_log or [],
-            'available_students': [],
-            **_live_session_batch_payload(session),
-        },
+        'session': _session_action_payload(session),
     })
 
 

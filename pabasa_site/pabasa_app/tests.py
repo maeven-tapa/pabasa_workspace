@@ -6825,7 +6825,8 @@ class LiveAssessmentStartTests(TestCase):
         self.assertIn('currentStoryState === "story_comprehension"', source)
         self.assertIn('comprehension: "Comprehension"', source)
 
-    def test_record_assessment_completion_cannot_finalize_an_active_live_crla_session(self):
+    @patch('pabasa_app.views._enforce_student_access_for_request', return_value=None)
+    def test_record_assessment_completion_cannot_finalize_an_active_live_crla_session(self, _access_check):
         self.material.is_official_reading = True
         self.material.assessment_kind = 'crla'
         self.material.save(update_fields=['is_official_reading', 'assessment_kind', 'updated_at'])
@@ -6877,6 +6878,31 @@ class LiveAssessmentStartTests(TestCase):
         self.assertFalse(response.json()['success'])
         session.refresh_from_db()
         self.assertEqual(session.student_states[str(self.student.id)]['status'], 'reading')
+        self.assertFalse(Assessment.objects.filter(
+            student=self.student, material=self.material, attempt_status='completed',
+        ).exists())
+
+        pause_response = self.client.post(
+            reverse('live_assessment_session_action', kwargs={'session_id': session.id}),
+            json.dumps({'action': 'pause'}),
+            content_type='application/json',
+        )
+        self.assertEqual(pause_response.status_code, 200)
+        paused_completion = student_client.post(
+            reverse('record_assessment_completion'),
+            json.dumps({
+                'material_id': f'material-{self.material.id}',
+                'activity_type': 'assessment',
+                'class_code': self.section.class_code,
+                'live_session_id': session.id,
+                'scores': {'duration_seconds': 15, 'word_count': 18, 'transcript': 'cat dog'},
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(paused_completion.status_code, 409)
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'paused')
+        self.assertEqual(session.student_states[str(self.student.id)]['status'], 'paused')
         self.assertFalse(Assessment.objects.filter(
             student=self.student, material=self.material, attempt_status='completed',
         ).exists())
@@ -7039,24 +7065,47 @@ class LiveAssessmentStartTests(TestCase):
         self.assertEqual(session.student_states[str(second_student.id)]['status'], 'completed')
 
     def test_teacher_can_pause_and_resume_live_assessment_session(self):
+        other_student = User.objects.create(
+            custom_id=f"STD-{uuid.uuid4().hex[:8].upper()}", role="student",
+            first_name="Noah", last_name="Student", middle_initial="", suffix="",
+            sex="male", birth_month=8, birth_day=14, birth_year=2013,
+            email=f"live-student-{uuid.uuid4().hex[:8]}@example.com",
+            password_hash=make_password("student-password"), grade_level="Grade 2",
+        )
         session = LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex,
             teacher=self.teacher,
             course=self.course,
             material=self.material,
-            student_ids=[self.student.id],
-            student_count=1,
+            student_ids=[self.student.id, other_student.id],
+            student_count=2,
+            batch_assignments={str(self.student.id): 1, str(other_student.id): 1},
             status='started',
             countdown_seconds=0,
             start_at=timezone.now() - timedelta(seconds=10),
-            student_states={str(self.student.id): {'status': 'reading', 'progress': 0}},
+            student_states={str(self.student.id): {
+                'status': 'reading', 'progress': 0.4, 'items_completed': 4,
+                'items_total': 10, 'elapsed_seconds': 128, 'current_item': 'Puno',
+                'crla_stage': 'words',
+                'recovery_state': {
+                    'branch': 'words', 'stage': 'words', 'current_index': 3,
+                    'live_item_scores': {'2': {'correct_words': 1, 'locked': True}},
+                },
+            }, str(other_student.id): {
+                'status': 'reading', 'progress': 0.7, 'items_completed': 7,
+                'items_total': 10, 'elapsed_seconds': 90, 'current_item': 'Basa',
+                'recovery_state': {'branch': 'sentences', 'stage': 'sentences', 'current_index': 6},
+            }},
         )
 
-        response = self.client.post(
-            reverse("live_assessment_session_action", kwargs={"session_id": session.id}),
-            json.dumps({"action": "pause"}),
-            content_type="application/json",
-        )
+        action_url = reverse("live_assessment_session_action", kwargs={"session_id": session.id})
+        with patch('pabasa_app.views._end_live_assessment_session') as finalize_session:
+            response = self.client.post(
+                action_url,
+                json.dumps({"action": "pause"}),
+                content_type="application/json",
+            )
+            finalize_session.assert_not_called()
         self.assertEqual(response.status_code, 200)
         pause_body = response.json()
         self.assertTrue(pause_body["success"])
@@ -7065,9 +7114,25 @@ class LiveAssessmentStartTests(TestCase):
         self.assertEqual(session.status, 'paused')
         self.assertEqual(session.student_states[str(self.student.id)]["status"], 'paused')
         self.assertEqual(session.student_states[str(self.student.id)]["previous_status"], 'reading')
+        self.assertEqual(session.student_states[str(self.student.id)]['progress'], 0.4)
+        self.assertEqual(session.student_states[str(self.student.id)]['items_completed'], 4)
+        self.assertEqual(session.student_states[str(self.student.id)]['items_total'], 10)
+        self.assertEqual(session.student_states[str(self.student.id)]['elapsed_seconds'], 128)
+        self.assertEqual(session.student_states[str(self.student.id)]['current_item'], 'Puno')
+        self.assertEqual(session.student_states[str(self.student.id)]['recovery_state']['current_index'], 3)
+        self.assertEqual(session.student_states[str(other_student.id)]['status'], 'paused')
+        self.assertEqual(session.student_states[str(other_student.id)]['progress'], 0.7)
+        self.assertEqual(session.student_states[str(other_student.id)]['current_item'], 'Basa')
+        self.assertEqual(session.student_states[str(other_student.id)]['recovery_state']['current_index'], 6)
+
+        duplicate_pause = self.client.post(action_url, json.dumps({"action": "pause"}), content_type="application/json")
+        self.assertEqual(duplicate_pause.status_code, 200)
+        self.assertEqual(duplicate_pause.json()['session']['status'], 'paused')
+        self.assertEqual(duplicate_pause.json()['session']['student_states'][str(self.student.id)]['progress'], 0.4)
+        self.assertEqual(duplicate_pause.json()['session']['student_count'], 2)
 
         response = self.client.post(
-            reverse("live_assessment_session_action", kwargs={"session_id": session.id}),
+            action_url,
             json.dumps({"action": "resume"}),
             content_type="application/json",
         )
@@ -7079,6 +7144,85 @@ class LiveAssessmentStartTests(TestCase):
         self.assertEqual(session.status, 'started')
         self.assertEqual(session.student_states[str(self.student.id)]["status"], 'reading')
         self.assertNotIn('previous_status', session.student_states[str(self.student.id)])
+        self.assertEqual(session.student_states[str(self.student.id)]['progress'], 0.4)
+        self.assertEqual(session.student_states[str(self.student.id)]['items_completed'], 4)
+        self.assertEqual(session.student_states[str(self.student.id)]['elapsed_seconds'], 128)
+        self.assertEqual(session.student_states[str(self.student.id)]['current_item'], 'Puno')
+        self.assertEqual(session.student_states[str(self.student.id)]['recovery_state']['current_index'], 3)
+        self.assertEqual(session.student_states[str(other_student.id)]['status'], 'reading')
+        self.assertEqual(session.student_states[str(other_student.id)]['progress'], 0.7)
+        self.assertEqual(session.student_states[str(other_student.id)]['current_item'], 'Basa')
+        self.assertEqual(session.student_states[str(other_student.id)]['recovery_state']['current_index'], 6)
+        duplicate_resume = self.client.post(action_url, json.dumps({"action": "resume"}), content_type="application/json")
+        self.assertEqual(duplicate_resume.status_code, 200)
+        self.assertEqual(duplicate_resume.json()['session']['status'], 'started')
+        self.assertEqual(duplicate_resume.json()['session']['student_states'][str(other_student.id)]['progress'], 0.7)
+        self.assertEqual(duplicate_resume.json()['session']['student_count'], 2)
+
+    def test_paused_student_can_publish_pause_snapshot_but_stale_reading_update_is_rejected(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='started',
+            countdown_seconds=0,
+            start_at=timezone.now() - timedelta(seconds=10),
+            student_states={str(self.student.id): {'status': 'reading', 'progress': 0.2}},
+        )
+        action_url = reverse('live_assessment_session_action', kwargs={'session_id': session.id})
+        state_url = reverse('live_assessment_student_state_update', kwargs={'session_id': session.id})
+        pause = self.client.post(action_url, json.dumps({'action': 'pause'}), content_type='application/json')
+        self.assertEqual(pause.status_code, 200)
+
+        student_client = Client()
+        student_session = student_client.session
+        student_session.update({'user_id': self.student.id, 'user_role': 'student'})
+        student_session.save()
+        paused_snapshot = student_client.post(state_url, json.dumps({
+            'status': 'paused', 'progress': 0.6, 'items_completed': 6, 'items_total': 10,
+            'elapsed_seconds': 128, 'current_item': 'Puno', 'crla_stage': 'words',
+            'recovery_state': {'branch': 'words', 'stage': 'words', 'current_index': 5},
+        }), content_type='application/json')
+        self.assertEqual(paused_snapshot.status_code, 200)
+        paused_state = paused_snapshot.json()['session']['student_states'][str(self.student.id)]
+        self.assertEqual(paused_state['status'], 'paused')
+        self.assertEqual(paused_state['items_completed'], 6)
+        self.assertEqual(paused_state['current_item'], 'Puno')
+        self.assertEqual(paused_state['recovery_state']['current_index'], 5)
+
+        stale = student_client.post(state_url, json.dumps({
+            'status': 'reading', 'progress': 0.9, 'items_completed': 9, 'items_total': 10,
+        }), content_type='application/json')
+        self.assertEqual(stale.status_code, 200)
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'paused')
+        self.assertEqual(session.student_states[str(self.student.id)]['status'], 'paused')
+        self.assertEqual(session.student_states[str(self.student.id)]['progress'], 0.6)
+        self.assertEqual(session.student_states[str(self.student.id)]['items_completed'], 6)
+
+    def test_reader_pause_lifecycle_guards_timers_recognition_and_resume_position(self):
+        root = Path(__file__).resolve().parent
+        reader = (root / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js').read_text(encoding='utf-8')
+        self.assertIn('pauseSentenceItemTimer();', reader)
+        self.assertIn('pauseAutoAdvanceTimer();', reader)
+        self.assertIn('abortCRLASpokenAttemptForPause();', reader)
+        self.assertIn('deferredSpeechResult = { data, context };', reader)
+        self.assertIn('if (liveSessionPaused) return;', reader)
+        self.assertIn('await resumeLiveSpeechCapture();', reader)
+        self.assertIn('function showLiveSessionPaused()', reader)
+        self.assertIn("title.textContent = 'Paused by teacher'", reader)
+        pause_handler = reader.split('function showLiveSessionPaused()', 1)[1].split('function hideLiveSessionPaused()', 1)[0]
+        self.assertIn('pauseLiveSpeechCapture();', pause_handler)
+        self.assertNotIn('stopSpeechRecognition()', pause_handler)
+        self.assertIn('storyReadingFinalizationPendingAfterPause', reader)
+        self.assertIn('crlaComprehensionAdvancePendingIndex', reader)
+        self.assertIn('while ((isSendingChunk || pendingAudioChunk || crlaLiveSpeech?.pending) && !liveSessionPaused', reader)
+        self.assertIn('recognitionActive = Boolean(mediaStream);\n                if (liveSessionPaused) return;\n                startLiveSpeechChunkTimer();', reader)
+        self.assertIn('if (isReviewMode || liveSessionPaused || liveSessionEnded || liveSessionEndRedirecting) return;', reader)
+        self.assertNotIn("traceLiveCrlaRedirect('resume_reader_redirect'", reader)
 
     def test_recovery_preserves_exact_student_state_and_releases_only_after_teacher_resume(self):
         """The server snapshot, including a pending transition, is recovered verbatim."""
