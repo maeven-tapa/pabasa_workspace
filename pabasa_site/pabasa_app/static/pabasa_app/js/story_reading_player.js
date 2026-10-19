@@ -97,6 +97,7 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
     let oralSessionSerial = 0;
     let activeOralSession = 0;
     let storyBasahinController = null;
+    let storyBasahinRun = null;
     let storyBasahinSyllableContext = '';
     let storyBasahinLoader = null;
     let requestController = null;
@@ -106,7 +107,20 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
     const formatTime = value => { const seconds = Math.max(0, Math.floor(value || 0)); return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`; };
     const token = value => String(value || '').normalize('NFKD').toLocaleLowerCase().replace(/[\u2018\u2019]/g, "'").replace(/[^\p{L}\p{N}']/gu, '');
     const wordsIn = text => String(text || '').match(/[\p{L}\p{N}]+(?:[\u2019'][\p{L}\p{N}]+)*/gu) || [];
-    const wordMarkup = text => wordsIn(text).map((word, index) => `<span class="story-word" data-word-index="${index}">${escapeHtml(word)}</span>`).join(' ');
+    const wordMarkup = text => {
+        const value = String(text || '');
+        const wordPattern = /[\p{L}\p{N}]+(?:[\u2019'][\p{L}\p{N}]+)*/gu;
+        let markup = '';
+        let sourceAt = 0;
+        let wordIndex = 0;
+        let match;
+        while ((match = wordPattern.exec(value))) {
+            markup += escapeHtml(value.slice(sourceAt, match.index));
+            markup += `<span class="story-word" data-word-index="${wordIndex++}">${escapeHtml(match[0])}</span>`;
+            sourceAt = wordPattern.lastIndex;
+        }
+        return markup + escapeHtml(value.slice(sourceAt));
+    };
     const imageFor = scene => images[scene - 1] || `/static/pabasa_app/images/story_reading/Filipino/Set_1/${scene}.png`;
     const saveState = (completed = state.completed) => {
         const payload = { material_id: data.material_id || data.id, story_key: storyKey, story_title: data.title, total_words: scenes.join(' ').split(/\s+/).filter(Boolean).length, words_read: 0, progress_percent: totalDuration ? Math.round(state.time / totalDuration * 100) : 0, correct_sentences: state.correctSentences, reading_score: state.readingScore, duration_seconds: Math.round(state.time), current_scene: state.scene, current_time_seconds: state.time, completed };
@@ -237,6 +251,7 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
         state.scene = Math.min(scenes.length, Math.max(1, Math.floor(Math.min(state.time, Math.max(0, totalDuration - .001)) / sceneDuration) + 1));
         image.src = imageFor(state.scene); image.alt = `Scene ${state.scene} from ${data.title || 'the story'}`;
         subtitle.innerHTML = wordMarkup(scenes[state.scene - 1] || '');
+        subtitle.classList.toggle('is-reading', state.oral);
         progress.value = String(state.time); fill.style.width = `${totalDuration ? state.time / totalDuration * 100 : 0}%`;
         currentTime.textContent = formatTime(state.time); durationLabel.textContent = formatTime(totalDuration);
         if (playbackButton) { playbackButton.textContent = state.playing ? '❚❚' : '▶'; playbackButton.setAttribute('aria-label', state.playing ? 'Pause' : 'Play'); }
@@ -250,8 +265,10 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
                 : `<i class="bi bi-book-half" aria-hidden="true"></i><span>${state.oral ? L.reading : L.readWithMe}</span><span aria-hidden="true">&rsaquo;</span>`;
         playButton.setAttribute('aria-label', state.completed ? 'Completed' : (atFinalEndpoint ? 'End Activity' : (state.oral ? 'Reading' : 'Read With Me')));
         playButton.setAttribute('aria-pressed', String(state.oral));
+        playButton.classList.toggle('is-active', state.oral);
         playButton.classList.toggle('is-complete-action', atFinalEndpoint);
         playButton.disabled = state.completed;
+        if (state.oral) window.BasahinButton?.setState(playButton, 'listening');
         listenButton.textContent = ttsAudio ? `🔊 ${L.listening}` : `🔊 ${L.listen}`;
         listenButton.setAttribute('aria-label', ttsAudio ? 'Listening' : 'Listen to Story');
         listenButton.setAttribute('aria-pressed', String(Boolean(ttsAudio)));
@@ -320,18 +337,22 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
         render();
     }
 
-    async function startOral() {
-        if (state.completed || state.oral) { if (state.oral) stopOral(); return; }
-        try {
-            if (!await ensureStoryBasahin()) throw new Error('Speech reading is unavailable in this browser.');
-        } catch (error) {
-            setStatus(error.message || 'Speech reading is unavailable in this browser.');
-            return;
+    async function startOral(continueSession = false) {
+        if (state.completed) return;
+        if (state.oral && !continueSession) { stopOral(); return; }
+        if (!continueSession) {
+            try {
+                if (!await ensureStoryBasahin()) throw new Error('Speech reading is unavailable in this browser.');
+            } catch (error) {
+                setStatus(error.message || 'Speech reading is unavailable in this browser.');
+                return;
+            }
         }
         stopTts();
         const contextVersion = ++state.context;
         const sceneAtStart = state.scene;
         const textAtStart = scenes[sceneAtStart - 1] || '';
+        let continueOral = false;
         state.playing = false;
         cancelAnimationFrame(frame);
         state.oral = true;
@@ -365,21 +386,28 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
             if (result?.complete) {
                 state.correctSentences = Math.min(totalSentences, state.correctSentences + 1);
                 state.readingScore = state.correctSentences;
-                state.oral = false;
-                state.context += 1;
-                oralButton.classList.remove('is-active');
                 persist();
                 if (state.scene >= scenes.length) {
+                    state.oral = false;
+                    state.context += 1;
+                    oralButton.classList.remove('is-active');
                     state.time = totalDuration;
                     render();
                     setStatus('Story ready to finish. Press End Activity to complete.');
                 } else {
+                    // End this sentence's STT context, but keep the reading
+                    // session active while the next sentence gets its own
+                    // target text and fresh recognition segment.
+                    state.context += 1;
                     const nextTime = state.scene * sceneDuration + .02;
                     state.time = nextTime;
                     state.readingCursor = 0;
                     storyBasahinSyllableContext = '';
+                    state.oral = true;
+                    oralButton.classList.add('is-active');
                     render();
-                    setStatus('Scene ready. Press Read With Me to continue.');
+                    setStatus('Listening... Continue reading the subtitle aloud.', true);
+                    continueOral = true;
                 }
             }
         } catch (error) {
@@ -394,6 +422,16 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
                 render();
             }
         }
+        if (continueOral && state.oral && !state.completed) void requestOralStart(true);
+    }
+
+    function requestOralStart(continueSession = false) {
+        const run = startOral(continueSession);
+        storyBasahinRun = run;
+        run.finally(() => {
+            if (storyBasahinRun === run) storyBasahinRun = null;
+        });
+        return run;
     }
 
     async function listenOneSegment() {
@@ -457,8 +495,43 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
             }).catch(() => { proceedButton.disabled = true; });
     }
     function endActivity() { finishCompletion(); }
-    function skipStory() { if (state.oral) stopOral(true); stopTts(); endActivity(); }
-    previousButton.onclick = skipStory; listenButton.onclick = listenOneSegment; oralButton.onclick = () => { if (state.time >= totalDuration) endActivity(); else startOral(); }; document.querySelectorAll('.scene-marker').forEach(marker => { marker.setAttribute('aria-disabled', 'true'); marker.style.pointerEvents = 'none'; });
+    async function skipStory() {
+        if (state.completed) return;
+        const continueOral = state.oral;
+        const activeRun = storyBasahinRun;
+        stopTts();
+        if (continueOral) {
+            state.context += 1;
+            storyBasahinController?.abort();
+            storyBasahinController = null;
+        }
+        state.playing = false;
+        cancelAnimationFrame(frame);
+        state.time = Math.min(totalDuration, state.scene * sceneDuration + .02);
+        state.readingCursor = 0;
+        storyBasahinSyllableContext = '';
+        const reachedEnd = state.scene >= scenes.length;
+        if (reachedEnd) {
+            state.time = totalDuration;
+            if (continueOral) {
+                state.oral = false;
+                state.context += 1;
+                oralButton.classList.remove('is-active');
+            }
+        }
+        render();
+        if (reachedEnd) setStatus('Story ready to finish. Press End Activity to complete.');
+        else if (continueOral) setStatus('Listening... Continue reading the subtitle aloud.', true);
+        else setStatus('Scene ready. Press Read With Me to continue.');
+        persist();
+        if (continueOral && !reachedEnd) {
+            // Let the aborted segment finish cleaning up its microphone before
+            // opening the next segment, so skipping cannot overlap captures.
+            await activeRun;
+            if (state.oral && !state.completed) void requestOralStart(true);
+        }
+    }
+    previousButton.onclick = skipStory; listenButton.onclick = listenOneSegment; oralButton.onclick = () => { if (state.time >= totalDuration) endActivity(); else requestOralStart(); }; document.querySelectorAll('.scene-marker').forEach(marker => { marker.setAttribute('aria-disabled', 'true'); marker.style.pointerEvents = 'none'; });
     window.addEventListener('beforeunload', () => { persist(); stopOral(true); stopTts(); });
     restoreState(); mountLiveShell(); render(); if (state.completed) showCompletionModal();
 })();
