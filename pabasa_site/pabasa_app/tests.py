@@ -14,6 +14,8 @@ from types import SimpleNamespace
 import hashlib
 import json
 import os
+import shutil
+import subprocess
 import uuid
 from urllib.parse import parse_qs, urlparse
 from unittest.mock import patch
@@ -6713,6 +6715,102 @@ class LiveAssessmentStartTests(TestCase):
         self.assertEqual((states[str(students[1].id)]['items_completed'], states[str(students[1].id)]['items_total']), (4, 4))
         self.assertEqual((states[str(students[2].id)]['items_completed'], states[str(students[2].id)]['items_total']), (6, 8))
 
+    def test_stale_story_snapshot_cannot_replace_resumed_segment_or_timer(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='started',
+            countdown_seconds=0,
+            start_at=timezone.now() - timedelta(seconds=10),
+            student_states={str(self.student.id): {'status': 'waiting', 'progress': 0}},
+        )
+        student_client = Client()
+        student_session = student_client.session
+        student_session.update({'user_id': self.student.id, 'user_role': 'student'})
+        student_session.save()
+        update_url = reverse('live_assessment_student_state_update', kwargs={'session_id': session.id})
+        current_revision = timezone.now()
+
+        def publish(segment_index, elapsed_ms, revision):
+            return student_client.post(
+                update_url,
+                json.dumps({
+                    'status': 'reading',
+                    'crla_stage': 'story',
+                    'crla_stage_label': 'Story',
+                    'items_completed': 1,
+                    'items_total': 4,
+                    'progress': .25,
+                    'connection_status': 'connected',
+                    'recovery_state': {
+                        'stage': 'story_reading',
+                        'selected_story': 'Isang Kakaibang Araw',
+                        'story_segment_index': segment_index,
+                        'story_reading_elapsed_ms': elapsed_ms,
+                        'story_reading_started_at': (revision - timedelta(milliseconds=elapsed_ms)).isoformat(),
+                        'updated_at': revision.isoformat(),
+                    },
+                }),
+                content_type='application/json',
+            )
+
+        self.assertEqual(publish(3, 155000, current_revision).status_code, 200)
+        self.assertEqual(publish(0, 10000, current_revision - timedelta(seconds=1)).status_code, 200)
+        session.refresh_from_db()
+        state = session.student_states[str(self.student.id)]
+        self.assertEqual(state['items_completed'], 1)
+        self.assertEqual(state['items_total'], 4)
+        self.assertEqual(state['recovery_state']['story_segment_index'], 3)
+        self.assertEqual(state['recovery_state']['story_reading_elapsed_ms'], 155000)
+
+    def test_story_reading_timer_keeps_restored_timestamp_when_starting_again(self):
+        node = shutil.which('node')
+        if not node:
+            self.skipTest('Node.js is required to exercise the browser timer initializer')
+        reader = (Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js').read_text(encoding='utf-8')
+        timer_start = reader.split('function startStoryReadingTimer(', 1)[1].split('\n        function startStoryReadingCountdown()', 1)[0]
+        source = '''
+let storyReadingTimerStartedAt = null;
+let storyReadingTimerPausedAt = null;
+let storyReadingTimerId = null;
+let storyReadingTimerExpiryId = null;
+let storyReadingRecordedDurationSeconds = null;
+let storyReadingTimerExpired = false;
+let intervalsCreated = 0;
+let expirySchedules = 0;
+const storyReadingTimer = { setAttribute() {} };
+const window = {
+  setInterval() { intervalsCreated += 1; return intervalsCreated; },
+  clearInterval() {},
+  setTimeout() { expirySchedules += 1; return expirySchedules; },
+  clearTimeout() {},
+};
+function updateStoryReadingTimerGeometry() {}
+function syncStoryReadingTimerProcessing() {}
+function scheduleStoryReadingTimerExpiry() { expirySchedules += 1; }
+function clearStoryReadingTimer() {
+  if (storyReadingTimerId) window.clearInterval(storyReadingTimerId);
+  storyReadingTimerId = null;
+  storyReadingTimerExpiryId = null;
+  storyReadingTimerStartedAt = null;
+  storyReadingTimerPausedAt = null;
+}
+function startStoryReadingTimer(''' + timer_start + '''
+const savedTimestamp = Date.now() - 155000;
+startStoryReadingTimer(savedTimestamp);
+const restoredTimestamp = storyReadingTimerStartedAt;
+const restoredInterval = storyReadingTimerId;
+startStoryReadingTimer(Date.now());
+if (storyReadingTimerStartedAt !== restoredTimestamp) throw new Error('restored elapsed time was replaced');
+if (storyReadingTimerId !== restoredInterval || intervalsCreated !== 1) throw new Error('duplicate story timer interval created');
+'''
+        result = subprocess.run([node, '-e', source], capture_output=True, text=True, timeout=20)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_live_story_progress_without_story_identity_has_no_invented_denominator(self):
         session = LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex,
@@ -6760,7 +6858,16 @@ class LiveAssessmentStartTests(TestCase):
         self.assertNotIn('currentPageIndex', progress_helper)
         self.assertIn('items_total: total', reader)
         self.assertIn('isCrla && currentAssessmentBranch === "story"', reader)
-        self.assertIn('`Story ${itemsCompleted}/${itemsTotal}`', monitor)
+        timer_start = reader.split('function startStoryReadingTimer(', 1)[1].split('\n        function startStoryReadingCountdown()', 1)[0]
+        self.assertIn('if (storyReadingTimerStartedAt !== null)', timer_start)
+        self.assertLess(timer_start.index('if (storyReadingTimerStartedAt !== null)'), timer_start.index('clearStoryReadingTimer();'))
+        self.assertIn('Story · Segment ${storySegmentIndex + 1}/${itemsTotal}', monitor)
+        self.assertIn('Math.round(((storySegmentIndex + 1) / itemsTotal) * 100)', monitor)
+        self.assertIn('storyPositionPercent ?? reportedPercent', monitor)
+        self.assertIn("statusLower === 'paused' && isOfficialCrlaSession && isStoryStage", monitor)
+        self.assertIn('if (progressText) progressText.textContent = crlaProgressText;', monitor)
+        self.assertNotIn('segments completed`', monitor)
+        self.assertIn("recoveryState.story_segment_index", monitor)
         self.assertIn("'Story —'", monitor)
         self.assertIn('if (pollInFlight) return;', monitor)
 

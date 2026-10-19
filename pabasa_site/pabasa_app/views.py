@@ -27148,6 +27148,21 @@ def _append_live_session_activity(session, message):
 def _merge_live_crla_evidence(existing, incoming):
     """Partial snapshots cannot blank previously captured CRLA evidence."""
     merged = dict(existing) if isinstance(existing, dict) else {}
+    incoming = incoming if isinstance(incoming, dict) else {}
+    same_story_reading = (
+        str(merged.get('stage') or '').strip().lower() == 'story_reading'
+        and str(incoming.get('stage') or '').strip().lower() == 'story_reading'
+        and str(merged.get('selected_story') or '').strip().casefold()
+        == str(incoming.get('selected_story') or '').strip().casefold()
+        and bool(str(merged.get('selected_story') or '').strip())
+    )
+    stale_story_snapshot = False
+    if same_story_reading:
+        existing_revision = _coerce_aware_datetime(merged.get('updated_at'))
+        incoming_revision = _coerce_aware_datetime(incoming.get('updated_at'))
+        stale_story_snapshot = bool(
+            existing_revision and incoming_revision and incoming_revision < existing_revision
+        )
     score_fields = {
         'task1_score', 'task1_correct_words', 'task2_type', 'task2_score',
         'task2_rhymes_score', 'task2_sentences_score', 'sentences_read',
@@ -27159,8 +27174,12 @@ def _merge_live_crla_evidence(existing, incoming):
         'comprehension_total', 'total_questions', 'learner_experience_rating',
         'learner_experience',
     }
-    for key, value in (incoming or {}).items():
+    for key, value in incoming.items():
         if key in score_fields and value in (None, '') and merged.get(key) not in (None, ''):
+            continue
+        if stale_story_snapshot and key in {
+            'story_segment_index', 'story_reading_elapsed_ms', 'story_reading_started_at',
+        }:
             continue
         merged[key] = value
     return merged

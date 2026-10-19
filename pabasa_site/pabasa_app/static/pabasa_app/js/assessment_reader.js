@@ -1678,6 +1678,19 @@
         }
 
         function startStoryReadingTimer(startedAt = Date.now()) {
+            // The recovery path starts this timer with the saved elapsed
+            // duration before the learner presses Start Reading. Keep that
+            // restored clock as the single story-level timer instead of
+            // replacing its timestamp when recording starts or a later
+            // segment resumes.
+            if (storyReadingTimerStartedAt !== null) {
+                syncStoryReadingTimerProcessing();
+                if (storyReadingTimerId === null) {
+                    storyReadingTimerId = window.setInterval(syncStoryReadingTimerProcessing, 200);
+                }
+                scheduleStoryReadingTimerExpiry();
+                return;
+            }
             updateStoryReadingTimerGeometry();
             clearStoryReadingTimer();
             storyReadingRecordedDurationSeconds = null;

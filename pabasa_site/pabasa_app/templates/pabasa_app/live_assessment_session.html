@@ -2548,17 +2548,32 @@
             const itemsTotal = Number(st.items_total) || 0;
             const itemsCompleted = Number(st.items_completed) || 0;
             const reportedPercent = itemsTotal > 0 ? Math.round((itemsCompleted / itemsTotal) * 100) : progressPercent;
-            const percent = isStoryStage ? Math.max(0, Math.min(100, reportedPercent)) : reportedPercent;
+            const recoveryState = st.recovery_state && typeof st.recovery_state === 'object' ? st.recovery_state : {};
+            const hasStoryIdentity = Boolean(String(recoveryState.selected_story || '').trim());
+            const hasStorySegmentIndex = recoveryState.story_segment_index !== null
+                && recoveryState.story_segment_index !== undefined
+                && String(recoveryState.story_segment_index).trim() !== '';
+            const storySegmentIndex = Number(recoveryState.story_segment_index);
+            const storySegmentIsValid = hasStoryIdentity
+                && ['story_ready', 'story_reading'].includes(String(recoveryState.stage || '').trim().toLowerCase())
+                && hasStorySegmentIndex && Number.isInteger(storySegmentIndex) && itemsTotal > 0
+                && storySegmentIndex >= 0 && storySegmentIndex < itemsTotal;
+            const storyPositionPercent = storySegmentIsValid
+                ? Math.round(((storySegmentIndex + 1) / itemsTotal) * 100)
+                : null;
+            const percent = isStoryStage
+                ? Math.max(0, Math.min(100, storyPositionPercent ?? reportedPercent))
+                : reportedPercent;
             const progressTextValue = itemsTotal > 0
                 ? `${percent}% • ${itemsCompleted} / ${itemsTotal}`
                 : Number.isFinite(rawProgress)
                     ? `${progressPercent}%`
                     : '--';
-            const recoveryState = st.recovery_state && typeof st.recovery_state === 'object' ? st.recovery_state : {};
-            const hasStoryIdentity = Boolean(String(recoveryState.selected_story || '').trim());
-            const storyProgressIsValid = hasStoryIdentity
-                && Number.isInteger(itemsCompleted) && Number.isInteger(itemsTotal)
-                && itemsTotal > 0 && itemsCompleted >= 0 && itemsCompleted <= itemsTotal;
+            const crlaProgressText = isStoryStage
+                ? (storySegmentIsValid ? `Story · Segment ${storySegmentIndex + 1}/${itemsTotal}` : (hasStoryIdentity ? 'Story · Segment —' : 'Story —'))
+                : crlaStageLabel && itemsTotal > 0
+                    ? `${crlaStageLabel} · ${itemsCompleted} / ${itemsTotal}`
+                    : '--';
 
             if (statusLower === 'missed') {
                 if (progressBar) {
@@ -2585,16 +2600,24 @@
                 if (progressText) progressText.textContent = '0%';
                 if (elapsedCol) elapsedCol.textContent = '--';
             } else if (statusLower === 'reading') {
-                const crlaProgressText = isStoryStage
-                    ? (storyProgressIsValid ? `Story ${itemsCompleted}/${itemsTotal}` : 'Story —')
-                    : crlaStageLabel && itemsTotal > 0
-                        ? `${crlaStageLabel} · ${itemsCompleted} / ${itemsTotal}`
-                        : '--';
                 if (progressBar) {
                     progressBar.style.width = `${percent}%`;
                     progressBar.setAttribute('aria-valuenow', percent);
                 }
-                if (progressText) progressText.textContent = isOfficialCrlaSession ? crlaProgressText : progressTextValue;
+                if (progressText) {
+                    if (isOfficialCrlaSession && isStoryStage) {
+                        progressText.textContent = crlaProgressText;
+                    } else {
+                        progressText.textContent = isOfficialCrlaSession ? crlaProgressText : progressTextValue;
+                    }
+                }
+                if (elapsedCol) elapsedCol.textContent = st.elapsed_seconds ? formatElapsed(st.elapsed_seconds) : '--';
+            } else if (statusLower === 'paused' && isOfficialCrlaSession && isStoryStage) {
+                if (progressBar) {
+                    progressBar.style.width = `${percent}%`;
+                    progressBar.setAttribute('aria-valuenow', percent);
+                }
+                if (progressText) progressText.textContent = crlaProgressText;
                 if (elapsedCol) elapsedCol.textContent = st.elapsed_seconds ? formatElapsed(st.elapsed_seconds) : '--';
             } else {
                 const finalPercent = st.items_total ? Math.round((Number(st.items_completed) || st.items_total) / (Number(st.items_total) || 1) * 100) : 100;
