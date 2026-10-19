@@ -15035,6 +15035,8 @@ def prescribed_activity_page(request, activity_key):
             if not student:
                 return redirect('assessment')
         lifecycle = _current_learning_context(student) if student else None
+        if student and not (preview or admin_preview) and lifecycle.get('term') in (1, 2, 3):
+            request.aral_draft_scope = f"{student.pk}:{lifecycle['school_calendar'].pk}:{lifecycle['term']}"
         progress = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first() if student and lifecycle.get('term') in (1, 2, 3) else None
         if student and (preview or admin_preview) and not progress:
             progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity_key).order_by('-updated_at', '-id').first()
@@ -20487,6 +20489,10 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             raise ValueError('Invalid event.')
         admin_preview = getattr(request, '_admin_prescribed_preview', False)
         row = None if admin_preview else _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
+        # Speech recognition can run while another tab or the teacher saves.
+        # Remember the database version before normalization, then check it
+        # under a short lock at commit time rather than holding a lock over STT.
+        saved_version = (row.pk, row.updated_at) if row else None
         if admin_preview:
             preview_state = event.pop('_preview_state', {})
             if isinstance(preview_state, str):
@@ -20860,9 +20866,18 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             return JsonResponse({'success': True, 'preview_only': True, **speech_details,
                 'state': updated, 'progress': {'current_index': index, 'completed_items': index,
                 'correct_items': correct, 'total_items': total, 'activity_completed': bool(updated.get('completed'))}})
-        progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': correct,
-                      'total_items': total, 'activity_completed': bool(updated.get('completed')), 'state': updated},
-        )
+        with transaction.atomic():
+            # The student row also serializes creation when no progress row
+            # exists yet. Different students never share this lock.
+            User.objects.select_for_update().only('pk').get(pk=student.pk)
+            current = _current_progress_queryset(student, lifecycle).select_for_update().filter(activity_key=activity_key).first()
+            current_version = (current.pk, current.updated_at) if current else None
+            if current_version != saved_version:
+                return JsonResponse({'success': False, 'error': 'Activity changed in another tab. Reload to resume.',
+                                     'state': current.state if current else {}}, status=409)
+            progress, _ = _current_progress_update_or_create(student, lifecycle, activity_key, defaults={'current_index': index, 'completed_items': index, 'correct_items': correct,
+                          'total_items': total, 'activity_completed': bool(updated.get('completed')), 'state': updated},
+            )
         return JsonResponse({'success': True, **speech_details, 'state': updated, 'progress': {
             'current_index': progress.current_index, 'completed_items': progress.completed_items,
             'correct_items': progress.correct_items, 'total_items': progress.total_items,
@@ -23432,6 +23447,8 @@ def session_4_gawain_5_page(request):
 def lesson_3_activity_progress(request):
     try:
         data = json.loads(request.body or '{}')
+        if not isinstance(data, dict):
+            raise ValueError('Invalid activity progress.')
         key = str(data.get('activity_key') or '')
         total = int(data.get('total_items') or 0)
         index = int(data.get('current_index') or 0)
@@ -23451,49 +23468,56 @@ def lesson_3_activity_progress(request):
             raise ValueError('Invalid activity progress.')
         if done and (completed < total or index < total):
             raise ValueError('Activity cannot be completed before all items are complete.')
-        existing_progress = StudentActivityProgress.objects.filter(
-            student_id=request.session.get('user_id'), activity_key=key,
-        ).first()
-        if reset and key in {'lesson-1-gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1', 'lesson-5-gawain-1', 'lesson-6-gawain-1', 'lesson-7-gawain-1'}:
-            progress, _ = StudentActivityProgress.objects.update_or_create(
-                student_id=request.session.get('user_id'), activity_key=key,
-                defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
-                          'total_items': total, 'activity_completed': False, 'state': {}},
-            )
-            if key == 'lesson-1-gawain-1':
-                StudentActivityRecordingSubmission.objects.filter(
-                    student_id=request.session.get('user_id'), activity_key=key,
-                ).update(status='retry', checked_by=None, checked_at=None, submitted_at=system_now())
-            return JsonResponse({'success': True, 'progress': {
-                'current_index': progress.current_index, 'completed_items': progress.completed_items,
-                'correct_items': progress.correct_items, 'total_items': progress.total_items,
-                'activity_completed': progress.activity_completed,
-            }})
-        # Progress saves can arrive out of order because the activity sends
-        # them asynchronously. Never let an older request roll back a newer
-        # position or completed result.
-        if existing_progress and (
-            existing_progress.activity_completed
-            or existing_progress.current_index > index
-            or existing_progress.completed_items > completed
-        ):
-            progress = existing_progress
-            return JsonResponse({'success': True, 'progress': {
-                'current_index': progress.current_index,
-                'completed_items': progress.completed_items,
-                'correct_items': progress.correct_items,
-                'total_items': progress.total_items,
-                'activity_completed': progress.activity_completed,
-            }})
-        progress, _ = StudentActivityProgress.objects.update_or_create(
-            student_id=request.session.get('user_id'), activity_key=key,
-            defaults={'current_index': index, 'completed_items': completed, 'correct_items': correct,
-                      'total_items': total, 'activity_completed': done, 'state': state},
-        )
-        return JsonResponse({'success': True, 'progress': {'current_index': progress.current_index, 'completed_items': progress.completed_items, 'correct_items': progress.correct_items, 'total_items': progress.total_items, 'activity_completed': progress.activity_completed}})
+        # Legacy pages can send their final and earlier checkpoints together
+        # when connectivity returns. Read and compare only while serialized.
+        with transaction.atomic():
+            User.objects.select_for_update().only('pk').get(pk=request.session.get('user_id'))
+            return _save_legacy_activity_progress(request, key, total, index, completed, correct, done, reset, state)
     except (TypeError, ValueError, json.JSONDecodeError) as exc:
         return JsonResponse({'success': False, 'error': str(exc)}, status=400)
 
+
+def _save_legacy_activity_progress(request, key, total, index, completed, correct, done, reset, state):
+    existing_progress = StudentActivityProgress.objects.filter(
+        student_id=request.session.get('user_id'), activity_key=key,
+    ).first()
+    if reset and key in {'lesson-1-gawain-1', 'lesson-2-gawain-1', 'lesson-3-gawain-1', 'lesson-3-gawain-2', 'lesson-4-gawain-1', 'lesson-5-gawain-1', 'lesson-6-gawain-1', 'lesson-7-gawain-1'}:
+        progress, _ = StudentActivityProgress.objects.update_or_create(
+            student_id=request.session.get('user_id'), activity_key=key,
+            defaults={'current_index': 0, 'completed_items': 0, 'correct_items': 0,
+                      'total_items': total, 'activity_completed': False, 'state': {}},
+        )
+        if key == 'lesson-1-gawain-1':
+            StudentActivityRecordingSubmission.objects.filter(
+                student_id=request.session.get('user_id'), activity_key=key,
+            ).update(status='retry', checked_by=None, checked_at=None, submitted_at=system_now())
+        return JsonResponse({'success': True, 'progress': {
+            'current_index': progress.current_index, 'completed_items': progress.completed_items,
+            'correct_items': progress.correct_items, 'total_items': progress.total_items,
+            'activity_completed': progress.activity_completed,
+        }})
+    # Progress saves can arrive out of order because the activity sends
+    # them asynchronously. Never let an older request roll back a newer
+    # position or completed result.
+    if existing_progress and (
+        existing_progress.activity_completed
+        or existing_progress.current_index > index
+        or existing_progress.completed_items > completed
+    ):
+        progress = existing_progress
+        return JsonResponse({'success': True, 'progress': {
+            'current_index': progress.current_index,
+            'completed_items': progress.completed_items,
+            'correct_items': progress.correct_items,
+            'total_items': progress.total_items,
+            'activity_completed': progress.activity_completed,
+        }})
+    progress, _ = StudentActivityProgress.objects.update_or_create(
+        student_id=request.session.get('user_id'), activity_key=key,
+        defaults={'current_index': index, 'completed_items': completed, 'correct_items': correct,
+                  'total_items': total, 'activity_completed': done, 'state': state},
+    )
+    return JsonResponse({'success': True, 'progress': {'current_index': progress.current_index, 'completed_items': progress.completed_items, 'correct_items': progress.correct_items, 'total_items': progress.total_items, 'activity_completed': progress.activity_completed}})
 
 @login_required(role='student')
 @xframe_options_sameorigin

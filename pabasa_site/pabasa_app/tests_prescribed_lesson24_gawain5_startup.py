@@ -30,7 +30,7 @@ class Lesson24Gawain5StartupTests(SimpleTestCase):
 
     def test_target_receives_cache_busted_shared_workbook_script(self):
         self.assertIn("aral-l24-g5-z-syllabication' %}<script", self.template)
-        self.assertIn('20261002-l24-g5-mapped-instruction-1', self.template)
+        self.assertIn('20261019-save-recovery', self.template)
 
     def test_exact_instruction_mapping_is_present_and_takes_priority(self):
         instruction = get_activity('aral-l24-g5-z-syllabication')['instruction']

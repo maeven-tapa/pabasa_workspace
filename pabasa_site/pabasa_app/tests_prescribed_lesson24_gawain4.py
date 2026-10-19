@@ -109,7 +109,7 @@ class Lesson24Gawain4WorkbookTests(SimpleTestCase):
         )
         self.assertIn("document.addEventListener('pabasa:l24-started'", js)
         self.assertIn('playPrescribedAudio(instructionText,true)', js)
-        self.assertIn('20261002-l24-g4-picture-start-2', template)
+        self.assertIn('20261019-save-recovery', template)
 
 
 class Lesson24Gawain5SyllabicationTests(SimpleTestCase):

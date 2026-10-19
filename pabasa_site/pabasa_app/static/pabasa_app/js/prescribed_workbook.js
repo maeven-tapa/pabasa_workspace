@@ -337,7 +337,7 @@
       throw Error(fallback);
     }
   }
-  let queue = Promise.resolve();
+  let queue = Promise.resolve(), draftQueue = null;
   function send(event, form=null, announceSaved=true, guardEpoch=null, guardCurrent=null) {
     if(preview) return Promise.resolve();
     const operation = async () => {
@@ -369,7 +369,7 @@
     await g6CompletionPromise;
   }
 
-  async function perform(event,form=null){if(busy)return;if(s9Family&&(event?.action==='answer'||event?.action==='restart'))session9DraftEpoch++;busy=true;lock();const wasCompleted=Boolean(state.completed),wasReadComplete=Boolean(state.read_aloud_completed);try{await send(event,form);if(l22G1&&event?.action==='build_word'&&!state.completed&&(state.found_words||[]).length===Number(a.building_word_total||0))await send({action:'finish'},null,false);if(g6Search&&state.completed&&!wasCompleted)await completeG6();render();if(s9Family&&state.completed&&!wasCompleted)await playPrescribedAudio('Good job! Activity 1 is complete!',true);if(s9Helping&&state.completed&&!wasCompleted)await playPrescribedAudio('Good job! Activity 2 is complete!',true);if(l22G1){if(state.completed)await playPrescribedAudio('Magaling! Nabasa mo nang tama ang lahat ng pantig.',true);else if(L22_G1_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);if(!wasReadComplete&&state.read_aloud_completed&&!state.completed)await playPrescribedAudio(L22_G1_BUILDING_INSTRUCTION,true);}if(l23G1){if(state.completed){await playPrescribedAudio('Magaling! Natapos mo ang Gawain 1.',true);await playPrescribedAudio('Magaling! Nabuo ang salitang Niño',true);}else if(G1_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}if(jSyllables){if(state.completed)await playPrescribedAudio('Natapos mo ang gawain!',true);else if(G4_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}if(qG6&&G6_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);if(g6Search&&L24_G6_WORD_SEARCH_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);if(l24Builder){if(state.completed)await playPrescribedAudio('Magaling! Nabasa mo nang tama ang lahat ng pantig.',true);else if(L24_G1_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}if(l24G4Builder){if(state.completed)await playPrescribedAudio('Magaling! Natapos mo ang Gawain 4.',true);else if(L24_G4_BUILDER_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}if(g5Syllables){if(state.completed)await playPrescribedAudio('Magaling! Natapos mo ang Gawain 5!',true);else if(L24_G5_SYLLABLE_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}}catch(e){const text=e.message||'Hindi na-save. Subukan muli.';message(text,true);if((l22G1&&L22_G1_MAPPED_TEXT.has(text))||(l23G1&&G1_MAPPED_TEXT.has(text))||(jSyllables&&G4_MAPPED_TEXT.has(text))||(qG6&&G6_MAPPED_TEXT.has(text))||(g6Search&&L24_G6_WORD_SEARCH_MAPPED_TEXT.has(text))||(l24Builder&&L24_G1_MAPPED_TEXT.has(text))||(l24G4Builder&&L24_G4_BUILDER_MAPPED_TEXT.has(text))||(g5Syllables&&L24_G5_SYLLABLE_MAPPED_TEXT.has(text))||(s9Helping&&S9_A2_MAPPED_TEXT.has(text)))playPrescribedAudio(text,true).catch(()=>{});}finally{busy=false;lock();}}
+  async function perform(event,form=null){if(busy)return;if(draftQueue&&event?.action==='restart')draftQueue.clear();if(draftQueue&&event?.action==='answer'){busy=true;try{await draftQueue.flush();}catch(error){message(error.message||session9SaveError,true);busy=false;return;}busy=false;}if(s9Family&&(event?.action==='answer'||event?.action==='restart'))session9DraftEpoch++;busy=true;lock();const wasCompleted=Boolean(state.completed),wasReadComplete=Boolean(state.read_aloud_completed);try{await send(event,form);if(draftQueue&&(event?.action==='answer'||event?.action==='restart'))draftQueue.clear();if(l22G1&&event?.action==='build_word'&&!state.completed&&(state.found_words||[]).length===Number(a.building_word_total||0))await send({action:'finish'},null,false);if(g6Search&&state.completed&&!wasCompleted)await completeG6();render();if(s9Family&&state.completed&&!wasCompleted)await playPrescribedAudio('Good job! Activity 1 is complete!',true);if(s9Helping&&state.completed&&!wasCompleted)await playPrescribedAudio('Good job! Activity 2 is complete!',true);if(l22G1){if(state.completed)await playPrescribedAudio('Magaling! Nabasa mo nang tama ang lahat ng pantig.',true);else if(L22_G1_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);if(!wasReadComplete&&state.read_aloud_completed&&!state.completed)await playPrescribedAudio(L22_G1_BUILDING_INSTRUCTION,true);}if(l23G1){if(state.completed){await playPrescribedAudio('Magaling! Natapos mo ang Gawain 1.',true);await playPrescribedAudio('Magaling! Nabuo ang salitang Niño',true);}else if(G1_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}if(jSyllables){if(state.completed)await playPrescribedAudio('Natapos mo ang gawain!',true);else if(G4_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}if(qG6&&G6_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);if(g6Search&&L24_G6_WORD_SEARCH_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);if(l24Builder){if(state.completed)await playPrescribedAudio('Magaling! Nabasa mo nang tama ang lahat ng pantig.',true);else if(L24_G1_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}if(l24G4Builder){if(state.completed)await playPrescribedAudio('Magaling! Natapos mo ang Gawain 4.',true);else if(L24_G4_BUILDER_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}if(g5Syllables){if(state.completed)await playPrescribedAudio('Magaling! Natapos mo ang Gawain 5!',true);else if(L24_G5_SYLLABLE_MAPPED_TEXT.has(state.last_feedback))await playPrescribedAudio(state.last_feedback,true);}}catch(e){const text=e.message||'Hindi na-save. Subukan muli.';message(text,true);if((l22G1&&L22_G1_MAPPED_TEXT.has(text))||(l23G1&&G1_MAPPED_TEXT.has(text))||(jSyllables&&G4_MAPPED_TEXT.has(text))||(qG6&&G6_MAPPED_TEXT.has(text))||(g6Search&&L24_G6_WORD_SEARCH_MAPPED_TEXT.has(text))||(l24Builder&&L24_G1_MAPPED_TEXT.has(text))||(l24G4Builder&&L24_G4_BUILDER_MAPPED_TEXT.has(text))||(g5Syllables&&L24_G5_SYLLABLE_MAPPED_TEXT.has(text))||(s9Helping&&S9_A2_MAPPED_TEXT.has(text)))playPrescribedAudio(text,true).catch(()=>{});}finally{busy=false;lock();}}
   function lock(){action.querySelectorAll('button').forEach(b=>b.disabled=busy||preview);}
   function lockG3(){if(l23G3)content.querySelectorAll('.wb-l23-g3-content button').forEach(b=>b.disabled=busy||preview);}
   function setG1ReadingState(next){
@@ -738,7 +738,7 @@
       const denied=e?.name==='NotAllowedError'||e?.name==='SecurityError';const text=denied?(l24G3WordReading?'Hindi available ang mikropono.':'Hindi pinayagan ang mikropono.'):e.message||'Hindi nakuha ang iyong boses. Subukan muli.';setJFeedback(text,true);if(l23G3&&G3_MAPPED_TEXT.has(text))await playPrescribedAudio(text,true).catch(()=>{});if(qReading&&G7_FEEDBACK_TEXT.has(text))await playPrescribedAudio(text,true).catch(()=>{});if(l24G3WordReading&&L24_G3_WORD_MAPPED_TEXT.has(text))await playPrescribedAudio(text,true).catch(()=>{});
     }finally{busy=false;lock();lockG3();}
   }
-  function draft(value){if(s9Family&&state.completed)return;state.draft={...state.draft,...value};if(specializedBuilder&&Object.prototype.hasOwnProperty.call(value,'builder')){state.last_feedback='';const feedback=content.querySelector('.wb-builder-feedback');if(feedback)feedback.textContent='';}const snapshot=structuredClone(state.draft),epoch=session9DraftEpoch;send({action:'draft',draft:snapshot},null,true,epoch).catch(e=>{const text=e.message||(session9Activity?session9SaveError:'Hindi na-save. Subukan muli.');message(text,true);if((l24Builder&&L24_G1_MAPPED_TEXT.has(text))||(l24G4Builder&&L24_G4_BUILDER_MAPPED_TEXT.has(text)))playPrescribedAudio(text,true).catch(()=>{});});}
+  function draft(value){if(s9Family&&state.completed)return;state.draft={...state.draft,...value};if(specializedBuilder&&Object.prototype.hasOwnProperty.call(value,'builder')){state.last_feedback='';const feedback=content.querySelector('.wb-builder-feedback');if(feedback)feedback.textContent='';}if(draftQueue){draftQueue.schedule(state.draft,state.revision);return;}const snapshot=structuredClone(state.draft),epoch=session9DraftEpoch;send({action:'draft',draft:snapshot},null,true,epoch).catch(e=>{const text=e.message||(session9Activity?session9SaveError:'Hindi na-save. Subukan muli.');message(text,true);if((l24Builder&&L24_G1_MAPPED_TEXT.has(text))||(l24G4Builder&&L24_G4_BUILDER_MAPPED_TEXT.has(text)))playPrescribedAudio(text,true).catch(()=>{});});}
   function syncL22G1Presentation(){
     if(!l22G1)return;
     document.body.classList.remove('wb-l22-g1-instruction','wb-l22-g1-reading','wb-l22-g1-building');
@@ -1073,6 +1073,23 @@
   }
   window.addEventListener('beforeunload',e=>{if(pictureReading)pictureGuidedAttempt?.controller.abort();activeRecorder?.stop();activeStream?.getTracks().forEach(t=>t.stop());stopReadAloud();if(!specializedBuilder&&busy){e.preventDefault();e.returnValue='';}});
   window.addEventListener('pagehide',()=>{if(pictureReading)pictureGuidedAttempt?.controller.abort();stopReadAloud();});
+  const draftScope=document.getElementById('workbook-draft-scope')?.dataset.scope;
+  if(session9Activity&&!preview&&draftScope&&window.PrescribedDraftQueue){
+    draftQueue=window.PrescribedDraftQueue.create({key:`pabasa_aral_draft:${draftScope}:${a.activity_key}`,
+      storage:{getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value),removeItem:key=>localStorage.removeItem(key)},
+      revision:state.revision,restored:draft=>{state.draft=draft;},
+      save:async draft=>{await send({action:'draft',draft},null,true,session9DraftEpoch);return state.revision;},
+      onError:error=>message(error.message||session9SaveError,true)});
+    if(state.completed||state.submitted||state.awaiting_teacher_verdict)draftQueue.clear();
+  }
+  window.PabasaWorkbookSaves={flush:async()=>{await draftQueue?.flush();await queue;await window.PabasaPrescribedPending?.flush();}};
+  document.getElementById('wb-back')?.addEventListener('click',async event=>{
+    if(preview)return;
+    event.preventDefault();const target=event.currentTarget.href;
+    try{await window.PabasaWorkbookSaves.flush();window.location.assign(target);}
+    catch(error){message(error.message||'Your work could not be saved. Try again.',true);}
+  });
+  window.addEventListener('beforeunload',event=>{if(draftQueue?.pending()){event.preventDefault();event.returnValue='';}});
   if(lesson24Activity&&!preview&&!state.completed){
     const startLesson24=()=>{
       activityStarted=true;render();
@@ -1088,4 +1105,10 @@
   render();
   initializeL22Entry();
   initializeSession9Entry();
+  if(draftQueue?.recovery()&&!state.completed&&!state.submitted&&!state.awaiting_teacher_verdict){
+    message('An unsaved drawing is available from an interrupted visit.');
+    const restore=document.createElement('button');restore.type='button';restore.textContent='Restore unsaved drawing';
+    restore.onclick=()=>{state.draft=structuredClone(draftQueue.recovery());draftQueue.schedule(state.draft,state.revision);restore.remove();render();};
+    document.getElementById('wb-status')?.appendChild(restore);
+  }
 })();

@@ -44,7 +44,7 @@ class Lesson24Gawain6AudioTests(SimpleTestCase):
         self.assertIn('new Audio(localUrl)', self.js)
         self.assertIn('fetch(data.read_aloud_url', self.js)
         self.assertIn("aral-l24-g6-z-word-search' %}<script", self.template)
-        self.assertIn('20261002-l24-g6-direct-start-audio-1', self.template)
+        self.assertIn('20261019-save-recovery', self.template)
 
     def test_real_simulan_path_is_the_only_gawain6_startup_owner(self):
         startup = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_l24_startup.js').read_text(encoding='utf-8')
@@ -63,4 +63,4 @@ class Lesson24Gawain6AudioTests(SimpleTestCase):
 
     def test_gawain5_mapping_remains_separate(self):
         self.assertIn('L24_G5_SYLLABLE_MAPPED_TEXT', self.js)
-        self.assertIn('20261002-l24-g5-mapped-instruction-1', self.template)
+        self.assertIn('20261019-save-recovery', self.template)

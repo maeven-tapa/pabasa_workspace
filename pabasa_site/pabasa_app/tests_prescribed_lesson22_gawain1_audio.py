@@ -125,7 +125,7 @@ class Lesson22Gawain1AudioTests(SimpleTestCase):
         self.assertIn("new Audio(localUrl)", self.js)
         self.assertIn("'Letrang C. Handa kana?': 'Letrang C. Handa kana_TTS.mp3'", self.views)
         self.assertIn("aral-l22-g1-c-syllable-builder' %}<script", self.template)
-        self.assertIn('20261005-l22-g1-startup-audio-4', self.template)
+        self.assertIn('20261019-save-recovery', self.template)
 
     def test_result_feedback_is_audio_only_but_operational_and_missing_statuses_remain_visible(self):
         self.assertIn("const L22_G1_OPERATIONAL_FEEDBACK = new Set(['Handa ka na?', 'Nakikinig...', 'Sinusuri ang iyong pagbasa...', 'Hindi magamit ang mikropono ngayon. Subukan muli mamaya.']);", self.js)
