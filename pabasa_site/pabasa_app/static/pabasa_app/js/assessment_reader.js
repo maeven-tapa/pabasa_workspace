@@ -1881,6 +1881,8 @@
             if (crlaQuestionStartReadingBtn) {
                 crlaQuestionStartReadingBtn.classList.remove("is-recording");
                 crlaQuestionStartReadingBtn.innerHTML = '<i class="bi bi-mic-fill" aria-hidden="true"></i> Sumagot';
+                crlaQuestionStartReadingBtn.setAttribute("aria-label", "Sumagot");
+                crlaQuestionStartReadingBtn.title = "Sumagot";
             }
             crlaQuestionStartReadingBtn?.classList.toggle("d-none", !currentStoryQuestions.length);
             const progress = document.getElementById("crlaQuestionProgressFill");
@@ -2099,7 +2101,9 @@
             if (crlaAnswerFeedback) { crlaAnswerFeedback.textContent = ""; crlaAnswerFeedback.classList.add("d-none"); }
             crlaQuestionStartReadingBtn.disabled = true;
             crlaQuestionStartReadingBtn.classList.add("is-recording");
-            crlaQuestionStartReadingBtn.textContent = "Listening…";
+            crlaQuestionStartReadingBtn.innerHTML = 'Nakikinig<span class="crla-listening-dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>';
+            crlaQuestionStartReadingBtn.setAttribute("aria-label", "Nakikinig");
+            crlaQuestionStartReadingBtn.title = "Nakikinig";
             try { crlaSpeechRecognition.start(); } catch (error) { crlaSpeechRecognition.onerror(error); }
         }
 
