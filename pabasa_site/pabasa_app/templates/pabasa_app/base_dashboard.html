@@ -3903,6 +3903,10 @@
             if (logoutModal && logoutModal.parentElement !== document.body) {
                 document.body.appendChild(logoutModal);
             }
+            logoutModal?.addEventListener("shown.bs.modal", () => {
+                // The mobile sidebar's focus trap may catch the initial focus.
+                logoutModal.querySelector('[data-bs-dismiss="modal"]')?.focus();
+            });
 
             const logoutButton = document.getElementById("confirmLogoutBtn");
             if (logoutButton) {
