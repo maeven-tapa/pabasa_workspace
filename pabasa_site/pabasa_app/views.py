@@ -4261,8 +4261,13 @@ def _send_course_update_to_student(
     record_note=True,
     note_type_prefix='course_update',
     sections=None,
+    course_sections=None,
+    course_title=None,
+    course_code=None,
 ):
-    course_sections = list(sections) if sections is not None else list(course.sections.filter(is_active=True))
+    if course_sections is None:
+        course_sections = sections if sections is not None else course.sections.filter(is_active=True)
+    course_sections = list(course_sections)
     if course_sections and not any(section.has_student(student, active_only=True) for section in course_sections):
         return {'success': False, 'reason': 'not_enrolled', 'student_id': student.id}
     if not student.email:
@@ -4366,10 +4371,10 @@ def _send_course_update_to_student(
         )
         include_attachment = True
 
-    course_title = course.title if course else course_sections[0].class_name
-    course_code = course.code if course else course_sections[0].class_code
+    report_course_title = course_title or getattr(course, 'title', '') or (course_sections[0].class_name if course_sections else 'Reading')
+    report_course_code = course_code or getattr(course, 'code', '') or (course_sections[0].class_code if course_sections else '')
     note_text = (
-        f"Course: {course_title} ({course_code})\n"
+        f"Course: {report_course_title} ({report_course_code})\n"
         f"Update Type: {update_type}\n"
         f"Recipient Email: {student.email}\n\n"
         f"Teacher Comments:\n"
@@ -12681,6 +12686,28 @@ def assessment(request):
         selected_section = next((section for section in joined_sections if section.id in current_section_ids), None)
     if selected_section is None and len(joined_sections) == 1:
         selected_section = joined_sections[0]
+    supplementary_return_requested = (
+        str(request.GET.get('return_to') or '').strip().lower() == 'reading_assessment'
+    )
+    return_material_id = request.GET.get('return_material_id') if supplementary_return_requested else None
+    _, return_material_id = _parse_prefixed_id(return_material_id)
+    return_material = (
+        Material.objects.filter(pk=return_material_id).first()
+        if return_material_id else None
+    )
+    current_enrollment = _student_current_enrollment(user) if return_material and user else None
+    returning_from_supplementary = bool(
+        user
+        and getattr(user, 'role', '') == 'student'
+        and supplementary_return_requested
+        and selected_section
+        and current_enrollment
+        and current_enrollment.section_id == selected_section.id
+        and return_material
+        and _is_supplementary_material(return_material)
+        and _current_supplementary_lifecycle_guard(request, return_material) is None
+        and _material_is_released(return_material)
+    )
     reading_access_state = workflow.get('eligibility') or _reader_assessment_state(user)
     # A finalized CRLA result takes precedence over calendar availability.
     # Calendar gates apply only to students who have not completed the active
@@ -12744,11 +12771,9 @@ def assessment(request):
         and not reading_access_state.get('reading_at_grade_level_complete')
         and (section_assessment_completed or (approved_assessment_request and student_live_assessment))
     )
-    if returning_to_reading_assessment and has_reading_assessment_access:
-        # A student returning from an already-authorized Reading Assessment
-        # activity must get the activity-selection hub, even if the section's
-        # Assessment Week flag is still enabled.  This is scoped to the
-        # originating context and does not bypass the normal entry flow.
+    if returning_to_reading_assessment and (has_reading_assessment_access or returning_from_supplementary):
+        # Preserve activity-hub navigation when the CRLA calendar would
+        # otherwise replace it with an official-assessment waiting screen.
         assessment_week_section = None
     if approved_assessment_request and assessment_week_live and student_live_assessment and not section_assessment_completed:
         # An approved overdue-assessment request is a student-specific grant.
@@ -12759,7 +12784,7 @@ def assessment(request):
         if (
             not current_term_crla_completed
             and not approved_assessment_request
-            and not (returning_to_reading_assessment and has_reading_assessment_access)
+            and not (returning_to_reading_assessment and (has_reading_assessment_access or returning_from_supplementary))
         ):
             context = _dashboard_context(request, 'student')
             pending_request = _current_crla_assessment_request(
@@ -12783,7 +12808,7 @@ def assessment(request):
                 'workflow_message': 'Keep up the great work. You can continue practicing whenever you like.',
             })
             return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
-    if user and getattr(user, 'role', '') == 'student' and selected_section and assessment_week_active and (not assessment_week_live or not student_live_assessment) and not section_assessment_completed and not has_completed_official_crla and not aral_week_mode:
+    if user and getattr(user, 'role', '') == 'student' and selected_section and assessment_week_active and (not assessment_week_live or not student_live_assessment) and not section_assessment_completed and not has_completed_official_crla and not aral_week_mode and not returning_from_supplementary:
         context = _dashboard_context(request, 'student')
         context.update({
             'stage': 'assessment_week_locked',
@@ -13045,6 +13070,14 @@ def assessment(request):
     ):
         stage = 'assessment_week_locked'
         routing_reason = 'approved_missed_crla_waiting_for_teacher'
+
+    if returning_from_supplementary:
+        # The student has just passed the material-specific publication and
+        # release checks. Return them to the activity hub independently of
+        # the official CRLA calendar; official CRLA launch authorization is
+        # still enforced by its material access checks.
+        stage = 'original'
+        routing_reason = 'return_from_authorized_supplementary_activity'
 
     try:
         logger.warning(
@@ -24476,11 +24509,6 @@ def story_reading_page(request):
     content_json = material.content_json if isinstance(material.content_json, dict) else {}
     story_config = content_json.get('storyReading') if isinstance(content_json.get('storyReading'), dict) else {}
     student = User.objects.filter(id=request.session.get('user_id'), role='student').first()
-    reader_state = _reader_assessment_state(student)
-    has_reading_assessment_access = bool(
-        reader_state.get('aral_eligible')
-        and not reader_state.get('reading_at_grade_level_complete')
-    )
     section_id_value = request.GET.get('section_id') or material.section_id or ''
     return_section = Section.objects.filter(pk=section_id_value).first() if section_id_value else None
     assessment_return_url = reverse('assessment')
@@ -24492,12 +24520,13 @@ def story_reading_page(request):
             or _student_has_approved_assessment_request(student, return_section)
         )
     )
-    if has_reading_assessment_access and has_completed_return_section:
-        # Preserve the originating activity-selection context.  The marker is
-        # emitted only for students who already have the persisted post-CRLA
-        # Reading Assessment access state.  This also keeps direct/reloaded
-        # Story Reading URLs from losing their originating context.
+    if has_completed_return_section or _is_supplementary_material(material):
+        # Supplementary readers return to the activity hub independently of
+        # the official CRLA workflow.  The assessment view validates this
+        # material reference against the student's current publication.
         return_params['return_to'] = 'reading_assessment'
+        if _is_supplementary_material(material):
+            return_params['return_material_id'] = f'material-{material.id}'
     return_query = urlencode({key: value for key, value in return_params.items() if value not in (None, '')})
     if return_query:
         assessment_return_url = f'{assessment_return_url}?{return_query}'
@@ -27362,12 +27391,18 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         str(activity_type or '').strip().lower() == 'word_decoding'
         and bool(material and _is_word_decoding_material(material))
     )
+    is_supplementary_activity = bool(
+        material and _is_supplementary_material(material) and not assist_context
+    )
     is_crla_assessment = bool(
-        data.get('crla_score_data')
-        or getattr(material, 'assessment_kind', '') == 'crla'
-        or getattr(material, 'is_official_reading', False)
-        or getattr(assessment, 'is_system_owned', False)
-        or 'crla' in str(getattr(assessment, 'system_assessment_key', '') or '').lower()
+        not is_supplementary_activity
+        and (
+            data.get('crla_score_data')
+            or getattr(material, 'assessment_kind', '') == 'crla'
+            or getattr(material, 'is_official_reading', False)
+            or getattr(assessment, 'is_system_owned', False)
+            or 'crla' in str(getattr(assessment, 'system_assessment_key', '') or '').lower()
+        )
     )
     if is_syllable_blending and bool(data.get('save_progress')):
         if not material or not _is_syllable_blending_material(material):
@@ -27890,7 +27925,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 assessment=assessment,
                 material=material,
             )
-        if not is_practice and not is_picture_word_matching and not is_syllable_blending and not is_clap_count_syllables and not is_letter_sound_matching and not is_letter_sound_correspondence and not is_word_decoding and not is_crla_assessment:
+        if not is_practice and not is_picture_word_matching and not is_syllable_blending and not is_clap_count_syllables and not is_letter_sound_matching and not is_letter_sound_correspondence and not is_word_decoding and not is_crla_assessment and not is_supplementary_activity:
             _log_completion_timing('student_profile_save_start')
             _update_student_reading_profile(student_user, score_payload)
             _log_completion_timing('student_profile_save_end')
@@ -31983,35 +32018,53 @@ def send_course_update(request):
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
         course = None
-        course_sections = None
+        course_sections = []
         if course_id.startswith('section-'):
             section_id = course_id.removeprefix('section-')
-            if not section_id.isdigit():
-                return JsonResponse({'success': False, 'error': 'Invalid class'}, status=400)
-            section = Section.objects.filter(id=int(section_id), teacher=teacher_user, is_active=True).first()
+            if not section_id.isdecimal():
+                return JsonResponse({'success': False, 'error': 'Invalid class selection'}, status=400)
+            section = Section.objects.filter(
+                id=int(section_id), teacher=teacher_user, is_active=True,
+            ).first()
             if not section:
                 return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
             course_sections = [section]
-        elif course_id.isdigit():
-            course = Course.objects.filter(id=int(course_id), teacher=teacher_user, is_active=True).prefetch_related('sections').first()
+            course_title, course_code = section.class_name, section.class_code
+        elif course_id.isdecimal():
+            course = Course.objects.filter(
+                id=int(course_id), teacher=teacher_user, is_active=True,
+            ).prefetch_related('sections').first()
             if not course:
                 return JsonResponse({'success': False, 'error': 'Course not found'}, status=404)
+            course_sections = list(course.sections.filter(is_active=True, teacher=teacher_user))
+            course_title, course_code = course.title, course.code
         else:
-            return JsonResponse({'success': False, 'error': 'Invalid course'}, status=400)
+            return JsonResponse({'success': False, 'error': 'Invalid course selection'}, status=400)
 
         selected_student_ids = []
         for raw_id in student_ids:
-            try:
-                selected_student_ids.append(int(raw_id))
-            except (TypeError, ValueError):
-                continue
+            raw_id_text = str(raw_id).strip()
+            if isinstance(raw_id, bool) or not raw_id_text.isdecimal():
+                return JsonResponse({'success': False, 'error': 'Invalid student recipient'}, status=400)
+            student_id = int(raw_id_text)
+            if student_id <= 0:
+                return JsonResponse({'success': False, 'error': 'Invalid student recipient'}, status=400)
+            if student_id not in selected_student_ids:
+                selected_student_ids.append(student_id)
 
         if not selected_student_ids:
             return JsonResponse({'success': False, 'error': 'No valid student recipients selected'}, status=400)
 
         students = User.objects.filter(id__in=selected_student_ids, role='student')
         students_by_id = {student.id: student for student in students}
-        ordered_students = [students_by_id[sid] for sid in selected_student_ids if sid in students_by_id]
+        if len(students_by_id) != len(selected_student_ids):
+            return JsonResponse({'success': False, 'error': 'One or more selected students no longer exist'}, status=400)
+        ordered_students = [students_by_id[sid] for sid in selected_student_ids]
+        if not course_sections or any(
+            not any(section.has_student(student, active_only=True) for section in course_sections)
+            for student in ordered_students
+        ):
+            return JsonResponse({'success': False, 'error': 'You can only send updates to students actively enrolled in this class'}, status=403)
         sent = []
         skipped = []
         scheduled_at_input = str(data.get('scheduled_at') or data.get('scheduledAt') or data.get('scheduled_at_input') or '').strip()
@@ -32030,7 +32083,9 @@ def send_course_update(request):
                 reading_material_input=reading_material_input,
                 record_note=True,
                 note_type_prefix='course_update',
-                sections=course_sections,
+                course_sections=course_sections,
+                course_title=course_title,
+                course_code=course_code,
             )
             if result.get('success'):
                 sent.append(result)
@@ -32056,7 +32111,7 @@ def send_course_update(request):
         return JsonResponse({'success': False, 'error': 'Invalid JSON payload'}, status=400)
     except Exception as e:
         logger.exception('Failed to send course update')
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return JsonResponse({'success': False, 'error': 'Could not send update. Please try again.'}, status=500)
 
 
 @require_http_methods(["GET"])
@@ -32084,7 +32139,9 @@ def preview_course_reading_report(request):
             sections = list(course.sections.filter(is_active=True))
     else:
         return JsonResponse({'success': False, 'error': 'Invalid course'}, status=400)
-    student = User.objects.filter(id=student_id, role='student').first()
+    if not str(student_id or '').isdecimal():
+        return JsonResponse({'success': False, 'error': 'Invalid student selection'}, status=400)
+    student = User.objects.filter(id=int(student_id), role='student').first()
     if (not course and not sections) or not student:
         return JsonResponse({'success': False, 'error': 'Course or student not found'}, status=404)
     if sections and not any(section.has_student(student, active_only=True) for section in sections):

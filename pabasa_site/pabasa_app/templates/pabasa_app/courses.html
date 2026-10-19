@@ -14466,7 +14466,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                 form.onsubmit = async (e) => {
                     e.preventDefault();
-                    if (form.getAttribute('aria-busy') === 'true') return;
+                    if (form.dataset.submitting === 'true' || form.getAttribute('aria-busy') === 'true') return;
                     const checked = Array.from(document.querySelectorAll('#courseUnifiedStudentReportList .student-checkbox:checked')).map(cb => cb.value);
                     if (checked.length === 0) return showToast('Please select at least one recipient.', 'error');
                     const message = (messageArea.value || '').trim();
@@ -14475,6 +14475,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
                     const originalButtonHtml = sendButton ? sendButton.innerHTML : '';
+                    form.dataset.submitting = 'true';
                     form.setAttribute('aria-busy', 'true');
                     syncCourseReportControls();
                     setCourseUpdateStatus('Sending your update. Please wait…');
@@ -14520,6 +14521,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         setCourseUpdateStatus(err.message || 'Failed to send update. Please try again.', 'danger');
                         showToast(err.message || 'Failed to send update', 'error');
                     } finally {
+                        form.dataset.submitting = 'false';
                         if (sendButton) {
                             sendButton.innerHTML = originalButtonHtml || '<i class="bi bi-send me-1"></i> Send Update';
                         }
