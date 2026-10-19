@@ -147,12 +147,19 @@ def run():
     try:
         with transaction.atomic():
             school=School.objects.create(name='Synthetic prescribed '+rid,code='P30'+rid)
-            calendar=SchoolCalendar.objects.create(school_year='P30-'+rid,current_term=1,is_active=False)
+            # Admin calendar pages parse every school_year as YYYY-YYYY.
+            # Keep disposable calendars valid and older than real school years.
+            existing_years=set(SchoolCalendar.objects.values_list('school_year',flat=True))
+            available_years=[year for year in range(1000,1900) if f'{year}-{year+1}' not in existing_years]
+            assert available_years,'No isolated historical school year is available'
+            year=secrets.choice(available_years)
+            calendar=SchoolCalendar.objects.create(school_year=f'{year}-{year+1}',current_term=1,is_active=False)
             from pabasa_app.system_clock import today
             day=today()
             for kind,when in [('school_opening',day-dt.timedelta(days=2)),('school_closing',day+dt.timedelta(days=2))]:
                 CalendarEvent.objects.create(school_calendar=calendar,school=school,scope=CalendarEvent.SCOPE_SCHOOL,
                     term=1,title='Synthetic '+kind,event_type=kind,start_date=when,end_date=when)
+            admin=make_user('a','admin')
             teachers=[make_user('t'+str(i),'teacher') for i in range(6)]
             sections=[Section.objects.create(school=school,school_calendar=calendar,teacher=teacher,
                 class_code='P30'+rid+str(i),class_name='Synthetic five-student class',subject='English',grade_level='Grade 2') for i,teacher in enumerate(teachers)]
@@ -215,6 +222,8 @@ def run():
             if isinstance(value,list):return [canonical(v) for v in value]
             return value
         with cf.ThreadPoolExecutor(max_workers=COUNT) as pool:
+            admin_client=client(admin)
+            wave(pool,[admin_client],'admin_calendar_during_setup',reverse('admin_school_calendar'))
             wave(pool,students,'dashboard','/dashboard/assessment/')
             legacy_keys=[] if recovery_only else ['lesson-2-gawain-1','lesson-3-gawain-1','lesson-3-gawain-2','lesson-4-gawain-1','lesson-5-gawain-1','lesson-6-gawain-1','lesson-7-gawain-1']
             for key in legacy_keys:
@@ -280,6 +289,7 @@ def run():
             from urllib.parse import urlencode
             wave(pool,students,'login_recovery','/api/login/',lambda c:urlencode({'custom_id':c['custom_id'],'password':password}).encode(),content_type='application/x-www-form-urlencoded')
             wave(pool,students,'authenticated_reload',reverse('lesson_1_gawain_1_page'))
+            wave(pool,[admin_client],'admin_calendar_after_assessment',reverse('admin_school_calendar'))
             report['expired_logins_recovered']=COUNT
             report['sessions_covered']=sorted({case['session'] for case in fixtures}|{1})
             report['all_thirty_preserved']=bool(fixtures) and report['saved_checkpoints']==len(fixtures)*COUNT and report['reloads']==len(fixtures)*COUNT

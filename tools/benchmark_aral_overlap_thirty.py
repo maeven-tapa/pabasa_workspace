@@ -118,7 +118,13 @@ def run():
     try:
         with transaction.atomic():
             school=School.objects.create(name='Synthetic prescribed '+rid,code='P30'+rid)
-            calendar=SchoolCalendar.objects.create(school_year='P30-'+rid,current_term=1,is_active=False)
+            # Admin calendar pages parse every school_year as YYYY-YYYY.
+            # Keep disposable calendars valid and older than real school years.
+            existing_years=set(SchoolCalendar.objects.values_list('school_year',flat=True))
+            available_years=[year for year in range(1000,1900) if f'{year}-{year+1}' not in existing_years]
+            assert available_years,'No isolated historical school year is available'
+            year=secrets.choice(available_years)
+            calendar=SchoolCalendar.objects.create(school_year=f'{year}-{year+1}',current_term=1,is_active=False)
             from pabasa_app.system_clock import today
             day=today()
             for kind,when in [('school_opening',day-dt.timedelta(days=2)),('school_closing',day+dt.timedelta(days=2))]:
