@@ -5178,6 +5178,8 @@
             if (isOfficialAssessmentLaunch && isCrla) {
                 formData.append("official_crla_assessment", "1");
                 formData.append("official_assessment_id", String(officialAssessmentId));
+                const liveSessionId = String(urlParams.get("live_session_id") || "").trim();
+                if (liveSessionId) formData.append("live_session_id", liveSessionId);
             }
             if (currentAssessmentBranch === "rhymes") formData.append("crla_rhymes", "1");
             if (isOfficialAssessmentLaunch && isCrla && mode === "paragraph" && currentStoryState === "story_reading") {

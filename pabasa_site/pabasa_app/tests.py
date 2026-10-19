@@ -1285,6 +1285,14 @@ class ReadingLaunchClassificationTests(TestCase):
         self.assertIn('customMaterialData || liveContent', custom_branch)
         self.assertNotIn("sessionStorage.getItem('pabasa_crla_assessment_items')", custom_branch)
 
+    def test_live_crla_transcription_sends_the_teacher_session_id(self):
+        script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
+        content = script_path.read_text(encoding='utf-8')
+        transcription = content.split('async function sendAudioChunk(', 1)[1].split('function handleSpeechResult', 1)[0]
+
+        self.assertIn('urlParams.get("live_session_id")', transcription)
+        self.assertIn('formData.append("live_session_id", liveSessionId)', transcription)
+
     def test_live_crla_completion_waits_without_classification_and_refreshes_once_after_end(self):
         script_path = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'js' / 'assessment_reader.js'
         content = script_path.read_text(encoding='utf-8')
