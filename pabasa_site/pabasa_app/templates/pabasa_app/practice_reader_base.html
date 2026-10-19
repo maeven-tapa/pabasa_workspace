@@ -6033,11 +6033,13 @@
             .practice-hunt-shell .hunt-main { inset: 40px 0 112px; }
             .practice-hunt-shell .hunt-word-area { width: 90%; }
             .practice-hunt-shell .hunt-actions { bottom: 8px; width: calc(100% - 1rem); }
-            .practice-hunt-shell .hunt-actions .practice-controls { gap: .3rem; }
+            .practice-hunt-shell .hunt-actions .practice-controls {
+                gap: .6rem;
+                grid-template-columns: 1fr;
+            }
             .practice-hunt-shell .hunt-actions .practice-controls button {
-                font-size: .65rem;
-                min-height: 38px;
-                padding-inline: .25rem;
+                min-height: 44px;
+                padding-inline: .65rem;
             }
         }
         /* Completion result and score-breakdown refinements */
@@ -6338,9 +6340,9 @@
             <section class="reading-help-card">
                 <div class="reading-help-head"><h2 id="practiceHelpTitle">How to practice reading</h2><button class="reading-help-close" id="practiceHelpClose" type="button" aria-label="Close help"><i class="bi bi-x-lg"></i></button></div>
                 <div class="reading-help-steps">
-                    <div class="reading-help-step"><i class="bi bi-eye-fill"></i><div><strong>Look at the text</strong><span>Take your time and read the word or passage carefully.</span></div></div>
-                    <div class="reading-help-step"><i class="bi bi-mic-fill"></i><div><strong>Read aloud</strong><span>Choose Read and speak clearly into your microphone.</span></div></div>
-                    <div class="reading-help-step"><i class="bi bi-arrow-right-circle-fill"></i><div><strong>Continue when ready</strong><span>Use Skip if needed, then choose Next to continue.</span></div></div>
+                    <div class="reading-help-step"><i class="bi bi-eye-fill"></i><div><strong>Look at the text</strong><span>Look at the words. Take your time.</span></div></div>
+                    <div class="reading-help-step"><i class="bi bi-mic-fill"></i><div><strong>Read aloud</strong><span>Tap Start Reading. Speak clearly.</span></div></div>
+                    <div class="reading-help-step"><i class="bi bi-arrow-right-circle-fill"></i><div><strong>Continue when ready</strong><span>{% if request.GET.game == 'hunt' %}Tap Skip to skip.{% elif request.GET.game == 'free' %}Swipe up for the next card. Swipe down to skip.{% else %}Tap Next to continue.{% endif %}</span></div></div>
                 </div>
             </section>
         </div>
@@ -6394,7 +6396,7 @@
                         <div class="scrolls-progress-meta" id="scrollsProgressMeta">Swipe up for the next challenge</div>
                     </div>
                     <div class="scrolls-dots" id="scrollsDots" aria-label="Reading progress"></div>
-                    <p class="scrolls-feedback" id="scrollsFeedback">Tap the mic to record your reading.</p>
+                    <p class="scrolls-feedback" id="scrollsFeedback">Tap the mic. Read aloud.</p>
                     <div class="scrolls-speech-debug-settings">
                         <label><input id="practiceSpeechDebugToggle" type="checkbox"> <span>Show speech debug panel</span></label>
                     </div>
@@ -6462,12 +6464,12 @@
                     <div class="hunt-checkpoint-toast" id="huntCheckpointToast" role="status" hidden><i class="bi bi-flag-fill"></i> Great exploring! Checkpoint reached!</div>
                     <aside class="hunt-guide" aria-label="PABASA bird reading guide">
                         <div class="hunt-bird-wrap"><img src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA bird guide looking toward the word"></div>
-                        <div class="hunt-guide-copy" id="huntGuideMessage">Look at the word, then read it aloud.</div>
+                        <div class="hunt-guide-copy" id="huntGuideMessage">Look at the word. Read it aloud.</div>
                     </aside>
                     <div class="hunt-word-area">
                         <span class="hunt-word-position" id="huntWordPosition">Word 1 of 5</span>
                         <h2 class="practice-text" id="practiceText">Ready?</h2>
-                        <p class="hunt-word-instruction">Look at the word, then read it aloud.</p>
+                        <p class="hunt-word-instruction">Look at the word. Read it aloud.</p>
                         <div class="hunt-speech-panel" id="huntSpeechPanel" aria-live="polite">
                             <strong class="hunt-speech-status" id="huntSpeechStatus">Ready to start reading</strong>
                             <span class="hunt-speech-transcript" id="huntSpeechTranscript">Google Speech results will appear here while you read.</span>
@@ -6477,7 +6479,7 @@
                 </section>
 
                 <div class="hunt-actions">
-                    <p class="practice-feedback" id="practiceFeedback">Begin reading.</p>
+                    <p class="practice-feedback" id="practiceFeedback">Read when you are ready.</p>
                     <div class="practice-controls">
                         <button class="record-btn" id="huntReadAloudBtn" type="button"><i class="bi bi-volume-up-fill me-1"></i> Read Aloud</button>
                         <button class="record-btn" id="recordBtn" type="button"><i class="bi bi-mic-fill me-1"></i> Start Reading</button>
@@ -6576,7 +6578,7 @@
                 </section>
 
                 <div class="practice-action-shell">
-                    <p class="practice-feedback" id="practiceFeedback">Begin reading.</p>
+                    <p class="practice-feedback" id="practiceFeedback">Read when you are ready.</p>
 
                     <div class="practice-controls">
                         <button class="record-btn" id="readAloudBtn" type="button"><i class="bi bi-volume-up-fill me-1"></i> Read Aloud</button>
@@ -6598,7 +6600,7 @@
                     <div class="practice-feedback-icon" id="feedbackIcon" aria-hidden="true">🎉</div>
                     <div class="practice-feedback-copy">
                         <h3>Performance Feedback</h3>
-                        <p id="resultsSummaryText">Great effort! Your practice summary is ready below.</p>
+                        <p id="resultsSummaryText">Great job! See your practice results below.</p>
                     </div>
                 </div>
                 <h3 class="practice-breakdown-title">Score Breakdown</h3>

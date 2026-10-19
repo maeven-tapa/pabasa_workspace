@@ -31371,18 +31371,18 @@ def _practice_tutorial_content(mode):
     mapping = {
         'free': [
             'Welcome to Free Mode! Read the word aloud.',
-            'Swipe up to read. Swipe down to skip.',
+            'Swipe up for the next card. Swipe down to skip.',
             'Finish all the words and have fun reading!',
         ],
         'color': [
             'Welcome to Color Mode! The picture is empty.',
-            'Read a word correctly. A new part appears!',
+            'Read a word correctly. A picture part appears!',
             'Keep reading until the whole picture is complete!',
         ],
         'hunt': [
             'Welcome to Hunt Mode! Get ready for a challenge.',
             'Read words correctly to score points.',
-            'Beat the timer and aim for the highest score!',
+            'Read words to earn points.',
         ],
     }
     return mapping.get(mode_key, mapping['free'])
