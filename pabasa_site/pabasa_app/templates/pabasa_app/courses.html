@@ -14414,6 +14414,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                 form.onsubmit = async (e) => {
                     e.preventDefault();
+                    if (form.dataset.submitting === 'true') return;
                     const checked = Array.from(document.querySelectorAll('#courseUnifiedStudentReportList .student-checkbox:checked')).map(cb => cb.value);
                     if (checked.length === 0) return showToast('Please select at least one recipient.', 'error');
                     const message = (messageArea.value || '').trim();
@@ -14422,6 +14423,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
                     const originalButtonHtml = sendButton ? sendButton.innerHTML : '';
+                    form.dataset.submitting = 'true';
                     if (sendButton) {
                         sendButton.disabled = true;
                         sendButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
@@ -14458,6 +14460,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         console.warn('send course update failed', err);
                         showToast(err.message || 'Failed to send update', 'error');
                     } finally {
+                        form.dataset.submitting = 'false';
                         if (sendButton) {
                             sendButton.disabled = false;
                             sendButton.innerHTML = originalButtonHtml || '<i class="bi bi-send me-1"></i> Send Update';

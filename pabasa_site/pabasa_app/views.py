@@ -4260,8 +4260,11 @@ def _send_course_update_to_student(
     reading_material_input='',
     record_note=True,
     note_type_prefix='course_update',
+    course_sections=None,
+    course_title=None,
+    course_code=None,
 ):
-    course_sections = list(course.sections.filter(is_active=True))
+    course_sections = list(course.sections.filter(is_active=True)) if course_sections is None else list(course_sections)
     if course_sections and not any(section.has_student(student, active_only=True) for section in course_sections):
         return {'success': False, 'reason': 'not_enrolled', 'student_id': student.id}
     if not student.email:
@@ -4365,8 +4368,10 @@ def _send_course_update_to_student(
         )
         include_attachment = True
 
+    report_course_title = course_title or getattr(course, 'title', '') or (course_sections[0].class_name if course_sections else 'Reading')
+    report_course_code = course_code or getattr(course, 'code', '') or (course_sections[0].class_code if course_sections else '')
     note_text = (
-        f"Course: {course.title} ({course.code})\n"
+        f"Course: {report_course_title} ({report_course_code})\n"
         f"Update Type: {update_type}\n"
         f"Recipient Email: {student.email}\n\n"
         f"Teacher Comments:\n"
@@ -31996,7 +32001,7 @@ def send_course_update(request):
     """Send a course progress update to selected enrolled students and store sent updates as notes."""
     try:
         data = json.loads(request.body or '{}')
-        course_id = data.get('course_id')
+        course_id = str(data.get('course_id') or '').strip()
         student_ids = data.get('student_ids') or []
         update_type = str(data.get('update_type') or 'general').strip()[:50]
         message_template = str(data.get('message') or '').strip()
@@ -32009,23 +32014,54 @@ def send_course_update(request):
         if not teacher_user:
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
-        course = Course.objects.filter(id=course_id, teacher=teacher_user, is_active=True).prefetch_related('sections').first()
-        if not course:
-            return JsonResponse({'success': False, 'error': 'Course not found'}, status=404)
+        course = None
+        course_sections = []
+        if course_id.startswith('section-'):
+            section_id = course_id.removeprefix('section-')
+            if not section_id.isdecimal():
+                return JsonResponse({'success': False, 'error': 'Invalid class selection'}, status=400)
+            section = Section.objects.filter(
+                id=int(section_id), teacher=teacher_user, is_active=True,
+            ).first()
+            if not section:
+                return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
+            course_sections = [section]
+            course_title, course_code = section.class_name, section.class_code
+        elif course_id.isdecimal():
+            course = Course.objects.filter(
+                id=int(course_id), teacher=teacher_user, is_active=True,
+            ).prefetch_related('sections').first()
+            if not course:
+                return JsonResponse({'success': False, 'error': 'Course not found'}, status=404)
+            course_sections = list(course.sections.filter(is_active=True, teacher=teacher_user))
+            course_title, course_code = course.title, course.code
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid course selection'}, status=400)
 
         selected_student_ids = []
         for raw_id in student_ids:
-            try:
-                selected_student_ids.append(int(raw_id))
-            except (TypeError, ValueError):
-                continue
+            raw_id_text = str(raw_id).strip()
+            if isinstance(raw_id, bool) or not raw_id_text.isdecimal():
+                return JsonResponse({'success': False, 'error': 'Invalid student recipient'}, status=400)
+            student_id = int(raw_id_text)
+            if student_id <= 0:
+                return JsonResponse({'success': False, 'error': 'Invalid student recipient'}, status=400)
+            if student_id not in selected_student_ids:
+                selected_student_ids.append(student_id)
 
         if not selected_student_ids:
             return JsonResponse({'success': False, 'error': 'No valid student recipients selected'}, status=400)
 
         students = User.objects.filter(id__in=selected_student_ids, role='student')
         students_by_id = {student.id: student for student in students}
-        ordered_students = [students_by_id[sid] for sid in selected_student_ids if sid in students_by_id]
+        if len(students_by_id) != len(selected_student_ids):
+            return JsonResponse({'success': False, 'error': 'One or more selected students no longer exist'}, status=400)
+        ordered_students = [students_by_id[sid] for sid in selected_student_ids]
+        if not course_sections or any(
+            not any(section.has_student(student, active_only=True) for section in course_sections)
+            for student in ordered_students
+        ):
+            return JsonResponse({'success': False, 'error': 'You can only send updates to students actively enrolled in this class'}, status=403)
         sent = []
         skipped = []
         scheduled_at_input = str(data.get('scheduled_at') or data.get('scheduledAt') or data.get('scheduled_at_input') or '').strip()
@@ -32044,6 +32080,9 @@ def send_course_update(request):
                 reading_material_input=reading_material_input,
                 record_note=True,
                 note_type_prefix='course_update',
+                course_sections=course_sections,
+                course_title=course_title,
+                course_code=course_code,
             )
             if result.get('success'):
                 sent.append(result)
@@ -32069,7 +32108,7 @@ def send_course_update(request):
         return JsonResponse({'success': False, 'error': 'Invalid JSON payload'}, status=400)
     except Exception as e:
         logger.exception('Failed to send course update')
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return JsonResponse({'success': False, 'error': 'Could not send update. Please try again.'}, status=500)
 
 
 @require_http_methods(["GET"])
@@ -32097,7 +32136,9 @@ def preview_course_reading_report(request):
             sections = list(course.sections.filter(is_active=True))
     else:
         return JsonResponse({'success': False, 'error': 'Invalid course'}, status=400)
-    student = User.objects.filter(id=student_id, role='student').first()
+    if not str(student_id or '').isdecimal():
+        return JsonResponse({'success': False, 'error': 'Invalid student selection'}, status=400)
+    student = User.objects.filter(id=int(student_id), role='student').first()
     if (not course and not sections) or not student:
         return JsonResponse({'success': False, 'error': 'Course or student not found'}, status=404)
     if sections and not any(section.has_student(student, active_only=True) for section in sections):

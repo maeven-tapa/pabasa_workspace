@@ -13325,6 +13325,8 @@ class TeacherStudentsDirectoryTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="courseSelectedStudentReportPreview"', html=False)
+        self.assertContains(response, "form.dataset.submitting === 'true'", html=False)
+        self.assertContains(response, "form.dataset.submitting = 'false'", html=False)
 
     @patch("pabasa_app.views.EmailMultiAlternatives")
     def test_send_course_update_emails_student_and_stores_note(self, mock_email_cls):
@@ -13334,10 +13336,10 @@ class TeacherStudentsDirectoryTests(TestCase):
             code="CRS-TEST-001",
             description="Course update test",
         )
-        course.sections.add(self.section_a)
+        course.sections.add(self.section_b)
         assessment = Assessment.objects.create(
             teacher=self.teacher,
-            section=self.section_a,
+            section=self.section_b,
             title="Oral Reading Check",
             code="ASM-COURSE-001",
             assessment_type="paragraph",
@@ -13361,7 +13363,7 @@ class TeacherStudentsDirectoryTests(TestCase):
             reverse("send_course_update"),
             data=json.dumps({
                 "course_id": course.id,
-                "student_ids": [self.student.id],
+                "student_ids": [self.student.id, self.student.id],
                 "update_type": "general",
                 "message": "Hello {name}, keep practicing.",
             }),
@@ -13376,7 +13378,7 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertTrue(data["report_included"])
         self.assertIn("report_summary", data["sent"][0])
         mock_email_cls.assert_called_once()
-        self.assertEqual(mock_email_cls.call_args[0][0], "Student Reading Progress Report – PABASA")
+        self.assertEqual(mock_email_cls.call_args[0][0], "Student Reading Progress Report - PABASA")
         email_instance = mock_email_cls.return_value
         email_body = mock_email_cls.call_args[0][1]
         self.assertIn("Dear Parent/Guardian", email_body)
@@ -13398,6 +13400,90 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertIn("Suggested Home Support", note.note_text)
 
     @patch("pabasa_app.views.EmailMultiAlternatives")
+    def test_send_course_update_accepts_section_backed_course_id(self, mock_email_cls):
+        second_student = User.objects.create(
+            custom_id="STD-DIR2", role="student", first_name="Second", last_name="Student",
+            sex="female", birth_month=2, birth_day=2, birth_year=2013,
+            email="second-student@example.com", password_hash=make_password("student-password"),
+        )
+        self.section_b.add_student(second_student)
+        response = self.client.post(
+            reverse("send_course_update"),
+            data=json.dumps({
+                "course_id": f"section-{self.section_b.id}",
+                "student_ids": [self.student.id, second_student.id, self.student.id],
+                "update_type": "assessment",
+                "message": "Hello {name}",
+            }),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200, response.content.decode())
+        self.assertTrue(response.json()["success"])
+        self.assertEqual(response.json()["sent_count"], 2)
+        self.assertEqual(mock_email_cls.call_count, 2)
+        note = Note.objects.get(teacher=self.teacher, student=self.student)
+        self.assertIn(f"Course: {self.section_b.class_name} ({self.section_b.class_code})", note.note_text)
+        self.assertEqual(Note.objects.filter(teacher=self.teacher).count(), 2)
+
+    def test_send_course_update_rejects_malformed_or_missing_recipients(self):
+        course = Course.objects.create(teacher=self.teacher, title="Reading", code="CRS-RECIPIENT")
+        course.sections.add(self.section_b)
+        url = reverse("send_course_update")
+        for student_ids in ([], ["student-not-a-number"], ["section-13"], [999999]):
+            with self.subTest(student_ids=student_ids):
+                response = self.client.post(
+                    url,
+                    data=json.dumps({"course_id": course.id, "student_ids": student_ids}),
+                    content_type="application/json",
+                )
+                self.assertEqual(response.status_code, 400)
+
+        for section_id, expected_status in (("section-not-a-number", 400), ("section-999999", 404)):
+            with self.subTest(section_id=section_id):
+                response = self.client.post(
+                    url,
+                    data=json.dumps({"course_id": section_id, "student_ids": [self.student.id]}),
+                    content_type="application/json",
+                )
+                self.assertEqual(response.status_code, expected_status)
+
+    @patch("pabasa_app.views.EmailMultiAlternatives")
+    def test_send_course_update_rejects_unauthorized_section_and_students(self, mock_email_cls):
+        course = Course.objects.create(teacher=self.teacher, title="Reading", code="CRS-AUTH")
+        course.sections.add(self.section_b)
+        other_teacher = User.objects.create(
+            custom_id="TCH-OTHER-REPORT", role="teacher", first_name="Other", last_name="Teacher",
+            sex="female", birth_month=1, birth_day=1, birth_year=1990,
+            email="other-teacher@example.com", password_hash=make_password("password"),
+        )
+        unauthorized_section = test_section_create(
+            teacher=other_teacher, class_name="Other Class", class_code="OTHER-CLASS",
+            subject="Reading", is_active=True,
+        )
+        response = self.client.post(
+            reverse("send_course_update"),
+            data=json.dumps({"course_id": f"section-{unauthorized_section.id}", "student_ids": [self.student.id]}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 404)
+
+        outsider = User.objects.create(
+            custom_id="STD-UNAUTHORIZED-REPORT", role="student", first_name="Outside", last_name="Student",
+            sex="female", birth_month=1, birth_day=1, birth_year=2013,
+            email="outside-report@example.com", password_hash=make_password("password"),
+        )
+        response = self.client.post(
+            reverse("send_course_update"),
+            data=json.dumps({"course_id": course.id, "student_ids": [self.student.id, outsider.id]}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 403)
+        mock_email_cls.assert_not_called()
+        self.assertFalse(Note.objects.filter(student=self.student).exists())
+
+    @patch("pabasa_app.views.EmailMultiAlternatives")
     def test_send_course_update_includes_baseline_message_when_metrics_missing(self, mock_email_cls):
         course = Course.objects.create(
             teacher=self.teacher,
@@ -13405,7 +13491,7 @@ class TeacherStudentsDirectoryTests(TestCase):
             code="CRS-TEST-002",
             description="Missing metrics test",
         )
-        course.sections.add(self.section_a)
+        course.sections.add(self.section_b)
 
         response = self.client.post(
             reverse("send_course_update"),
@@ -13421,7 +13507,7 @@ class TeacherStudentsDirectoryTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["success"])
-        self.assertEqual(mock_email_cls.call_args[0][0], "Student Reading Progress Report – PABASA")
+        self.assertEqual(mock_email_cls.call_args[0][0], "Student Reading Progress Report - PABASA")
         email_body = mock_email_cls.call_args[0][1]
         self.assertIn("Dear Parent/Guardian", email_body)
         self.assertIn("Attached is the latest Reading Progress Report", email_body)
@@ -13440,7 +13526,7 @@ class TeacherStudentsDirectoryTests(TestCase):
             code="CRS-TEST-004",
             description="Commendation test",
         )
-        course.sections.add(self.section_a)
+        course.sections.add(self.section_b)
 
         response = self.client.post(
             reverse("send_course_update"),
@@ -13457,7 +13543,7 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["success"])
         self.assertFalse(response.json()["report_included"])
-        self.assertEqual(mock_email_cls.call_args[0][0], "Performance Commendation – PABASA")
+        self.assertEqual(mock_email_cls.call_args[0][0], "Performance Commendation - PABASA")
         email_body = mock_email_cls.call_args[0][1]
         self.assertIn("Congratulations", email_body)
         self.assertIn("certificate is attached", email_body.lower())
@@ -13476,7 +13562,7 @@ class TeacherStudentsDirectoryTests(TestCase):
             code="CRS-TEST-005",
             description="Assessment notice test",
         )
-        course.sections.add(self.section_a)
+        course.sections.add(self.section_b)
 
         response = self.client.post(
             reverse("send_course_update"),
@@ -13496,7 +13582,7 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["success"])
         self.assertFalse(response.json()["report_included"])
-        self.assertEqual(mock_email_cls.call_args[0][0], "Scheduled Assessment Notice – PABASA")
+        self.assertEqual(mock_email_cls.call_args[0][0], "Scheduled Assessment Notice - PABASA")
         email_body = mock_email_cls.call_args[0][1]
         self.assertIn("Oral Reading Check", email_body)
         self.assertIn("July 10, 2026 at 09:00 AM", email_body)
@@ -13534,20 +13620,20 @@ class TeacherStudentsDirectoryTests(TestCase):
             email="outside@example.com",
             password_hash=make_password("student-password"),
         )
-        self.section_a.add_student(no_email_student)
+        self.section_b.add_student(no_email_student)
         course = Course.objects.create(
             teacher=self.teacher,
             title="Chapter 4",
             code="CRS-TEST-003",
             description="Skipped recipient test",
         )
-        course.sections.add(self.section_a)
+        course.sections.add(self.section_b)
 
         response = self.client.post(
             reverse("send_course_update"),
             data=json.dumps({
                 "course_id": course.id,
-                "student_ids": [self.student.id, no_email_student.id, outsider.id],
+                "student_ids": [self.student.id, no_email_student.id],
                 "update_type": "general",
                 "message": "Hello {name}, keep reading.",
             }),
@@ -13559,8 +13645,20 @@ class TeacherStudentsDirectoryTests(TestCase):
         data = response.json()
         self.assertTrue(data["success"])
         self.assertEqual(data["sent_count"], 1)
-        self.assertEqual(len(data["skipped"]), 2)
-        self.assertCountEqual([item["reason"] for item in data["skipped"]], ["missing_email", "not_enrolled"])
+        self.assertEqual(len(data["skipped"]), 1)
+        self.assertEqual(data["skipped"][0]["reason"], "missing_email")
+        mock_email_cls.assert_called_once()
+
+        unauthorized_response = self.client.post(
+            reverse("send_course_update"),
+            data=json.dumps({
+                "course_id": course.id,
+                "student_ids": [outsider.id],
+                "update_type": "general",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(unauthorized_response.status_code, 403)
         mock_email_cls.assert_called_once()
 
 
