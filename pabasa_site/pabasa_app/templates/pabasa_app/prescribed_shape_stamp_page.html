@@ -8,7 +8,7 @@
   <title>{{ shape_stamp_activity_data.title }}</title>
   <style>
     html,body{height:100%;margin:0;overflow:hidden}
-    body{background:#e1f5f7;color:#16465d;font-family:Nunito,"Segoe UI",sans-serif}
+    body{background:#e1f5f7;color:#16465d;font-family:var(--font-family-primary)}
     .page{height:100%;padding:10px;box-sizing:border-box}
     .back{display:inline-block;padding:7px 12px;background:#fff;border:2px solid #bfdde4;border-radius:12px;color:#16465d;font-weight:900;text-decoration:none}
     .card{height:calc(100dvh - 62px);box-sizing:border-box;margin:8px auto 0;padding:clamp(12px,2vh,22px);max-width:900px;background:#fffdf7;border-radius:24px;text-align:center;overflow:hidden}
@@ -47,6 +47,7 @@
       body.lesson7-gawain4a-page .instruction{display:none!important}
     </style>
   {% endif %}
+{% include "pabasa_app/includes/typography.html" %}
 </head>
 <body class="{% if shape_stamp_activity_data.activity_key == 'lesson7-gawain4a' %}lesson7-gawain4a-page{% endif %}"><style>body.lesson7-gawain4a-page .numbered-progress{display:none!important}</style>
   <main class="page">

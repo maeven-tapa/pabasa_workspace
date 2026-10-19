@@ -7,10 +7,10 @@ body:has(.global-nav-links) { padding-top: var(--public-header-height, 62px); }
 .modern-nav-wrap:has(.global-nav-links) { position: fixed !important; top: 0; left: 0; right: 0; z-index: 1050; }
 .public-site-footer a { color: rgba(255,255,255,.82); text-decoration: none; }
 .public-site-footer a:hover, .public-site-footer a:focus-visible { color: #ffd639; }
-.public-site-footer__brand { display: inline-flex; align-items: center; gap: .65rem; color: #fff !important; font: 800 1.45rem "Nunito", sans-serif; }
+.public-site-footer__brand { display: inline-flex; align-items: center; gap: .65rem; color: #fff !important; font: 800 1.45rem var(--font-family-primary); }
 .public-site-footer__brand img { width: 2.4rem; height: 2.4rem; object-fit: contain; }
 .public-site-footer__copy { max-width: 25rem; margin: 1rem 0 0; color: rgba(255,255,255,.72); line-height: 1.6; }
-.public-site-footer__title { margin-bottom: .85rem; color: #ffd639; font: 800 .8rem "Nunito", sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+.public-site-footer__title { margin-bottom: .85rem; color: #ffd639; font: 800 .8rem var(--font-family-primary); letter-spacing: .1em; text-transform: uppercase; }
 .public-site-footer__links { display: grid; gap: .55rem; margin: 0; padding: 0; list-style: none; }
 .public-site-footer__project { margin: 0; color: rgba(255,255,255,.78); line-height: 1.6; }
 .public-site-footer__bottom { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,.18); color: rgba(255,255,255,.58); font-size: .8rem; }
@@ -57,7 +57,7 @@ body:has(.contextual-section-links) .info-hero[id], body:has(.contextual-section
     min-height: var(--public-secondary-nav-height) !important;
     padding: 0 .65rem !important;
     color: rgba(255,255,255,.72) !important;
-    font-family: "Poppins", sans-serif !important;
+    font-family: var(--font-family-primary) !important;
     font-size: .75rem !important;
     font-weight: 700 !important;
     letter-spacing: .05em !important;

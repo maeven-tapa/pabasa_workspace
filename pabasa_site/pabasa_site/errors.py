@@ -23,12 +23,14 @@ def server_error(request):
                 response = HttpResponse(format_html(
                     '<!doctype html><html lang="en"><meta charset="utf-8">'
                     '<meta name="viewport" content="width=device-width,initial-scale=1">'
-                    '<title>Please wait | PABASA</title><body>'
-                    '<main style="max-width:32rem;margin:15vh auto;padding:1.5rem;font:1.1rem system-ui">'
+                    '<title>Please wait | PABASA</title>'
+                    '<link rel="stylesheet" href="{}"><body>'
+                    '<main style="max-width:32rem;margin:15vh auto;padding:1.5rem;font-size:1.1rem">'
                     '<h1>Please wait a moment</h1><p id="retry-message" role="status">'
                     'We are reconnecting to your page. Please keep this tab open.</p>'
                     '<p><a href="" id="retry-link">Try again</a></p></main>'
                     '<script src="{}"></script></body></html>',
+                    static('pabasa_app/css/typography.css'),
                     static('pabasa_app/js/service_busy.js'),
                 ), status=503)
             else:

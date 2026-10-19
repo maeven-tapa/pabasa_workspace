@@ -59,7 +59,7 @@
 .wb-l23-page .wb-bigbox-cell{grid-auto-rows:76px;gap:0}
 .wb-l23-page .wb-bigbox-cell:not(:last-child){border-right:2px solid #496879}
 .wb-l23-page .wb-bigbox-row:not(:last-child){border-bottom:2px solid #496879}
-.wb-l23-page .wb-l22-builder .wb-bigbox-tile{height:76px;min-height:76px;border:0;border-radius:0;box-shadow:none;background:#fff;font-family:Georgia,'Times New Roman',serif;font-weight:700}
+.wb-l23-page .wb-l22-builder .wb-bigbox-tile{height:76px;min-height:76px;border:0;border-radius:0;box-shadow:none;background:#fff;font-family:var(--font-family-primary);font-weight:700}
 .wb-l23-page .wb-l22-builder .wb-bigbox-tile.is-active{border:0;box-shadow:inset 0 0 0 4px #e0ad21;background:#fff4bd}
 .wb-l23-page .wb-l22-builder .wb-bigbox-tile.is-complete{border:0;background:#e8f5ea}
 @media(max-width:700px){.wb-l23-page .wb-l22-builder{grid-template-columns:1fr}.wb-l23-page .wb-bigbox-cell{grid-auto-rows:62px}.wb-l23-page .wb-l22-builder .wb-bigbox-tile{height:62px;min-height:62px;font-size:21px}}
@@ -70,7 +70,7 @@
 .wb-l24-page .wb-bigbox-cell{grid-auto-rows:clamp(58px,8vw,82px);gap:0;border-right:2px solid #496879}
 .wb-l24-page .wb-bigbox-cell:last-child{border-right:0}
 .wb-l24-page .wb-bigbox-row:not(:last-child){border-bottom:2px solid #496879}
-.wb-l24-page .wb-l22-builder .wb-bigbox-tile{height:100%;min-height:58px;border:0;border-radius:0;box-shadow:none;background:#fff;font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:clamp(20px,3vw,34px)}
+.wb-l24-page .wb-l22-builder .wb-bigbox-tile{height:100%;min-height:58px;border:0;border-radius:0;box-shadow:none;background:#fff;font-family:var(--font-family-primary);font-weight:700;font-size:clamp(20px,3vw,34px)}
 .wb-l24-page .wb-l22-builder .wb-bigbox-tile.is-active{border:0;box-shadow:inset 0 0 0 4px #e0ad21;background:#fff4bd}
 .wb-l24-page .wb-l22-builder .wb-bigbox-tile.is-complete{border:0;background:#e8f5ea}
 @media(max-width:700px){.wb-l24-page .wb-l22-builder{grid-template-columns:1fr}.wb-l24-page .wb-bigbox-cell{grid-auto-rows:clamp(54px,16vw,70px)}.wb-l24-page .wb-l22-builder .wb-bigbox-tile{height:100%;min-height:54px;font-size:clamp(17px,5.5vw,25px)}}
@@ -82,7 +82,7 @@
 .wb-l23-g6-page .wb-q-builder .wb-bigbox-cell{grid-auto-rows:clamp(58px,8vw,82px);gap:0;border-right:2px solid #496879}
 .wb-l23-g6-page .wb-q-builder .wb-bigbox-cell:last-child{border-right:0}
 .wb-l23-g6-page .wb-q-builder .wb-bigbox-row:not(:last-child){border-bottom:2px solid #496879}
-.wb-l23-g6-page .wb-q-builder .wb-bigbox-tile{height:100%;min-height:58px;border:0;border-radius:0;box-shadow:none;background:#fff;font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:clamp(20px,3vw,34px)}
+.wb-l23-g6-page .wb-q-builder .wb-bigbox-tile{height:100%;min-height:58px;border:0;border-radius:0;box-shadow:none;background:#fff;font-family:var(--font-family-primary);font-weight:700;font-size:clamp(20px,3vw,34px)}
 .wb-l23-g6-page .wb-q-builder .wb-bigbox-tile.is-active{border:0;box-shadow:inset 0 0 0 4px #e0ad21;background:#fff4bd}
 .wb-l23-g6-page .wb-q-builder .wb-bigbox-tile.is-complete{border:0;background:#e8f5ea}
 .wb-l23-g6-page .wb-q-builder .wb-start-cue{top:-26px;font-family:inherit}
@@ -90,8 +90,8 @@
 
 /* Lesson 22, Gawain 1: reference-led stage treatment. This stays page-scoped
    so the existing workbook DOM and the other Big Box activities are unchanged. */
-@font-face{font-family:Fredoka;src:url('../font/fredoka-one.one-regular.ttf') format('truetype');font-display:swap}
-.wb-l22-g1-page{--l22-ref-ink:#183e63;--l22-ref-teal:#299e9a;--l22-ref-teal-dark:#187b7a;--l22-ref-accent:#e7af45;min-height:100vh;height:100vh;margin:0;padding:16px clamp(16px,4vw,42px) 22px;overflow:hidden;background:url('../prescribed/PRESCRIBED-BG.jpg') center/cover no-repeat;color:var(--l22-ref-ink);font-family:Fredoka,Nunito,'Segoe UI',sans-serif}
+
+.wb-l22-g1-page{--l22-ref-ink:#183e63;--l22-ref-teal:#299e9a;--l22-ref-teal-dark:#187b7a;--l22-ref-accent:#e7af45;min-height:100vh;height:100vh;margin:0;padding:16px clamp(16px,4vw,42px) 22px;overflow:hidden;background:url('../prescribed/PRESCRIBED-BG.jpg') center/cover no-repeat;color:var(--l22-ref-ink);font-family:var(--font-family-primary)}
 .wb-l22-g1-page .wb-shell{position:relative;width:min(1250px,100%);height:calc(100vh - 38px);min-height:0;margin:auto;padding:clamp(68px,8vh,92px) clamp(18px,6vw,80px) 16px;display:flex;flex-direction:column;overflow:hidden;border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35}
 .wb-l22-g1-page .wb-lesson-header{position:static;flex:0 0 auto;min-height:0;margin:0 0 7px;padding:0;background:transparent;border:0;border-radius:0;box-shadow:none;overflow:visible;text-align:center}
 .wb-l22-g1-page .wb-lesson-header:after,.wb-l22-g1-page .wb-lesson-art{display:none}
@@ -123,7 +123,7 @@
 @media(max-width:780px){.wb-l22-g1-page .wb-l22-builder{grid-template-columns:1fr}.wb-l22-g1-page .wb-reading-panel{order:3}.wb-l22-g1-page .wb-bigbox{order:2}.wb-l22-g1-page .wb-word-panel{order:4}.wb-l22-g1-page .wb-bigbox-grid{max-width:560px;margin-inline:auto}.wb-l22-g1-page .wb-reading-panel{max-width:560px;width:100%;margin-inline:auto}}
 
 /* Lesson 22 Gawain 5 format adapted to Gawain 1's existing activity DOM. */
-.wb-l22-g1-page{min-height:100vh;height:100vh;margin:0;padding:16px clamp(12px,4vw,42px) 22px;overflow-x:hidden;overflow-y:auto;background:url('../prescribed/PRESCRIBED-BG.jpg') center/cover no-repeat;color:var(--l22-ref-ink);font-family:Fredoka,Nunito,'Segoe UI',sans-serif}
+.wb-l22-g1-page{min-height:100vh;height:100vh;margin:0;padding:16px clamp(12px,4vw,42px) 22px;overflow-x:hidden;overflow-y:auto;background:url('../prescribed/PRESCRIBED-BG.jpg') center/cover no-repeat;color:var(--l22-ref-ink);font-family:var(--font-family-primary)}
 .wb-l22-g1-page .wb-shell{position:relative;width:min(1250px,100%);height:calc(100vh - 38px);height:calc(100dvh - 38px);min-height:0;margin:auto;padding:clamp(68px,8vh,92px) clamp(14px,5vw,64px) 16px;display:flex;flex-direction:column;overflow:visible;border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35}
 .wb-l22-g1-page .wb-lesson-header{position:static;flex:0 0 auto;min-height:0;margin:0 0 10px;padding:0;background:transparent;border:0;border-radius:0;box-shadow:none;text-align:center;overflow:visible}.wb-l22-g1-page .wb-lesson-header:after,.wb-l22-g1-page .wb-lesson-art{display:none}.wb-l22-g1-page .wb-lesson-copy{display:flex;flex-direction:column;align-items:center;min-width:0}.wb-l22-g1-page #wb-back{position:absolute;top:0;left:0;z-index:3;display:inline-flex;align-items:center;justify-content:center;gap:12px;width:280px;min-height:64px;padding:10px 18px;border-radius:999px;background:#fff;color:var(--l22-ref-ink);font-size:1.2rem;line-height:1.15;text-align:center;text-decoration:none;box-shadow:0 8px 17px #145ca744}.wb-l22-g1-page #wb-back:before{content:'\2190';font-size:2rem;line-height:1}
 .wb-l22-g1-page .wb-lesson-label{width:max-content;max-width:100%;margin:0 auto 8px!important;padding:8px 22px;border-radius:999px;background:#277f82;color:#fff!important;font-size:clamp(.76rem,1.2vw,.98rem)!important;font-weight:900!important;letter-spacing:.02em;text-transform:uppercase}.wb-l22-g1-page .wb-lesson-header h1{margin:0;color:var(--l22-ref-ink);font-size:clamp(1.75rem,3.4vw,3rem);line-height:1.08;font-weight:900}.wb-l22-g1-page .wb-instruction{max-width:920px;margin:7px auto 0!important;color:var(--l22-ref-ink)!important;font-size:clamp(.92rem,1.35vw,1.15rem);line-height:1.3;text-align:center;font-weight:700}.wb-l22-g1-page #wb-instruction-replay{min-height:44px;margin-top:9px;padding:8px 18px;border:3px solid #94d9d6;border-radius:999px;background:#fff;color:var(--l22-ref-teal-dark);font:inherit;font-size:.9rem;font-weight:900;cursor:pointer;box-shadow:0 4px 0 #b7d6dc}

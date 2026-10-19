@@ -6,13 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Learner Experience Rating | PABASA</title>
     <style>
-        @font-face {
-            font-family: 'Schoolbell';
-            src: url("{% static 'pabasa_app/font/Schoolbell.ttf' %}") format('truetype');
-            font-weight: 400;
-            font-style: normal;
-            font-display: swap;
-        }
+
 
         :root {
             --ink: #234b3b;
@@ -33,7 +27,7 @@
             background: linear-gradient(135deg, #fff8df 0%, #e6f3e9 100%);
             color: var(--ink);
             display: grid;
-            font-family: 'Schoolbell', cursive;
+            font-family: var(--font-family-primary);
             min-height: 100vh;
             overflow-x: hidden;
             padding: 3vh 4vw;
@@ -64,7 +58,7 @@
 
         h1 {
             color: var(--ink);
-            font-family: 'Schoolbell', cursive;
+            font-family: var(--font-family-primary);
             font-size: clamp(2.1rem, 5vw, 4.4rem);
             line-height: 1;
             margin: 0;
@@ -141,12 +135,12 @@
 
         .rating-label {
             color: var(--ink);
-            font-family: 'Schoolbell', cursive;
+            font-family: var(--font-family-primary);
             font-size: clamp(1rem, 1.5vw, 1.3rem);
             font-weight: 700;
             line-height: 1.2;
         }
-        .rating-number { color:#527462; font:800 .85rem 'Schoolbell',cursive; }
+        .rating-number { color:#527462; font:800 .85rem var(--font-family-primary); }
 
         .continue-button {
             background: #e4b83f;
@@ -155,7 +149,7 @@
             box-shadow: 0 5px 10px rgba(10, 30, 20, 0.25);
             color: #234b3b;
             cursor: pointer;
-            font: 400 clamp(1.15rem, 2vw, 1.7rem) 'Schoolbell', cursive;
+            font: 400 clamp(1.15rem, 2vw, 1.7rem) var(--font-family-primary);
             min-height: 3.2rem;
             padding: 0.65rem 2.5rem;
             transition: filter 160ms ease, transform 160ms ease;
@@ -192,6 +186,7 @@
         }
         @media (prefers-reduced-motion: reduce) { .rating-option, .continue-button { transition:none; } }
     </style>
+{% include "pabasa_app/includes/typography.html" %}
 </head>
 <body>
     <main class="board" aria-labelledby="page-title">

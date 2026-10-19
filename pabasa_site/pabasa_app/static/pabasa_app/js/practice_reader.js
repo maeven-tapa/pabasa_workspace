@@ -2876,4 +2876,9 @@
     }
     updatePracticeLanguageLabels();
     loadItems();
+    // Re-measure after the local reading font replaces any initial fallback.
+    document.fonts?.ready.then(() => {
+        fitFreeModeWordCardText();
+        updateFreeModeMobileLayoutState();
+    });
 })();

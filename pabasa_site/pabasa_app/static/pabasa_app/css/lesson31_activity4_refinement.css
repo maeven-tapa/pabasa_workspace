@@ -1,7 +1,7 @@
-@font-face{font-family:L31;src:url('../images/lesson_31/lesson31-fredoka.ttf')}
+
 *{box-sizing:border-box}
 html,body{height:100%;overflow:hidden!important}
-body{margin:0;min-height:100vh;background:#49b8e0 url('../images/lesson_31/lesson31-ui-background.jpg') center/cover fixed;color:#183e63;font-family:L31,Nunito,sans-serif}
+body{margin:0;min-height:100vh;background:#49b8e0 url('../images/lesson_31/lesson31-ui-background.jpg') center/cover fixed;color:#183e63;font-family:var(--font-family-primary)}
 .page{position:relative;width:min(1250px,calc(100% - 36px));height:100dvh;min-height:0;margin:auto;padding:16px 0 22px}
 .back{position:absolute;top:16px;left:0;z-index:2;display:flex;align-items:center;justify-content:center;width:280px;min-height:64px;border-radius:999px;background:#fff;color:#183e63;font-size:1.15rem;text-decoration:none;box-shadow:0 8px 17px #145ca744;transition:transform .16s ease,box-shadow .16s ease}
 .back:hover{transform:translateY(-2px);box-shadow:0 10px 22px #145ca755}.back:active{transform:translateY(2px);box-shadow:0 3px 8px #145ca744}

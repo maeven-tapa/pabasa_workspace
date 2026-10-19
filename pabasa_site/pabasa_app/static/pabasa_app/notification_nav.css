@@ -34,7 +34,7 @@
     box-shadow: 0 4px 10px rgba(245, 184, 0, 0.2);
     color: #10466E;
     display: inline-flex;
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 0.67rem;
     font-weight: 800;
     height: 18px;

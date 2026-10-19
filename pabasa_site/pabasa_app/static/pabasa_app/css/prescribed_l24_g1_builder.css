@@ -6,7 +6,7 @@
 @media(max-width:600px){.wb-l24-g1-page .wb-shell{padding-inline:14px}.wb-l24-g1-page .wb-lesson-header{padding:19px}}
 
 /* Lesson 24 Bahagi 1 Gawain 1: target-only reference-led stage treatment. */
-.wb-l24-g1-page{--l24-ink:#183e63;--l24-teal:#299e9a;--l24-teal-dark:#187b7a;--l24-gold:#e7af45;min-height:100svh;height:100svh;overflow:hidden;background:linear-gradient(145deg,#e7f8f7 0%,#f8fbff 58%,#fff4df 100%);font-family:Nunito,system-ui,sans-serif}
+.wb-l24-g1-page{--l24-ink:#183e63;--l24-teal:#299e9a;--l24-teal-dark:#187b7a;--l24-gold:#e7af45;min-height:100svh;height:100svh;overflow:hidden;background:linear-gradient(145deg,#e7f8f7 0%,#f8fbff 58%,#fff4df 100%);font-family:var(--font-family-primary)}
 .wb-l24-g1-page .wb-shell{display:flex;flex-direction:column;width:min(1240px,calc(100% - clamp(20px,5vw,72px)));height:calc(100svh - clamp(18px,4vh,42px));min-height:0;margin:clamp(9px,2vh,21px) auto;padding:clamp(14px,2.5vh,28px) clamp(18px,4vw,58px) clamp(12px,2vh,22px);border:2px solid #ffffffc7;border-radius:clamp(26px,3vw,40px);background:#ffffffb5;box-shadow:0 18px 45px #1e5b7a2e;backdrop-filter:blur(10px);overflow:hidden}
 .wb-l24-g1-page .wb-lesson-header{display:block;flex:0 0 auto;margin:0 0 clamp(6px,1vh,12px);padding:0;text-align:center;background:transparent;border:0;border-radius:0;box-shadow:none;overflow:visible}
 .wb-l24-g1-page .wb-lesson-header:after,.wb-l24-g1-page .wb-lesson-art{display:none}
@@ -33,7 +33,7 @@
 .wb-l24-g1-page .wb-bigbox-row:not(:last-child){border-bottom:2px solid #94d9d6}
 .wb-l24-g1-page .wb-bigbox-cell{display:flex;min-width:0;min-height:0;gap:0;grid-auto-rows:1fr}
 .wb-l24-g1-page .wb-bigbox-cell:not(:last-child){border-right:2px solid #94d9d6}
-.wb-l24-g1-page .wb-l22-builder .wb-bigbox-tile{width:100%;height:100%;min-height:0;padding:2px 6px;border:0;border-radius:0;background:#fff;color:var(--l24-ink);font-family:Nunito,system-ui,sans-serif;font-size:clamp(1.35rem,2.8vw,2.35rem);font-weight:950;line-height:1.05;box-shadow:none}
+.wb-l24-g1-page .wb-l22-builder .wb-bigbox-tile{width:100%;height:100%;min-height:0;padding:2px 6px;border:0;border-radius:0;background:#fff;color:var(--l24-ink);font-family:var(--font-family-primary);font-size:clamp(1.35rem,2.8vw,2.35rem);font-weight:950;line-height:1.05;box-shadow:none}
 .wb-l24-g1-page .wb-l22-builder .wb-bigbox-tile.is-active{border:0;background:#fff4bd;box-shadow:inset 0 0 0 4px var(--l24-gold);color:var(--l24-ink)}
 .wb-l24-g1-page .wb-l22-builder .wb-bigbox-tile.is-complete{border:0;background:#e8f5ea;color:#32735a}
 .wb-l24-g1-page .wb-reading-panel{display:flex;flex-direction:column;align-items:stretch}

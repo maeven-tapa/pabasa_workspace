@@ -17,7 +17,8 @@
 	{% if workbook_payload.activity.activity_key == 'aral-s9-a2-helping-drawing' %}<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_s9_a2_helping_drawing.css' %}">{% endif %}
 {% if workbook_payload.activity.activity_key == 'aral-l23-g1-n-syllable-builder' %}<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l23_g1_standard.css' %}">{% endif %}
 {% if workbook_payload.activity.activity_key == 'aral-l23-g3-j-word-reading' %}<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l23_g3_j_reading.css' %}?v=20261003-g3-interface-1">{% endif %}
-{% if workbook_payload.activity.activity_key == 'aral-l23-g7-q-word-reading' %}<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l23_g7_reading.css' %}">{% endif %}</head>
+{% if workbook_payload.activity.activity_key == 'aral-l23-g7-q-word-reading' %}<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l23_g7_reading.css' %}">{% endif %}{% include "pabasa_app/includes/typography.html" %}
+</head>
 	{% if workbook_payload.activity.activity_key == 'aral-l23-g6-q-syllable-builder' %}<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l23_g6_q_builder.css' %}?v=20261004-l23-g6-basahin-indicator-1">{% endif %}
 	{% if workbook_payload.activity.activity_key == 'aral-l23-g4-j-syllabication' %}<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l23_g4_syllabication.css' %}?v=20261003-l23-g4-startup-1">{% endif %}
 {% if workbook_payload.activity.activity_key == 'aral-l23-g1-n-syllable-builder' or workbook_payload.activity.activity_key == 'aral-l23-g3-j-word-reading' or workbook_payload.activity.activity_key == 'aral-l23-g4-j-syllabication' or workbook_payload.activity.activity_key == 'aral-l23-g6-q-syllable-builder' or workbook_payload.activity.activity_key == 'aral-l23-g7-q-word-reading' %}<link rel="stylesheet" href="{% static 'pabasa_app/css/lesson_start_modal.css' %}">{% endif %}

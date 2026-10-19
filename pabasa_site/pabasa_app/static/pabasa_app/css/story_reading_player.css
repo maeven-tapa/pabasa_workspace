@@ -14,7 +14,7 @@
 html, body { margin: 0; min-height: 100%; overflow-x: hidden; }
 body {
   color: var(--ink);
-  font-family: "Nunito", "Segoe UI", sans-serif;
+  font-family: var(--font-family-primary);
   background: radial-gradient(circle at 8% 10%, #fff 0 4%, transparent 22%),
     radial-gradient(circle at 95% 18%, rgba(255,255,255,.8), transparent 20%),
     linear-gradient(145deg, #eaf7f4, #c8e5df 52%, #f9e8b6);
@@ -36,7 +36,7 @@ body::after { width: 220px; height: 110px; right: -60px; top: 35%; background: #
 .back-link, .control-button, .mode-button, .replay { border: 0; text-decoration: none; color: var(--teal-dark); font-weight: 900; cursor: pointer; }
 .back-link { display: inline-flex; align-items: center; gap: 8px; justify-self: start; padding: 9px 13px; border-radius: 13px; background: rgba(255,255,255,.7); box-shadow: 0 5px 16px rgba(21,82,79,.1); }
 .video-meta { min-width: 0; padding: 0 2px; }
-.video-meta h1 { margin: 0; color: var(--ink); font-family: "Baloo 2", "Nunito", sans-serif; font-size: clamp(1.25rem, 2.4vw, 1.9rem); line-height: 1.05; }
+.video-meta h1 { margin: 0; color: var(--ink); font-family: var(--font-family-primary); font-size: clamp(1.25rem, 2.4vw, 1.9rem); line-height: 1.05; }
 .video-meta p { margin: 3px 0 0; color: var(--muted); font-size: .78rem; font-weight: 800; }
 
 .media-shell {
@@ -75,7 +75,7 @@ body::after { width: 220px; height: 110px; right: -60px; top: 35%; background: #
   background: rgba(255,250,240,.96);
   box-shadow: 0 4px 0 rgba(243,189,77,.74), 0 9px 18px rgba(0,0,0,.18);
   text-align: center;
-  font-family: "Baloo 2", "Nunito", sans-serif;
+  font-family: var(--font-family-primary);
   font-size: clamp(1.375rem, 2.2vw, 1.75rem);
   font-weight: 700;
   line-height: 1.15;
@@ -114,7 +114,7 @@ body::after { width: 220px; height: 110px; right: -60px; top: 35%; background: #
 .reading-status.is-listening { color: var(--coral); }
 
 .complete-panel { align-self: center; justify-self: center; width: min(540px,100%); padding: clamp(26px,5vw,52px); border-radius: 24px; background: rgba(255,255,255,.92); box-shadow: var(--shadow); text-align: center; }
-.complete-panel h2 { margin: 8px 0; color: var(--teal-dark); font-family: "Baloo 2", "Nunito", sans-serif; font-size: clamp(2rem,5vw,3rem); }
+.complete-panel h2 { margin: 8px 0; color: var(--teal-dark); font-family: var(--font-family-primary); font-size: clamp(2rem,5vw,3rem); }
 .complete-panel p { color: var(--muted); font-weight: 800; }
 .complete-panel[hidden] { display: none; }
 .complete-panel .replay { display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: 12px; color: #fff; background: var(--teal); }

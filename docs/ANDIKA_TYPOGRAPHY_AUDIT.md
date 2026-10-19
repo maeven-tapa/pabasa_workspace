@@ -1,0 +1,27 @@
+# Andika Typography Audit and Implementation
+
+**Status:** Implemented locally; not deployed. Audited 2026-10-19.
+
+## Initial audit
+
+The active Django app is `pabasa_site/pabasa_app`. It has **255 HTML templates**, including **121 document entry templates with their own `<head>`**. Main layouts include public, authenticated dashboard, student reading, principal, administrator, and practice-reader bases. A large set of lesson, prescribed activity, assessment, authentication and error templates are standalone. Before the change, typography was split among Nunito, Fredoka, Quattrocento, Schoolbell, Coiny, Poppins, Baloo, Super Bubble and other decorative text faces; per-template CSS, important overrides and Google Fonts imports made inheritance inconsistent. Bootstrap Icons is a local icon font and was kept separate.
+
+The provided `AndBasR.ttf` is present at the supplied static path. Django static files are served through the project’s optimized static middleware, which uses Django finders; tests confirmed the stylesheet, TTF and Bootstrap Icons file are served in both development and production static modes. The TTF’s OS/2 weight metadata is 400.
+
+## Implementation
+
+A single shared `@font-face` and `--font-family-primary` variable are defined in `static/pabasa_app/css/typography.css`. A shared template include preloads the local TTF and loads that stylesheet from every HTML document root, including standalone activities, the built-in admin override and the custom 400/403/404/500 pages. The service-busy HTML page also references the same CSS. Existing text-family overrides now use the shared variable while retaining sizes, weights, line heights, spacing and `!important` only where already present. Legacy Google font requests and decorative text-face registrations were removed; icon font declarations and vendor code were left intact. The supplied Regular face is registered at weight 400; the browser synthesizes heavier weights to retain hierarchy.
+
+Form controls and SVG text receive the primary family explicitly. Bootstrap variables are aligned. The one Chart.js canvas explicitly uses the shared family and redraws after fonts load, because canvas text does not inherit CSS. Practice Mode refits its word card after the font loads. The source audit found no canvas `fillText` or `strokeText` calls; handwriting canvases draw strokes/guides and their content logic was left alone. Static SVG artwork may contain designed, embedded lettering; that artwork is unchanged. Exported spreadsheets/PDFs and HTML email bodies are not webpage UI: they retain their document/email rendering fonts. Native browser and operating-system UI is outside page CSS control.
+
+## Coverage and visual validation
+
+Template-source audit and Django compilation covered all **121 document-root templates**. Browser checks inspected 24 representative public, authentication, student, teacher, administrator, principal, assessment, prescribed, supplementary and practice pages at **1440, 1024, 768, 375 and 320 CSS pixels** (120 page/viewport combinations). Computed visible text styles resolved to Andika; Bootstrap Icons retained their icon face. No text clipping was detected by the automated DOM overflow inspection. At 320px, a prescribed handwriting canvas card exceeded its parent after the wider typeface was applied; adding `min-width: 0` to the card and `max-width: 100%` to the board resolves that. The public footer star also extended beyond the narrow viewport; its mobile offset is now constrained so it stays inside the document. Story Reading was exercised with a short and a wrapping synthetic sentence at 320px; its subtitle resolved to Andika and stayed inside the viewport. A standalone Chart.js canvas preview rendered with the centralized font configured for canvas labels. Screenshot evidence: `tmp/typography-preview/andika-story-mobile.png`, `tmp/typography-preview/andika-story-desktop.png` and `tmp/typography-preview/andika-chart-mobile.png` (local QA artifacts).
+
+The unauthenticated previews use synthetic data and mock empty API responses; they verify template typography, controls, icons and layout, not real account workflows, chart data, microphone access or production data. No text clipping or horizontal document overflow remained in the final viewport sweep. No unrelated redesign was made.
+
+## Tests and limits
+
+Passed: `manage.py check`; 33 tests across `tests_typography`, `tests_static_images` and `tests_story_reading_player`; `git diff --check`; and the 120 browser font/layout checks (zero font mismatches, clipping findings or overflow cases). Tests assert all document roots load the include, no legacy text families or Google font references remain, the face is Regular/400, static fonts/icons serve, errors/admin load typography, canvas/practice hooks are present, and existing Story Reading player regressions still pass.
+
+Not exercised: authenticated browser workflows for every account/lesson, populated Chart.js data in a real teacher roster, mic/STT, real student records, and deployed Cloud Run static configuration. Assessment scoring, reading content, handwriting validation and progress logic were not changed. The only JavaScript changes concern text font measurement/chart rendering. `218` source files were changed; the complete path list is in [ANDIKA_TYPOGRAPHY_FILES.txt](ANDIKA_TYPOGRAPHY_FILES.txt). The initially dirty local SQLite database was preserved and excluded from implementation edits. Nothing was deployed.

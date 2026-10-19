@@ -1,5 +1,5 @@
 *{box-sizing:border-box}
-body.l16g3-page{min-height:100dvh;margin:0;overflow-x:hidden;background:#d9f0f2 url("../prescribed/PRESCRIBED-BG.jpg") center/cover fixed no-repeat;color:#183e63;font-family:Fredoka,Nunito,"Segoe UI",sans-serif}
+body.l16g3-page{min-height:100dvh;margin:0;overflow-x:hidden;background:#d9f0f2 url("../prescribed/PRESCRIBED-BG.jpg") center/cover fixed no-repeat;color:#183e63;font-family:var(--font-family-primary)}
 .l16g3-shell{display:grid;min-height:100dvh;place-items:center;padding:98px 24px 26px}
 .l16g3-back{position:fixed;top:22px;left:24px;z-index:9;display:inline-flex;min-height:64px;align-items:center;justify-content:center;padding:12px 26px;border-radius:999px;background:#fffffff0;color:#183e63;font-size:1.04rem;font-weight:900;text-decoration:none;box-shadow:0 8px 17px #145ca744}
 .l16g3-back:focus-visible,.l16g3-card button:focus-visible{outline:4px solid #e9ae40;outline-offset:3px}

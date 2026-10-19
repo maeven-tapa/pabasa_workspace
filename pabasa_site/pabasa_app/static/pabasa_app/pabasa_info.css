@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@600;700;800&display=swap");
-
 .pabasa-info {
     --info-blue-deep: #10466e;
     --info-blue: #2ea8e5;
@@ -14,7 +12,7 @@
     position: relative;
     isolation: isolate;
     background: #fcfbf8;
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     overflow: hidden;
     width: 100%;
     --info-nav-height: 5.25rem;
@@ -97,15 +95,15 @@ main:has(.pabasa-info) + .editorial-footer { margin-top: 0; }
 .info-hero__card { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(16rem, .9fr); align-items: center; gap: clamp(1.5rem, 5vw, 4rem); padding: clamp(2rem, 5vw, 4.25rem); border: 1px solid rgba(46,168,229,.2); border-radius: clamp(1.5rem, 3vw, 2.25rem); background: linear-gradient(135deg, rgba(255,255,255,.96), rgba(234,247,253,.94) 68%, rgba(255,248,214,.88)); box-shadow: 0 1.5rem 4rem rgba(16,70,110,.14); overflow: hidden; }
 .info-hero__inner { max-width: 40rem; }
 .info-kicker { display: inline-flex; padding: .45rem .9rem; border: 1px solid rgba(46,168,229,.24); border-radius: 999px; background: rgba(46,168,229,.09); color: var(--info-blue-deep); font-size: .75rem; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
-.info-hero h1, .info-heading h2, .info-purpose h2, .info-card h3, .step-card h3 { font-family: "Baloo 2", "Nunito", sans-serif; }
+.info-hero h1, .info-heading h2, .info-purpose h2, .info-card h3, .step-card h3 { font-family: var(--font-family-primary); }
 .info-hero h1 { margin: 1rem 0 .8rem; font-size: clamp(2.7rem, 6vw, 5rem); font-weight: 800; line-height: 1.02; color: var(--info-blue-deep); }
 .info-hero p { max-width: 46rem; margin: 0 auto; color: var(--info-muted); font-size: clamp(1rem, 1.7vw, 1.25rem); line-height: 1.7; }
 .info-hero__visual { position: relative; display: grid; place-items: center; min-height: clamp(15rem, 26vw, 22rem); }
 .info-hero__visual::before { content: ""; position: absolute; width: min(100%, 22rem); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(255,214,57,.35), rgba(46,168,229,.2) 55%, transparent 72%); }
 .info-hero__visual img { position: relative; z-index: 1; width: min(100%, 23rem); max-height: 22rem; object-fit: contain; filter: drop-shadow(0 1rem 1rem rgba(16,70,110,.15)); }
-.pip-greeting { position: absolute; z-index: 3; top: 1%; left: 6%; padding: .65rem 1rem; border: .13rem solid rgba(46,168,229,.22); border-radius: 1.2rem 1.2rem 1.2rem .25rem; background: #fff; color: var(--info-blue-deep); box-shadow: 0 .55rem 1.3rem rgba(16,70,110,.13); font-family: "Baloo 2", sans-serif; font-size: clamp(.9rem, 1.5vw, 1.05rem); font-weight: 800; animation: playfulFloat 4s ease-in-out infinite; }
+.pip-greeting { position: absolute; z-index: 3; top: 1%; left: 6%; padding: .65rem 1rem; border: .13rem solid rgba(46,168,229,.22); border-radius: 1.2rem 1.2rem 1.2rem .25rem; background: #fff; color: var(--info-blue-deep); box-shadow: 0 .55rem 1.3rem rgba(16,70,110,.13); font-family: var(--font-family-primary); font-size: clamp(.9rem, 1.5vw, 1.05rem); font-weight: 800; animation: playfulFloat 4s ease-in-out infinite; }
 .pip-greeting span { color: #f36f8e; }
-.hero-bubble, .hero-spark { position: absolute; z-index: 2; display: grid; place-items: center; font-family: "Baloo 2", sans-serif; font-weight: 800; }
+.hero-bubble, .hero-spark { position: absolute; z-index: 2; display: grid; place-items: center; font-family: var(--font-family-primary); font-weight: 800; }
 .hero-bubble { width: 3.25rem; aspect-ratio: 1; border-radius: 1rem 1rem 1rem .3rem; background: #fff; color: var(--info-blue-deep); box-shadow: 0 .5rem 1.25rem rgba(16,70,110,.12); font-size: .78rem; transform: rotate(-7deg); }
 .hero-bubble--one { top: 12%; left: 2%; }
 .hero-bubble--two { right: 2%; bottom: 14%; transform: rotate(8deg); background: var(--info-yellow-soft); }
@@ -189,7 +187,7 @@ main:has(.pabasa-info) + .editorial-footer { margin-top: 0; }
 .journey-node--practice .journey-icon { background: var(--info-yellow-soft); color: #9b6500; }
 .journey-node--improve .journey-icon { background: #e8f5ec; color: #2f855a; }
 .journey-node strong, .journey-node small { display: block; }
-.journey-node strong { font-family: "Baloo 2", sans-serif; font-size: 1.4rem; color: var(--info-ink); }
+.journey-node strong { font-family: var(--font-family-primary); font-size: 1.4rem; color: var(--info-ink); }
 .journey-node small { margin-top: .25rem; color: var(--info-muted); font-size: .82rem; }
 .journey-connector { color: var(--info-yellow); font-size: 1.5rem; }
 .journey-panel__note { padding-top: 1rem; border-top: 1px dashed rgba(16,70,110,.2); color: var(--info-muted); font-size: .9rem; text-align: center; }
@@ -228,7 +226,7 @@ main:has(.pabasa-info) + .editorial-footer { margin-top: 0; }
 .community-number { position: absolute; right: 1.2rem; bottom: 1rem; color: rgba(46,168,229,.35); font-weight: 900; font-size: .8rem; }
 .community-center { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
 .community-center__ring { display: grid; place-items: center; width: clamp(6rem, 10vw, 8.5rem); aspect-ratio: 1; margin-bottom: 1.2rem; border: 1px dashed var(--info-blue); border-radius: 50%; background: var(--info-yellow-soft); color: var(--info-blue-deep); font-size: clamp(2rem, 4vw, 3rem); box-shadow: 0 0 0 1rem rgba(255,214,57,.12); }
-.community-center strong { font-family: "Baloo 2", sans-serif; font-size: 1.35rem; line-height: 1.1; color: var(--info-ink); }.community-center small { margin-top: .6rem; color: var(--info-muted); }
+.community-center strong { font-family: var(--font-family-primary); font-size: 1.35rem; line-height: 1.1; color: var(--info-ink); }.community-center small { margin-top: .6rem; color: var(--info-muted); }
 
 .steps-journey { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 1.5rem; margin: 0; padding: 1.5rem 0 0; list-style: none; }
 .steps-journey::before { content: ""; position: absolute; top: 3.25rem; left: 7%; right: 7%; border-top: 2px dashed rgba(46,168,229,.38); }

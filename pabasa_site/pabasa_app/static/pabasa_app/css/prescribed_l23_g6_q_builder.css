@@ -12,7 +12,7 @@
     url("../prescribed/PRESCRIBED-BG.jpg") center / cover fixed,
     linear-gradient(135deg, #d9f1ef, #eaf7fb);
   color: var(--g6-ink);
-  font-family: "Nunito", system-ui, sans-serif;
+  font-family: var(--font-family-primary);
 }
 .wb-l23-g6-page .wb-shell {
   width: min(1180px, 100%);

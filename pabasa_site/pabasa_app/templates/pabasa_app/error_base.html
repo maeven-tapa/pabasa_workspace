@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{% block title %}PABASA{% endblock %}</title>
+    {% include "pabasa_app/includes/typography.html" %}
+</head>
+<body>
+    <main>
+        <h1>{% block heading %}An error occurred{% endblock %}</h1>
+        <p>{% block message %}Please try again later.{% endblock %}</p>
+    </main>
+</body>
+</html>

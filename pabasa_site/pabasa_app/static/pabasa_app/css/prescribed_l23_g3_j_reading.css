@@ -10,7 +10,7 @@
   padding:16px clamp(12px,4vw,42px) 22px;
   background:url('../prescribed/PRESCRIBED-BG.jpg') center/cover no-repeat;
   color:var(--g3-ink);
-  font-family:Fredoka,Nunito,'Segoe UI',sans-serif;
+  font-family:var(--font-family-primary);
 }
 .wb-l23-g3-page .wb-l23-g3-page-layout{
   display:flex;
@@ -37,7 +37,7 @@
   background:#fff;
   color:var(--g3-ink);
   font-size:1.2rem;
-  font-family:Fredoka,Nunito,'Segoe UI',sans-serif;
+  font-family:var(--font-family-primary);
   font-weight:900;
   line-height:1.15;
   text-align:center;
@@ -111,7 +111,7 @@
   border-radius:999px;
   background:#fff;
   color:var(--g3-teal-dark);
-  font:900 .88rem/1.1 inherit;
+  font:900 .88rem/1.1 var(--font-family-primary);
   box-shadow:0 4px 0 #b7d6dc;
 }
 .wb-l23-g3-page #wb-progress-row{
@@ -160,7 +160,7 @@
 }
 .wb-l23-g3-panel h2{flex:0 0 auto;margin:0 0 5px;color:var(--g3-teal-dark);font-size:clamp(1rem,1.9vw,1.55rem);line-height:1.1;text-align:center;letter-spacing:.01em}
 .wb-l23-g3-list-panel .wb-l23-g3-word-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:repeat(3,minmax(67px,1fr));align-content:stretch;gap:10px;flex:1 1 auto;min-height:0;max-height:none;margin:5px auto 0;width:100%;max-width:650px}
-.wb-l23-g3-word{grid-column:span 2;display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;padding:2px 4px;border:2px solid #b9d9df;border-radius:14px;background:#f9fcfb;color:var(--g3-ink);font-family:Fredoka,Nunito,'Segoe UI',sans-serif;font-size:clamp(1rem,2.1vw,1.8rem);font-weight:900;line-height:1.05;letter-spacing:.01em;text-align:center;white-space:nowrap;box-shadow:0 3px 0 rgba(180,218,231,.22)}
+.wb-l23-g3-word{grid-column:span 2;display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;padding:2px 4px;border:2px solid #b9d9df;border-radius:14px;background:#f9fcfb;color:var(--g3-ink);font-family:var(--font-family-primary);font-size:clamp(1rem,2.1vw,1.8rem);font-weight:900;line-height:1.05;letter-spacing:.01em;text-align:center;white-space:nowrap;box-shadow:0 3px 0 rgba(180,218,231,.22)}
 .wb-l23-g3-word:nth-child(7){grid-column:2 / span 2}
 .wb-l23-g3-word:nth-child(8){grid-column:4 / span 2}
 .wb-l23-g3-word.is-current{border-color:#e7af45;background:#fff2be;box-shadow:0 0 0 4px #f4c86655,0 4px 0 #d29f23}
@@ -170,10 +170,10 @@
 .wb-l23-g3-attempts{flex:0 0 auto;margin:3px 0 8px;color:#a45d00;font-size:1rem;font-weight:900;text-align:center}
 .wb-l23-g3-target{flex:0 0 auto;display:block;margin:3px 0 5px;color:var(--g3-ink);font-size:clamp(1.8rem,4vw,3rem);font-weight:900;line-height:1.05;text-align:center}
 .wb-l23-g3-controls{display:grid;gap:12px;flex:0 0 auto;margin:4px 0 8px}
-.wb-l23-g3-controls button{width:100%;min-height:52px;padding:8px 12px;border:0;border-radius:999px;background:var(--g3-teal);color:#fff;font-family:Fredoka,Nunito,'Segoe UI',sans-serif;font-size:1rem;font-weight:900;line-height:1.1;box-shadow:0 5px 0 var(--g3-teal-dark)}
+.wb-l23-g3-controls button{width:100%;min-height:52px;padding:8px 12px;border:0;border-radius:999px;background:var(--g3-teal);color:#fff;font-family:var(--font-family-primary);font-size:1rem;font-weight:900;line-height:1.1;box-shadow:0 5px 0 var(--g3-teal-dark)}
 .wb-l23-g3-controls button.wb-l23-g3-secondary{background:#fff;color:var(--g3-teal-dark);border:3px solid #94d9d6;box-shadow:0 4px 0 #b7d6dc}
 .wb-l23-g3-heard{display:grid;gap:3px;flex:0 0 auto;min-height:58px;margin:0 0 8px;padding:8px;border:2px solid #d6e8f2;border-radius:14px;background:#f6fbfe;text-align:center}
-.wb-l23-g3-heard span{color:#557b91;font-family:Fredoka,Nunito,'Segoe UI',sans-serif;font-size:.7rem;font-weight:900;letter-spacing:.12em;line-height:1.1}.wb-l23-g3-heard strong{overflow-wrap:anywhere;color:#16465d;font-family:Fredoka,Nunito,'Segoe UI',sans-serif;font-size:1rem;font-weight:900;line-height:1.1}
+.wb-l23-g3-heard span{color:#557b91;font-family:var(--font-family-primary);font-size:.7rem;font-weight:900;letter-spacing:.12em;line-height:1.1}.wb-l23-g3-heard strong{overflow-wrap:anywhere;color:#16465d;font-family:var(--font-family-primary);font-size:1rem;font-weight:900;line-height:1.1}
 .wb-l23-g3-feedback{flex:0 0 auto;min-height:2.3em;margin:0;color:var(--g3-ink);font-size:clamp(1rem,2.2vw,1.35rem);line-height:1.35;font-weight:900;text-align:center}.wb-l23-g3-feedback.is-error{color:#b23a3a}
 .wb-l23-g3-reset{flex:0 0 auto;align-self:center;min-height:38px;margin-top:auto;padding:7px 14px;border:2px solid #e1b6b6;border-radius:999px;background:#fff;color:#9b4141;font-weight:900}
 @media(max-width:760px){

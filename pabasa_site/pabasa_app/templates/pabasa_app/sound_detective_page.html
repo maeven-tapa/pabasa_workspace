@@ -28,7 +28,7 @@
                 linear-gradient(180deg, rgba(19, 15, 13, 0.12), rgba(19, 15, 13, 0.08)),
                 url("{% static 'pabasa_app/images/sound_detective/sound_detective_bg.jpg' %}") center/cover no-repeat fixed;
             color: #302a32;
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
         }
 
         .sound-detective-activity {
@@ -149,6 +149,7 @@
             }
         }
     </style>
+{% include "pabasa_app/includes/typography.html" %}
 </head>
 <body>
     <div class="sound-detective-activity">

@@ -24,11 +24,11 @@ body.dark-theme .student-progress-review-trigger:not(:disabled):hover{background
 @media(max-width:600px){.student-progress-review-dialog{width:calc(var(--review-viewport-width) - 20px);max-height:calc(var(--review-viewport-height) - 24px)}.student-progress-review-header,.student-progress-review-body{padding:.9rem}}
 
 /* Only the seven explicitly opted-in activity reviews use this compact layout. */
-.student-progress-review-dialog--compact-reading{width:min(1080px,calc(var(--review-viewport-width) - 32px));font-family:"Nunito","Segoe UI",sans-serif}
+.student-progress-review-dialog--compact-reading{width:min(1080px,calc(var(--review-viewport-width) - 32px));font-family:var(--font-family-primary)}
 @media(min-width:992px){.dashboard-app-shell .student-progress-review-dialog--compact-reading{width:min(calc(1080px / var(--dashboard-display-scale,1)),calc(var(--review-viewport-width) - 32px))}}
 .student-progress-review-dialog--compact-reading .student-progress-review-header{padding:.75rem 1rem .5rem;border:0}
 .student-progress-review-dialog--compact-reading .student-progress-review-header small{font-size:.7rem;font-weight:800;color:#137d81;letter-spacing:.08em}
-.student-progress-review-dialog--compact-reading .student-progress-review-header h2{font-family:"Righteous","Nunito",sans-serif;color:#173f63;font-size:1.2rem;line-height:1.3;margin:.15rem 0 0}
+.student-progress-review-dialog--compact-reading .student-progress-review-header h2{font-family:var(--font-family-primary);color:#173f63;font-size:1.2rem;line-height:1.3;margin:.15rem 0 0}
 .student-progress-review-dialog--compact-reading .student-progress-review-close:focus-visible{outline:3px solid #2483a4;outline-offset:2px}
 .student-progress-review-dialog--compact-reading .student-progress-review-body{display:flex;overflow:hidden;padding:.25rem 1rem 1rem}
 .student-progress-review-dialog--compact-reading .student-progress-recording,

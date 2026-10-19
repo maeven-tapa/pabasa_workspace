@@ -1,0 +1,46 @@
+/* One application text face. The supplied file is Regular; heavier text uses
+   browser synthesis rather than registering the Regular file as a bold face. */
+@font-face {
+  font-family: "Andika";
+  src: url("../font/AndBasR.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root {
+  --font-family-primary: "Andika", sans-serif;
+  --font-body: var(--font-family-primary);
+  --font-display: var(--font-family-primary);
+  --bs-font-sans-serif: var(--font-family-primary);
+  --bs-body-font-family: var(--font-family-primary);
+  --bs-font-monospace: var(--font-family-primary);
+  --font-family-monospace: var(--font-family-primary);
+}
+
+html,
+body {
+  font-family: var(--font-family-primary);
+}
+
+/* Controls and browser defaults do not consistently inherit body typography.
+   Deliberately avoid a universal selector: icon fonts keep their own face. */
+button,
+input,
+select,
+optgroup,
+option,
+textarea,
+output,
+code,
+pre,
+kbd,
+samp,
+svg text {
+  font-family: var(--font-family-primary);
+}
+
+::placeholder,
+::file-selector-button {
+  font-family: var(--font-family-primary);
+}

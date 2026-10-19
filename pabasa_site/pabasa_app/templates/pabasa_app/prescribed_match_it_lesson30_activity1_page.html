@@ -8,10 +8,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Match It! | PABASA</title>
   <style>
-    @font-face{font-family:L30;src:url("{% static 'pabasa_app/images/lesson_30/lesson30-fredoka.ttf' %}")}
+
     :root{--ink:#183e63;--muted:#55768b;--line:#94d9d6;--gold:#efb947;--teal:#299e9a;--dark:#187b7a;--good:#287b4c;--bad:#b33b43}
     *{box-sizing:border-box}html,body{height:100%;overflow:hidden}
-    body{margin:0;background:#49b8e0 url("{% static 'pabasa_app/images/lesson_30/lesson30-ui-background.jpg' %}") center/cover fixed;color:var(--ink);font-family:L30,Nunito,sans-serif}
+    body{margin:0;background:#49b8e0 url("{% static 'pabasa_app/images/lesson_30/lesson30-ui-background.jpg' %}") center/cover fixed;color:var(--ink);font-family:var(--font-family-primary)}
     .page{position:relative;width:min(1250px,calc(100% - 32px));height:100dvh;min-height:0;margin:auto;padding:16px clamp(16px,4vw,42px) 22px}
     .back{position:absolute;top:16px;left:clamp(16px,4vw,42px);z-index:3;display:flex;align-items:center;justify-content:center;gap:12px;width:280px;min-height:64px;border-radius:999px;background:#fff;color:var(--ink);font-size:1.15rem;text-decoration:none;box-shadow:0 8px 17px #145ca744;transition:transform .16s ease,box-shadow .16s ease}.back:hover{transform:translateY(-2px);box-shadow:0 11px 22px #145ca755}
     .stage{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(1250px,100%);height:min(820px,calc(100dvh - 32px));min-height:0;margin:0;padding:clamp(24px,3.3vh,42px) clamp(20px,5vw,72px) 24px;border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63;backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35;display:grid;place-items:center;text-align:center;overflow:hidden}.stage.waiting{filter:blur(2px);opacity:.58;pointer-events:none}
@@ -68,6 +68,7 @@
   .l30a1-completion-card p{margin:18px 0 26px;color:#183e63;font-size:clamp(18px,2vw,20px);font-weight:800;line-height:1.4}
   .l30a1-completion-button{display:inline-flex;align-items:center;justify-content:center;width:min(100%,390px);min-height:68px;padding:14px 24px;border-radius:999px;background:#299e9a;box-shadow:0 5px 0 #187b7a,0 8px 18px #187b7a26;color:#fff;font:inherit;font-size:clamp(18px,2vw,20px);font-weight:900;text-align:center;text-decoration:none}
 </style>
+{% include "pabasa_app/includes/typography.html" %}
 </head>
 <body>
   <main class="page">

@@ -1,4 +1,4 @@
-.wb-l24-g3-repeat-page{min-height:100svh;margin:0;background:url('../prescribed/PRESCRIBED-BG.jpg') center/cover no-repeat;color:#183e63;font:18px/1.45 "Nunito",system-ui,sans-serif}
+.wb-l24-g3-repeat-page{min-height:100svh;margin:0;background:url('../prescribed/PRESCRIBED-BG.jpg') center/cover no-repeat;color:#183e63;font:18px/1.45 var(--font-family-primary)}
 .wb-l24-g3-repeat-page .wb-shell{width:100%;max-width:none;min-height:100svh;margin:0;padding:0;background:transparent;border:0;box-shadow:none}
 .l24g3-repeat-shell{position:relative;display:flex;align-items:center;justify-content:center;width:min(92vw,1320px);min-height:100svh;margin:auto;padding:16px 0 24px;box-sizing:border-box}
 .l24g3-repeat-card{display:flex;flex:0 1 auto;flex-direction:column;width:100%;max-height:calc(100svh - 40px);padding:34px 24px 20px;border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35}

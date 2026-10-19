@@ -92,7 +92,7 @@
   background: #299e9a !important;
   box-shadow: 0 6px 0 #187b7a, 0 9px 18px #187b7a35 !important;
   color: #fff !important;
-  font: 900 clamp(1rem, 1.6vw, 1.25rem) Fredoka, Nunito, "Segoe UI", sans-serif !important;
+  font: 900 clamp(1rem, 1.6vw, 1.25rem) var(--font-family-primary) !important;
   cursor: pointer !important;
 }
 
@@ -180,7 +180,7 @@
   height: clamp(50px, 8vw, 62px) !important;
   place-items: center !important;
   border-radius: 15px !important;
-  font: 900 clamp(1.5rem, 4.8vw, 2rem) Fredoka, Nunito, "Segoe UI", sans-serif !important;
+  font: 900 clamp(1.5rem, 4.8vw, 2rem) var(--font-family-primary) !important;
   text-transform: lowercase !important;
 }
 

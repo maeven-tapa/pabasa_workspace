@@ -8,10 +8,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Basahin at Isulat ang Salita</title>
   <style>
-    @font-face{font-family:Fredoka;src:url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');font-display:swap}
+
     *{box-sizing:border-box}
     :root{--ink:#183e63;--teal:#187f80;--teal-dark:#12696b;--mint:#a9ded1;--gold:#e7af45;--good:#26784e;--bad:#a43d48}
-    body{height:100dvh;min-height:100dvh;margin:0;overflow:hidden;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover no-repeat;color:var(--ink);font-family:Fredoka,Nunito,"Segoe UI",sans-serif}
+    body{height:100dvh;min-height:100dvh;margin:0;overflow:hidden;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover no-repeat;color:var(--ink);font-family:var(--font-family-primary)}
     .page{position:relative;display:grid;place-items:center;width:min(1180px,calc(100% - 40px));height:100dvh;margin:auto;padding:88px 0 18px}
     .back{position:fixed;top:16px;left:max(20px,calc((100vw - 1180px)/2));z-index:12;display:inline-flex;align-items:center;min-height:52px;padding:9px 18px;border-radius:999px;background:#fffffff0;color:var(--ink);font-size:1rem;text-decoration:none;box-shadow:0 5px 15px #145ca733}
     .back::before{content:"←";margin-right:9px;font-size:1.35rem}
@@ -54,6 +54,7 @@
     @media(max-width:650px){.page{width:calc(100% - 20px);padding:132px 0 10px}.back{top:72px;left:10px;min-height:44px;padding:8px 13px;font-size:.85rem}.card{padding:15px 12px;border-radius:24px}.image-stage{height:clamp(130px,23vh,185px);margin:8px auto;padding:9px;border-width:3px}.button{min-height:58px}.steps{margin:4px auto}.steps span{padding:7px 9px}}
     @media(max-height:650px){.page{padding-top:72px}.card{padding:10px 16px}.eyebrow{margin-bottom:4px;padding:4px 12px}h1{font-size:1.65rem;margin-bottom:4px}.image-stage{height:clamp(105px,24vh,150px);margin:5px auto;padding:7px}.progress-wrap{margin:3px auto 5px}.dot{width:25px;height:25px}.button{min-height:49px;margin-top:5px}.steps{margin:4px auto}.letter-boxes{margin:6px auto}.letter-box{height:43px}}
   </style>
+{% include "pabasa_app/includes/typography.html" %}
 </head>
 <body>
   <main class="page">

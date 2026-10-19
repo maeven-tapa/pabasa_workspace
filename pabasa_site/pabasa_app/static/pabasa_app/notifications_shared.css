@@ -49,7 +49,7 @@
     display: inline-flex;
     flex: 0 1 auto;
     flex-wrap: nowrap;
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 1.2rem;
     font-weight: 800;
     gap: 0.55rem;
@@ -67,7 +67,7 @@
     box-shadow: 0 6px 14px rgba(245, 184, 0, 0.2);
     color: var(--pabasa-notif-blue-deep);
     display: inline-flex;
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 0.78rem;
     font-weight: 900;
     flex: 0 0 auto;
@@ -99,7 +99,7 @@
     border-color: rgba(16, 70, 110, 0.22);
     color: var(--pabasa-notif-blue-deep);
     display: inline-flex;
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 0.82rem;
     font-weight: 800;
     gap: 0.42rem;
@@ -159,7 +159,7 @@
     align-items: center;
     color: var(--pabasa-notif-blue-deep);
     display: flex;
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 0.78rem;
     font-weight: 900;
     gap: 0.65rem;
@@ -234,7 +234,7 @@
 
 .notif-title {
     color: var(--pabasa-notif-blue-deep);
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 0.98rem;
     font-weight: 800;
     letter-spacing: -0.01em;
@@ -250,7 +250,7 @@
 
 .notif-message {
     color: var(--pabasa-notif-muted);
-    font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 0.9rem;
     line-height: 1.5;
     margin: 0;
@@ -271,7 +271,7 @@
 .notif-time {
     border-radius: 999px;
     display: inline-flex;
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 0.7rem;
     font-weight: 800;
     letter-spacing: 0.04em;
@@ -363,7 +363,7 @@
 .notif-empty-title,
 .notif-error-title {
     color: var(--pabasa-notif-blue-deep);
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 1rem;
     font-weight: 800;
     margin: 0;
@@ -406,7 +406,7 @@
 
 .notif-confirm-title {
     color: var(--pabasa-notif-blue-deep);
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 1.18rem;
     font-weight: 900;
     margin-bottom: 0.35rem;
@@ -425,7 +425,7 @@
 
 .notif-confirm-actions .btn {
     border-radius: 999px;
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-weight: 800;
     min-width: 132px;
     padding: 0.72rem 1rem;

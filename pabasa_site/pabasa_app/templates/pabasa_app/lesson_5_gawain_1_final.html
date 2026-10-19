@@ -14,9 +14,9 @@ document.addEventListener('DOMContentLoaded',function(){
 });
 </script>
 <style>
-@font-face{font-family:Fredoka;src:url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');font-display:swap}
+
 *{box-sizing:border-box}html,body{height:100%;margin:0;overflow:hidden}
-body{color:#183e63;font-family:Fredoka,"Segoe UI",sans-serif;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed no-repeat}
+body{color:#183e63;font-family:var(--font-family-primary);background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover fixed no-repeat}
 .page{height:100dvh;padding:16px clamp(10px,4vw,42px) 22px;overflow:hidden}
 .card{position:relative;width:min(1250px,100%);height:calc(100dvh - 38px);min-height:0;margin:0 auto;padding:clamp(24px,3.2vh,42px) clamp(18px,6vw,80px) 20px;border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63;backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35;text-align:center;overflow:hidden}
 .back{position:absolute;top:16px;left:clamp(18px,5vw,80px);z-index:2;display:inline-flex;align-items:center;justify-content:center;min-height:58px;padding:12px 24px;border-radius:999px;background:#fff;color:#183e63;font-size:1.1rem;text-decoration:none;box-shadow:0 8px 17px #145ca744}
@@ -41,7 +41,8 @@ body.lesson-start-open #app{padding-top:0!important}
 <style>#app .focus{border:0;background:transparent;box-shadow:none;padding:0;overflow:visible}#app .lesson5-golden-picture-box{width:min(420px,88%);min-height:190px;margin:8px auto;padding:10px 16px;display:grid;place-items:center;border:5px solid #e7af45;border-radius:28px;background:#fffdf0;box-shadow:0 0 0 8px #f8dfb0,0 8px 0 #c9902d,0 14px 24px #187b7a25}#app .lesson5-golden-picture-box>img{width:min(220px,48vw);height:min(170px,24vh);margin:0;object-fit:contain}</style>
 </style><script>
 (()=>{const wrap=()=>{document.querySelectorAll('#app .focus>img').forEach(image=>{const box=document.createElement('div');box.className='lesson5-golden-picture-box';image.replaceWith(box);box.appendChild(image)})};const app=()=>document.getElementById('app');const start=()=>{const root=app();if(root){new MutationObserver(wrap).observe(root,{childList:true,subtree:true});wrap()}};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start()})();
-</script></head>
+</script>{% include "pabasa_app/includes/typography.html" %}
+</head>
 <body>
 <div class="page"><a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a><main class="card"><div id="app"></div></main></div>
 {{ lesson_5_data|json_script:"lesson-five-data" }}
@@ -102,7 +103,7 @@ render();
 body:has(#app .completion-state) .card{border-color:transparent!important}
 </style>
 <style>
-body:has(#app .completion-state) .back,body:has(#app .completion-state) .lesson-start-backdrop{display:none!important}body:has(#app .completion-state) .card{display:grid;place-items:center;align-content:center;background:transparent!important;box-shadow:none!important}body:has(#app .completion-state) .completion-state{width:min(540px,calc(100vw - 48px));padding:42px 38px 40px;background:#fffffff2;border:2px solid #ffffffc7;border-radius:32px;box-shadow:0 22px 60px #173f6340;text-align:center}body:has(#app .completion-state) .completion-state h1{margin:0;color:#183e63;font:900 clamp(1.75rem,3vw,2rem)/1.2 Fredoka,Nunito,"Segoe UI",sans-serif}body:has(#app .completion-state) .completion-state p{margin:18px 0 28px;color:#183e63;font:700 clamp(1.1rem,2vw,1.25rem)/1.4 Fredoka,Nunito,"Segoe UI",sans-serif}body:has(#app .completion-state) .completion-state .action{background:#299e9a;color:#fff;border-radius:999px;text-decoration:none;font:900 clamp(1.05rem,1.8vw,1.25rem)/1.2 Fredoka,Nunito,"Segoe UI",sans-serif;box-shadow:0 5px 0 #187b7a}
+body:has(#app .completion-state) .back,body:has(#app .completion-state) .lesson-start-backdrop{display:none!important}body:has(#app .completion-state) .card{display:grid;place-items:center;align-content:center;background:transparent!important;box-shadow:none!important}body:has(#app .completion-state) .completion-state{width:min(540px,calc(100vw - 48px));padding:42px 38px 40px;background:#fffffff2;border:2px solid #ffffffc7;border-radius:32px;box-shadow:0 22px 60px #173f6340;text-align:center}body:has(#app .completion-state) .completion-state h1{margin:0;color:#183e63;font:900 clamp(1.75rem,3vw,2rem)/1.2 var(--font-family-primary)}body:has(#app .completion-state) .completion-state p{margin:18px 0 28px;color:#183e63;font:700 clamp(1.1rem,2vw,1.25rem)/1.4 var(--font-family-primary)}body:has(#app .completion-state) .completion-state .action{background:#299e9a;color:#fff;border-radius:999px;text-decoration:none;font:900 clamp(1.05rem,1.8vw,1.25rem)/1.2 var(--font-family-primary);box-shadow:0 5px 0 #187b7a}
 </style></body>
 {% include 'pabasa_app/session4_prescribed_controls.html' with prefix='prescribed-s2l5g1' help_text='Tingnan ang larawan at tukuyin kung nagsisimula ito sa tunog /a/.' %}
 <script>(function(){const e=document.getElementById('lesson-five-data');if(!e)return;const d=JSON.parse(e.textContent||'{}');d.progress_url='{% url "lesson_5_activity_progress" %}';e.textContent=JSON.stringify(d)})();</script>

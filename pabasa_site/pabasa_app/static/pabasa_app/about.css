@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@400;500;600;700;800&display=swap");
-
 /* ============================================================
    PABASA ABOUT CSS — Matches home.css design system
    Blue + Yellow palette, child-friendly, educational
@@ -30,8 +28,8 @@
     --line-soft: rgba(16, 70, 110, 0.07);
 
     /* Typography */
-    --font-display: 'Baloo 2', 'Nunito', cursive;
-    --font-body:    'Nunito', 'Segoe UI', sans-serif;
+    --font-display: var(--font-family-primary);
+    --font-body:    var(--font-family-primary);
 
     /* Shadows */
     --shadow-sm:  0 4px 12px rgba(16, 70, 110, 0.08);
@@ -52,7 +50,7 @@
 
 html, body {
     margin: 0;
-    font-family: var(--font-body);
+    font-family: var(--font-family-primary);
     color: var(--ink);
     background: linear-gradient(180deg, #EEF7FF 0%, #E6F3FA 52%, #F5FBFF 100%) !important;
     background-attachment: fixed !important;
@@ -91,7 +89,7 @@ body::after {
 a { text-decoration: none; color: inherit; }
 
 h1, h2, h3, h4 {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     line-height: 1.2;
 }
 
@@ -161,7 +159,7 @@ h1, h2, h3, h4 {
 
 .modern-hero h1,
 .modern-hero h2 {
-    font-family: var(--font-display) !important;
+    font-family: var(--font-family-primary) !important;
     font-size: clamp(1.65rem, 3vw, 2.5rem);
     font-weight: 900 !important;
     color: var(--pabasa-blue-deep) !important;
@@ -196,7 +194,7 @@ h1, h2, h3, h4 {
     background: var(--pabasa-yellow-soft) !important;
     border: 1.5px solid rgba(245, 184, 0, 0.38) !important;
     color: #7A4A00 !important;
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     font-weight: 800 !important;
     font-size: 0.78rem;
     letter-spacing: 0.12em;
@@ -235,7 +233,7 @@ h1, h2, h3, h4 {
    BUTTONS
    ============================================================ */
 .btn {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     font-weight: 800;
     border-radius: var(--r-pill) !important;
     padding: 0.65rem 1.5rem;
@@ -278,7 +276,7 @@ h1, h2, h3, h4 {
 }
 
 .about-section-header h2 {
-    font-family: var(--font-display) !important;
+    font-family: var(--font-family-primary) !important;
     color: var(--pabasa-blue-deep) !important;
     font-weight: 900 !important;
     font-size: clamp(1.35rem, 2.5vw, 1.85rem);
@@ -298,7 +296,7 @@ h1, h2, h3, h4 {
 /* Section header underline (pb-4 / pb-md-5 sections) */
 section.pb-4 h2,
 section.pb-md-5 h2 {
-    font-family: var(--font-display) !important;
+    font-family: var(--font-family-primary) !important;
     font-weight: 900 !important;
     color: var(--pabasa-blue-deep) !important;
     background: none !important;
@@ -389,7 +387,7 @@ section.pb-md-5 h2::after {
     border-radius: var(--r-pill);
     background: var(--pabasa-yellow);
     color: var(--pabasa-blue-deep);
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     font-size: 0.82rem;
     font-weight: 900;
     letter-spacing: 0.06em;
@@ -429,7 +427,7 @@ section.pb-md-5 h2::after {
 }
 
 .card-label {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     color: var(--pabasa-blue) !important;
     font-size: 0.74rem;
     font-weight: 900;
@@ -440,7 +438,7 @@ section.pb-md-5 h2::after {
 }
 
 .card-body h3 {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     color: var(--pabasa-blue-deep) !important;
     font-size: 1.08rem;
     font-weight: 900;
@@ -459,7 +457,7 @@ section.pb-md-5 h2::after {
 }
 
 .card-meta {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     color: var(--pabasa-blue) !important;
     font-size: 0.72rem;
     font-weight: 900;
@@ -498,7 +496,7 @@ section.pb-md-5 h2::after {
 }
 
 .principles-board-intro span {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     color: var(--pabasa-blue) !important;
     display: block;
     font-size: 0.74rem;
@@ -509,7 +507,7 @@ section.pb-md-5 h2::after {
 }
 
 .principles-board-intro h2 {
-    font-family: var(--font-display) !important;
+    font-family: var(--font-family-primary) !important;
     color: var(--pabasa-blue-deep) !important;
     font-size: clamp(1.35rem, 2.8vw, 2rem);
     font-weight: 900 !important;
@@ -551,7 +549,7 @@ section.pb-md-5 h2::after {
 }
 
 .principle-number {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     color: var(--pabasa-yellow-deep) !important;
     font-size: 0.9rem;
     font-weight: 900;
@@ -561,7 +559,7 @@ section.pb-md-5 h2::after {
 }
 
 .principle-label {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     color: var(--pabasa-blue) !important;
     font-size: 0.76rem;
     font-weight: 900;
@@ -572,7 +570,7 @@ section.pb-md-5 h2::after {
 }
 
 .principle-content h3 {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     color: var(--pabasa-blue-deep) !important;
     font-size: 1.15rem;
     font-weight: 900;
@@ -590,7 +588,7 @@ section.pb-md-5 h2::after {
 }
 
 .principle-meta {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     color: var(--pabasa-blue) !important;
     font-size: 0.74rem;
     font-weight: 900;
@@ -653,7 +651,7 @@ section.pb-md-5 h2::after {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     font-weight: 900;
     font-size: 0.88rem;
     box-shadow: 0 4px 10px rgba(46, 168, 229, 0.3);
@@ -661,7 +659,7 @@ section.pb-md-5 h2::after {
 }
 
 .timeline-step span {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     color: var(--pabasa-blue) !important;
     font-size: 0.72rem;
     font-weight: 900;
@@ -672,7 +670,7 @@ section.pb-md-5 h2::after {
 }
 
 .timeline-step h3 {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     color: var(--pabasa-blue-deep) !important;
     font-size: 1rem;
     font-weight: 900;
@@ -724,7 +722,7 @@ section.pb-md-5 h2::after {
 
 .project-support h3 {
     color: #ffffff !important;
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     font-size: 1.3rem;
     font-weight: 900;
     margin: 0 0 0.75rem;
@@ -833,7 +831,7 @@ section.pb-md-5 h2::after {
 }
 
 .development-team-header h2 {
-    font-family: var(--font-display) !important;
+    font-family: var(--font-family-primary) !important;
     color: var(--pabasa-blue-deep) !important;
     font-weight: 900 !important;
     letter-spacing: 0;
@@ -901,7 +899,7 @@ section.pb-md-5 h2::after {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     font-size: 0.8rem;
     font-weight: 900;
     color: #ffffff !important;
@@ -958,7 +956,7 @@ section.pb-md-5 h2::after {
 }
 
 .team-member-name {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     font-size: 0.95rem;
     font-weight: 900;
     margin-bottom: 0.15rem;
@@ -968,7 +966,7 @@ section.pb-md-5 h2::after {
 }
 
 .team-member-role-hover {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -1064,7 +1062,7 @@ section.pb-md-5 h2::after {
 }
 
 .team-member-overlay.active .team-member-name {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     font-size: clamp(1.2rem, 3vw, 1.45rem);
     color: var(--pabasa-blue-deep) !important;
     text-shadow: none;
@@ -1073,7 +1071,7 @@ section.pb-md-5 h2::after {
 }
 
 .team-member-overlay.active .team-member-role-hover {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     font-size: 0.8rem;
     color: var(--pabasa-blue) !important;
     text-shadow: none;
@@ -1124,7 +1122,7 @@ section.pb-md-5 h2::after {
     color: var(--pabasa-blue-deep) !important;
     padding: 0.45rem 1rem;
     border-radius: var(--r-pill);
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     font-size: 0.74rem;
     font-weight: 800;
     white-space: nowrap;
@@ -1211,7 +1209,7 @@ section.pb-md-5 h2::after {
 }
 
 .team-member-modal-title {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     text-align: center;
     margin-bottom: 0.4rem;
     color: var(--pabasa-blue-deep) !important;
@@ -1685,7 +1683,7 @@ section.pb-md-5 h2::after {
     left: 0; right: 0; bottom: 0;
     background: linear-gradient(to top, rgba(16, 70, 110, 0.85), transparent);
     color: #ffffff;
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     font-size: 0.78rem;
     font-weight: 750;
     letter-spacing: 0.04em;
@@ -1693,7 +1691,7 @@ section.pb-md-5 h2::after {
 }
 
 .article-kicker {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     color: var(--pabasa-blue-deep) !important;
     display: inline-flex;
     align-items: center;
@@ -1709,7 +1707,7 @@ section.pb-md-5 h2::after {
 }
 
 .article-modal-header h2 {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     color: var(--pabasa-blue-deep) !important;
     font-size: clamp(1.7rem, 4.5vw, 2.8rem);
     font-weight: 900;
@@ -1785,7 +1783,7 @@ section.pb-md-5 h2::after {
 .article-body { max-width: 720px; margin: 0 auto; }
 
 .article-content h3 {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     color: var(--pabasa-blue-deep) !important;
     font-size: 1.18rem;
     font-weight: 900;
@@ -1814,7 +1812,7 @@ section.pb-md-5 h2::after {
 }
 
 .article-references h3 {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     color: var(--pabasa-blue-deep) !important;
     font-size: 1rem;
     font-weight: 900;
@@ -1899,7 +1897,7 @@ section.pb-md-5 h2::after {
 .about-insight-card span,
 .principle-card span,
 .timeline-step span {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     color: var(--pabasa-blue) !important;
     font-size: 0.72rem;
     font-weight: 900;
@@ -1909,7 +1907,7 @@ section.pb-md-5 h2::after {
 
 .about-insight-card h3,
 .principle-card h3 {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     color: var(--pabasa-blue-deep) !important;
     font-size: 1.08rem;
     font-weight: 900;
@@ -1927,7 +1925,7 @@ section.pb-md-5 h2::after {
 }
 
 .about-meta {
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     border-top: 1.5px solid var(--line-soft);
     color: var(--pabasa-blue) !important;
     font-size: 0.7rem;
@@ -1965,7 +1963,7 @@ section.pb-md-5 h2::after {
     border-radius: var(--r-pill) !important;
     box-shadow: 0 4px 14px rgba(255, 214, 57, 0.38) !important;
     color: var(--pabasa-blue-deep) !important;
-    font-family: var(--font-display) !important;
+    font-family: var(--font-family-primary) !important;
     font-weight: 800 !important;
     padding: 0.3rem 1.1rem !important;
 }
@@ -1988,11 +1986,11 @@ body { overflow-x: hidden; }
     background: repeating-linear-gradient(0deg,transparent 0 2rem,rgba(46,168,229,.2) 2rem calc(2rem + 1px));
 }
 .py-4.fade-in-section:first-of-type .modern-hero > * { position:relative; }
-.py-4.fade-in-section:first-of-type h1 { max-width:14ch; font-family:var(--font-display) !important; font-size:clamp(2.2rem,5vw,4.2rem) !important; font-weight:900; line-height:1.04; }
-.pip-research-note { display:flex; width:fit-content; gap:.4rem; margin:.75rem 0 1rem; padding:.55rem .85rem; border:1px dashed rgba(16,70,110,.28); border-radius:.35rem 1rem 1rem; background:var(--pabasa-yellow-soft); color:var(--pabasa-blue-deep); font-family:var(--font-display); font-size:.82rem; font-weight:800; transform:rotate(-1deg); }
+.py-4.fade-in-section:first-of-type h1 { max-width:14ch; font-family:var(--font-family-primary) !important; font-size:clamp(2.2rem,5vw,4.2rem) !important; font-weight:900; line-height:1.04; }
+.pip-research-note { display:flex; width:fit-content; gap:.4rem; margin:.75rem 0 1rem; padding:.55rem .85rem; border:1px dashed rgba(16,70,110,.28); border-radius:.35rem 1rem 1rem; background:var(--pabasa-yellow-soft); color:var(--pabasa-blue-deep); font-family:var(--font-family-primary); font-size:.82rem; font-weight:800; transform:rotate(-1deg); }
 .pip-research-note span { color:var(--pabasa-yellow-deep); }
 #project-origin { padding-top:clamp(3rem,6vw,5rem) !important; }
-#project-origin::before { content:"RESEARCH NOTES  •  CLASSROOM STORIES  •  READING PROGRESS"; display:block; overflow:hidden; margin-bottom:1.4rem; color:rgba(16,70,110,.3); font-family:var(--font-display); font-size:.8rem; font-weight:900; letter-spacing:.16em; white-space:nowrap; }
+#project-origin::before { content:"RESEARCH NOTES  •  CLASSROOM STORIES  •  READING PROGRESS"; display:block; overflow:hidden; margin-bottom:1.4rem; color:rgba(16,70,110,.3); font-family:var(--font-family-primary); font-size:.8rem; font-weight:900; letter-spacing:.16em; white-space:nowrap; }
 .insight-card-image { border-radius:1.35rem !important; box-shadow:0 .8rem 2rem rgba(16,70,110,.1) !important; }
 .insight-card-image:nth-child(2) { transform:translateY(1.15rem); }
 .insight-card-image .card-image-wrapper { aspect-ratio:16/10; min-height:0 !important; }
@@ -2747,7 +2745,7 @@ body { overflow-x: hidden; }
 }
 
 .hero-stamps { display:flex; flex-wrap:wrap; gap:.55rem; margin-top:1.35rem; }
-.hero-stamps span { padding:.38rem .65rem; border:2px solid currentColor; border-radius:.35rem; color:var(--pabasa-blue); font-family:var(--font-display); font-size:.7rem; font-weight:900; letter-spacing:.12em; transform:rotate(-3deg); }
+.hero-stamps span { padding:.38rem .65rem; border:2px solid currentColor; border-radius:.35rem; color:var(--pabasa-blue); font-family:var(--font-family-primary); font-size:.7rem; font-weight:900; letter-spacing:.12em; transform:rotate(-3deg); }
 .hero-stamps span:nth-child(2){color:#9a4dcc;transform:rotate(2deg)}.hero-stamps span:nth-child(3){color:#b77900;transform:rotate(-1deg)}
 
 .about-section-header { max-width:62rem; margin-bottom:1.25rem; }
@@ -3124,7 +3122,7 @@ body::after {
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.94);
     color: var(--about-section-blue);
-    font-family: var(--font-display);
+    font-family: var(--font-family-primary);
     font-size: 0.75rem;
     font-weight: 900;
     line-height: 1;

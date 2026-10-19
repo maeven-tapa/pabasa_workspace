@@ -104,8 +104,8 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    .numbered-progress { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; flex:0 0 auto; margin:12px auto 0; order:999; font-family:BasahinFredoka, Fredoka, Nunito, sans-serif; }
-    .numbered-progress__circle { display:grid; place-items:center; width:32px; height:32px; border:2px solid #dce9e9; border-radius:50%; background:#f5faf9; color:#54727a; font:400 15px/1 BasahinFredoka, Fredoka, Nunito, sans-serif; }
+    .numbered-progress { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; flex:0 0 auto; margin:12px auto 0; order:999; font-family:var(--font-family-primary); }
+    .numbered-progress__circle { display:grid; place-items:center; width:32px; height:32px; border:2px solid #dce9e9; border-radius:50%; background:#f5faf9; color:#54727a; font:400 15px/1 var(--font-family-primary); }
     .numbered-progress__circle.active { border-color:#e9ad38; background:#f6bf4c; color:#77531d; }
     .numbered-progress__circle.is-completed { border-color:#299e9a; background:#299e9a; color:#fff; }
     body.numbered-progress-lesson5 .focus { gap:6px; }

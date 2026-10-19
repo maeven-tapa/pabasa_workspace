@@ -12,7 +12,7 @@
     html, body { width: 100%; min-height: 100%; margin: 0; }
     html { overflow: hidden; }
     body { overflow: hidden; }
-    body { font-family: Nunito, Arial, sans-serif; }
+    body { font-family: var(--font-family-primary); }
     .story-call-page { box-sizing: border-box; width: 100vw; height: 100vh; padding: clamp(10px, 1.8vh, 20px) clamp(10px, 1.8vw, 26px); overflow: hidden; background: radial-gradient(circle at 8% 8%, rgba(255, 188, 214, .34), transparent 24%), radial-gradient(circle at 92% 88%, rgba(185, 231, 247, .48), transparent 28%), #eef8fc; }
     .story-call-shell { box-sizing: border-box; width: 100%; max-width: none; height: 100%; margin: 0; padding: clamp(14px, 2vh, 24px) clamp(18px, 2.8vw, 44px); border: 1px solid rgba(186, 221, 237, .7); border-radius: 30px; background: rgba(255, 253, 249, .96); box-shadow: 0 15px 45px rgba(38, 76, 111, .12); }
     .story-top-back { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; margin-bottom: 12px; padding: 8px 16px; border: 2px solid #c5e5f1; border-radius: 999px; background: #f8fdff; color: #285d82; font-size: .86rem; font-weight: 900; text-decoration: none; box-shadow: 0 4px 0 rgba(176, 215, 231, .45); transition: transform .18s ease, background-color .18s ease, box-shadow .18s ease; }
@@ -67,7 +67,7 @@
     .story-intro-card::before { content: "✦"; top: 18px; left: 28px; transform: rotate(-15deg); }
     .story-intro-card::after { content: "✦"; right: 28px; bottom: 22px; color: #ef8fb2; transform: rotate(18deg); }
     .story-intro-icon { display: grid; place-items: center; width: 82px; height: 82px; margin: 0 auto 16px; border: 5px solid #fff; border-radius: 30px; background: linear-gradient(145deg, #c9f3f5, #fbd0df); color: #176e9a; font-size: 2.35rem; box-shadow: 0 7px 0 #a9dce4, 0 12px 18px rgba(23, 110, 154, .16); transform: rotate(-4deg); }
-    .story-intro-card h2 { margin: 0; color: #234b78; font-family: "Baloo 2", "Nunito", sans-serif; font-size: clamp(1.65rem, 4vw, 2.2rem); font-weight: 900; line-height: 1.05; }
+    .story-intro-card h2 { margin: 0; color: #234b78; font-family: var(--font-family-primary); font-size: clamp(1.65rem, 4vw, 2.2rem); font-weight: 900; line-height: 1.05; }
     .story-intro-card p { margin: 14px auto 24px; max-width: 430px; color: #55728e; font-size: .94rem; font-weight: 700; line-height: 1.35; }
     .story-intro-continue { min-width: 190px; border: 0; border-radius: 999px; background: linear-gradient(135deg, #ff9f6e, #f2769d); color: #fff; font-weight: 900; box-shadow: 0 6px 0 #d65c7f, 0 10px 18px rgba(210, 92, 127, .22); transition: transform .18s ease, box-shadow .18s ease; }
     .story-intro-continue:hover, .story-intro-continue:focus-visible { background: linear-gradient(135deg, #ff8d5a, #eb628e); color: #fff; transform: translateY(-2px); box-shadow: 0 8px 0 #d65c7f, 0 12px 20px rgba(210, 92, 127, .26); }
@@ -80,6 +80,7 @@
     .story-answer-feedback.is-correct { border-color: #a9dfd0; background: #effcf8; color: #23816d; }
     @media (max-width: 650px) { html, body { overflow: auto; } .story-call-page { min-height: 100vh; height: auto; overflow: visible; padding: 10px; } .story-call-shell { height: auto; padding: 20px 14px; border-radius: 22px; } .story-call-heading { align-items: flex-start; flex-direction: column; } .story-header-meta { width: 100%; justify-content: space-between; } .story-video { height: 500px; } .maya { left: 50%; bottom: 35px; width: 66%; transform: translateX(-50%); } .story-bubble { top: 26px; right: 7%; width: 86%; padding: 17px 20px; font-size: 1.08rem; transform: none; } .story-bubble::before { top: auto; right: 42%; bottom: -18px; left: auto; border-width: 19px 12px 0; border-color: #fff transparent transparent; } .answer-area { padding: 16px 20px; } .story-actions { margin-top: 18px; } }
 </style>
+{% include "pabasa_app/includes/typography.html" %}
 </head>
 <body>
 

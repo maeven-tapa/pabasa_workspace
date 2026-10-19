@@ -4,7 +4,7 @@
 .g4-stroke-guide::before{content:attr(data-letter);display:block;color:#183e63;font-size:clamp(2.2rem,4vw,3.5rem);font-weight:900;line-height:.85;margin-bottom:2px}
 .g4-stroke-guide h2{margin:0 0 4px;color:#187b7a;font-size:clamp(.8rem,1.4vw,1rem);font-weight:900;letter-spacing:.06em;text-transform:uppercase}
 .g4-stroke-guide .guide-letter{width:100%;height:clamp(120px,18vh,170px)}
-.g4-stroke-guide .guide-number{font:900 18px Fredoka,Nunito,"Segoe UI",sans-serif;fill:#df8b2d}
+.g4-stroke-guide .guide-number{font:900 18px var(--font-family-primary);fill:#df8b2d}
 .g4-stroke-guide .guide-stroke{fill:none;stroke:#df8b2d;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#g4-guide-arrow)}
 .g4-stroke-guide p{margin:3px 0 0;color:#55727e;font-size:.78rem;font-weight:700;text-align:center;line-height:1.15}
 @media(max-width:600px){.g4-writing-layout{gap:8px}.g4-stroke-guide{min-width:92px;padding:8px 5px;border-width:2px;border-radius:18px}.g4-stroke-guide h2{font-size:.68rem}.g4-stroke-guide .guide-letter{height:120px}.g4-stroke-guide p{font-size:.65rem}.g4-writing-layout .g4-board{flex-basis:78%}}

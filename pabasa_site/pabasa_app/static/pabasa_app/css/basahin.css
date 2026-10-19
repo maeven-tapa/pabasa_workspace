@@ -1,9 +1,5 @@
 /* Shared Basahin button. Layout containers remain owned by each activity. */
-@font-face {
-  font-family: BasahinFredoka;
-  src: url('../font/fredoka-one.one-regular.ttf') format('truetype');
-  font-display: swap;
-}
+
 :root body button[data-basahin-button] {
   --basahin-teal: #299e9a;
   --basahin-shadow: #187b7a;
@@ -20,7 +16,7 @@
   border-radius: 999px !important;
   background: var(--basahin-teal) !important;
   color: #fff !important;
-  font: 400 clamp(1.1rem, 1.8vw, 1.45rem)/1.25 BasahinFredoka, Nunito, 'Segoe UI', sans-serif !important;
+  font: 400 clamp(1.1rem, 1.8vw, 1.45rem)/1.25 Basahinvar(--font-family-primary) !important;
   box-shadow: 0 7px 0 var(--basahin-shadow), 0 10px 20px #187b7a40 !important;
   cursor: pointer;
   transition: transform .16s ease, filter .16s ease, box-shadow .16s ease !important;
@@ -40,7 +36,7 @@
   border-radius: 999px !important;
   background: #fffffff0 !important;
   color: #187b7a !important;
-  font: 400 clamp(1.1rem, 1.8vw, 1.45rem)/1.25 BasahinFredoka, Nunito, 'Segoe UI', sans-serif !important;
+  font: 400 clamp(1.1rem, 1.8vw, 1.45rem)/1.25 Basahinvar(--font-family-primary) !important;
   box-shadow: 0 6px 0 #b7d6dc, 0 10px 20px #187b7a20 !important;
   cursor: pointer;
   transition: transform .16s ease, filter .16s ease, box-shadow .16s ease !important;

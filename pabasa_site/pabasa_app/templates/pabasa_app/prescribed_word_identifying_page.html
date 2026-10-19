@@ -6,7 +6,7 @@
   <title>Word Identifying | PABASA</title>
   <style>
     :root{--ink:#16465d;--blue:#197b99;--muted:#5b7680;--line:#d6e7e8;--good:#2b9b63;--bad:#c85555;--gold:#efbd4d}
-    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#f3faf8;color:var(--ink);font-family:Nunito,"Segoe UI",sans-serif}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#f3faf8;color:var(--ink);font-family:var(--font-family-primary)}
     .page{width:min(920px,calc(100% - 28px));margin:auto;padding:24px 0}.back{color:var(--ink);font-weight:900;text-decoration:none}
     .card{margin-top:20px;border:1px solid var(--line);border-radius:24px;background:#fff;padding:clamp(22px,4vw,48px);box-shadow:0 18px 45px #24545d18}
     .eyebrow{color:#42768a;font-size:.82rem;font-weight:900;letter-spacing:.14em}.title{font-size:clamp(2.2rem,5vw,3.6rem);margin:.3rem 0}.instruction{color:var(--muted);font-size:1.1rem;font-weight:750}
@@ -17,6 +17,7 @@
     .status{min-height:30px;color:var(--muted);font-size:1rem;font-weight:800;text-align:center}.status.good{color:var(--good)}.status.bad{color:var(--bad)}.done{padding:48px;text-align:center;color:var(--good);font-size:1.5rem;font-weight:900}
     @media(max-width:480px){.card{padding:18px}.word-row{gap:6px;grid-template-columns:34px repeat(2,minmax(0,1fr));padding:8px}.word-option{font-size:1.25rem}}
   </style>
+{% include "pabasa_app/includes/typography.html" %}
 </head>
 <body>
   <main class="page">

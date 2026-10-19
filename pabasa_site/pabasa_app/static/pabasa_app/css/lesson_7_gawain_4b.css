@@ -1,8 +1,4 @@
-@font-face {
-  font-family: Fredoka;
-  src: url('../font/fredoka-one.one-regular.ttf') format('truetype');
-  font-display: swap;
-}
+
 
 .lesson7-gawain4b-page {
   min-height: 100vh;
@@ -10,7 +6,7 @@
   padding: 16px clamp(16px, 4vw, 42px) 22px;
   overflow: hidden;
   color: #183e63;
-  font-family: Fredoka, Nunito, "Segoe UI", sans-serif;
+  font-family: var(--font-family-primary);
   background: url('../prescribed/PRESCRIBED-BG.jpg') center / cover no-repeat;
 }
 

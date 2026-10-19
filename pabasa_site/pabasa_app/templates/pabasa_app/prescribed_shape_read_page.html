@@ -8,7 +8,7 @@
   <title>Gawain 4B</title>
   <style>
     html,body{height:100%;margin:0;overflow:hidden}
-    body{background:#e1f5f7;color:#16465d;font-family:Nunito,"Segoe UI",sans-serif}
+    body{background:#e1f5f7;color:#16465d;font-family:var(--font-family-primary)}
     .page{padding:10px}
     .back{padding:8px;background:#fff;border:2px solid #bfdde4;border-radius:12px;color:#16465d;font-weight:900;text-decoration:none}
     .card{height:calc(100dvh - 70px);max-width:980px;margin:8px auto;background:#fffdf7;border-radius:24px;padding:12px;box-sizing:border-box;text-align:center;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center}
@@ -47,6 +47,7 @@
       body.lesson7-gawain4b-page:has(.done) .done a{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:min(330px,100%)!important;min-width:0!important;min-height:58px!important;padding:14px 28px!important;border-radius:999px!important;background:#299e9a!important;color:#fff!important;font-size:1.15rem!important;font-weight:900!important;line-height:1.2!important;text-decoration:none!important;box-shadow:0 7px #187b7a!important;pointer-events:auto!important;position:relative!important;z-index:3!important}
     </style>
   {% endif %}
+{% include "pabasa_app/includes/typography.html" %}
 </head>
 <body class="{% if shape_read_activity_data.activity_key == 'lesson7-gawain4b' %}lesson7-gawain4b-page{% endif %}">
   <main class="page">

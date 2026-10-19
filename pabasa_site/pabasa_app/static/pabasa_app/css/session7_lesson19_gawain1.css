@@ -150,7 +150,7 @@ body.session7-g1-page .button {
   width: min(650px, 100%);
   min-height: 62px;
   margin: 12px auto 6px;
-  font-family: Fredoka, Nunito, "Segoe UI", sans-serif;
+  font-family: var(--font-family-primary);
   font-weight: 900;
 }
 
@@ -158,7 +158,7 @@ body.session7-g1-page .choices { margin: 10px auto 4px; }
 body.session7-g1-page .choice {
   width: clamp(82px, 10vw, 104px);
   min-height: clamp(82px, 10vw, 104px);
-  font-family: Fredoka, Nunito, "Segoe UI", sans-serif;
+  font-family: var(--font-family-primary);
 }
 
 body.session7-g1-page .intro-example {

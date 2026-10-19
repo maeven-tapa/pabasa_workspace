@@ -452,7 +452,7 @@
 .paper-aral__writing-row span {
     margin-left: 14%;
     color: rgba(43,131,189,.45);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: var(--font-family-primary);
     font-size: clamp(2.4rem, 5vw, 3.7rem);
     font-weight: 700;
     line-height: 1;

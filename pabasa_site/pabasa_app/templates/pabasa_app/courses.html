@@ -26,18 +26,9 @@
 (()=>{document.addEventListener('DOMContentLoaded',()=>{const p=document.getElementById('prescribedActivityPicker'),s=document.getElementById('prescribed-lesson-14-activities');if(!p||!s)return;const a=JSON.parse(s.textContent||'[]').find(x=>x.activity_key==='lesson-14-gawain-1');if(!a)return;const o=document.createElement('button');o.type='button';o.className='prescribed-activity-option';o.dataset.prescribedActivity=a.activity_key;o.innerHTML=`<span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">1</span><span><strong>Lesson 14 · Gawain 1</strong><br><span class="small text-muted">${a.title}</span></span></span><span class="prescribed-activity-option__overlay">Preview</span>`;const v=document.createElement('div');v.className='prescribed-activity-preview';v.id='lesson14Gawain1Preview';v.innerHTML=`<div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview">×</button><div class="small text-uppercase text-muted fw-semibold">Session 5 · Lesson 14 · Gawain 1</div><h5>${a.title}</h5><p class="mb-0 text-muted">${a.instruction}</p></div><div class="lesson13-preview"><p class="lesson13-meta">Session 5 · Lesson 14 · Gawain 1</p><h1 class="lesson13-title">${a.title}</h1><p class="lesson13-competencies"><strong>Competencies:</strong> ${a.competencies.join(', ')}</p><p class="lesson13-instruction">${a.instruction}</p><div class="lesson13-words-preview">${a.items.map(i=>`<div class="lesson13-word-column"><div class="lesson13-word">${i.prompt} (${i.word}) → ${i.answer}</div></div>`).join('')}</div></div>`;p.append(o,v);o.onclick=()=>{p.querySelectorAll('[data-prescribed-activity]').forEach(x=>x.classList.toggle('is-selected',x===o));document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(x=>x.classList.remove('is-maximized'));v.classList.add('is-maximized')};v.querySelector('.prescribed-preview-close').onclick=()=>v.classList.remove('is-maximized')});})();
 </script>
 <style>
-    @font-face {
-        font-family: 'Righteous';
-        src: url('{% static "pabasa_app/font/Righteous-Regular.ttf" %}') format('truetype');
-    }
 
-    @font-face {
-        font-family: 'Super Bubble';
-        src: url('{% static "pabasa_app/font/Super Bubble.ttf" %}') format('truetype');
-        font-weight: 400;
-        font-style: normal;
-        font-display: swap;
-    }
+
+
 
     :root {
         --dash-primary: #1f6f8b;
@@ -72,7 +63,7 @@
     }
 
     .dashboard-topbar h1 {
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 1.25rem;
         font-weight: 900;
         line-height: 1.2;
@@ -80,7 +71,7 @@
     }
     
     body.dark-theme {
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 1.35rem;
         font-weight: 900;
         line-height: 1.15;
@@ -90,7 +81,7 @@
 
     .class-card-full .class-description {
         color: var(--dash-ink-soft);
-        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.95rem;
         line-height: 1.55;
         margin: 0;
@@ -112,7 +103,7 @@
     }
 
     .class-stat strong {
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         display: block;
         font-size: 1.15rem;
         font-weight: 900;
@@ -121,7 +112,7 @@
 
     .class-stat span {
         color: var(--dash-muted);
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         display: block;
         font-size: 0.7rem;
         font-weight: 700;
@@ -331,7 +322,7 @@
 
     .course-card-title {
         color: var(--dash-ink);
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 1.33rem;
         font-weight: 900;
         line-height: 1.18;
@@ -467,7 +458,7 @@
     }
 
     .course-card-footer .ccf-label {
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-weight: 800;
         color: var(--dash-ink);
         font-size: 0.98rem;
@@ -858,7 +849,7 @@
 
     #createCourseModal .modal-title {
         color: #10466E;
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 1.08rem;
         font-weight: 900;
         letter-spacing: 0;
@@ -868,7 +859,7 @@
     #createCourseModal .modal-body,
     #createCourseModal .course-sidebar,
     #createCourseModal .course-tab-content {
-        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         line-height: 1.5;
     }
 
@@ -881,7 +872,7 @@
 
     .course-sidebar strong {
         color: #10466E;
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         display: block;
         font-size: 0.84rem;
         font-weight: 900;
@@ -904,7 +895,7 @@
 
     #createCourseModal .form-label {
         color: var(--dash-ink);
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.84rem;
         font-weight: 900;
         letter-spacing: 0.06em;
@@ -913,7 +904,7 @@
     }
 
     #createCourseModal .form-control {
-        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.96rem;
         border-color: rgba(31, 111, 139, 0.16);
         border-radius: 12px;
@@ -981,7 +972,7 @@
 
     .course-sections-list .form-check-label {
         color: var(--dash-ink);
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         cursor: pointer;
         font-size: 0.95rem;
         font-weight: 800;
@@ -1007,7 +998,7 @@
     #createCourseModal .modal-footer .btn-secondary {
         background: #eef2f7;
         border: 1px solid rgba(100, 116, 139, 0.3);
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-weight: 800;
         color: #334155;
     }
@@ -1019,7 +1010,7 @@
     }
 
     #createCourseModal .modal-footer .btn-primary {
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-weight: 900;
         letter-spacing: 0;
         box-shadow: 0 10px 24px rgba(16, 70, 110, 0.18);
@@ -1077,7 +1068,7 @@
 
     #deleteConfirmModal .system-modal-icon,
     #deleteConfirmModal .modal-title {
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
     }
 
     #deleteConfirmModal .modal-title {
@@ -1090,13 +1081,13 @@
 
     #deleteConfirmModal #deleteConfirmText {
         color: var(--dash-ink-soft);
-        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.98rem;
         line-height: 1.55;
     }
 
     #deleteConfirmModal .modal-footer .btn {
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.95rem;
         font-weight: 800;
         letter-spacing: 0;
@@ -1827,7 +1818,7 @@
         border-radius: 20px;
         color: #475569;
         display: flex;
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.95rem;
         font-weight: 800;
         letter-spacing: 0.01em;
@@ -1850,7 +1841,7 @@
         color: #0f172a;
         display: inline-flex;
         gap: 0.5rem;
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.82rem;
         font-weight: 800;
         letter-spacing: 0.01em;
@@ -1874,7 +1865,7 @@
     }
 
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .modal-header h4 {
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 1.5rem !important;
         font-weight: 900 !important;
         letter-spacing: -0.03em !important;
@@ -1882,14 +1873,14 @@
     }
 
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .modal-header .text-muted {
-        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.98rem !important;
         line-height: 1.5 !important;
     }
 
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .teacher-field .form-label,
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .form-label {
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.92rem;
         font-weight: 800;
         letter-spacing: 0.01em;
@@ -1898,7 +1889,7 @@
 
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .form-control,
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .form-select {
-        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.98rem;
         line-height: 1.45;
     }
@@ -1906,7 +1897,7 @@
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] #materialType,
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] #materialTitle,
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] #itemInput {
-        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.96rem;
         font-weight: 700;
         letter-spacing: 0;
@@ -1915,7 +1906,7 @@
 
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] #materialTitle::placeholder,
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] #itemInput::placeholder {
-        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-weight: 400;
         opacity: 0.72;
     }
@@ -1964,7 +1955,7 @@
 
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-value {
         color: var(--dash-text);
-        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.96rem;
         font-weight: 700;
         line-height: 1.25;
@@ -2063,7 +2054,7 @@
 
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-option-title {
         color: inherit;
-        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.92rem;
         font-weight: 700;
         line-height: 1.25;
@@ -2102,7 +2093,7 @@
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .modal-footer .btn-link,
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .modal-footer .btn-primary,
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] #addItemBtn {
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-weight: 800;
         letter-spacing: 0.01em;
     }
@@ -2207,7 +2198,7 @@
         border: 1px solid rgba(27,26,23,0.06);
         border-radius: 12px;
         color: var(--dash-ink);
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.92rem;
         font-weight: 800;
         letter-spacing: 0;
@@ -2816,7 +2807,7 @@
 
     .template-landing-hero h5 {
         color: var(--dash-ink);
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 1.15rem;
         font-weight: 900;
         margin: 0 0 0.25rem;
@@ -2873,7 +2864,7 @@
         border-radius: 999px;
         color: var(--dash-primary-deep);
         display: inline-flex;
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.72rem;
         font-weight: 900;
         letter-spacing: 0.08em;
@@ -2883,7 +2874,7 @@
 
     #templateActivityGrid .template-card-title {
         color: var(--dash-ink);
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 1.08rem;
         font-weight: 900;
         line-height: 1.25;
@@ -2892,7 +2883,7 @@
 
     #templateActivityGrid .template-card-lesson {
         color: var(--dash-primary-deep);
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.8rem;
         font-weight: 800;
         letter-spacing: 0.04em;
@@ -2902,7 +2893,7 @@
     #templateActivityGrid .template-card-description {
         color: var(--dash-ink-soft);
         flex: 1 1 auto;
-        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.95rem;
         line-height: 1.55;
         margin: 0;
@@ -6694,7 +6685,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     .course-floating-action .btn {
         border-radius: 999px;
         box-shadow: 0 14px 28px rgba(15, 78, 100, 0.14);
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.92rem;
         font-weight: 900;
         min-height: 46px;
@@ -6767,7 +6758,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
     .course-assessment-overview-title {
         color: var(--dash-ink);
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 1.08rem;
         font-weight: 900;
         line-height: 1.3;
@@ -6829,7 +6820,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
     .story-response-student-name {
         color: var(--dash-ink);
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: .98rem;
         font-weight: 800;
         line-height: 1.25;
@@ -6962,7 +6953,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         padding: clamp(1rem, 2vw, 1.5rem);
         color: #fff;
         background: #182f64 url("{% static 'pabasa_app/images/story_response/bg.jpg' %}") center / cover no-repeat;
-        font-family: "Righteous", "Nunito", sans-serif;
+        font-family: var(--font-family-primary);
     }
     .story-response-preview::before {
         content: "";
@@ -6982,25 +6973,25 @@ document.addEventListener('DOMContentLoaded',()=>{
     .story-response-preview-tv-frame { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
     .story-response-preview-screen { position: absolute; z-index: 1; left: 14%; top: 20%; width: 61%; height: 54%; display: grid; place-items: end center; overflow: hidden; border-radius: 9% 8% 10% 9%; background: radial-gradient(circle at 50% 20%, #6dc0df, #183f67 62%, #10253f); }
     .story-response-preview-host { width: auto; height: 115%; max-width: 108%; transform: translateY(5%); object-fit: contain; filter: drop-shadow(0 5px 4px #0008); }
-    .story-response-preview-live { position: absolute; z-index: 3; top: 12%; left: 17%; padding: 3px 6px; border-radius: 4px; background: #df3f44; color: #fff; font: .55rem/1 "Righteous", sans-serif; letter-spacing: .08em; }
-    .story-response-preview-host-label { position: absolute; z-index: 3; bottom: 24%; left: 20%; padding: 3px 6px; background: #182a45e8; color: #fff; font: .55rem/1 "Righteous", sans-serif; letter-spacing: .08em; }
+    .story-response-preview-live { position: absolute; z-index: 3; top: 12%; left: 17%; padding: 3px 6px; border-radius: 4px; background: #df3f44; color: #fff; font: .55rem/1 "Righteous", var(--font-family-primary); letter-spacing: .08em; }
+    .story-response-preview-host-label { position: absolute; z-index: 3; bottom: 24%; left: 20%; padding: 3px 6px; background: #182a45e8; color: #fff; font: .55rem/1 "Righteous", var(--font-family-primary); letter-spacing: .08em; }
     .story-response-preview-bubble { position: relative; display: flex; min-width: 0; width: min(100%, 290px); aspect-ratio: 1; align-items: center; justify-content: center; padding: 20% 11% 28%; justify-self: center; overflow: hidden; background: url("{% static 'pabasa_app/images/story_response/bubble4.png' %}") center / contain no-repeat; filter: drop-shadow(0 10px 12px rgba(6,19,49,.24)); }
     .story-response-preview-copy { width: 100%; color: #1e3550; text-align: center; }
-    .story-response-preview-label { margin: 0 0 .35rem; color: #42709b; font: .62rem/1.2 "Righteous", sans-serif; letter-spacing: .1em; }
+    .story-response-preview-label { margin: 0 0 .35rem; color: #42709b; font: .62rem/1.2 "Righteous", var(--font-family-primary); letter-spacing: .1em; }
     .story-response-preview-prompt { margin: 0; font-size: clamp(.75rem, 1.5vw, 1rem); line-height: 1.25; }
     .story-response-preview-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: .45rem; margin-top: .85rem; }
-    .story-response-preview-controls button { min-height: 34px; padding: .35rem .55rem; border: 1px solid #c8983d; border-bottom-width: 3px; border-radius: 10px; box-shadow: 0 5px 10px rgba(48,21,40,.2); font: .68rem/1.2 "Righteous", sans-serif; }
+    .story-response-preview-controls button { min-height: 34px; padding: .35rem .55rem; border: 1px solid #c8983d; border-bottom-width: 3px; border-radius: 10px; box-shadow: 0 5px 10px rgba(48,21,40,.2); font: .68rem/1.2 "Righteous", var(--font-family-primary); }
     .story-response-preview-hear { background: #fff4ca; color: #554e52; }
     .story-response-preview-record { background: #e94f52; border-color: #9f3439 !important; color: #fff; }
     .story-response-preview-status { margin-top: .65rem; color: #753f55; font-size: .7rem; text-align: center; }
-    .story-response-preview-complete { margin-top: .55rem; color: #16704a; font: .68rem/1.2 "Nunito", sans-serif; font-weight: 800; text-align: center; }
+    .story-response-preview-complete { margin-top: .55rem; color: #16704a; font: .68rem/1.2 var(--font-family-primary); font-weight: 800; text-align: center; }
     @media (max-width: 700px) {
         .story-response-preview-stage { grid-template-columns: 1fr; gap: .25rem; }
         .story-response-preview-tv { width: min(280px, 85vw); }
         .story-response-preview-bubble { width: min(300px, 88vw); }
     }
 
-    .template-learner-preview { overflow: hidden; border-radius: 22px; font-family: "Nunito", "Segoe UI", sans-serif; }
+    .template-learner-preview { overflow: hidden; border-radius: 22px; font-family: var(--font-family-primary); }
     .template-learner-preview button { pointer-events: none; }
     .template-learner-preview-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .72rem .9rem; font-weight: 900; }
     .template-learner-preview-progress { min-width: 100px; color: #5f645f; font-size: .68rem; text-align: right; }
@@ -7044,7 +7035,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     .phrase-learner-preview-paper strong { display: block; margin-bottom: .45rem; color: #16786f; font-size: 1.2rem; }
     .phrase-learner-preview-controls { display: flex; justify-content: center; gap: .45rem; margin-top: .7rem; }
     .phrase-learner-preview-controls span { padding: .4rem .65rem; border: 2px solid #16786f; border-radius: 10px; background: #fff; font-size: .72rem; font-weight: 900; }
-    .phrase-learner-preview-board::before { content: "You have magical mail!"; grid-column: 1 / -1; color: #684f70; font: 900 1.15rem/1.1 "Patrick Hand", cursive; text-align: center; }
+    .phrase-learner-preview-board::before { content: "You have magical mail!"; grid-column: 1 / -1; color: #684f70; font: 900 1.15rem/1.1 "Patrick Hand", var(--font-family-primary); text-align: center; }
     .phrase-learner-preview-envelope { position: relative; min-height: 0; aspect-ratio: 1.52; padding: 0; border: 0; border-radius: 10px; background: transparent; box-shadow: 0 5px 0 #d39b3d; color: #126c65; font-size: 1.25rem; overflow: visible; cursor: pointer; }
     .phrase-learner-preview-envelope span { position: absolute; inset: 0; display: block; border-radius: 10px; pointer-events: none; }
     .phrase-learner-preview-envelope-back { background: linear-gradient(145deg,#fff4d9,#f0cfae); border: 2px solid rgba(147,96,91,.18); }
@@ -7075,7 +7066,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     @media (max-width: 620px) { .blend-learner-preview-discovery, .story-reading-learner-preview-scene { grid-template-columns: 1fr; } .phrase-learner-preview-board { grid-template-columns: repeat(3, 1fr); } }
     .story-reading-preview-stage .activity-preview-title,
     .story-reading-preview-stage .activity-preview-instruction { display: none; }
-    .storybook-learner-preview { position: relative; display: grid; grid-template-rows: auto minmax(0,1fr) auto; min-height: 390px; overflow: hidden; padding: .8rem; color: #193f49; background: radial-gradient(ellipse at 15% 13%,rgba(255,255,255,.72) 0 8%,transparent 8.4%), linear-gradient(155deg,#edf8f6 0,#dcefee 48%,#c4e0df 100%); font-family: "Nunito", sans-serif; }
+    .storybook-learner-preview { position: relative; display: grid; grid-template-rows: auto minmax(0,1fr) auto; min-height: 390px; overflow: hidden; padding: .8rem; color: #193f49; background: radial-gradient(ellipse at 15% 13%,rgba(255,255,255,.72) 0 8%,transparent 8.4%), linear-gradient(155deg,#edf8f6 0,#dcefee 48%,#c4e0df 100%); font-family: var(--font-family-primary); }
     .storybook-learner-preview::after { content: ""; position: absolute; z-index: 0; left: -5%; right: -5%; bottom: -8%; height: 28%; border-radius: 50% 50% 0 0; background: linear-gradient(180deg,#b9d58e,#91be78); pointer-events: none; }
     .storybook-learner-header { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: .5rem; min-height: 38px; }
     .storybook-learner-exit { justify-self: start; padding: .35rem .6rem; border: 1px solid rgba(16,93,103,.17); border-radius: 999px; background: rgba(255,255,255,.55); color: #105d67; font-size: .62rem; font-weight: 900; }
@@ -7092,7 +7083,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     .storybook-learner-controls span { display: inline-flex; align-items: center; justify-content: center; min-height: 31px; padding: .35rem .6rem; border-radius: 999px; font-size: .62rem; font-weight: 900; }
     .storybook-learner-controls span:first-child { background: #16786f; color: #fff; }
     .storybook-learner-controls span:last-child { border: 1px solid rgba(16,93,103,.2); background: rgba(255,255,255,.72); color: #105d67; }
-    .story-live-learner-preview { position: relative; display: flex; min-height: 390px; flex-direction: column; gap: .55rem; overflow: hidden; padding: .7rem; background: radial-gradient(circle at 18% 0%,#19314c 0,transparent 32%), linear-gradient(145deg,#090e18,#101b2a 58%,#0a111d); color: #edf6ff; font-family: "Nunito", sans-serif; }
+    .story-live-learner-preview { position: relative; display: flex; min-height: 390px; flex-direction: column; gap: .55rem; overflow: hidden; padding: .7rem; background: radial-gradient(circle at 18% 0%,#19314c 0,transparent 32%), linear-gradient(145deg,#090e18,#101b2a 58%,#0a111d); color: #edf6ff; font-family: var(--font-family-primary); }
     .story-live-learner-header { display: flex; align-items: center; gap: .45rem; min-height: 34px; padding: .35rem .5rem; border: 1px solid rgba(151,205,240,.18); border-radius: 9px; background: rgba(13,24,39,.88); font-size: .7rem; }
     .story-live-learner-logo { width: 22px; height: 22px; object-fit: contain; }
     .story-live-learner-brand { color: #f4f9ff; font-weight: 900; white-space: nowrap; }
@@ -7120,7 +7111,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         background: #f4f9fc;
         border-bottom: 1px solid rgba(31, 111, 139, 0.14);
         color: var(--dash-primary-deep);
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.72rem;
         font-weight: 900;
         letter-spacing: 0.08em;
@@ -7149,7 +7140,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
     .course-assessment-results-table td:first-child strong {
         color: var(--dash-ink);
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: 0.95rem;
     }
 
@@ -7281,7 +7272,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
     .single-class-card:hover .single-class-details::after { border-color: rgba(31,111,139,0.16); transform: translateY(-50%) rotate(2deg); }
     .single-class-literacy-motif { height: 100%; inset: 0; overflow: hidden; pointer-events: none; position: absolute; }
-    .single-class-literacy-motif span { color: rgba(31,111,139,0.1); font-family: "Nunito", sans-serif; font-weight: 900; position: absolute; }
+    .single-class-literacy-motif span { color: rgba(31,111,139,0.1); font-family: var(--font-family-primary); font-weight: 900; position: absolute; }
     .single-class-literacy-motif span:nth-child(1) { font-size: 1rem; right: 7.6rem; top: 1.15rem; transform: rotate(-9deg); }
     .single-class-literacy-motif span:nth-child(2) { bottom: 1rem; font-size: 1.3rem; right: 2rem; transform: rotate(8deg); }
     .single-class-literacy-motif span:nth-child(3) { background: rgba(245,184,0,0.24); border-radius: 50%; height: 7px; right: 6.7rem; top: 2.8rem; width: 7px; }
@@ -7289,7 +7280,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     .single-class-eyebrow { color: var(--dash-primary); font-size: 0.7rem; font-weight: 900; letter-spacing: 0.12em; margin: 0 0 0.55rem; text-transform: uppercase; }
     .single-class-title {
         color: var(--dash-ink);
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: var(--font-family-primary);
         font-size: clamp(1.55rem, 2.6vw, 2.1rem);
         font-weight: 900;
         line-height: 1.12;
@@ -7987,7 +7978,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 }
 #addMaterialModal .modal-header { padding: 1.25rem 1.5rem; border-bottom: none; background: transparent; }
 #addMaterialModal .modal-header h4 {
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 1.35rem;
     font-weight: 900;
     line-height: 1.15;
@@ -7996,7 +7987,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     margin: 0;
 }
 #addMaterialModal .modal-header .text-muted {
-    font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 0.92rem;
     line-height: 1.45;
     color: #64748b !important;
@@ -8184,24 +8175,24 @@ document.addEventListener('DOMContentLoaded',()=>{
 .template-builder-shell { gap: 1.4rem; }
 .template-back-button {
     align-items: center; align-self: flex-start; background: transparent; border: 0; border-radius: 9px;
-    color: var(--activity-brand-deep); display: inline-flex; font: 800 .86rem/1 "Nunito", "Segoe UI", sans-serif;
+    color: var(--activity-brand-deep); display: inline-flex; font: 800 .86rem/1 var(--font-family-primary);
     margin: -.3rem 0 0 -.45rem; min-height: 40px; padding: .55rem .65rem; transition: background-color .16s ease, color .16s ease;
 }
 .template-back-button:hover { background: var(--activity-brand-soft); color: var(--activity-brand); }
 .template-back-button:focus-visible,
 .template-builder-panel :is(button, input, select, textarea):focus-visible { outline: 3px solid rgba(31,111,139,.24); outline-offset: 2px; }
 .template-builder-header { align-items: center; border-bottom: 1px solid var(--activity-border); padding-bottom: 1.3rem; }
-.template-builder-eyebrow { color: var(--activity-brand); display: block; font: 900 .72rem/1.2 "Nunito", sans-serif; letter-spacing: .1em; margin-bottom: .4rem; text-transform: uppercase; }
-.template-builder-heading h5 { color: var(--activity-ink); font: 900 clamp(1.35rem, 3vw, 1.7rem)/1.15 "Nunito", sans-serif; letter-spacing: -.025em; margin: 0; }
-.template-builder-heading p { color: var(--activity-muted); font: 400 .94rem/1.5 "Quattrocento Sans", "Segoe UI", sans-serif; margin: .45rem 0 0; max-width: 620px; }
+.template-builder-eyebrow { color: var(--activity-brand); display: block; font: 900 .72rem/1.2 var(--font-family-primary); letter-spacing: .1em; margin-bottom: .4rem; text-transform: uppercase; }
+.template-builder-heading h5 { color: var(--activity-ink); font: 900 clamp(1.35rem, 3vw, 1.7rem)/1.15 var(--font-family-primary); letter-spacing: -.025em; margin: 0; }
+.template-builder-heading p { color: var(--activity-muted); font: 400 .94rem/1.5 var(--font-family-primary); margin: .45rem 0 0; max-width: 620px; }
 .template-builder-lesson-pill { background: var(--activity-brand-soft); border-color: #cce3e9; border-radius: 9px; color: var(--activity-brand-deep); font-size: .8rem; padding: .5rem .7rem; }
 .template-builder-form { gap: 0; }
 #templateDynamicFields .five-w-row { min-width: 0; }
-#templateDynamicFields .five-w-indicator { color: var(--activity-brand-deep); font: 900 1rem/1.2 "Nunito", sans-serif; }
+#templateDynamicFields .five-w-indicator { color: var(--activity-brand-deep); font: 900 1rem/1.2 var(--font-family-primary); }
 #templateDynamicFields .five-w-question-wrap,
 #templateDynamicFields .five-w-answer-wrap { min-width: 0; }
 #templateDynamicFields .five-w-question-wrap > label,
-#templateDynamicFields .five-w-answer-wrap > label { color: var(--activity-muted); display: block; font: 800 .72rem/1.2 "Nunito", sans-serif; letter-spacing: .05em; margin-bottom: .35rem; text-transform: uppercase; }
+#templateDynamicFields .five-w-answer-wrap > label { color: var(--activity-muted); display: block; font: 800 .72rem/1.2 var(--font-family-primary); letter-spacing: .05em; margin-bottom: .35rem; text-transform: uppercase; }
 #templateDynamicFields .five-w-answer-chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .45rem; min-height: 0; width: 100%; }
 #templateDynamicFields .five-w-answer-chip { align-items: center; background: var(--activity-brand-soft); border: 1px solid #c7e2e8; border-radius: 999px; color: var(--activity-brand-deep); display: inline-flex; gap: .35rem; max-width: 100%; padding: .35rem .55rem .35rem .7rem; white-space: normal; overflow-wrap: anywhere; }
 #templateDynamicFields .five-w-answer-chip .btn-close { flex: 0 0 auto; font-size: .55rem; }
@@ -8214,16 +8205,16 @@ document.addEventListener('DOMContentLoaded',()=>{
 }
 .template-builder-section { background: transparent; border: 0; border-bottom: 1px solid var(--activity-border); border-radius: 0; padding: 1.5rem 0; }
 .template-section-heading { align-items: flex-start; display: flex; gap: .8rem; margin-bottom: 1rem; }
-.template-section-index { align-items: center; background: var(--activity-brand-soft); border-radius: 8px; color: var(--activity-brand); display: inline-flex; flex: 0 0 34px; font: 900 .72rem/1 "Nunito", sans-serif; height: 30px; justify-content: center; letter-spacing: .05em; }
-.template-section-heading h6 { color: var(--activity-ink); font: 900 1rem/1.25 "Nunito", sans-serif; margin: 0; }
-.template-section-heading p { color: var(--activity-muted); font: 400 .86rem/1.45 "Quattrocento Sans", sans-serif; margin: .25rem 0 0; }
+.template-section-index { align-items: center; background: var(--activity-brand-soft); border-radius: 8px; color: var(--activity-brand); display: inline-flex; flex: 0 0 34px; font: 900 .72rem/1 var(--font-family-primary); height: 30px; justify-content: center; letter-spacing: .05em; }
+.template-section-heading h6 { color: var(--activity-ink); font: 900 1rem/1.25 var(--font-family-primary); margin: 0; }
+.template-section-heading p { color: var(--activity-muted); font: 400 .86rem/1.45 var(--font-family-primary); margin: .25rem 0 0; }
 .template-required { color: var(--activity-danger); }
 .template-information-grid { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1.6fr) minmax(210px, .7fr); }
 .template-information-grid.is-syllable-blending { grid-template-columns: minmax(0, 1fr); }
-.template-builder-panel .form-label { color: #334155 !important; font: 800 .86rem/1.3 "Nunito", sans-serif !important; margin-bottom: .42rem; }
+.template-builder-panel .form-label { color: #334155 !important; font: 800 .86rem/1.3 var(--font-family-primary) !important; margin-bottom: .42rem; }
 .template-builder-panel :is(.form-control, .form-select) {
     background-color: #fff; border: 1px solid #cbd8de !important; border-radius: 10px !important; box-shadow: none !important;
-    color: var(--activity-ink); font: 600 .95rem/1.4 "Quattrocento Sans", sans-serif; min-height: 44px; padding: .65rem .8rem !important;
+    color: var(--activity-ink); font: 600 .95rem/1.4 var(--font-family-primary); min-height: 44px; padding: .65rem .8rem !important;
     transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
 }
 .template-builder-panel textarea.form-control { min-height: 112px; resize: vertical; }
@@ -8232,20 +8223,20 @@ document.addEventListener('DOMContentLoaded',()=>{
 .template-builder-panel :is(.form-control, .form-select):disabled { background: #eef2f4; color: #84919a; cursor: not-allowed; }
 .template-builder-panel .form-text { color: var(--activity-muted); font-size: .82rem; margin-top: .4rem; }
 .template-language-filter { background: var(--activity-subtle); border: 1px solid var(--activity-border); border-radius: 10px; display: grid; gap: 3px; margin: 0; padding: 3px; width: 100%; grid-template-columns: 1fr 1fr; }
-.template-language-option span { border-radius: 7px; color: #52616c; display: block; font: 800 .86rem/1.2 "Nunito", sans-serif; padding: .64rem .8rem; text-align: center; transition: background-color .16s ease, color .16s ease, box-shadow .16s ease; }
+.template-language-option span { border-radius: 7px; color: #52616c; display: block; font: 800 .86rem/1.2 var(--font-family-primary); padding: .64rem .8rem; text-align: center; transition: background-color .16s ease, color .16s ease, box-shadow .16s ease; }
 .template-language-option input:checked + span { background: #fff; box-shadow: 0 1px 4px rgba(15,23,42,.12); color: var(--activity-brand-deep); }
 .template-language-option input:focus-visible + span { outline: 3px solid rgba(31,111,139,.24); outline-offset: 1px; }
 .template-weeks-grid { gap: .55rem; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); }
-.template-week-chip { background: #fff; border-color: var(--activity-border); border-radius: 10px; font: 800 .85rem/1.2 "Nunito", sans-serif; min-height: 44px; padding: .55rem .7rem; transform: none; }
+.template-week-chip { background: #fff; border-color: var(--activity-border); border-radius: 10px; font: 800 .85rem/1.2 var(--font-family-primary); min-height: 44px; padding: .55rem .7rem; transform: none; }
 .template-week-chip:hover { background: var(--activity-subtle); border-color: #9eb9c3; transform: none; }
 .template-week-chip.is-selected { background: var(--activity-brand-soft); border-color: var(--activity-brand); color: var(--activity-brand-deep); }
 .template-week-chip .form-check-input { accent-color: var(--activity-brand); }
 .template-preview-panel { background: var(--activity-subtle); border: 1px solid var(--activity-border); border-radius: 14px; color: var(--activity-ink); min-height: 260px; overflow: hidden; padding: 0; }
 .activity-preview-chrome { background: #fff; border-bottom: 1px solid var(--activity-border); display: flex; justify-content: space-between; gap: 1rem; padding: .8rem 1rem; }
-.activity-preview-label { align-items: center; color: var(--activity-brand-deep); display: inline-flex; font: 900 .72rem/1 "Nunito", sans-serif; gap: .4rem; letter-spacing: .08em; text-transform: uppercase; }
+.activity-preview-label { align-items: center; color: var(--activity-brand-deep); display: inline-flex; font: 900 .72rem/1 var(--font-family-primary); gap: .4rem; letter-spacing: .08em; text-transform: uppercase; }
 .activity-preview-meta { color: var(--activity-muted); font-size: .78rem; text-align: right; }
 .activity-preview-stage { padding: clamp(1.1rem, 3vw, 2rem); }
-.activity-preview-title { color: var(--activity-ink); font: 900 clamp(1.2rem, 2.7vw, 1.55rem)/1.2 "Nunito", sans-serif; letter-spacing: -.02em; margin: 0; }
+.activity-preview-title { color: var(--activity-ink); font: 900 clamp(1.2rem, 2.7vw, 1.55rem)/1.2 var(--font-family-primary); letter-spacing: -.02em; margin: 0; }
 .activity-preview-instruction { color: var(--activity-muted); font-size: .92rem; line-height: 1.5; margin: .35rem 0 1.25rem; }
 .activity-preview-content { margin-top: 1rem; }
 .activity-preview-empty { align-items: center; color: var(--activity-muted); display: flex; flex-direction: column; gap: .65rem; justify-content: center; min-height: 260px; padding: 2rem; text-align: center; }
@@ -8254,18 +8245,18 @@ document.addEventListener('DOMContentLoaded',()=>{
 .preview-learning-card { background: #fff; border: 1px solid var(--activity-border); border-radius: 11px; padding: 1rem; }
 .clap-preview-card{max-width:620px;margin:0 auto;padding:clamp(1.25rem,4vw,2.25rem);border:1px solid #d4e8e8;border-radius:28px;background:#fffdf8;text-align:center;box-shadow:0 14px 32px rgba(24,83,104,.12)}.clap-preview-progress{display:flex;align-items:center;justify-content:space-between;gap:1rem;color:#65787e;font-size:.78rem;font-weight:800}.clap-preview-word{display:flex;align-items:center;justify-content:center;min-height:120px;padding:1rem clamp(1rem,5vw,2.5rem);color:#0f5369;font-size:clamp(2.4rem,9vw,5.3rem);font-weight:900;line-height:1;letter-spacing:.025em;white-space:nowrap;overflow:hidden}.clap-preview-listen,.clap-preview-clap,.clap-preview-reset,.clap-preview-done,.clap-preview-nav{border-radius:999px;font:inherit;font-weight:800;cursor:pointer}.clap-preview-listen{border:1px solid #b9dfe5;background:#edf9fb;color:#0f5369;padding:.5rem .9rem}.clap-preview-prompt{margin:1.2rem 0 .8rem;font-size:1.1rem;font-weight:850}.clap-preview-clap{min-width:190px;border:2px solid #68b5c0;background:linear-gradient(135deg,#e7f8fa,#dff3f7);color:#0f5369;padding:.8rem 1.2rem;box-shadow:0 5px 0 #a8d8dc}.clap-preview-actions,.clap-preview-navigation{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:.75rem;margin-top:1rem}.clap-preview-reset,.clap-preview-nav{border:1px solid #cadbda;background:#fff;color:#52666b;padding:.55rem 1rem}.clap-preview-done{border:1px solid #176d88;background:#176d88;color:#fff;padding:.55rem 1rem}.clap-preview-status{min-height:1.4rem;margin-top:.9rem;color:#65787e;font-size:.84rem;font-weight:750}.clap-preview-nav:disabled{opacity:.45;cursor:not-allowed}@media(max-width:575px){.clap-preview-card{padding:1rem;border-radius:20px}.clap-preview-word{min-height:92px;font-size:clamp(2rem,13vw,4rem);padding-inline:.5rem}}
 .preview-letter-pair { align-items: center; display: flex; gap: .8rem; justify-content: center; min-height: 88px; }
-.preview-letter-token { align-items: center; background: var(--activity-brand-soft); border: 1px solid #c7e2e8; border-radius: 10px; color: var(--activity-brand-deep); display: flex; font: 900 1.8rem/1 "Nunito", sans-serif; height: 58px; justify-content: center; min-width: 58px; padding: .4rem; }
+.preview-letter-token { align-items: center; background: var(--activity-brand-soft); border: 1px solid #c7e2e8; border-radius: 10px; color: var(--activity-brand-deep); display: flex; font: 900 1.8rem/1 var(--font-family-primary); height: 58px; justify-content: center; min-width: 58px; padding: .4rem; }
 .preview-arrow { color: #8aa0aa; font-size: 1.1rem; }
-.preview-answer-token { color: var(--activity-ink); font: 900 1.2rem/1.2 "Nunito", sans-serif; }
-.preview-sound-word { font: 900 1.55rem/1.3 "Nunito", sans-serif; letter-spacing: .04em; text-align: center; }
+.preview-answer-token { color: var(--activity-ink); font: 900 1.2rem/1.2 var(--font-family-primary); }
+.preview-sound-word { font: 900 1.55rem/1.3 var(--font-family-primary); letter-spacing: .04em; text-align: center; }
 .preview-sound-highlight { background: #dff1f4; border-bottom: 3px solid var(--activity-brand); color: var(--activity-brand-deep); padding: 0 .12em; }
 .preview-reading-card { background: #fff; border: 1px solid var(--activity-border); border-radius: 11px; font-size: 1.08rem; line-height: 1.85; padding: 1.25rem; }
 .preview-lost-found { display: grid; gap: .8rem; grid-template-columns: 1fr 1fr; }
 .preview-lost-found > div { background: #fff; border: 1px solid var(--activity-border); border-radius: 11px; min-height: 130px; padding: 1rem; }
-.preview-lost-found h7 { color: var(--activity-muted); display: block; font: 900 .7rem/1 "Nunito",sans-serif; letter-spacing: .12em; margin-bottom: .85rem; text-transform: uppercase; }
+.preview-lost-found h7 { color: var(--activity-muted); display: block; font: 900 .7rem/1 var(--font-family-primary); letter-spacing: .12em; margin-bottom: .85rem; text-transform: uppercase; }
 .preview-syllable-pieces { display: flex; flex-wrap: wrap; gap: .45rem; }
-.preview-syllable-piece { background: var(--activity-brand-soft); border: 1px solid #c7e2e8; border-radius: 8px; color: var(--activity-brand-deep); font: 900 1rem/1 "Nunito",sans-serif; padding: .55rem .65rem; }
-.preview-found-word { color: var(--activity-brand-deep); font: 900 1.4rem/1.2 "Nunito", sans-serif; }
+.preview-syllable-piece { background: var(--activity-brand-soft); border: 1px solid #c7e2e8; border-radius: 8px; color: var(--activity-brand-deep); font: 900 1rem/1 var(--font-family-primary); padding: .55rem .65rem; }
+.preview-found-word { color: var(--activity-brand-deep); font: 900 1.4rem/1.2 var(--font-family-primary); }
 .preview-writing-area { background: #fff; border: 1px solid var(--activity-border); border-radius: 11px; min-height: 130px; padding: 1rem; }
 .preview-writing-line { border-bottom: 1px solid #cbd8de; height: 34px; }
 .preview-question { background: #fff; border: 1px solid var(--activity-border); border-left: 4px solid var(--activity-brand); border-radius: 8px 11px 11px 8px; padding: 1rem; }
@@ -8275,9 +8266,9 @@ document.addEventListener('DOMContentLoaded',()=>{
 .five-w-preview .activity-preview-title { margin-bottom: .25rem; }
 .five-w-preview .activity-preview-instruction { margin-bottom: .85rem; }
 .five-w-preview .preview-reading-card { line-height: 1.65; padding: 1rem 1.1rem; box-shadow: 0 5px 14px rgba(15,23,42,.05); }
-.five-w-preview .preview-reading-card strong { display:block; color:var(--activity-brand-deep); font:900 .82rem/1.2 "Nunito",sans-serif; letter-spacing:.04em; text-transform:uppercase; }
+.five-w-preview .preview-reading-card strong { display:block; color:var(--activity-brand-deep); font:900 .82rem/1.2 var(--font-family-primary); letter-spacing:.04em; text-transform:uppercase; }
 .five-w-preview .preview-question { align-items: baseline; display:flex; gap:.45rem; padding:.7rem .85rem; }
-.five-w-preview .preview-question strong { color:var(--activity-brand-deep); flex:0 0 auto; font:900 .82rem/1.3 "Nunito",sans-serif; }
+.five-w-preview .preview-question strong { color:var(--activity-brand-deep); flex:0 0 auto; font:900 .82rem/1.3 var(--font-family-primary); }
 .five-w-preview .preview-question-text { line-height:1.45; }
 .teacher-story-call-preview { background:#fffdf9; border:1px solid #baddec; border-radius:24px; padding:18px; box-shadow:0 12px 28px rgba(38,76,111,.12); }
 .teacher-story-call-preview .story-call-heading { display:flex; justify-content:space-between; gap:16px; color:#183c68; }
@@ -8292,25 +8283,25 @@ document.addEventListener('DOMContentLoaded',()=>{
 .teacher-retell-story-preview .retell-preview-page { position:relative; display:grid; grid-template-rows:auto minmax(0,1fr) auto; min-height:580px; }
 .teacher-retell-story-preview .retell-preview-header { position:relative; z-index:2; display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:10px; margin:0 0 12px 4px; color:#29416d; }
 .teacher-retell-story-preview .retell-preview-header-icon { display:grid; width:48px; height:48px; place-items:center; border-radius:50%; background:rgba(255,255,255,.92); color:#29416d; font-size:25px; box-shadow:0 8px 16px rgba(31,30,54,.16); }
-.teacher-retell-story-preview .retell-preview-header h2 { margin:0; font:800 26px/1.1 Nunito,"Segoe UI",sans-serif; }
-.teacher-retell-story-preview .retell-preview-header p { margin:4px 0 0; font:600 14px/1.2 Nunito,"Segoe UI",sans-serif; }
+.teacher-retell-story-preview .retell-preview-header h2 { margin:0; font:800 26px/1.1 var(--font-family-primary); }
+.teacher-retell-story-preview .retell-preview-header p { margin:4px 0 0; font:600 14px/1.2 var(--font-family-primary); }
 .teacher-retell-story-preview .retell-preview-scene { position:relative; min-height:440px; margin:0 0 0; overflow:hidden; border:6px solid #fff; border-radius:28px; background:#fff; box-shadow:0 20px 44px rgba(88,67,49,.14); }
 .teacher-retell-story-preview .retell-preview-scene img { display:block; width:100%; height:100%; min-height:440px; object-fit:contain; border-radius:20px; }
 .teacher-retell-story-preview .retell-preview-card { position:absolute; top:50%; right:2.5%; z-index:2; width:min(49%,390px); transform:translateY(-50%); padding:22px 24px; border:1px solid rgba(255,255,255,.82); border-radius:34px; background:rgba(255,253,248,.96); text-align:center; box-shadow:0 20px 40px rgba(31,30,54,.2); }
 .teacher-retell-story-preview .retell-preview-card .story-icon { margin-bottom:4px; color:#efad39; font-size:28px; }
-.teacher-retell-story-preview .retell-preview-card h3 { margin:0; font:800 22px/1.25 Nunito,"Segoe UI",sans-serif; }
-.teacher-retell-story-preview .retell-preview-title { margin:11px 0 13px; padding:10px 14px; border-radius:999px; background:#fff0d0; color:#243d70; font:800 18px/1.2 Nunito,"Segoe UI",sans-serif; }
-.teacher-retell-story-preview .retell-preview-instructions { margin:0; font:600 14px/1.45 Nunito,"Segoe UI",sans-serif; }
+.teacher-retell-story-preview .retell-preview-card h3 { margin:0; font:800 22px/1.25 var(--font-family-primary); }
+.teacher-retell-story-preview .retell-preview-title { margin:11px 0 13px; padding:10px 14px; border-radius:999px; background:#fff0d0; color:#243d70; font:800 18px/1.2 var(--font-family-primary); }
+.teacher-retell-story-preview .retell-preview-instructions { margin:0; font:600 14px/1.45 var(--font-family-primary); }
 .teacher-retell-story-preview .retell-preview-mic { display:grid; width:92px; height:92px; margin:16px auto 7px; place-items:center; border:11px solid #ffd1d0; border-radius:50%; background:#ef4b4f; color:#fff; font-size:36px; box-shadow:0 9px 16px rgba(202,54,63,.25); }
-.teacher-retell-story-preview .retell-preview-record-label { margin:0; color:#e94448; font:800 18px/1.2 Nunito,"Segoe UI",sans-serif; }
-.teacher-retell-story-preview .retell-preview-tip { display:flex; align-items:center; gap:10px; margin-top:12px; padding:10px 12px; border-radius:20px; background:#f8eee1; color:#59545a; text-align:left; font:700 13px/1.35 Nunito,"Segoe UI",sans-serif; }
+.teacher-retell-story-preview .retell-preview-record-label { margin:0; color:#e94448; font:800 18px/1.2 var(--font-family-primary); }
+.teacher-retell-story-preview .retell-preview-tip { display:flex; align-items:center; gap:10px; margin-top:12px; padding:10px 12px; border-radius:20px; background:#f8eee1; color:#59545a; text-align:left; font:700 13px/1.35 var(--font-family-primary); }
 .teacher-retell-story-preview .retell-preview-tip i { color:#f5aa32; font-size:22px; }
 .teacher-retell-story-preview .retell-preview-nav { display:flex; justify-content:flex-end; margin-top:16px; }
-.teacher-retell-story-preview .retell-preview-finish { display:inline-flex; align-items:center; gap:9px; padding:11px 22px; border:0; border-radius:999px; background:rgba(255,255,255,.94); color:#29416d; font:800 15px Nunito,"Segoe UI",sans-serif; box-shadow:0 7px 16px rgba(31,30,54,.14); }
+.teacher-retell-story-preview .retell-preview-finish { display:inline-flex; align-items:center; gap:9px; padding:11px 22px; border:0; border-radius:999px; background:rgba(255,255,255,.94); color:#29416d; font:800 15px var(--font-family-primary); box-shadow:0 7px 16px rgba(31,30,54,.14); }
 @media (max-width:800px) { .teacher-retell-story-preview .retell-preview-card { position:relative; top:auto; right:auto; width:calc(100% - 32px); margin:-120px auto 0; transform:none; } .teacher-retell-story-preview .retell-preview-scene { min-height:360px; } .teacher-retell-story-preview .retell-preview-scene img { min-height:360px; } }
 .template-builder-actions { align-items: center; background: #fff; display: flex; gap: 1rem; justify-content: space-between; padding-top: 1.25rem; }
 .template-action-buttons { display: flex; flex-wrap: wrap; gap: .65rem; justify-content: flex-end; margin-left: auto; }
-.template-btn { align-items: center; border-radius: 10px !important; display: inline-flex; font: 900 .88rem/1 "Nunito", sans-serif; gap: .45rem; justify-content: center; min-height: 44px; padding: .68rem 1rem; transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .1s ease; }
+.template-btn { align-items: center; border-radius: 10px !important; display: inline-flex; font: 900 .88rem/1 var(--font-family-primary); gap: .45rem; justify-content: center; min-height: 44px; padding: .68rem 1rem; transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .1s ease; }
 .template-btn:active { transform: translateY(1px); }
 .template-btn-primary { background: var(--activity-brand, #1f6f8b); border-color: var(--activity-brand, #1f6f8b); color: #fff; }
 .template-btn-primary:hover { background: var(--activity-brand-deep, #15556c); border-color: var(--activity-brand-deep, #15556c); color: #fff; }
@@ -8318,27 +8309,27 @@ document.addEventListener('DOMContentLoaded',()=>{
 .template-btn-secondary:hover { background: var(--activity-subtle); border-color: #91a7b0; color: var(--activity-ink); }
 .template-btn-accent { border-color: #8db9c6; color: var(--activity-brand-deep); }
 .template-btn:disabled { background: #e7edef; border-color: #e7edef; color: #8a969d; cursor: not-allowed; opacity: 1; }
-.template-validation-message { align-items: center; color: var(--activity-danger); display: flex; font: 700 .84rem/1.4 "Quattrocento Sans", sans-serif; gap: .45rem; }
+.template-validation-message { align-items: center; color: var(--activity-danger); display: flex; font: 700 .84rem/1.4 var(--font-family-primary); gap: .45rem; }
 .syllable-prebuilt-section { background: var(--activity-subtle); border: 1px solid var(--activity-border); border-radius: 14px; padding: clamp(1rem, 2vw, 1.35rem); }
 .syllable-prebuilt-header { align-items: flex-start; display: flex; gap: 1rem; justify-content: space-between; margin-bottom: 1rem; }
-.syllable-prebuilt-heading { color: var(--activity-ink); font: 800 1rem/1.3 "Nunito", sans-serif; letter-spacing: -.01em; margin: 0; }
-.syllable-prebuilt-meta { color: var(--activity-muted); font: 400 .84rem/1.45 "Quattrocento Sans", sans-serif; margin-top: .18rem; }
-.syllable-prebuilt-count { background: var(--activity-brand-soft); border: 1px solid #cce3e9; border-radius: 999px; color: var(--activity-brand-deep); flex: 0 0 auto; font: 800 .73rem/1 "Nunito", sans-serif; padding: .48rem .66rem; }
+.syllable-prebuilt-heading { color: var(--activity-ink); font: 800 1rem/1.3 var(--font-family-primary); letter-spacing: -.01em; margin: 0; }
+.syllable-prebuilt-meta { color: var(--activity-muted); font: 400 .84rem/1.45 var(--font-family-primary); margin-top: .18rem; }
+.syllable-prebuilt-count { background: var(--activity-brand-soft); border: 1px solid #cce3e9; border-radius: 999px; color: var(--activity-brand-deep); flex: 0 0 auto; font: 800 .73rem/1 var(--font-family-primary); padding: .48rem .66rem; }
 .syllable-prebuilt-card { background: #fff; border: 1px solid var(--activity-border); border-radius: 12px; display: flex; flex-direction: column; height: 100%; padding: 1rem; transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease; }
 .syllable-prebuilt-card:hover { border-color: #a9c4cd; box-shadow: 0 7px 18px rgba(15,23,42,.07); transform: translateY(-1px); }
 .syllable-prebuilt-card.is-selected { background: var(--activity-brand-soft); border-color: #83b5c3; box-shadow: inset 3px 0 0 var(--activity-brand); }
 .syllable-prebuilt-card.is-selected:hover { box-shadow: inset 3px 0 0 var(--activity-brand), 0 7px 18px rgba(15,23,42,.06); }
 .syllable-prebuilt-card-header { align-items: flex-start; display: flex; gap: .75rem; justify-content: space-between; }
-.syllable-prebuilt-title { color: var(--activity-ink); font: 800 .94rem/1.35 "Nunito", sans-serif; letter-spacing: -.01em; margin: 0; }
-.syllable-prebuilt-detail { color: var(--activity-muted); font: 400 .8rem/1.4 "Quattrocento Sans", sans-serif; margin-top: .18rem; }
+.syllable-prebuilt-title { color: var(--activity-ink); font: 800 .94rem/1.35 var(--font-family-primary); letter-spacing: -.01em; margin: 0; }
+.syllable-prebuilt-detail { color: var(--activity-muted); font: 400 .8rem/1.4 var(--font-family-primary); margin-top: .18rem; }
 .syllable-prebuilt-check { align-items: center; background: var(--activity-brand); border-radius: 50%; color: #fff; display: inline-flex; flex: 0 0 22px; font-size: .76rem; height: 22px; justify-content: center; }
-.syllable-prebuilt-sample { color: #46545d; display: grid; font: 500 .84rem/1.5 "Quattrocento Sans", sans-serif; gap: .24rem; margin-top: .85rem; }
-.syllable-prebuilt-sample code { background: #edf4f6; border-radius: 5px; color: var(--activity-brand-deep); font: 800 .78rem/1 "Nunito", monospace; padding: .2rem .34rem; }
+.syllable-prebuilt-sample { color: #46545d; display: grid; font: 500 .84rem/1.5 var(--font-family-primary); gap: .24rem; margin-top: .85rem; }
+.syllable-prebuilt-sample code { background: #edf4f6; border-radius: 5px; color: var(--activity-brand-deep); font: 800 .78rem/1 var(--font-family-primary); padding: .2rem .34rem; }
 .syllable-prebuilt-sample strong { color: var(--activity-ink); font-weight: 700; }
-.syllable-prebuilt-sample-label { color: var(--activity-brand-deep); font: 800 .69rem/1.2 "Nunito", sans-serif; letter-spacing: .08em; text-transform: uppercase; }
-.syllable-prebuilt-expanded { border-top: 1px solid var(--activity-border); color: #52616c; font: 400 .82rem/1.55 "Quattrocento Sans", sans-serif; margin-top: .85rem; padding-top: .75rem; }
+.syllable-prebuilt-sample-label { color: var(--activity-brand-deep); font: 800 .69rem/1.2 var(--font-family-primary); letter-spacing: .08em; text-transform: uppercase; }
+.syllable-prebuilt-expanded { border-top: 1px solid var(--activity-border); color: #52616c; font: 400 .82rem/1.55 var(--font-family-primary); margin-top: .85rem; padding-top: .75rem; }
 .syllable-prebuilt-actions { display: flex; gap: .5rem; margin-top: auto; padding-top: 1rem; }
-.syllable-choice-btn { align-items: center; border-radius: 9px !important; display: inline-flex; font: 800 .8rem/1 "Nunito", sans-serif; justify-content: center; min-height: 38px; padding: .58rem .8rem; transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease; }
+.syllable-choice-btn { align-items: center; border-radius: 9px !important; display: inline-flex; font: 800 .8rem/1 var(--font-family-primary); justify-content: center; min-height: 38px; padding: .58rem .8rem; transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease; }
 .syllable-preview-btn { background: #fff; border-color: #bdcbd1; color: #46545d; }
 .syllable-preview-btn:hover { background: var(--activity-subtle); border-color: #91a7b0; color: var(--activity-ink); }
 .syllable-select-btn { background: #fff; border-color: #8db9c6; color: var(--activity-brand-deep); flex: 1; }
@@ -8348,35 +8339,35 @@ document.addEventListener('DOMContentLoaded',()=>{
 .syllable-choice-btn:disabled { background: #e7edef; border-color: #e7edef; color: #8a969d; cursor: not-allowed; opacity: 1; }
 .phrase-prescribed-shell { background: var(--activity-subtle); border: 1px solid var(--activity-border); border-radius: 14px; padding: clamp(1rem, 2vw, 1.35rem); }
 .phrase-prescribed-header { margin-bottom: 1rem; }
-.phrase-prescribed-eyebrow { color: var(--activity-brand); font: 800 .7rem/1.2 "Nunito", sans-serif; letter-spacing: .09em; text-transform: uppercase; }
-.phrase-prescribed-heading { color: var(--activity-ink); font: 800 1rem/1.3 "Nunito", sans-serif; letter-spacing: -.01em; margin: .28rem 0 0; }
-.phrase-prescribed-description { color: var(--activity-muted); font: 400 .85rem/1.5 "Quattrocento Sans", sans-serif; margin: .3rem 0 0; max-width: 680px; }
+.phrase-prescribed-eyebrow { color: var(--activity-brand); font: 800 .7rem/1.2 var(--font-family-primary); letter-spacing: .09em; text-transform: uppercase; }
+.phrase-prescribed-heading { color: var(--activity-ink); font: 800 1rem/1.3 var(--font-family-primary); letter-spacing: -.01em; margin: .28rem 0 0; }
+.phrase-prescribed-description { color: var(--activity-muted); font: 400 .85rem/1.5 var(--font-family-primary); margin: .3rem 0 0; max-width: 680px; }
 .phrase-set-card { background: #fff; border: 1px solid var(--activity-border); border-radius: 12px; display: flex; flex-direction: column; height: 100%; padding: 1rem; transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease; }
 .phrase-set-card:hover { border-color: #a9c4cd; box-shadow: 0 7px 18px rgba(15,23,42,.07); transform: translateY(-1px); }
 .phrase-set-card.is-selected { background: var(--activity-brand-soft); border-color: #83b5c3; box-shadow: inset 3px 0 0 var(--activity-brand); }
 .phrase-set-card.is-selected:hover { box-shadow: inset 3px 0 0 var(--activity-brand), 0 7px 18px rgba(15,23,42,.06); }
-.phrase-set-title { color: var(--activity-ink); font: 800 .94rem/1.35 "Nunito", sans-serif; letter-spacing: -.01em; margin: 0; }
-.phrase-set-meta { color: var(--activity-muted); font: 400 .8rem/1.4 "Quattrocento Sans", sans-serif; margin-top: .18rem; }
-.phrase-set-sample { border-top: 1px solid #e7edef; color: #52616c; font: 400 .82rem/1.45 "Quattrocento Sans", sans-serif; margin-top: .75rem; padding-top: .65rem; }
+.phrase-set-title { color: var(--activity-ink); font: 800 .94rem/1.35 var(--font-family-primary); letter-spacing: -.01em; margin: 0; }
+.phrase-set-meta { color: var(--activity-muted); font: 400 .8rem/1.4 var(--font-family-primary); margin-top: .18rem; }
+.phrase-set-sample { border-top: 1px solid #e7edef; color: #52616c; font: 400 .82rem/1.45 var(--font-family-primary); margin-top: .75rem; padding-top: .65rem; }
 .phrase-set-sample span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.phrase-set-select-btn { align-items: center; align-self: flex-start; background: #fff; border: 1px solid #8db9c6; border-radius: 9px !important; color: var(--activity-brand-deep); display: inline-flex; flex: 0 0 auto; font: 800 .8rem/1 "Nunito", sans-serif; justify-content: center; min-height: 38px; min-width: 94px; padding: .58rem .8rem; transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease; }
+.phrase-set-select-btn { align-items: center; align-self: flex-start; background: #fff; border: 1px solid #8db9c6; border-radius: 9px !important; color: var(--activity-brand-deep); display: inline-flex; flex: 0 0 auto; font: 800 .8rem/1 var(--font-family-primary); justify-content: center; min-height: 38px; min-width: 94px; padding: .58rem .8rem; transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease; }
 .phrase-set-select-btn:hover { background: var(--activity-brand-deep); border-color: var(--activity-brand-deep); color: #fff; }
 .phrase-set-select-btn.is-selected,
 .phrase-set-select-btn.is-selected:hover { background: var(--activity-brand); border-color: var(--activity-brand); color: #fff; cursor: default; }
 .phrase-set-select-btn:disabled { background: #e7edef; border-color: #e7edef; color: #8a969d; cursor: not-allowed; opacity: 1; }
 .letter-sound-items-preview { background: var(--activity-subtle); border: 1px solid var(--activity-border); border-radius: 12px; padding: 1rem; margin-top: 1rem; }
-.letter-sound-preview-title { color: var(--activity-ink); font: 800 .94rem/1.35 "Nunito", sans-serif; letter-spacing: -.01em; margin: 0 0 1rem; }
+.letter-sound-preview-title { color: var(--activity-ink); font: 800 .94rem/1.35 var(--font-family-primary); letter-spacing: -.01em; margin: 0 0 1rem; }
 .letter-sound-items-grid { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); margin-bottom: .75rem; }
-.letter-sound-item-card { align-items: center; background: #fff; border: 1px solid #c7e2e8; border-radius: 8px; color: var(--activity-brand-deep); display: flex; font: 900 1.1rem/1 "Nunito", sans-serif; height: 52px; justify-content: center; min-width: 52px; }
+.letter-sound-item-card { align-items: center; background: #fff; border: 1px solid #c7e2e8; border-radius: 8px; color: var(--activity-brand-deep); display: flex; font: 900 1.1rem/1 var(--font-family-primary); height: 52px; justify-content: center; min-width: 52px; }
 .letter-sound-items-count { border-top: 1px solid var(--activity-border); padding-top: .65rem; }
 
 .phrase-selected-items { margin-top: 1rem; }
 .phrase-selected-items-header { align-items: flex-start; display: flex; gap: 1rem; justify-content: space-between; margin-bottom: .65rem; }
-.phrase-selected-items-title { color: var(--activity-ink); font: 800 .9rem/1.35 "Nunito", sans-serif; margin: 0; }
-.phrase-selected-items-help { color: var(--activity-muted); font: 400 .8rem/1.4 "Quattrocento Sans", sans-serif; text-align: right; }
+.phrase-selected-items-title { color: var(--activity-ink); font: 800 .9rem/1.35 var(--font-family-primary); margin: 0; }
+.phrase-selected-items-help { color: var(--activity-muted); font: 400 .8rem/1.4 var(--font-family-primary); text-align: right; }
 .phrase-selected-items-list { background: #fff; border: 1px solid var(--activity-border); border-radius: 11px; padding: .8rem 1rem; }
-.phrase-selected-items-list label { color: #3f4d56; font: 500 .86rem/1.45 "Quattrocento Sans", sans-serif; }
-.phrase-selected-items-list .phrase-select-all { color: var(--activity-ink); font: 800 .84rem/1.4 "Nunito", sans-serif; }
+.phrase-selected-items-list label { color: #3f4d56; font: 500 .86rem/1.45 var(--font-family-primary); }
+.phrase-selected-items-list .phrase-select-all { color: var(--activity-ink); font: 800 .84rem/1.4 var(--font-family-primary); }
 @media (max-width: 767.98px) {
     .template-builder-header { align-items: flex-start; flex-direction: column; }
     .template-information-grid { grid-template-columns: 1fr; }
@@ -8401,7 +8392,7 @@ body.dark-theme .template-builder-panel :is(.form-control,.form-select), body.da
 #addMaterialModal.template-builder-active #templateLandingPanel { display: block !important; }
 #addMaterialModal .teacher-field .form-label,
 #addMaterialModal .form-label {
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     color: #334155;
     font-weight: 800;
     font-size: 0.9rem;
@@ -8412,7 +8403,7 @@ body.dark-theme .template-builder-panel :is(.form-control,.form-select), body.da
 #addMaterialModal .form-text,
 #addMaterialModal .teacher-field .small,
 #addMaterialModal .teacher-field .text-muted {
-    font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     line-height: 1.45;
 }
 #addMaterialModal .form-control, #addMaterialModal .form-select {
@@ -8421,7 +8412,7 @@ body.dark-theme .template-builder-panel :is(.form-control,.form-select), body.da
     background: rgba(255,255,255,0.98);
     border: 1px solid rgba(31,111,139,0.06);
     box-shadow: none;
-    font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 0.95rem;
     line-height: 1.45;
 }
@@ -8432,7 +8423,7 @@ body.dark-theme .template-builder-panel :is(.form-control,.form-select), body.da
 #editMaterialModal #materialType,
 #editMaterialModal #materialTitle,
 #editMaterialModal #itemInput {
-    font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 0.96rem;
     font-weight: 700;
     letter-spacing: 0;
@@ -8502,7 +8493,7 @@ body.dark-theme .template-builder-panel :is(.form-control,.form-select), body.da
 }
 #addMaterialModal #materialTitle::placeholder,
 #addMaterialModal #itemInput::placeholder {
-    font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-weight: 400;
     opacity: 0.72;
 }
@@ -8511,7 +8502,7 @@ body.dark-theme .template-builder-panel :is(.form-control,.form-select), body.da
 #addMaterialModal .upload-material-panel .btn {
     border-radius: 12px;
     min-height: 44px;
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-weight: 800;
     letter-spacing: 0.01em;
 }
@@ -8532,7 +8523,7 @@ body.dark-theme .template-builder-panel :is(.form-control,.form-select), body.da
     display: inline-flex;
     align-items:center;
     gap:0.5rem;
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 0.82rem;
     font-weight: 800;
     line-height: 1.2;
@@ -8642,7 +8633,7 @@ body.dark-theme .template-builder-panel :is(.form-control,.form-select), body.da
 }
 #addMaterialModal .custom-device-value {
     color: var(--dash-text);
-    font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 0.96rem;
     font-weight: 700;
     line-height: 1.25;
@@ -8743,7 +8734,7 @@ body.dark-theme .template-builder-panel :is(.form-control,.form-select), body.da
 }
 #addMaterialModal .custom-device-option-title {
     color: inherit;
-    font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 0.92rem;
     font-weight: 700;
     line-height: 1.25;
@@ -8774,7 +8765,7 @@ body.dark-theme .template-builder-panel :is(.form-control,.form-select), body.da
 #addMaterialModal .modal-footer { padding: 1rem 1.5rem; border-top: none; background: transparent; }
 #addMaterialModal .modal-footer .btn-link {
     color: #6b7280;
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-weight: 800;
     letter-spacing: 0.01em;
 }
@@ -8787,7 +8778,7 @@ body.dark-theme .template-builder-panel :is(.form-control,.form-select), body.da
     background-image: none;
     border-color: #1f6f8b;
     box-shadow:0 8px 20px rgba(31,111,139,0.12);
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-weight: 900;
     letter-spacing: 0.01em;
 }
@@ -8844,7 +8835,7 @@ body.dark-theme .template-builder-panel :is(.form-control,.form-select), body.da
     border-radius: 20px;
     background: transparent;
     color: #475569;
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 0.95rem;
     font-weight: 800;
     letter-spacing: 0.01em;
@@ -8873,7 +8864,7 @@ body.dark-theme .template-builder-panel :is(.form-control,.form-select), body.da
     min-height: 44px;
 }
 #addMaterialModal .other-material-panel .table thead th {
-    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 0.76rem;
     font-weight: 900;
     letter-spacing: 0.04em;
@@ -8881,7 +8872,7 @@ body.dark-theme .template-builder-panel :is(.form-control,.form-select), body.da
     color: #64748b;
 }
 #addMaterialModal .other-material-panel .table tbody td {
-    font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 0.94rem;
     line-height: 1.45;
     color: #1e293b;
@@ -10796,7 +10787,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     .student-progress-source-toggle { align-items: stretch; background: #E2E8F0; border: 1px solid #CBD5E1; border-radius: 9999px; display: flex; flex: 0 1 320px; gap: 0; margin-left: auto; max-width: 320px; min-height: 42px; min-width: 300px; overflow: hidden; padding: 3px; position: relative; width: 320px; }
     .student-progress-source-toggle::before { background: linear-gradient(135deg, #CFFAFE, #BFDBFE); border-radius: 9999px; box-shadow: 0 10px 22px rgba(59,130,246,.14); content: ''; height: calc(100% - 6px); left: 3px; position: absolute; top: 3px; transition: left .2s ease, background .2s ease; width: calc((100% - 6px) / 2); }
     .student-progress-source-toggle.active-supplementary::before { left: calc((100% - 6px) / 2 + 3px); }
-    .student-progress-source-toggle button { align-items: center; background: transparent; border: 0; border-radius: 20px; box-sizing: border-box; color: #475569; display: flex; flex: 1 1 0; font-family: "Nunito", "Segoe UI", sans-serif; font-size: .95rem; font-weight: 800; height: 42px; justify-content: center; letter-spacing: .01em; line-height: 1.2; min-width: 0; padding: 0 .6rem; position: relative; text-align: center; transition: color .2s ease, background .2s ease; white-space: nowrap; width: 50%; z-index: 1; }
+    .student-progress-source-toggle button { align-items: center; background: transparent; border: 0; border-radius: 20px; box-sizing: border-box; color: #475569; display: flex; flex: 1 1 0; font-family: var(--font-family-primary); font-size: .95rem; font-weight: 800; height: 42px; justify-content: center; letter-spacing: .01em; line-height: 1.2; min-width: 0; padding: 0 .6rem; position: relative; text-align: center; transition: color .2s ease, background .2s ease; white-space: nowrap; width: 50%; z-index: 1; }
     .student-progress-source-toggle button.active { color: #0F172A; }
     .student-progress-source-toggle button:not(.active):hover { background: rgba(15,23,42,.06); }
     .student-progress-source-toggle button:focus-visible { outline: 2px solid rgba(59,130,246,.3); outline-offset: 2px; }
@@ -19662,7 +19653,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         }
                         .letter-sound-preview-live .game-title-wrap h1 {
                             margin: 0;
-                            font-family: "Super Bubble","Segoe UI",sans-serif;
+                            font-family: var(--font-family-primary);
                             font-size: 1.15rem;
                             line-height: 1.2;
                             color: #FF7F9F;
@@ -19678,7 +19669,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         }
                         .letter-sound-preview-live .progress-label {
                             color: #FFD76A;
-                            font-family: "Super Bubble","Segoe UI",sans-serif;
+                            font-family: var(--font-family-primary);
                             font-size: .8rem;
                             font-weight: 600;
                             white-space: nowrap;
@@ -19832,7 +19823,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             left: 50%;
                             top: 50%;
                             transform: translate(-50%, -52%);
-                            font-family: "Super Bubble","Segoe UI",sans-serif;
+                            font-family: var(--font-family-primary);
                             font-size: 1.7rem;
                             line-height: 1;
                             color: #fff;
@@ -19937,7 +19928,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const previewItems = items.length ? items.slice(0, 5) : [];
                 previewBody = previewItems.length
                     ? `<style>
-                        .correspondence-assessment-preview{position:relative;min-height:370px;overflow:hidden;border:4px solid #812d21;border-radius:18px;background:repeating-conic-gradient(from -90deg at 50% 55%,#f6df91 0 8deg,#c8983f 8deg 16deg);color:#fff;box-shadow:inset 0 0 0 5px #f7c54c}.correspondence-assessment-preview:before,.correspondence-assessment-preview:after{content:'';position:absolute;z-index:1;top:0;bottom:0;width:17%;background:repeating-linear-gradient(90deg,#7e1c1e 0 13px,#c43c2e 13px 26px,#8f211f 26px 40px);border-right:5px solid #e7b948;box-shadow:inset -6px 0 #551c1d}.correspondence-assessment-preview:before{left:0}.correspondence-assessment-preview:after{right:0;transform:scaleX(-1)}.correspondence-assessment-preview__top{position:relative;z-index:3;display:flex;justify-content:space-between;gap:12px;margin:12px 20%;padding:7px 14px;border:2px solid #f6ce62;border-radius:20px;background:#8d2726;box-shadow:0 3px 0 #5b2020;font-family:Georgia,serif;font-size:.76rem;font-weight:700;text-transform:uppercase}.correspondence-assessment-preview__roulette{position:relative;z-index:2;width:min(260px,58%);aspect-ratio:1;margin:26px auto 0;border:12px solid #f7c54c;border-radius:50%;background:conic-gradient(#755b98 0 20%,#b94741 20% 40%,#35799b 40% 60%,#d7a52c 60% 80%,#4c927a 80%);box-shadow:0 0 0 6px #7e2925,inset 0 0 0 5px #f7e5a8}.correspondence-assessment-preview__target{position:absolute;z-index:2;left:50%;top:50%;translate:-50% -50%;width:70px;height:70px;display:grid;place-items:center;border-radius:50%;border:4px solid #7c2a23;background:radial-gradient(circle at 35% 30%,#fff9c5,#e6a939);color:#68251f;font-family:Georgia,serif;font-size:2.3rem;font-weight:900;box-shadow:0 3px 0 #f3bb47}.correspondence-assessment-preview__prompt{position:absolute;z-index:3;left:50%;bottom:14px;translate:-50% 0;width:min(300px,58%);margin:0;padding:6px 10px;border:2px solid #9d5a31;border-radius:4px;background:#fff1ca;color:#67251f;text-align:center;font-size:.62rem;font-weight:700;text-transform:uppercase}.correspondence-assessment-preview__balloons{position:absolute;inset:0;display:block}.correspondence-assessment-preview__balloon-wrap{position:absolute;left:50%;top:50%;transform:rotate(calc(var(--balloon-index) * 72deg)) translateY(-91px) rotate(calc(var(--balloon-index) * -72deg));transform-origin:0 0}.correspondence-assessment-preview__balloon{width:38px;height:49px;display:grid;place-items:center;border:3px solid #f8eec8;border-radius:50% 50% 47% 47%;background:linear-gradient(135deg,#7cc8ed,#3292c8);box-shadow:inset 5px 5px 0 #ffffff66;font-size:.8rem}.correspondence-assessment-preview__balloon-wrap:nth-child(2n) .correspondence-assessment-preview__balloon{background:linear-gradient(135deg,#eea1bd,#d74b7a)}.correspondence-assessment-preview__handle{display:block;width:24px;height:8px;margin:2px auto 0;border-radius:5px;background:#f7bf4c;color:#67321e;font-size:.5rem;text-align:center;line-height:8px}@media(max-width:600px){.correspondence-assessment-preview{min-height:320px}.correspondence-assessment-preview:before,.correspondence-assessment-preview:after{width:12%}.correspondence-assessment-preview__roulette{width:240px;max-width:70%}.correspondence-assessment-preview__top{margin-inline:13%}.correspondence-assessment-preview__prompt{width:72%}}
+                        .correspondence-assessment-preview{position:relative;min-height:370px;overflow:hidden;border:4px solid #812d21;border-radius:18px;background:repeating-conic-gradient(from -90deg at 50% 55%,#f6df91 0 8deg,#c8983f 8deg 16deg);color:#fff;box-shadow:inset 0 0 0 5px #f7c54c}.correspondence-assessment-preview:before,.correspondence-assessment-preview:after{content:'';position:absolute;z-index:1;top:0;bottom:0;width:17%;background:repeating-linear-gradient(90deg,#7e1c1e 0 13px,#c43c2e 13px 26px,#8f211f 26px 40px);border-right:5px solid #e7b948;box-shadow:inset -6px 0 #551c1d}.correspondence-assessment-preview:before{left:0}.correspondence-assessment-preview:after{right:0;transform:scaleX(-1)}.correspondence-assessment-preview__top{position:relative;z-index:3;display:flex;justify-content:space-between;gap:12px;margin:12px 20%;padding:7px 14px;border:2px solid #f6ce62;border-radius:20px;background:#8d2726;box-shadow:0 3px 0 #5b2020;font-family:var(--font-family-primary);font-size:.76rem;font-weight:700;text-transform:uppercase}.correspondence-assessment-preview__roulette{position:relative;z-index:2;width:min(260px,58%);aspect-ratio:1;margin:26px auto 0;border:12px solid #f7c54c;border-radius:50%;background:conic-gradient(#755b98 0 20%,#b94741 20% 40%,#35799b 40% 60%,#d7a52c 60% 80%,#4c927a 80%);box-shadow:0 0 0 6px #7e2925,inset 0 0 0 5px #f7e5a8}.correspondence-assessment-preview__target{position:absolute;z-index:2;left:50%;top:50%;translate:-50% -50%;width:70px;height:70px;display:grid;place-items:center;border-radius:50%;border:4px solid #7c2a23;background:radial-gradient(circle at 35% 30%,#fff9c5,#e6a939);color:#68251f;font-family:var(--font-family-primary);font-size:2.3rem;font-weight:900;box-shadow:0 3px 0 #f3bb47}.correspondence-assessment-preview__prompt{position:absolute;z-index:3;left:50%;bottom:14px;translate:-50% 0;width:min(300px,58%);margin:0;padding:6px 10px;border:2px solid #9d5a31;border-radius:4px;background:#fff1ca;color:#67251f;text-align:center;font-size:.62rem;font-weight:700;text-transform:uppercase}.correspondence-assessment-preview__balloons{position:absolute;inset:0;display:block}.correspondence-assessment-preview__balloon-wrap{position:absolute;left:50%;top:50%;transform:rotate(calc(var(--balloon-index) * 72deg)) translateY(-91px) rotate(calc(var(--balloon-index) * -72deg));transform-origin:0 0}.correspondence-assessment-preview__balloon{width:38px;height:49px;display:grid;place-items:center;border:3px solid #f8eec8;border-radius:50% 50% 47% 47%;background:linear-gradient(135deg,#7cc8ed,#3292c8);box-shadow:inset 5px 5px 0 #ffffff66;font-size:.8rem}.correspondence-assessment-preview__balloon-wrap:nth-child(2n) .correspondence-assessment-preview__balloon{background:linear-gradient(135deg,#eea1bd,#d74b7a)}.correspondence-assessment-preview__handle{display:block;width:24px;height:8px;margin:2px auto 0;border-radius:5px;background:#f7bf4c;color:#67321e;font-size:.5rem;text-align:center;line-height:8px}@media(max-width:600px){.correspondence-assessment-preview{min-height:320px}.correspondence-assessment-preview:before,.correspondence-assessment-preview:after{width:12%}.correspondence-assessment-preview__roulette{width:240px;max-width:70%}.correspondence-assessment-preview__top{margin-inline:13%}.correspondence-assessment-preview__prompt{width:72%}}
                     </style><section class="template-learner-preview correspondence-assessment-preview" aria-label="Match the Letter to Its Sound assessment preview"><div class="correspondence-assessment-preview__top"><span>Match the Letter to Its Sound</span><span>Round 1 of ${items.length}</span></div><div class="correspondence-assessment-preview__roulette"><div class="correspondence-assessment-preview__target">${escapeHtml(previewItems[0].letter || '?')}</div><div class="correspondence-assessment-preview__balloons">${previewItems.map((item, index) => `<div class="correspondence-assessment-preview__balloon-wrap" style="--balloon-index:${index};translate:-50% -50%"><div class="correspondence-assessment-preview__balloon">ðŸ”Š</div><span class="correspondence-assessment-preview__handle">ðŸ”Š</span></div>`).join('')}</div></div><p class="correspondence-assessment-preview__prompt">Tap a handle to hear each balloon, then pop the matching sound.</p></section>`
                     : empty('Add a letter and sound pair to begin the preview.');
             } else if (templateTitle === 'Sound Detective') {
@@ -19992,7 +19983,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         : (languageSet?.items || []);
                     const phraseItems = phraseSource.map(item => String(item?.phrase || item || '').replace(/^\d+\.\s*/, '').trim()).filter(Boolean);
                     const previewCount = Math.max(phraseItems.length, 1);
-                    previewBody = `<section class="template-learner-preview phrase-learner-preview" aria-label="Phrase Reading learner preview"><div class="template-learner-preview-header"><strong>✉️ <span style="font-family:'Patrick Hand',cursive;font-size:1.35rem">Secret Messages</span></strong><div class="template-learner-preview-progress">Messages Read<br><strong class="phrase-learner-preview-count">0 / ${previewCount}</strong><div class="template-learner-preview-track"><div class="template-learner-preview-fill phrase-learner-preview-fill" style="width:0"></div></div></div></div><div class="phrase-learner-preview-board">${Array.from({length: previewCount}, (_, index) => {
+                    previewBody = `<section class="template-learner-preview phrase-learner-preview" aria-label="Phrase Reading learner preview"><div class="template-learner-preview-header"><strong>✉️ <span style="font-family:var(--font-family-primary);font-size:1.35rem">Secret Messages</span></strong><div class="template-learner-preview-progress">Messages Read<br><strong class="phrase-learner-preview-count">0 / ${previewCount}</strong><div class="template-learner-preview-track"><div class="template-learner-preview-fill phrase-learner-preview-fill" style="width:0"></div></div></div></div><div class="phrase-learner-preview-board">${Array.from({length: previewCount}, (_, index) => {
                         const phrase = phraseItems[index] || '';
                         return `<button class="phrase-learner-preview-envelope${phrase ? '' : ' is-empty'}" data-phrase-index="${index + 1}" data-phrase-text="${escapeAttr(phrase)}" type="button" tabindex="0" aria-label="Envelope ${index + 1}" ${phrase ? '' : 'disabled'}><span class="phrase-learner-preview-envelope-back"></span><span class="phrase-learner-preview-envelope-front"></span><span class="phrase-learner-preview-envelope-flap"></span><span class="phrase-learner-preview-envelope-number">${index + 1}</span></button>`;
                     }).join('')}<article class="phrase-learner-preview-paper"><strong class="phrase-learner-preview-message-title">Choose an envelope</strong><span class="phrase-learner-preview-message-text">Open a message to reveal the phrase.</span><div class="phrase-learner-preview-controls"><span>ðŸŽ™ Start Reading</span><span>ðŸ”Š Read Aloud</span></div></article></div></section>`;
@@ -24525,7 +24516,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const levelDisclaimer = s.adapted_reading_level_disclaimer || s.reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || 'This assessment result is based on the student\'s reading accuracy, fluency, pronunciation, and pacing during the assessment. The Reading Level and Overall Score reflect the student\'s current reading performance and may help identify strengths and areas for improvement.';
                     const clarityScore = levelScoreMap[s.level] || levelScoreMap[s.adapted_reading_level] || 3;
                     const htmlMessage = `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 25px; border-radius: 12px; color: #333;">
+                    <div style="font-family: var(--font-family-primary); max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 25px; border-radius: 12px; color: #333;">
                         <h1 style="color: #1f6f8b; text-align: center; border-bottom: 2px solid #1f6f8b; padding-bottom: 10px; font-size: 1.5rem;">READING ASSESSMENT REPORT</h1>
                         <h2 style="font-size: 1.1rem; margin-top: 20px; color: #444;">Student Information</h2>
                         <p><strong>Student Name:</strong> ${s.name}</p>
@@ -24851,7 +24842,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 <style>
-.lesson7-gawain2c-thumb{align-items:center;background:linear-gradient(180deg,#eaf8fb,#fff);display:flex;gap:.25rem;justify-content:center;padding:.5rem}.lesson7-gawain2c-thumb span{color:#286b93;font-size:1.7rem;font-family:cursive;font-weight:700}.lesson7-gawain2c-workbook{background:#fffdf8;min-height:420px;padding:clamp(1.25rem,4vw,3rem)}.lesson7-gawain2c-sheet{margin:0 auto;max-width:900px;padding-top:1rem}.lesson7-gawain2c-guide{border-top:3px solid #398ac5;border-bottom:3px solid #398ac5;height:112px;position:relative}.lesson7-gawain2c-guide::after{border-top:2px dashed #d64c55;content:"";left:0;position:absolute;right:0;top:50%}.lesson7-gawain2c-guide.blank{margin-top:1.25rem}.lesson7-gawain2c-model{color:#286b93;font-family:cursive;font-size:5.4rem;font-weight:700;left:12%;line-height:1;position:absolute;top:8px;z-index:1}.lesson7-gawain2c-model.faint{left:31%;opacity:.22}
+.lesson7-gawain2c-thumb{align-items:center;background:linear-gradient(180deg,#eaf8fb,#fff);display:flex;gap:.25rem;justify-content:center;padding:.5rem}.lesson7-gawain2c-thumb span{color:#286b93;font-size:1.7rem;font-family:var(--font-family-primary);font-weight:700}.lesson7-gawain2c-workbook{background:#fffdf8;min-height:420px;padding:clamp(1.25rem,4vw,3rem)}.lesson7-gawain2c-sheet{margin:0 auto;max-width:900px;padding-top:1rem}.lesson7-gawain2c-guide{border-top:3px solid #398ac5;border-bottom:3px solid #398ac5;height:112px;position:relative}.lesson7-gawain2c-guide::after{border-top:2px dashed #d64c55;content:"";left:0;position:absolute;right:0;top:50%}.lesson7-gawain2c-guide.blank{margin-top:1.25rem}.lesson7-gawain2c-model{color:#286b93;font-family:var(--font-family-primary);font-size:5.4rem;font-weight:700;left:12%;line-height:1;position:absolute;top:8px;z-index:1}.lesson7-gawain2c-model.faint{left:31%;opacity:.22}
 </style>
 <script>
 document.addEventListener('DOMContentLoaded',()=>{const p=document.getElementById('prescribedActivityPicker');if(!p)return;const cells=[['O','a','o'],['S','M','M'],['O','I','O'],['s','o','A']];[['lesson7-gawain4','4','GAWAIN 4: Letrang Oo','Magsanay Magsulat'],['lesson7-gawain4a','4A','GAWAIN 4A: Letrang Oo','I-drag ang parisukat sa MALAKING O. I-drag ang bilog sa maliit na o.'],['lesson7-gawain4b','4B','GAWAIN 4B: Letrang Oo','Isulat ang i o o sa bawat larawan.']].forEach(([key,num,title,instruction])=>{if(p.querySelector(`[data-prescribed-activity="${key}"]`))return;const o=document.createElement('button');o.type='button';o.className='prescribed-activity-option';o.dataset.prescribedActivity=key;o.innerHTML=`<span class="prescribed-activity-option__body"><span class="prescribed-activity-option__number">${num}</span><span><strong>Lesson 7 · Gawain ${num}</strong><br><span class="small text-muted">${title}</span></span></span><span class="prescribed-activity-option__overlay">Preview</span>`;const grid=cells.flat().map(letter=>`<div class="g4-preview-cell"><span>${letter}</span>${key==='lesson7-gawain4a'&&['O','o'].includes(letter)?`<i class="g4-preview-stamp ${letter==='O'?'square':'circle'}"></i>`:''}</div>`).join('');const v=document.createElement('div');v.className='prescribed-activity-preview';v.dataset.prescribedPreview=key;v.innerHTML=`<div class="g4-preview-shell"><div class="prescribed-activity-preview__header"><button type="button" class="prescribed-preview-close" aria-label="Close preview">×</button><div class="g4-preview-eyebrow">Session 3 · Lesson 7 · Gawain ${num}</div><h5>${title}</h5><p>${instruction}</p>${key==='lesson7-gawain4a'?'<div class="g4-preview-tools"><span><b class="g4-preview-tool square"></b> PARISUKAT</span><span><b class="g4-preview-tool circle"></b> BILOG</span></div>':''}<div class="g4-preview-sheet">${key==='lesson7-gawain4a'?grid:'<div class="g4-writing-row">Oo</div><div class="g4-writing-row">Oo</div><div class="g4-writing-row">Oo</div>'}</div></div></div>`;p.append(o,v);o.onclick=()=>{p.querySelectorAll('[data-prescribed-activity]').forEach(x=>x.classList.toggle('is-selected',x===o));document.querySelectorAll('.prescribed-activity-preview.is-maximized').forEach(x=>x.classList.remove('is-maximized'));v.classList.add('is-maximized')};v.querySelector('.prescribed-preview-close').onclick=()=>v.classList.remove('is-maximized')})});

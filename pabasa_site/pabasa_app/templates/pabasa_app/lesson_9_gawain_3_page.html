@@ -6,11 +6,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Gawain 3: Letrang Ii, Oo, Ee | PABASA</title>
   <style>
-    @font-face{font-family:Fredoka;src:url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');font-display:swap}
+
     @font-face{font-family:bootstrap-icons;src:url("{% static 'pabasa_app/vendor/bootstrap-icons/fonts/bootstrap-icons.woff2' %}") format('woff2');font-display:block}
     *{box-sizing:border-box}
     html,body{height:100%;overflow:hidden}
-    .page{--ink:#183e63;--teal:#299e9a;--dark:#187b7a;--gold:#e7af45;height:100vh;min-height:0;overflow:hidden;padding:16px clamp(16px,4vw,42px) 22px;color:var(--ink);font-family:Fredoka,Nunito,"Segoe UI",sans-serif;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover no-repeat}
+    .page{--ink:#183e63;--teal:#299e9a;--dark:#187b7a;--gold:#e7af45;height:100vh;min-height:0;overflow:hidden;padding:16px clamp(16px,4vw,42px) 22px;color:var(--ink);font-family:var(--font-family-primary);background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover no-repeat}
     .shell{width:min(980px,100%);min-height:calc(100vh - 38px);margin:auto;position:relative}
     .back{position:absolute;top:0;left:0;z-index:3;display:inline-flex;align-items:center;justify-content:center;gap:13px;width:280px;min-height:64px;border-radius:999px;background:#fff;color:var(--ink);font-size:1.2rem;text-align:center;text-decoration:none;box-shadow:0 8px 17px #145ca744}
     .back i,.action i{font-family:bootstrap-icons;font-style:normal;line-height:1}.back i{font-size:2rem}
@@ -24,6 +24,7 @@
     .done{font-size:clamp(1.2rem,2.2vw,1.55rem);font-weight:900;color:#26784e}.done h1{margin:.3rem 0;color:var(--ink);font-size:clamp(2.2rem,5vw,3.6rem)}.done p{margin:0 0 1.5rem;color:var(--ink)}.done .action{text-decoration:none}@keyframes pulse{50%{transform:scale(1.025);box-shadow:0 0 0 11px #f5d47c55,0 7px 0 #a93432}}.bi-arrow-left:before{content:"\f12f"}.bi-mic:before{content:"\f490"}
     @media(max-width:520px){.page{padding:12px}.shell{min-height:calc(100vh - 24px)}.back{width:230px;min-height:58px;font-size:1rem}.card{top:calc(50% + 23px);max-height:calc(100vh - 92px);padding:22px 14px 18px;border-radius:30px}.task{min-height:0}.eyebrow{padding:8px 16px;margin-bottom:10px}.item{min-height:135px;border-width:4px;border-radius:26px}.action{width:100%;min-width:0}}
   </style>
+{% include "pabasa_app/includes/typography.html" %}
 </head>
 <body class="page">
   <main class="shell">

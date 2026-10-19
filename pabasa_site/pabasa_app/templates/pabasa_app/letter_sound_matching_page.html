@@ -8,13 +8,7 @@
     <link rel="icon" href="{% static 'pabasa_app/images/pabasalogo.png' %}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
-        @font-face {
-            font-family: "Super Bubble";
-            src: url("{% static 'pabasa_app/font/Super Bubble.ttf' %}") format("truetype");
-            font-weight: 400;
-            font-style: normal;
-            font-display: swap;
-        }
+
 
         :root {
             --bg-deep: #072c3d;
@@ -49,7 +43,7 @@
             background-repeat: no-repeat;
             background-size: cover;
             color: var(--ink);
-            font-family: "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
         }
         button { font: inherit; }
 
@@ -82,7 +76,7 @@
             border-radius: 12px;
             background: #8FE3E5;
             color: #075B68;
-            font-family: "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             text-decoration: none;
             font-size: 0.82rem;
             font-weight: 800;
@@ -179,7 +173,7 @@
         .fishing-intro h2 {
             margin: 0;
             color: #ff7f9f;
-            font-family: "Super Bubble", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: clamp(1.45rem, 4vw, 2.15rem);
             font-weight: 400;
             letter-spacing: 0.03em;
@@ -237,7 +231,7 @@
             border-radius: 16px;
             background: #ffe795;
             color: #075b68;
-            font-family: "Super Bubble", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: 1rem;
             letter-spacing: 0.03em;
             cursor: pointer;
@@ -282,7 +276,7 @@
 
         .game-title-wrap h1 {
             margin: 0;
-            font-family: "Super Bubble", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: clamp(1.05rem, 2vw, 1.5rem);
             line-height: 1.2;
             color: #FF7F9F;
@@ -302,7 +296,7 @@
 
         .progress-label {
             color: #FFD76A;
-            font-family: "Super Bubble", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: 0.8rem;
             font-weight: 600;
             white-space: nowrap;
@@ -411,7 +405,7 @@
 
         .target-label {
             margin: 0;
-            font-family: "Super Bubble", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: 0.72rem;
             font-weight: 600;
             letter-spacing: 0.11em;
@@ -684,7 +678,7 @@
 
         .result-title {
             margin: 0 0 8px;
-            font-family: "Super Bubble", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             color: #fff9d5;
             font-size: clamp(1.4rem, 3vw, 1.9rem);
             font-weight: 600;
@@ -700,7 +694,7 @@
 
         .score-badge {
             display: inline-block;
-            font-family: "Super Bubble", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-weight: 600;
             font-size: clamp(1.8rem, 4vw, 2.5rem);
             color: #fff4a8;
@@ -745,7 +739,7 @@
 
         .result-kicker {
             margin: 18px 0 0;
-            font-family: "Super Bubble", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             color: rgba(232, 251, 255, 0.9);
             font-size: 0.72rem;
             font-weight: 600;
@@ -763,7 +757,7 @@
             border-radius: 12px;
             background: linear-gradient(135deg, #0d87b4, #0b5f85);
             color: #fff4b0;
-            font-family: "Super Bubble", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-weight: 600;
             cursor: pointer;
             box-shadow: 0 12px 20px rgba(13, 132, 180, 0.22);
@@ -1155,6 +1149,7 @@
             }
         }
     </style>
+{% include "pabasa_app/includes/typography.html" %}
 </head>
 <body>
 <main class="activity">

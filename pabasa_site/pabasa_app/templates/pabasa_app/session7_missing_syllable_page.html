@@ -1,11 +1,11 @@
 {% load static %}
-<!doctype html><html lang="fil"><head>{% include 'pabasa_app/basahin_script.html' %}<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lesson 19: Gawain 2 | PABASA</title><style>@font-face{font-family:Fredoka;src:url("{% static 'pabasa_app/font/fredoka-one.one-regular.ttf' %}") format('truetype');font-display:swap}:root{--ink:#183e63;--teal:#299e9a;--teal-dark:#187b7a;--accent:#e7af45;--good:#26784e;--bad:#b33b2f;--line:#94d9d6}
+<!doctype html><html lang="fil"><head>{% include 'pabasa_app/basahin_script.html' %}<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lesson 19: Gawain 2 | PABASA</title><style>:root{--ink:#183e63;--teal:#299e9a;--teal-dark:#187b7a;--accent:#e7af45;--good:#26784e;--bad:#b33b2f;--line:#94d9d6}
 *{box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
-body{margin:0;color:var(--ink);font-family:Fredoka,Nunito,"Segoe UI",sans-serif;background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover no-repeat}
+body{margin:0;color:var(--ink);font-family:var(--font-family-primary);background:url("{% static 'pabasa_app/prescribed/PRESCRIBED-BG.jpg' %}") center/cover no-repeat}
 .page{position:relative;width:min(1250px,100%);height:100dvh;margin:auto;padding:16px clamp(16px,4vw,42px);display:grid;place-items:center}
 .back{position:absolute;top:16px;left:clamp(16px,4vw,42px);z-index:2;display:inline-flex;align-items:center;justify-content:center;gap:12px;width:280px;min-height:64px;padding:10px 22px;border-radius:999px;background:#fff;color:var(--ink);font-size:1.18rem;font-weight:900;line-height:1.15;text-align:center;text-decoration:none;box-shadow:0 8px 17px #145ca744}
-.back>span:first-child{font-family:"Segoe UI",sans-serif;font-size:2rem;font-weight:700;line-height:1}
+.back>span:first-child{font-family:var(--font-family-primary);font-size:2rem;font-weight:700;line-height:1}
 .card{width:100%;max-height:calc(100dvh - 108px);padding:clamp(16px,2.8vh,34px) clamp(20px,6vw,80px);overflow:hidden;border:2px solid #ffffffaa;border-radius:42px;background:#ffffff63;backdrop-filter:blur(10px);box-shadow:0 18px 45px #1e5b7a35;text-align:center}
 .eyebrow{width:max-content;max-width:100%;margin:0 auto 10px;padding:8px 24px;border-radius:999px;background:#277f82;color:#fff;font-size:clamp(.74rem,1.2vw,1rem);font-weight:900;letter-spacing:.02em}
 .card h1{margin:0;color:var(--ink);font-size:clamp(1.65rem,3.4vw,3rem);line-height:1.08}.card h2{margin:8px 0 0;color:#277f82;font-size:clamp(1.05rem,2vw,1.55rem);line-height:1.16}
@@ -78,15 +78,16 @@ body{margin:0;color:var(--ink);font-family:Fredoka,Nunito,"Segoe UI",sans-serif;
 .oral-action .oral-label{font-weight:900}
 .render-error{max-width:620px;margin:auto;padding:28px;border:2px solid #f0c4b9;border-radius:24px;background:#fff8f5;color:#8c342d}
 .render-error h1{font-size:clamp(1.5rem,3vw,2rem)}
-.render-error p{font:700 1.05rem/1.5 Nunito,"Segoe UI",sans-serif}
+.render-error p{font:700 1.05rem/1.5 var(--font-family-primary)}
 .answer:focus-visible,.button:focus-visible,.intro-audio:focus-visible,.back:focus-visible{outline:4px solid #efcb69;outline-offset:3px}
-.status{font-family:Nunito,"Segoe UI",sans-serif}
+.status{font-family:var(--font-family-primary)}
 .status.good{color:#176b42}.status.bad{color:#a33b35}
 .done{max-width:760px;margin:auto;padding:clamp(18px,5vh,54px) 0}
 .done .button{margin-top:14px}.done .button.secondary{background:#fff;color:var(--teal-dark);box-shadow:0 5px 0 var(--line)}
 @media(max-width:700px){.page{padding:76px 10px 10px}.back{top:12px;left:12px;min-width:48px;min-height:44px;padding:6px 12px;font-size:.86rem}.prescribed-session-tools{top:12px;right:12px;gap:6px}.prescribed-session-tool{width:42px;height:42px;border-radius:13px;font-size:1.2rem}.card{max-height:calc(100dvh - 88px);padding:14px 12px;border-radius:24px}.question-top{gap:8px}.step-card{padding:10px;border-radius:20px}.step-card .picture{width:min(230px,45vw);height:clamp(100px,16vh,140px);margin:4px auto 6px}.step-card .button{min-height:50px}.button{min-height:56px}}
 @media(max-height:640px){.page{padding-top:66px}.card{max-height:calc(100dvh - 76px);padding:12px 18px}.eyebrow{margin-bottom:7px}.picture{height:108px;margin:4px auto}.track{margin:5px auto 8px}.question-instruction,.oral-label{margin:5px auto}.button{min-height:48px;padding:8px 20px}.intro-page .intro-subtitle{margin:8px auto 12px}}
-</style></head><body><main class="page"><a class="back" href="{% url 'assessment' %}" aria-label="Bumalik sa Aking Aralin"><span aria-hidden="true">←</span><span>Bumalik</span></a><section id="app" class="card" aria-live="polite"></section></main>{{ prescribed_activity_data|json_script:"prescribed-activity-data" }}
+</style>{% include "pabasa_app/includes/typography.html" %}
+</head><body><main class="page"><a class="back" href="{% url 'assessment' %}" aria-label="Bumalik sa Aking Aralin"><span aria-hidden="true">←</span><span>Bumalik</span></a><section id="app" class="card" aria-live="polite"></section></main>{{ prescribed_activity_data|json_script:"prescribed-activity-data" }}
 <script>(()=>{'use strict';
 const d=JSON.parse(document.getElementById('prescribed-activity-data').textContent||'{}'),items=d.items||[],app=document.getElementById('app'),csrf=()=>((document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)||[])[1]||''),esc=x=>String(x??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])),norm=x=>String(x||'').toLocaleLowerCase('fil-PH').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,''),key=i=>String(i);
 let s=Object.assign({phase:'intro',current_item_index:0,completed_oral_reads:[],stt_attempts:{},tts_plays:{},written_answers:[],completed_item_count:0,correct_answer_count:0,state_version:0},d.progress?.state||{}),busy=false,request=0,stream=null,audio=null,narrationAudio=null,narrationRequest=0;

@@ -6,10 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block page_title %}Reading Practice{% endblock %}</title>
     <link rel="icon" type="image/png" href="{% static 'pabasa_app/images/pabasalogo.png' %}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Quattrocento+Sans:wght@400;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --sky: #1f6f8b;
@@ -39,7 +36,7 @@
             justify-content: center;
             height: 100dvh;
             overflow: hidden;
-            font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             line-height: 1.5;
             letter-spacing: 0;
         }
@@ -295,7 +292,7 @@
         }
 
         .scrolls-header-copy h1 {
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             color: var(--sky-deep);
             font-size: clamp(1.06rem, 2vw, 1.2rem);
             font-weight: 900;
@@ -316,7 +313,7 @@
         }
 
         .scrolls-meta-pill {
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             background: rgba(31,111,139,0.08);
             border: 1px solid rgba(31,111,139,0.12);
             border-radius: 999px;
@@ -329,7 +326,7 @@
         }
 
         .scrolls-status-pill {
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             background: rgba(31,111,139,0.12);
             border: 1px solid rgba(31,111,139,0.16);
             border-radius: 999px;
@@ -344,7 +341,7 @@
 
         .scrolls-progress-pill {
             display: inline-flex;
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
         }
 
         .scrolls-phone-shell {
@@ -587,7 +584,7 @@
         }
 
         .scrolls-level-overlay-card h3 {
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             color: var(--sky-deep);
             font-size: 1.25rem;
             font-weight: 900;
@@ -620,7 +617,7 @@
             border-radius: 999px;
             color: #fff;
             display: inline-flex;
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: clamp(0.82rem, 1.3vw, 0.92rem);
             font-weight: 800;
             gap: 0.4rem;
@@ -639,7 +636,7 @@
             border-radius: 999px;
             color: #475569;
             display: inline-flex;
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: clamp(0.82rem, 1.3vw, 0.92rem);
             font-weight: 800;
             gap: 0.4rem;
@@ -1300,7 +1297,7 @@
                 radial-gradient(circle at 82% 20%, rgba(217, 238, 244, 0.95), transparent 28%),
                 linear-gradient(180deg, #fffdf7 0%, #f2f7f4 100%);
             color: var(--ink);
-            font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             color-scheme: light;
             line-height: 1.5;
             letter-spacing: 0;
@@ -1372,7 +1369,7 @@
             border-radius: 22px;
             color: var(--sky-deep);
             cursor: pointer;
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-weight: 900;
             line-height: 1.2;
             padding: 0.85rem 1rem;
@@ -1493,7 +1490,7 @@
 
         .practice-title p {
             color: #7c4a03;
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: 0.68rem;
             font-weight: 900;
             letter-spacing: 0.13em;
@@ -1508,7 +1505,7 @@
             border-radius: 999px;
             color: #166534;
             display: inline-flex;
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: 0.64rem;
             font-weight: 800;
             gap: 0.14rem;
@@ -1522,7 +1519,7 @@
 
         .practice-title h1 {
             color: #2b1b0f;
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: clamp(1.12rem, 2.8vw, 1.7rem);
             font-weight: 900;
             letter-spacing: 0;
@@ -1559,7 +1556,7 @@
             color: #334155;
             display: inline-flex;
             flex-shrink: 0;
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: 0.78rem;
             font-weight: 800;
             gap: 0.28rem;
@@ -1706,7 +1703,7 @@
         }
 
         .coach-panel h2 {
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: 1.18rem;
             font-weight: 900;
             margin: 0;
@@ -1740,7 +1737,7 @@
         }
 
         .coach-card-title {
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             align-items: center;
             color: var(--sky-deep);
             display: inline-flex;
@@ -1929,7 +1926,7 @@
 
         .practice-text {
             color: #24231f;
-            font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-weight: 900;
             line-height: 1.2;
             margin: 0;
@@ -2704,7 +2701,7 @@
         }
 
         .practice-complete-card h2 {
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: clamp(2rem, 5vw, 3rem);
             font-weight: 800;
             line-height: 1.1;
@@ -2714,7 +2711,7 @@
 
         .practice-complete-card p {
             color: #4A6680;
-            font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: clamp(1rem, 2vw, 1.08rem);
             font-weight: 600;
             line-height: 1.5;
@@ -2749,7 +2746,7 @@
 
         .practice-feedback-copy h3 {
             color: #10466E;
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: clamp(0.98rem, 2.9vw, 1.05rem);
             font-weight: 800;
             margin: 0 0 0.2rem;
@@ -2757,7 +2754,7 @@
 
         .practice-feedback-copy p {
             color: #4A6680;
-            font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: clamp(0.88rem, 2.7vw, 0.96rem);
             font-weight: 600;
             line-height: 1.45;
@@ -2775,7 +2772,7 @@
 
         .practice-breakdown-title {
             color: #10466E;
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: clamp(0.98rem, 2.9vw, 1.05rem);
             font-weight: 800;
             margin: 0;
@@ -2816,7 +2813,7 @@
 
         .practice-metric-body strong {
             color: #10466E;
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: clamp(1.02rem, 2.8vw, 1.55rem);
             font-weight: 800;
             line-height: 1.1;
@@ -2825,7 +2822,7 @@
 
         .practice-metric-body span {
             color: #4A6680;
-            font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: clamp(0.8rem, 2.4vw, 0.92rem);
             font-weight: 700;
             overflow-wrap: anywhere;
@@ -5294,7 +5291,7 @@
         .hunt-raw-mic code { color: #263332; display: block; font-family: inherit; font-size: .72rem; font-weight: 800; margin-top: .2rem; white-space: pre-wrap; }
         .hunt-checkpoint { background: #fff7d8; border: 2px solid #966d38; border-radius: 10px; color: #a84a32; font-size: 1.25rem; height: 38px; width: 44px; }
         .hunt-checkpoint.is-earned { background: #ffe36e; transform: rotate(-3deg) scale(1.08); }
-        .hunt-destination { color: #a52f27; font-family: "Nunito", "Segoe UI", sans-serif; font-size: 3rem; font-weight: 900; line-height: 1; text-shadow: 0 2px #fff3cc; }
+        .hunt-destination { color: #a52f27; font-family: var(--font-family-primary); font-size: 3rem; font-weight: 900; line-height: 1; text-shadow: 0 2px #fff3cc; }
         .practice-hunt-shell .hunt-main { align-items: center; display: flex; justify-content: center; min-height: 0; padding: clamp(.75rem,2vw,1.4rem); }
         .practice-hunt-shell .hunt-guide { display: none; }
         .practice-hunt-shell .hunt-word-area { background: rgba(255,255,247,.96); border: 4px solid #8e6536; box-shadow: 0 18px 40px rgba(70,45,19,.24); min-height: clamp(190px,35vh,340px); max-width: 760px; transform: scale(1); transition: opacity .2s ease, transform .2s ease; width: min(82%,760px); }
@@ -5492,7 +5489,7 @@
                 align-items: center;
                 color: #0f172a;
                 display: flex !important;
-                font-family: "Nunito", "Segoe UI", sans-serif;
+                font-family: var(--font-family-primary);
                 font-size: clamp(0.8rem, 0.95vw, 0.96rem);
                 font-weight: 800;
                 justify-content: space-between;
@@ -6054,7 +6051,7 @@
             border: 1px solid rgba(46, 168, 229, 0.16);
             border-radius: 999px;
             color: #10466e;
-            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-family: var(--font-family-primary);
             font-size: 0.76rem;
             font-weight: 900;
             justify-self: center;
@@ -6328,6 +6325,7 @@
         body.dark-theme .practice-hunt-shell .hunt-destination {filter:brightness(1.18);text-shadow:0 2px rgba(255,240,195,.38)}
     </style>
     {% include "pabasa_app/includes/student_theme_stylesheet.html" %}
+{% include "pabasa_app/includes/typography.html" %}
 </head>
 <body data-student-theme="{{ student_theme_slug|default:'sky' }}">
     {% include "pabasa_app/partials/_forest_world.html" %}

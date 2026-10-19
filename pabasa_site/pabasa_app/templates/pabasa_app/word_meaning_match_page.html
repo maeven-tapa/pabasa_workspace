@@ -10,7 +10,7 @@
     :root { --night:#190b42; --purple:#5d3196; --orange:#ff8a38; --sun:#ffc45b; --cream:#fffaf0; --ink:#352550; --good:#287b57; --bad:#bd4552; }
     * { box-sizing:border-box; }
     html, body { min-height:100%; }
-    body { min-height:100vh; margin:0; color:#fff8ea; font-family:"Trebuchet MS", "Segoe UI", sans-serif; overflow-x:hidden; background:linear-gradient(180deg,#150936 0,#342063 33%,#7a3d79 63%,#ef8248 100%); }
+    body { min-height:100vh; margin:0; color:#fff8ea; font-family:var(--font-family-primary); overflow-x:hidden; background:linear-gradient(180deg,#150936 0,#342063 33%,#7a3d79 63%,#ef8248 100%); }
     button, a { font:inherit; }
     .sky, .sunset { position:fixed; inset:0; pointer-events:none; }
     .sky { z-index:0; overflow:hidden; mask-image:linear-gradient(#000 0 50%,transparent 84%); }
@@ -59,6 +59,7 @@
     @media (max-width:680px) { .app { width:calc(100% - 18px); padding-top:10px; } .back { min-height:40px; padding:9px 12px; } .back span { display:none; } .logo { height:38px; } .badge { padding:8px 11px; font-size:.8rem; } .card { border-radius:26px; } .choices { grid-template-columns:1fr; } .choice { min-height:68px; } .activity-wrap { padding-top:12px; } }
     @media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
   </style>
+{% include "pabasa_app/includes/typography.html" %}
 </head>
 <body>
   <div class="sky" aria-hidden="true"></div><div class="sunset" aria-hidden="true"></div>

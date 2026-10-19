@@ -10,8 +10,8 @@
     .calendar-card { min-width: 0; background: #fff; border: 1px solid rgba(16, 70, 110, 0.10); border-radius: 22px; box-shadow: 0 18px 42px rgba(16, 70, 110, 0.08); }
     .calendar-card-inner { padding: 1rem 1.1rem; }
     .calendar-label { color: #6b7f95; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.35rem; }
-    .calendar-value { color: #10466E; font-family: "Nunito", "Segoe UI", sans-serif; font-size: 1.05rem; font-weight: 900; }
-    .school-year-navigation { max-width: 17rem; border-color: rgba(16,70,110,.18); color: #10466E; font-family: "Nunito", "Segoe UI", sans-serif; font-size: 1.05rem; font-weight: 900; }
+    .calendar-value { color: #10466E; font-family: var(--font-family-primary); font-size: 1.05rem; font-weight: 900; }
+    .school-year-navigation { max-width: 17rem; border-color: rgba(16,70,110,.18); color: #10466E; font-family: var(--font-family-primary); font-size: 1.05rem; font-weight: 900; }
     .term-progress { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; color: #8ba0b2; font-size: 1.02rem; font-weight: 900; }
     .term-progress-step { padding: .42rem .62rem; border-radius: 999px; white-space: nowrap; }
     .term-progress-step.is-active { background: #2ea8e5; color: #fff; box-shadow: 0 6px 14px rgba(46,168,229,.25); }
@@ -33,7 +33,7 @@
     /* FullCalendar owns table/axis widths. Do not rescale or rewrite its measured pixels. */
     .calendar-stage .fc-scrollgrid { border-color: rgba(16,70,110,0.12); }
     .fc .fc-toolbar { display: none; }
-    .fc .fc-button { border-radius: 999px !important; box-shadow: none !important; font-family: "Nunito", "Segoe UI", sans-serif; font-weight: 800; }
+    .fc .fc-button { border-radius: 999px !important; box-shadow: none !important; font-family: var(--font-family-primary); font-weight: 800; }
     .fc .fc-col-header-cell-cushion { padding: 0.75rem 0.25rem; font-weight: 800; color: #62809a; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.04em; text-decoration: none; }
     .fc .fc-dayGridMonth-view .fc-daygrid-day-frame { min-height: 6.5rem; padding: 0.25rem; }
     .fc .fc-timeGridWeek-view .fc-daygrid-day-frame { min-height: 2.5rem; padding: .2rem; }

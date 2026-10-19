@@ -67,7 +67,7 @@
     max-width: 43rem;
     margin: 0;
     color: var(--support-navy);
-    font-family: 'Baloo 2', 'Nunito', sans-serif;
+    font-family: var(--font-family-primary);
     font-size: clamp(2.35rem, 5vw, 4rem);
     font-weight: 800;
     letter-spacing: -0.035em;
