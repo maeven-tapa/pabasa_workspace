@@ -1,9 +1,12 @@
 """Focused Phase 2.5 validation for current-term Supplementary ownership."""
 
 from datetime import timedelta
+from copy import deepcopy
+from pathlib import Path
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlsplit
 
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -156,6 +159,165 @@ class SupplementaryTermLifecycleTests(TestCase):
     def test_pending_and_grade_level_are_denied(self):
         self.activate_term(1, completed=False)
         self.assertNotEqual(self.client.get(reverse('story_reading_page'), {'id': f'material-{self.story.id}'}).status_code, 200)
+
+    def test_story_reading_return_button_target_is_authorized_activity_hub(self):
+        assessment_result = self.crla
+        CalendarEvent.objects.create(
+            school_calendar=self.calendar, term=1, title='Current Pre-Assessment Week',
+            event_type='pre_assessment', start_date=self.today, end_date=self.today + timedelta(days=2),
+        )
+        for enabled in (False, True):
+            self.section.assessment_week_enabled = enabled
+            self.section.save(update_fields=['assessment_week_enabled', 'updated_at'])
+            story_page = self.client.get(reverse('story_reading_page'), {
+                'id': f'material-{self.story.id}', 'section_id': self.section.id,
+                'return_to': 'reading_assessment',
+            })
+            self.assertEqual(story_page.status_code, 200)
+            return_url = story_page.context['story_reading_data']['return_url']
+            target = urlsplit(return_url)
+            params = parse_qs(target.query)
+            self.assertEqual(target.path, reverse('assessment'))
+            self.assertEqual(params.get('return_to'), ['reading_assessment'])
+            self.assertEqual(params.get('return_material_id'), [f'material-{self.story.id}'])
+            self.assertEqual(params.get('section_id'), [str(self.section.id)])
+            player_js = Path(__file__).parent / 'static' / 'pabasa_app' / 'js' / 'story_reading_player.js'
+            self.assertIn(
+                'const returnToAssessment = () => { close(); window.location.assign(data.return_url ||',
+                player_js.read_text(encoding='utf-8'),
+            )
+
+            returned_page = self.client.get(return_url)
+            self.assertEqual(returned_page.status_code, 200)
+            self.assertEqual(returned_page.context['stage'], 'original')
+            self.assertNotContains(returned_page, 'CRLA Assessment is not available yet.')
+        self.assertTrue(Assessment.objects.filter(pk=assessment_result.pk, attempt_status='completed').exists())
+
+    def test_story_completion_persists_without_changing_official_crla_result(self):
+        official_result = self.crla
+        preference_before = deepcopy(self.student.preference or {})
+        progress_payload = {
+            'material_id': f'material-{self.story.id}', 'story_key': 'story-a',
+            'story_title': 'Story A', 'total_words': 2, 'words_read': 2,
+            'progress_percent': 100, 'correct_sentences': 1,
+            'duration_seconds': 60, 'current_scene': 1,
+            'current_time_seconds': 12, 'completed': True,
+        }
+        response = self.client.post(
+            reverse('story_reading_complete'),
+            data=progress_payload,
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['completed'])
+        progress = StoryReadingProgress.objects.get(
+            student=self.student, material=self.story, enrollment=self.enrollment,
+            school_calendar=self.calendar, term=1,
+        )
+        self.assertTrue(progress.completed)
+        self.assertEqual(progress.correct_sentences, 1)
+        self.client.post(
+            reverse('story_reading_complete'), data=progress_payload,
+            content_type='application/json',
+        )
+        self.assertEqual(StoryReadingProgress.objects.filter(
+            student=self.student, material=self.story, enrollment=self.enrollment,
+            school_calendar=self.calendar, term=1,
+        ).count(), 1)
+        refreshed_story = self.client.get(reverse('story_reading_page'), {
+            'id': f'material-{self.story.id}', 'section_id': self.section.id,
+        })
+        self.assertTrue(refreshed_story.context['story_reading_data']['completion']['completed'])
+        generic_completion = self.client.post(
+            reverse('record_assessment_completion'),
+            data={
+                'material_id': f'material-{self.story.id}',
+                'activity_type': 'story_reading',
+                'assessment_type': 'paragraph',
+                'items_completed': 1, 'correct_items': 1,
+                'accuracy': 1, 'total_score': 1, 'duration_seconds': 60,
+                'scores': {'correct_items': 1, 'items_completed': 1, 'accuracy': 1, 'total_score': 1},
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(generic_completion.status_code, 200)
+        self.assertTrue(generic_completion.json()['success'])
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.preference or {}, preference_before)
+        self.assertTrue(Assessment.objects.filter(
+            pk=official_result.pk, attempt_status='completed',
+            crla_classification='Developing Reader',
+        ).exists())
+
+    def test_two_students_keep_independent_supplementary_story_progress(self):
+        from .models import User
+
+        first_response = self.client.post(
+            reverse('story_reading_complete'),
+            data={
+                'material_id': f'material-{self.story.id}', 'story_key': 'story-a',
+                'story_title': 'Story A', 'total_words': 2, 'words_read': 2,
+                'progress_percent': 100, 'correct_sentences': 1,
+                'duration_seconds': 60, 'current_scene': 1,
+                'current_time_seconds': 12, 'completed': True,
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(first_response.status_code, 200)
+        other = User.objects.create(
+            custom_id='SUP-SECOND', role='student', first_name='Second', last_name='Student',
+            sex='female', birth_month=1, birth_day=1, birth_year=2018,
+            email='supplementary-second@example.test', password_hash='x', school_record=self.school,
+        )
+        other.set_password('test-password')
+        other.save(update_fields=['password_hash', 'updated_at'])
+        prescribed_term_fixture(
+            other, teacher=self.section.teacher, section=self.section,
+            calendar=self.calendar, term=1, today=self.today,
+            classification='Developing Reader',
+        )
+        second_client = Client()
+        login_response = second_client.post(reverse('login_user'), {
+            'custom_id': other.custom_id, 'password': 'test-password',
+        })
+        self.assertEqual(login_response.status_code, 200)
+        response = second_client.post(
+            reverse('story_reading_complete'),
+            data={
+                'material_id': f'material-{self.story.id}', 'story_key': 'story-a',
+                'story_title': 'Story A', 'total_words': 2, 'words_read': 2,
+                'progress_percent': 100, 'correct_sentences': 1,
+                'duration_seconds': 30, 'current_scene': 1,
+                'current_time_seconds': 12, 'completed': True,
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+        rows = StoryReadingProgress.objects.filter(material=self.story).order_by('student_id')
+        self.assertEqual(rows.count(), 2, list(rows.values(
+            'student_id', 'enrollment_id', 'school_calendar_id', 'term', 'material_id',
+        )))
+        self.assertEqual(set(rows.values_list('student_id', flat=True)), {self.student.id, other.id})
+        self.assertEqual(
+            {row.student_id: row.duration_seconds for row in rows},
+            {self.student.id: 60, other.id: 30},
+        )
+
+    def test_ineligible_supplementary_return_does_not_bypass_crla_gate(self):
+        CalendarEvent.objects.create(
+            school_calendar=self.calendar, term=1, title='Current Pre-Assessment Week',
+            event_type='pre_assessment', start_date=self.today, end_date=self.today + timedelta(days=2),
+        )
+        self.activate_term(1, completed=False)
+        self.section.assessment_week_enabled = False
+        self.section.save(update_fields=['assessment_week_enabled', 'updated_at'])
+        response = self.client.get(reverse('assessment'), {
+            'section_id': self.section.id, 'return_to': 'reading_assessment',
+            'return_material_id': f'material-{self.story.id}',
+        })
+        self.assertEqual(response.context['stage'], 'unavailable')
+        self.assertContains(response, 'CRLA Assessment is not available yet.')
         self.activate_term(1, completed=True, classification='Reading At Grade Level')
         self.assertNotEqual(self.client.get(reverse('story_reading_page'), {'id': f'material-{self.story.id}'}).status_code, 200)
 
@@ -329,6 +491,7 @@ class SupplementaryTermLifecycleTests(TestCase):
 
     def test_assessment_backed_supplementary_endpoint_is_scoped_and_isolated(self):
         endpoint = reverse('record_assessment_completion')
+        preference_before = deepcopy(self.student.preference or {})
         payload = {
             'material_id': f'material-{self.story_questions.id}',
             'activity_type': 'five_w_story_questions',
@@ -347,6 +510,8 @@ class SupplementaryTermLifecycleTests(TestCase):
             attempt_status='completed',
         )
         self.assertEqual(first_row.enrollment_id, self.enrollment.id)
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.preference or {}, preference_before)
 
         self.activate_term(2)
         self.publish_for_current_term(self.story_questions)
@@ -368,6 +533,8 @@ class SupplementaryTermLifecycleTests(TestCase):
             student=self.student, material=self.story_questions,
             supplementary_school_calendar=self.calendar, supplementary_term=2,
         ).exists())
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.preference or {}, preference_before)
 
     def test_assessment_backed_supplementary_endpoint_denies_pending_grade_level_and_closed(self):
         endpoint = reverse('record_assessment_completion')

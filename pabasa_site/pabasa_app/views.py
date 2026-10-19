@@ -12678,6 +12678,28 @@ def assessment(request):
         selected_section = next((section for section in joined_sections if section.id in current_section_ids), None)
     if selected_section is None and len(joined_sections) == 1:
         selected_section = joined_sections[0]
+    supplementary_return_requested = (
+        str(request.GET.get('return_to') or '').strip().lower() == 'reading_assessment'
+    )
+    return_material_id = request.GET.get('return_material_id') if supplementary_return_requested else None
+    _, return_material_id = _parse_prefixed_id(return_material_id)
+    return_material = (
+        Material.objects.filter(pk=return_material_id).first()
+        if return_material_id else None
+    )
+    current_enrollment = _student_current_enrollment(user) if return_material and user else None
+    returning_from_supplementary = bool(
+        user
+        and getattr(user, 'role', '') == 'student'
+        and supplementary_return_requested
+        and selected_section
+        and current_enrollment
+        and current_enrollment.section_id == selected_section.id
+        and return_material
+        and _is_supplementary_material(return_material)
+        and _current_supplementary_lifecycle_guard(request, return_material) is None
+        and _material_is_released(return_material)
+    )
     reading_access_state = workflow.get('eligibility') or _reader_assessment_state(user)
     # A finalized CRLA result takes precedence over calendar availability.
     # Calendar gates apply only to students who have not completed the active
@@ -12741,11 +12763,9 @@ def assessment(request):
         and not reading_access_state.get('reading_at_grade_level_complete')
         and (section_assessment_completed or (approved_assessment_request and student_live_assessment))
     )
-    if returning_to_reading_assessment and has_reading_assessment_access:
-        # A student returning from an already-authorized Reading Assessment
-        # activity must get the activity-selection hub, even if the section's
-        # Assessment Week flag is still enabled.  This is scoped to the
-        # originating context and does not bypass the normal entry flow.
+    if returning_to_reading_assessment and (has_reading_assessment_access or returning_from_supplementary):
+        # Preserve activity-hub navigation when the CRLA calendar would
+        # otherwise replace it with an official-assessment waiting screen.
         assessment_week_section = None
     if approved_assessment_request and assessment_week_live and student_live_assessment and not section_assessment_completed:
         # An approved overdue-assessment request is a student-specific grant.
@@ -12756,7 +12776,7 @@ def assessment(request):
         if (
             not current_term_crla_completed
             and not approved_assessment_request
-            and not (returning_to_reading_assessment and has_reading_assessment_access)
+            and not (returning_to_reading_assessment and (has_reading_assessment_access or returning_from_supplementary))
         ):
             context = _dashboard_context(request, 'student')
             pending_request = _current_crla_assessment_request(
@@ -12780,7 +12800,7 @@ def assessment(request):
                 'workflow_message': 'Keep up the great work. You can continue practicing whenever you like.',
             })
             return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
-    if user and getattr(user, 'role', '') == 'student' and selected_section and assessment_week_active and (not assessment_week_live or not student_live_assessment) and not section_assessment_completed and not has_completed_official_crla and not aral_week_mode:
+    if user and getattr(user, 'role', '') == 'student' and selected_section and assessment_week_active and (not assessment_week_live or not student_live_assessment) and not section_assessment_completed and not has_completed_official_crla and not aral_week_mode and not returning_from_supplementary:
         context = _dashboard_context(request, 'student')
         context.update({
             'stage': 'assessment_week_locked',
@@ -13042,6 +13062,14 @@ def assessment(request):
     ):
         stage = 'assessment_week_locked'
         routing_reason = 'approved_missed_crla_waiting_for_teacher'
+
+    if returning_from_supplementary:
+        # The student has just passed the material-specific publication and
+        # release checks. Return them to the activity hub independently of
+        # the official CRLA calendar; official CRLA launch authorization is
+        # still enforced by its material access checks.
+        stage = 'original'
+        routing_reason = 'return_from_authorized_supplementary_activity'
 
     try:
         logger.warning(
@@ -24473,11 +24501,6 @@ def story_reading_page(request):
     content_json = material.content_json if isinstance(material.content_json, dict) else {}
     story_config = content_json.get('storyReading') if isinstance(content_json.get('storyReading'), dict) else {}
     student = User.objects.filter(id=request.session.get('user_id'), role='student').first()
-    reader_state = _reader_assessment_state(student)
-    has_reading_assessment_access = bool(
-        reader_state.get('aral_eligible')
-        and not reader_state.get('reading_at_grade_level_complete')
-    )
     section_id_value = request.GET.get('section_id') or material.section_id or ''
     return_section = Section.objects.filter(pk=section_id_value).first() if section_id_value else None
     assessment_return_url = reverse('assessment')
@@ -24489,12 +24512,13 @@ def story_reading_page(request):
             or _student_has_approved_assessment_request(student, return_section)
         )
     )
-    if has_reading_assessment_access and has_completed_return_section:
-        # Preserve the originating activity-selection context.  The marker is
-        # emitted only for students who already have the persisted post-CRLA
-        # Reading Assessment access state.  This also keeps direct/reloaded
-        # Story Reading URLs from losing their originating context.
+    if has_completed_return_section or _is_supplementary_material(material):
+        # Supplementary readers return to the activity hub independently of
+        # the official CRLA workflow.  The assessment view validates this
+        # material reference against the student's current publication.
         return_params['return_to'] = 'reading_assessment'
+        if _is_supplementary_material(material):
+            return_params['return_material_id'] = f'material-{material.id}'
     return_query = urlencode({key: value for key, value in return_params.items() if value not in (None, '')})
     if return_query:
         assessment_return_url = f'{assessment_return_url}?{return_query}'
@@ -27359,12 +27383,18 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         str(activity_type or '').strip().lower() == 'word_decoding'
         and bool(material and _is_word_decoding_material(material))
     )
+    is_supplementary_activity = bool(
+        material and _is_supplementary_material(material) and not assist_context
+    )
     is_crla_assessment = bool(
-        data.get('crla_score_data')
-        or getattr(material, 'assessment_kind', '') == 'crla'
-        or getattr(material, 'is_official_reading', False)
-        or getattr(assessment, 'is_system_owned', False)
-        or 'crla' in str(getattr(assessment, 'system_assessment_key', '') or '').lower()
+        not is_supplementary_activity
+        and (
+            data.get('crla_score_data')
+            or getattr(material, 'assessment_kind', '') == 'crla'
+            or getattr(material, 'is_official_reading', False)
+            or getattr(assessment, 'is_system_owned', False)
+            or 'crla' in str(getattr(assessment, 'system_assessment_key', '') or '').lower()
+        )
     )
     if is_syllable_blending and bool(data.get('save_progress')):
         if not material or not _is_syllable_blending_material(material):
@@ -27887,7 +27917,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 assessment=assessment,
                 material=material,
             )
-        if not is_practice and not is_picture_word_matching and not is_syllable_blending and not is_clap_count_syllables and not is_letter_sound_matching and not is_letter_sound_correspondence and not is_word_decoding and not is_crla_assessment:
+        if not is_practice and not is_picture_word_matching and not is_syllable_blending and not is_clap_count_syllables and not is_letter_sound_matching and not is_letter_sound_correspondence and not is_word_decoding and not is_crla_assessment and not is_supplementary_activity:
             _log_completion_timing('student_profile_save_start')
             _update_student_reading_profile(student_user, score_payload)
             _log_completion_timing('student_profile_save_end')
