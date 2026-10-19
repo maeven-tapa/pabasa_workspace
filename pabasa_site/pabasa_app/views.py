@@ -356,13 +356,22 @@ def _current_supplementary_scope(student, material, lifecycle=None, enrollment=N
 
 
 def _current_supplementary_lifecycle_guard(request, material, *, json_response=False):
-    """Require the canonical ARAL_ACTIVE state for student Supplementary work."""
+    """Require current enrollment and material authorization for Supplementary work."""
     if request.session.get('user_role') not in (None, 'student'):
         return None
     student = _current_user(request)
     lifecycle = _current_learning_context(student) if student else {'state': 'BEFORE_TERM'}
-    if lifecycle.get('state') != 'ARAL_ACTIVE':
-        message = 'Supplementary activities are available only after the current term CRLA is completed for an ARAL-eligible student.'
+    material_type = str(getattr(material, 'type', '') or '').strip().lower() if material else ''
+    if (
+        not material
+        or not material.is_active
+        or not material.student_access
+        or material_type not in {'assessment', 'both'}
+        or _is_official_crla_material(material)
+        or not _material_is_released(material)
+        or lifecycle.get('state') not in {'ARAL_ACTIVE', 'CRLA_PENDING', 'GRADE_LEVEL'}
+    ):
+        message = 'This Supplementary material is currently unavailable.'
         if json_response:
             return JsonResponse({'success': False, 'error': message}, status=403)
         return HttpResponseForbidden(message)
@@ -1424,6 +1433,38 @@ def _current_supplementary_materials_for_student(student, section=None):
     ).exclude(
         Q(assessment_kind='crla') | Q(is_official_reading=True) | Q(is_system_owned=True)
     ).distinct()
+
+
+def _student_has_current_supplementary_material_access(student, section, lifecycle=None):
+    """Whether a student has at least one released, assigned current-term Supplementary material."""
+    lifecycle = lifecycle or _current_learning_context(student)
+    calendar = lifecycle.get('school_calendar') if lifecycle else None
+    term = lifecycle.get('term') if lifecycle else None
+    if not student or not section or not calendar or term not in {1, 2, 3}:
+        return False
+    if lifecycle.get('state') not in {'ARAL_ACTIVE', 'CRLA_PENDING', 'GRADE_LEVEL'}:
+        return False
+    enrollment = Enrollment.objects.filter(
+        student=student, section=section, school_calendar=calendar,
+        status='active', is_active=True,
+    ).first()
+    if not enrollment:
+        return False
+    publications = SupplementaryMaterialPublication.objects.filter(
+        school_calendar=calendar, term=term, section=section, is_active=True,
+        material__is_active=True, material__student_access=True,
+        material__type__in=('assessment', 'both'),
+        material__status__in=('published', '', None),
+    ).select_related('material')
+    for publication in publications:
+        material = publication.material
+        if (
+            not _is_official_crla_material(material)
+            and _material_is_released(material)
+            and _student_can_access_supplementary_publication(student, publication)
+        ):
+            return True
+    return False
 
 
 def _material_week_values(material):
@@ -12683,6 +12724,13 @@ def assessment(request):
         selected_section = next((section for section in joined_sections if section.id in current_section_ids), None)
     if selected_section is None and len(joined_sections) == 1:
         selected_section = joined_sections[0]
+    has_independent_supplementary_access = bool(
+        user
+        and getattr(user, 'role', '') == 'student'
+        and _student_has_current_supplementary_material_access(
+            user, selected_section, learning_context,
+        )
+    )
     supplementary_return_requested = (
         str(request.GET.get('return_to') or '').strip().lower() == 'reading_assessment'
     )
@@ -12716,6 +12764,7 @@ def assessment(request):
         user
         and getattr(user, 'role', '') == 'student'
         and reading_access_state.get('aral_exit_override')
+        and not has_independent_supplementary_access
     ):
         # Reuse the established congratulatory state after a teacher exits a
         # learner from ARAL. The finalized CRLA result remains untouched; the
@@ -12781,6 +12830,7 @@ def assessment(request):
         if (
             not current_term_crla_completed
             and not approved_assessment_request
+            and not has_independent_supplementary_access
             and not (returning_to_reading_assessment and (has_reading_assessment_access or returning_from_supplementary))
         ):
             context = _dashboard_context(request, 'student')
@@ -13075,6 +13125,15 @@ def assessment(request):
         # still enforced by its material access checks.
         stage = 'original'
         routing_reason = 'return_from_authorized_supplementary_activity'
+    elif has_independent_supplementary_access and (
+        current_term_crla_completed or not assessment_week_active
+    ):
+        # Normal sidebar, refresh, and direct navigation should expose an
+        # independently assigned Supplementary activity without a temporary
+        # return marker. CRLA launch rules remain enforced by the material
+        # access checks and Assessment Week still owns its official workflow.
+        stage = 'original'
+        routing_reason = 'authorized_supplementary_material_available'
 
     try:
         logger.warning(
@@ -28835,7 +28894,20 @@ def _student_can_complete_assessment(student_user, assessment=None, material=Non
             or linked_material.assessment_kind == 'crla'
         ))
     )
-    if linked_material and not _assessment_week_allows_material(student_user, linked_material):
+    independently_published_supplementary = bool(
+        linked_material
+        and not _is_official_crla_material(linked_material)
+        and linked_material.is_active
+        and linked_material.student_access
+        and str(linked_material.type or '').strip().lower() in {'assessment', 'both'}
+        and _material_is_released(linked_material)
+        and _supplementary_material_currently_published(student_user, linked_material)
+    )
+    if (
+        linked_material
+        and not independently_published_supplementary
+        and not _assessment_week_allows_material(student_user, linked_material)
+    ):
         return False
     if official:
         if _student_crla_finalized_for_material(student_user, linked_material):
@@ -35059,10 +35131,13 @@ def get_class_materials(request):
         )
         if request_user.role == 'student' and _section_assessment_week_status(section) == 'after':
             if not _student_completed_section_assessment(request_user, section) and not _student_has_approved_assessment_request(request_user, section):
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Assessment Week assessment was not completed; reading assessments are unavailable.',
-                }, status=403)
+                if not _student_has_current_supplementary_material_access(
+                    request_user, section, _current_learning_context(request_user),
+                ):
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Assessment Week assessment was not completed; reading assessments are unavailable.',
+                    }, status=403)
             if _finalized_grade_level_crla_result_exists(request_user):
                 return JsonResponse({
                     'success': False,
@@ -36842,6 +36917,19 @@ def _assessment_week_allows_material(student, material):
     """Apply Assessment Week to official assessments, not expired teacher work."""
     if not student or not material:
         return False
+    if (
+        not _is_official_crla_material(material)
+        and material.is_active
+        and material.student_access
+        and str(material.type or '').strip().lower() in {'assessment', 'both'}
+        and _material_is_released(material)
+        and _current_learning_context(student).get('state') in {'ARAL_ACTIVE', 'CRLA_PENDING', 'GRADE_LEVEL'}
+        and _supplementary_material_currently_published(student, material)
+    ):
+        # A current-term publication is an independent teacher grant. The
+        # CRLA Assessment Week switch controls official CRLA entry, not these
+        # separately assigned activities.
+        return True
     # Once a finalized official CRLA result exists, Assessment Week must not
     # hide the teacher's ordinary learning materials.  Keep official CRLA
     # itself excluded so completion never becomes a retake authorization.
