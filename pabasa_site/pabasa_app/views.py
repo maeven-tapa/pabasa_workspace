@@ -4301,11 +4301,14 @@ def _send_course_update_to_student(
     reading_material_input='',
     record_note=True,
     note_type_prefix='course_update',
+    sections=None,
     course_sections=None,
     course_title=None,
     course_code=None,
 ):
-    course_sections = list(course.sections.filter(is_active=True)) if course_sections is None else list(course_sections)
+    if course_sections is None:
+        course_sections = sections if sections is not None else course.sections.filter(is_active=True)
+    course_sections = list(course_sections)
     if course_sections and not any(section.has_student(student, active_only=True) for section in course_sections):
         return {'success': False, 'reason': 'not_enrolled', 'student_id': student.id}
     if not student.email:

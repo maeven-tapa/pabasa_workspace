@@ -1,0 +1,341 @@
+/* Reports & Updates only. The outer course content owns page scrolling. */
+#reportsPane {
+    container: course-reports / inline-size;
+}
+
+#reportsPane .course-report-layout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin: 0;
+    align-items: stretch;
+}
+
+#reportsPane .course-report-layout > .col-lg-6 {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+#reportsPane .course-report-layout .dash-card {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    max-height: none;
+    border: 1px solid var(--dash-border);
+    border-radius: 16px;
+}
+
+#reportsPane .course-report-composer-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 1.25rem;
+}
+
+#reportsPane .course-report-composer-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+}
+
+#reportsPane .course-report-heading-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 2.5rem;
+    height: 2.5rem;
+    border-radius: 12px;
+    color: var(--dash-primary);
+    background: var(--dash-primary-soft);
+    font-size: 1.15rem;
+}
+
+#reportsPane .course-report-composer-header h6,
+#reportsPane #courseRecipientsHeading {
+    color: var(--dash-ink);
+    font-size: 1.05rem;
+    line-height: 1.4;
+}
+
+#reportsPane .course-report-description {
+    color: var(--dash-muted);
+    font-size: 0.84rem;
+    line-height: 1.5;
+}
+
+#reportsPane .course-report-card-header {
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding-bottom: 1rem !important;
+}
+
+#reportsPane .course-report-card-header > div:first-child {
+    flex: 1 1 12rem;
+}
+
+#reportsPane .course-report-composer-card {
+    container-type: inline-size;
+}
+
+#reportsPane .course-report-card-header .form-check {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 0.5rem;
+    margin: 0;
+    min-height: 44px;
+    padding: 0;
+}
+
+#reportsPane .course-report-card-header .form-check-input {
+    margin: 0;
+    width: 1.15rem;
+    height: 1.15rem;
+}
+
+#reportsPane .course-report-selection-summary {
+    padding: 0.75rem 1.5rem;
+    border-block: 1px solid var(--dash-border);
+    color: var(--dash-ink-soft);
+    background: var(--dash-primary-soft);
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+#reportsPane .course-report-recipients-card .card-body {
+    display: flex;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+#reportsPane #courseUnifiedStudentReportList {
+    display: block;
+    flex: 1 1 0;
+    min-height: 0;
+    padding: 0;
+    max-height: none;
+    /* The roster fills the shared row instead of determining its height. */
+    contain: size;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+    border-radius: 0 0 16px 16px;
+}
+
+#reportsPane #courseUnifiedStudentReportList:focus-visible {
+    outline: 2px solid var(--dash-primary);
+    outline-offset: -3px;
+}
+
+#reportsPane .course-report-recipient-name {
+    cursor: pointer;
+    line-height: 1.4;
+}
+
+#reportsPane .course-report-pill-label {
+    overflow-wrap: anywhere;
+}
+
+#reportsPane .course-report-recipient-level.level-pending {
+    background: var(--dash-primary-soft);
+    color: var(--dash-primary-deep);
+}
+
+#reportsPane .course-report-recipient-check {
+    align-items: flex-start;
+    padding-top: 0.15rem;
+}
+
+#reportsPane .course-report-recipient:has(.student-checkbox:disabled) {
+    background: var(--dash-primary-soft);
+}
+
+#reportsPane #courseParentUpdateTabForm {
+    flex: 1 1 auto;
+    gap: 1rem;
+}
+
+#reportsPane .course-report-preview {
+    margin: 0;
+    border-radius: 12px;
+}
+
+#reportsPane .course-report-details > summary {
+    color: var(--dash-primary-deep);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding-block: 0.35rem;
+}
+
+#reportsPane .course-report-details[open] > summary {
+    margin-bottom: 0.75rem;
+}
+
+#reportsPane .course-report-preview-disclaimer {
+    color: var(--dash-muted);
+    font-size: 0.78rem;
+    line-height: 1.5;
+}
+
+#reportsPane .course-report-preview-disclaimer summary {
+    cursor: pointer;
+    font-weight: 700;
+}
+
+#reportsPane .course-report-preview-disclaimer p {
+    margin: 0.5rem 0 0;
+}
+
+#reportsPane #courseParentUpdateTabForm .form-label {
+    color: var(--dash-ink);
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+}
+
+#reportsPane #courseParentUpdateTabForm .form-control,
+#reportsPane #courseParentUpdateTabForm .form-select {
+    border-radius: 10px;
+    min-width: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+#reportsPane #courseParentUpdateMessage {
+    min-height: 9rem;
+    padding: 0.85rem;
+    resize: vertical;
+}
+
+#reportsPane .course-report-submit-row {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--dash-border);
+}
+
+#reportsPane .course-report-recipient-count {
+    color: var(--dash-ink-soft);
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+#reportsPane #courseBtnSendParentUpdate {
+    border-radius: 10px;
+    min-height: 44px;
+    padding-inline: 1.25rem;
+}
+
+#reportsPane .course-report-send-status:empty {
+    display: none;
+}
+
+#reportsPane .course-report-send-status {
+    padding: 0.75rem;
+    border-radius: 10px;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+/* Account for the space taken by both existing navigation columns. */
+@container course-reports (max-width: 780px) {
+    #reportsPane .course-report-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #reportsPane .course-report-layout .dash-card {
+        flex: 0 0 auto;
+        height: auto;
+    }
+
+    #reportsPane .course-report-recipients-card .card-body {
+        flex: 0 1 auto;
+    }
+
+    #reportsPane #courseUnifiedStudentReportList {
+        flex: 0 1 auto;
+        contain: none;
+        max-height: min(28rem, 60dvh);
+    }
+}
+
+@container (max-width: 440px) {
+    #reportsPane .course-report-automated-report {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    #reportsPane .course-report-preview-pdf-btn {
+        grid-column: 2;
+        width: 100%;
+    }
+}
+
+@media (min-width: 992px) and (max-width: 1279.98px) {
+    #courseDetailModal:has(#reportsPane.active) .course-modal-body {
+        grid-template-columns: minmax(0, 28%) minmax(0, 1fr);
+        padding: 1rem;
+    }
+
+    #courseDetailModal:has(#reportsPane.active) .course-sidebar {
+        min-width: 0;
+        padding-right: 0.75rem;
+    }
+
+    #courseDetailModal:has(#reportsPane.active) .course-side-nav .nav-link {
+        overflow-wrap: anywhere;
+    }
+}
+
+@media (max-width: 768px) {
+    #reportsPane .course-report-card-header {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center !important;
+    }
+
+    #reportsPane .course-report-selection-summary {
+        padding-inline: 0.95rem;
+    }
+
+    #reportsPane .course-report-recipient {
+        border-radius: 0;
+        border: 0 !important;
+        border-bottom: 1px solid var(--dash-border) !important;
+        padding: 0.95rem !important;
+    }
+
+    #reportsPane .course-report-recipient-name {
+        flex-basis: auto;
+    }
+
+    #reportsPane .course-report-composer-body {
+        gap: 1rem;
+    }
+
+    #reportsPane #courseParentUpdateTabForm .form-control,
+    #reportsPane #courseParentUpdateTabForm .form-select {
+        font-size: 1rem;
+    }
+
+    #reportsPane #courseParentUpdateTabForm .course-report-metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575.98px) {
+    #reportsPane .course-report-submit-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

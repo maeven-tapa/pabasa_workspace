@@ -100,3 +100,60 @@ class ReadingProgressReportTests(TestCase):
         self.assertTrue(attachment[1].startswith(b'%PDF'))
         self.assertEqual(attachment[2], 'application/pdf')
         self.assertTrue(Note.objects.filter(teacher=self.teacher, student=self.student, note_type='course_update:general').exists())
+
+    def send_section_update(self, **overrides):
+        session = self.client.session
+        session.update({'user_id': self.teacher.id, 'user_role': 'teacher'})
+        session.save()
+        payload = {'course_id': f'section-{self.section.id}',
+                   'student_ids': [self.student.id], 'update_type': 'general', 'message': ''}
+        payload.update(overrides)
+        return self.client.post(reverse('send_course_update'), data=json.dumps(payload),
+                                content_type='application/json')
+
+    @patch('pabasa_app.views.EmailMultiAlternatives')
+    def test_section_updates_preserve_delivery_pdf_and_notice_behavior(self, email_cls):
+        for update_type in ['general', 'followup', 'commendation', 'assessment']:
+            with self.subTest(update_type=update_type):
+                email_cls.reset_mock()
+                response = self.send_section_update(update_type=update_type)
+                self.assertEqual(response.status_code, 200, response.content)
+                self.assertEqual(response.json()['sent_count'], 1)
+                email_cls.return_value.send.assert_called_once()
+                if update_type == 'assessment':
+                    email_cls.return_value.attach.assert_not_called()
+                else:
+                    self.assertTrue(email_cls.return_value.attach.call_args.args[1].startswith(b'%PDF'))
+                self.assertTrue(Note.objects.filter(
+                    teacher=self.teacher, student=self.student,
+                    note_type=f'course_update:{update_type}').exists())
+
+    @patch('pabasa_app.views.EmailMultiAlternatives')
+    def test_section_update_rejects_other_teacher_inactive_and_invalid_sections(self, email_cls):
+        for course_id in ['section-invalid', 'invalid']:
+            self.assertEqual(self.send_section_update(course_id=course_id).status_code, 400)
+        other = User.objects.create(custom_id='RPT-OTHER', role='teacher', first_name='Other',
+            last_name='Teacher', email='other@example.com', sex='female',
+            birth_month=1, birth_day=1, birth_year=1990)
+        self.section.teacher = other
+        self.section.save(update_fields=['teacher'])
+        self.assertEqual(self.send_section_update().status_code, 404)
+        self.section.teacher = self.teacher
+        self.section.is_active = False
+        self.section.save(update_fields=['teacher', 'is_active'])
+        self.assertEqual(self.send_section_update().status_code, 404)
+        email_cls.assert_not_called()
+
+    @patch('pabasa_app.views.EmailMultiAlternatives')
+    def test_section_update_skips_unenrolled_and_missing_email_students(self, email_cls):
+        Enrollment.objects.filter(student=self.student).update(is_active=False, status='completed')
+        response = self.send_section_update()
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['skipped'][0]['reason'], 'not_enrolled')
+        Enrollment.objects.filter(student=self.student).update(is_active=True, status='active')
+        self.student.email = ''
+        self.student.save(update_fields=['email'])
+        response = self.send_section_update()
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['skipped'][0]['reason'], 'missing_email')
+        email_cls.assert_not_called()
