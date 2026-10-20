@@ -14,6 +14,23 @@ class Session4RecordingIntegrityTests(TestCase):
     setUp = fixtures.Lesson15ReadingTests.setUp
     client_for = fixtures.Lesson15ReadingTests.client_for
 
+    def test_empty_review_items_do_not_mark_activity_started(self):
+        for name in ('teacher_session_4_gawain_1_recordings',
+                     'teacher_session_4_gawain_2_recordings',
+                     'teacher_lesson_13_gawain_1_recordings',
+                     'teacher_lesson29_trace_say_recordings'):
+            with self.subTest(endpoint=name):
+                data = self.teacher_client.get(reverse(name), {'student_id': self.student.pk}).json()
+                self.assertTrue(data['success'])
+                self.assertFalse(data['started'])
+                self.assertFalse(data['completed'])
+                self.assertTrue(data['items'])
+        self.upload('session_4_gawain_1')
+        data = self.teacher_client.get(reverse('teacher_session_4_gawain_1_recordings'),
+                                       {'student_id': self.student.pk}).json()
+        self.assertTrue(data['started'])
+        self.assertFalse(data['completed'])
+
     def upload(self, activity, *, item_index=0, substep=None, content=b'first recording'):
         fields = {
             'item_index': str(item_index),

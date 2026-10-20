@@ -19,6 +19,7 @@ const progress = between('        function progressStudentMatches(', "        if
 const audio = between('    const studentProgressRetellGrades = new Map();', '    // Existing course student-progress actions');
 const grades = between("    document.addEventListener('click', function(event) {\n        const fluencyButton", "    document.addEventListener('input', function(event) {");
 const fluency = between("    document.addEventListener('change', function(event) {\n        const select = event.target.closest('.session5-fluency-select')", "    document.addEventListener('click', function(event) {\n        const courseTrigger");
+const seek = between("    document.addEventListener('input', function(event) {\n        const progress = event.target.closest('.student-progress-retell-progress');", '    // Toast notification function');
 const adapter = between('    function installCourseInlineModalAdapter() {', '    installCourseInlineModalAdapter();');
 const modalHtml = between('<div class="modal fade" id="studentProgressModal"', '<script>\ndocument.addEventListener');
 const courseCss = [...template.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(match => match[1]).join('\n').replace(/{% static ["']([^"']+)["'] %}/g, '/static/$1');
@@ -89,6 +90,7 @@ ${audio}
 ${urls(lesson1Only ? progress.replace('const tasks = courseProgressTasks(course, studentId);',
     "const tasks = courseProgressTasks(course, studentId).filter(task=>task.assessmentId==='prescribed-lesson-1-gawain-1');") : progress)}
 ${urls(grades)}
+${seek}
 ${urls(fluency)}
 ${adapter}
 installCourseInlineModalAdapter();
@@ -150,6 +152,13 @@ new (require('node:vm').Script)(setup);
             await page.addScriptTag({path:path.join(app,'static/pabasa_app/js/student_activity_review.js')});
             await page.addScriptTag({path:path.join(app,'static/pabasa_app/js/lesson15_reading_review.js')});
             await page.addScriptTag({content:setup});
+            assert.deepEqual(await page.evaluate(() => [
+                normalizeProgressStatus([]).label,
+                normalizeProgressStatus([{status:'not_started'}]).label,
+                normalizeProgressStatus([{status:'Not Started'}]).label,
+                normalizeProgressStatus([{status:'in_progress'}]).label,
+                normalizeProgressStatus([{status:'completed'}]).label,
+            ]), ['Not Started','Not Started','Not Started','In Progress','Completed']);
             assert.deepEqual(errors,[]);
             await page.evaluate(()=>window.openProgress());
             const cards=page.locator('#studentProgressList > .student-progress-card');
@@ -437,8 +446,35 @@ new (require('node:vm').Script)(setup);
                 assert(await singleDialog.locator('.reading-review-list').evaluate(node=>node.scrollWidth<=node.clientWidth+2));
                 if(process.env.PABASA_REVIEW_SCREENSHOTS)await page.screenshot({path:path.join(process.env.PABASA_REVIEW_SCREENSHOTS,`teacher-recording-review-0-${size.width}.png`)});
             }
+            await page.waitForFunction(() => {
+                const time = document.querySelector('dialog[open] .student-progress-retell-time');
+                return time && /^0:00 \/ 0:0[12]$/.test(time.textContent);
+            });
+            assert.equal(await cards.nth(0).locator('.student-progress-time-spent').textContent(),
+                (await singleDialog.locator('.student-progress-retell-time').textContent()).split(' / ')[1].padStart(5, '0'),
+                'Time Spent must match the audio duration on the card');
+            assert.equal(await singleDialog.locator('.student-progress-retell-progress').inputValue(), '0',
+                'Duration must load before playback without seeking');
             await cards.nth(0).locator('.student-progress-retell-play').click();
             await page.waitForFunction(()=>activeStudentProgressAudio && !activeStudentProgressAudio.paused);
+            const seekResult = await page.evaluate(async () => {
+                const slider = document.querySelector('dialog[open] .student-progress-retell-progress');
+                const audio = activeStudentProgressAudio;
+                const seekTo = fraction => new Promise(resolve => {
+                    audio.addEventListener('seeked', resolve, {once:true});
+                    slider.value = Number(slider.max) * fraction;
+                    slider.dispatchEvent(new Event('input', {bubbles:true}));
+                });
+                await seekTo(0.35);
+                const playingSeek = !audio.paused && audio.currentTime >= audio.duration * 0.3;
+                audio.pause();
+                await seekTo(0.65);
+                await new Promise(resolve => setTimeout(resolve, 100));
+                const pausedSeek = audio.paused && audio.currentTime >= audio.duration * 0.6;
+                await audio.play();
+                return {playingSeek, pausedSeek, resumed: !audio.paused && audio.currentTime >= audio.duration * 0.6};
+            });
+            assert.deepEqual(seekResult, {playingSeek:true, pausedSeek:true, resumed:true});
             failNext=true;
             await singleDialog.locator('.student-progress-lesson1-action[data-action="checked"]').click();
             await page.waitForFunction(()=>reviewToasts.at(-1)?.message==='Test save failure'&&!document.querySelector('.student-progress-lesson1-action[data-action="checked"]').disabled);

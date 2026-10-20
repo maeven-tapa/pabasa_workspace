@@ -1171,6 +1171,14 @@ def is_recognizable_a(value):
     strokes = normalize_strokes(value)
     if strokes is None or not strokes:
         return False
+    for points in strokes:
+        if len(points) < 2:
+            continue
+        xs, ys = zip(*points)
+        diagonal = max(hypot(max(xs) - min(xs), max(ys) - min(ys)), .01)
+        length = sum(hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(points, points[1:]))
+        if length / diagonal > 3.6:
+            return False
     shapes = []
     for index, stroke in enumerate(strokes):
         if len(stroke) < 2:
@@ -1215,6 +1223,48 @@ def is_recognizable_a(value):
                          (adiag >= 2 or (ax1 - ax0 >= .045 and (ah >= 1 or av >= 1))))
             lower_a = ((bx1 - bx0 >= .018 and by1 - by0 >= .018) and
                        bdiag >= 2 and bh >= 1)
+            # The current guide uses a single-storey a: a closed bowl plus
+            # a short right stem. It need not contain diagonal direction runs.
+            width, height = bx1 - bx0, by1 - by0
+            bowl = right_stem = False
+            if width >= .018 and height >= .018:
+                for stroke_index, *_ in lower:
+                    points = strokes[stroke_index]
+                    # Check consecutive near-vertical segments, including a
+                    # stem joined to the bowl, in either drawing direction.
+                    for first, second in zip(points, points[1:]):
+                        if (min(first[0], second[0]) >= bx0 + width * .70
+                                and abs(first[0] - second[0]) <= width * .25
+                                and abs(first[1] - second[1]) >= height * .70):
+                            right_stem = True
+                    right_run = []
+                    for point in points:
+                        if point[0] >= bx0 + width * .90:
+                            right_run.append(point[1])
+                            if max(right_run) - min(right_run) >= height * .70:
+                                right_stem = True
+                        else:
+                            right_run = []
+                    # A loop can be part of a continuous bowl-and-stem stroke.
+                    # Subsample to keep closure checks bounded for long traces.
+                    step = max(1, len(points) // 80)
+                    sampled = points[::step]
+                    if sampled[-1] != points[-1]:
+                        sampled.append(points[-1])
+                    for begin in range(len(sampled) - 3):
+                        for end in range(begin + 3, len(sampled)):
+                            if hypot(sampled[begin][0] - sampled[end][0], sampled[begin][1] - sampled[end][1]) > min(width, height) * .30:
+                                continue
+                            loop = sampled[begin:end + 1]
+                            lx, ly = zip(*loop)
+                            if (max(lx) - min(lx) >= width * .65
+                                    and max(ly) - min(ly) >= height * .65
+                                    and min(ly) <= by0 + height * .25):
+                                bowl = True
+                                break
+                        if bowl:
+                            break
+                lower_a = (lower_a and not bowl) or (bowl and right_stem)
             lower_region_valid = lower_a and capital_a and (ay1 - ay0) >= (by1 - by0) * 1.08
             if capital_a and lower_a and (ay1 - ay0) >= (by1 - by0) * 1.08:
                 return True

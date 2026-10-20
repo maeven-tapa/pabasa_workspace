@@ -2264,6 +2264,8 @@ class StudentActivityProgress(models.Model):
 class StudentActivityRecordingSubmission(models.Model):
     STATUS_CHOICES = [('submitted', 'Submitted'), ('retry', 'Retry Requested'), ('checked', 'Checked')]
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="activity_recording_submissions")
+    school_calendar = models.ForeignKey('SchoolCalendar', on_delete=models.PROTECT, null=True, blank=True)
+    term = models.PositiveSmallIntegerField(choices=SchoolCalendar.TERM_CHOICES, null=True, blank=True)
     activity_key = models.CharField(max_length=100)
     # Nullable for legacy one-record-per-activity submissions; itemized
     # activities use this to keep one current recording per item.
@@ -2321,8 +2323,15 @@ class StudentActivityRecordingSubmission(models.Model):
             ),
             models.UniqueConstraint(
                 fields=("student", "activity_key", "item_index"),
-                condition=models.Q(item_index__isnull=False, substep__isnull=True),
+                condition=(models.Q(item_index__isnull=False, substep__isnull=True)
+                           & ~(models.Q(activity_key='lesson-29-gawain-3', school_calendar__isnull=False, term__isnull=False))),
                 name="unique_itemized_activity_recording",
+            ),
+            models.UniqueConstraint(
+                fields=('student', 'activity_key', 'school_calendar', 'term', 'item_index'),
+                condition=models.Q(activity_key='lesson-29-gawain-3', school_calendar__isnull=False,
+                                   term__isnull=False, item_index__isnull=False, substep__isnull=True),
+                name='unique_term_lesson29_recording',
             ),
             models.UniqueConstraint(
                 fields=("student", "activity_key", "item_index", "substep"),
