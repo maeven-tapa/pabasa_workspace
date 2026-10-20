@@ -13,11 +13,8 @@
   .ora-meta{font-size:.84rem;color:#64748b}
   .ora-badge{display:inline-flex;align-items:center;padding:.32rem .7rem;border-radius:999px;font-size:.78rem;font-weight:900;line-height:1}
   .b-active{background:rgba(34,197,94,.12);color:#166534}
-  .b-archived{background:rgba(148,163,184,.18);color:#475569}
   .b-system{background:rgba(37,99,235,.12);color:#1d4ed8}
   .b-custom{background:rgba(249,115,22,.12);color:#c2410c}
-  .ora-list{display:grid;gap:.75rem}
-  .ora-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.8rem;align-items:flex-start;padding-top:.2rem}
   .ora-actions{display:flex;flex-wrap:wrap;gap:.5rem}
   .ora-divider{height:1px;background:rgba(16,70,110,.08);margin:1rem 0}
   @media (max-width:991.98px){
@@ -34,9 +31,6 @@
         <div class="ora-kicker mb-1">Official Reading Assessment Management</div>
         <h1 class="h3 fw-black mb-2">Official Reading Assessments</h1>
         <div class="ora-subtitle">Manage the official Pre-Assessment and Post-Assessment materials used by the reading assessment workflow.</div>
-      </div>
-      <div class="d-flex align-items-center gap-2">
-        <span class="badge rounded-pill text-bg-primary px-3 py-2">{{ assessment_window_status }}</span>
       </div>
     </div>
   </section>
@@ -64,10 +58,6 @@
           <div class="ora-actions">
             <a class="btn btn-outline-primary btn-sm fw-bold" href="{% url 'admin_official_reading_assessment_detail' group.active_material.id %}">View</a>
             <a class="btn btn-primary btn-sm fw-bold" href="{% url 'admin_official_reading_assessment_test' group.active_material.id %}"><i class="bi bi-shield-check me-1"></i>Test CRLA</a>
-            <form method="post" action="{% url 'admin_official_reading_assessment_archive' group.active_material.id %}">
-              {% csrf_token %}
-              <button class="btn btn-outline-secondary btn-sm fw-bold" type="submit">Archive</button>
-            </form>
           </div>
         </div>
       </div>
@@ -75,36 +65,6 @@
       <div class="text-secondary">No active {{ group.phase_label|lower }} material is currently set.</div>
     {% endif %}
 
-    <div class="ora-divider"></div>
-    <div class="d-flex justify-content-between align-items-center mb-2">
-      <div class="fw-bold text-secondary">Archived Materials ({{ group.archived_materials|length }})</div>
-    </div>
-    <div class="ora-list">
-      {% for material in group.archived_materials %}
-      <div class="ora-material">
-        <div class="d-flex flex-wrap justify-content-between gap-3 align-items-start">
-          <div>
-            <div class="d-flex flex-wrap gap-2 mb-2">
-              <span class="ora-badge b-archived">ARCHIVED</span>
-              <span class="ora-badge {% if material.is_system_owned %}b-system{% else %}b-custom{% endif %}">{% if material.is_system_owned %}SYSTEM OFFICIAL{% else %}CUSTOM{% endif %}</span>
-            </div>
-            <h3 class="h6 fw-black mb-1">{{ material.title }}</h3>
-            <div class="ora-meta">{{ group.phase_label }} · {% if material.is_active %}Active{% else %}Archived{% endif %}</div>
-          </div>
-          <div class="ora-actions">
-            <a class="btn btn-outline-primary btn-sm fw-bold" href="{% url 'admin_official_reading_assessment_detail' material.id %}">View</a>
-            <a class="btn btn-outline-primary btn-sm fw-bold" href="{% url 'admin_official_reading_assessment_test' material.id %}"><i class="bi bi-shield-check me-1"></i>Test CRLA</a>
-            <form method="post" action="{% url 'admin_official_reading_assessment_unarchive' material.id %}">
-              {% csrf_token %}
-              <button class="btn btn-outline-success btn-sm fw-bold" type="submit">Unarchive</button>
-            </form>
-          </div>
-        </div>
-      </div>
-      {% empty %}
-      <div class="text-secondary">No archived materials yet.</div>
-      {% endfor %}
-    </div>
   </section>
   {% endfor %}
 </div>
