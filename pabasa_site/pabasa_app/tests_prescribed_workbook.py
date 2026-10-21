@@ -883,6 +883,17 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertEqual(s['pending_words'], [{'word': 'com', 'parts': ['item-5']}])
         self.assertEqual(s['building_attempts'], 1)
 
+    def test_lesson22_gawain1_builder_tiles_are_identity_scoped_and_final_audio_precedes_popup(self):
+        root = Path(__file__).parent / 'static/pabasa_app'
+        renderer = (root / 'js/prescribed_workbook.js').read_text(encoding='utf-8')
+        css = (root / 'css/prescribed_l22_c_builder.css').read_text(encoding='utf-8')
+        self.assertIn("builder.includes(item.id)", renderer)
+        self.assertIn("tile.disabled=!readDone||preview||buildingLocked||picked", renderer)
+        self.assertIn("if(l22FinalBuild)await playPrescribedAudio('Tama!',true);render();", renderer)
+        self.assertIn("await playPrescribedAudio('Magaling! Natapos mo ang Gawain 1.',true)", renderer)
+        self.assertIn('.wb-bigbox-tile.is-picked:disabled', css)
+        self.assertIn('grid-template-columns:repeat(auto-fit,minmax(118px,1fr))', css)
+
     def test_lesson22_gawain1_advances_only_the_verified_current_syllable(self):
         a = get_activity('aral-l22-g1-c-syllable-builder')
         s = initial_state()

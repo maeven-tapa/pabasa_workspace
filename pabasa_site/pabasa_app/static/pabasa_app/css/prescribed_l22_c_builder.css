@@ -493,3 +493,13 @@ body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active>.wb-reading-p
 .wb-l22-g1-page .wb-word-panel .wb-tools #wb-retry{flex-basis:100%;display:none}
 .wb-l22-g1-page .wb-word-panel .wb-tools #wb-retry:not([hidden]){display:block}
 @media(max-width:520px){.wb-l22-g1-page .wb-word-panel .wb-tools{gap:8px}.wb-l22-g1-page .wb-word-panel .wb-tools button{flex-basis:calc(50% - 4px);padding-inline:10px;font-size:.9rem}}
+
+/* Gawain 1: keep accepted words legible and make each selected tile unavailable
+   by tile identity until the current draft is cleared. */
+.wb-l22-g1-page .wb-builder-words{margin-top:10px;padding:10px 12px;background:#e8f5ea;border:2px solid #b9dfc5;border-radius:14px;color:#286349;font-size:1rem;line-height:1.2;white-space:normal;overflow:visible}
+.wb-l22-g1-page .wb-builder-words strong{display:block;margin-bottom:8px;color:#256347;font-size:1.05rem;letter-spacing:.03em}
+.wb-l22-g1-page .wb-builder-words ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin:0;padding:0;list-style:none}
+.wb-l22-g1-page .wb-builder-words li{display:flex;align-items:center;justify-content:center;min-height:38px;padding:6px 10px;background:#f4fff5;border:1px solid #9ccaa8;border-radius:10px;color:#286349;font-size:1rem;font-weight:900;text-align:center}
+.wb-l22-g1-page .wb-l22-builder .wb-bigbox-tile.is-picked:disabled{cursor:not-allowed;color:#5f7180;background:#dce6eb;border-color:#9eafb9;box-shadow:inset 0 0 0 2px #b8c7cf}
+.wb-l22-g1-page .wb-l22-builder .wb-bigbox-tile.is-picked:disabled:hover{background:#dce6eb;border-color:#9eafb9;transform:none}
+@media(max-width:520px){.wb-l22-g1-page .wb-builder-words{padding:8px 9px;font-size:.9rem}.wb-l22-g1-page .wb-builder-words strong{font-size:.95rem}.wb-l22-g1-page .wb-builder-words ul{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.wb-l22-g1-page .wb-builder-words li{min-height:34px;padding:5px 6px;font-size:.85rem}}
