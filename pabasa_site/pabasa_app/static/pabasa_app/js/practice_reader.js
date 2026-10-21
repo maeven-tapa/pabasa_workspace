@@ -111,6 +111,8 @@
     let speechActiveButton = null;
     let speechOriginalButtonHtml = "";
     let speechRequestActive = false;
+    let speechAttemptGeneration = 0;
+    let activeSpeechAttempt = null;
     let speechAudioContext = null;
     let speechAnalyser = null;
     let speechMeterFrame = null;
@@ -167,6 +169,9 @@
     let huntDiscardCurrentAudio = false;
     let huntReadAloudActive = false;
     let practicePlaybackStarted = false;
+        let huntReadAloudAudio = null;
+    let huntReadAloudPlaybackCancel = null;
+    let huntReadAloudGeneration = 0;
 
     function activeReadingButton() {
         return isFreeMode ? scrollRecordBtn : recordBtn;
@@ -210,6 +215,56 @@
         if (advance) advance.textContent = viewMode === 'view' ? (finalItem ? "Exit" : "Next")
             : isColorMode && colorModeCompletionReady ? "Finish"
                 : read ? (finalItem ? "Finish" : "Next") : (finalItem ? "Skip & Finish" : "Skip");
+    }
+
+    function isReadAloudCurrent(generation, itemIndex, targetText) {
+        return huntReadAloudActive && generation === huntReadAloudGeneration &&
+            !shell.classList.contains("is-complete") &&
+            itemIndex === (isFreeMode ? scrollCurrentIndex : currentIndex) &&
+            targetText === items[itemIndex];
+    }
+
+    function restoreReadAloudControls() {
+        huntReadAloudActive = false;
+        huntReadAloudAudio = null;
+        huntReadAloudPlaybackCancel = null;
+        if (readAloudBtn) {
+            readAloudBtn.disabled = false;
+            readAloudBtn.classList.remove("is-playing");
+        }
+        updateReadingToggleButton();
+        resetHuntSpeechPanel();
+    }
+
+    function cancelPracticeReadAloud() {
+        if (!huntReadAloudActive && !huntReadAloudAudio) return;
+        huntReadAloudGeneration += 1;
+        const cancelPlayback = huntReadAloudPlaybackCancel;
+        huntReadAloudPlaybackCancel = null;
+        if (cancelPlayback) cancelPlayback();
+        else if (huntReadAloudAudio) {
+            huntReadAloudAudio.pause();
+            huntReadAloudAudio.currentTime = 0;
+        }
+        restoreReadAloudControls();
+    }
+
+    function waitForPracticeReadAloud(audio) {
+        return new Promise((resolve, reject) => {
+            let settled = false;
+            const cleanup = () => {
+                audio.removeEventListener("ended", finish);
+                audio.removeEventListener("error", fail);
+                if (huntReadAloudPlaybackCancel === cancel) huntReadAloudPlaybackCancel = null;
+            };
+            const finish = () => { if (!settled) { settled = true; cleanup(); resolve(); } };
+            const fail = () => { if (!settled) { settled = true; cleanup(); reject(new Error("The pronunciation audio could not play.")); } };
+            const cancel = () => { audio.pause(); audio.currentTime = 0; finish(); };
+            huntReadAloudPlaybackCancel = cancel;
+            audio.addEventListener("ended", finish, { once: true });
+            audio.addEventListener("error", fail, { once: true });
+            audio.play().catch(fail);
+        });
     }
 
     function isEditableTarget(target) {
@@ -281,7 +336,35 @@
         }, delay);
     }
 
+    function speechAttemptItemIndex() {
+        return isFreeMode ? scrollCurrentIndex : currentIndex;
+    }
+
+    function beginSpeechAttempt(targetText) {
+        const attempt = { generation: ++speechAttemptGeneration, index: speechAttemptItemIndex(), targetText };
+        activeSpeechAttempt = attempt;
+        return attempt;
+    }
+
+    function invalidateSpeechAttempt() {
+        speechAttemptGeneration += 1;
+        activeSpeechAttempt = null;
+        if (huntRecognitionRestartTimer) window.clearTimeout(huntRecognitionRestartTimer);
+        huntRecognitionRestartTimer = null;
+    }
+
+    function isSpeechAttemptCurrent(attempt) {
+        return Boolean(attempt && activeSpeechAttempt === attempt && attempt.generation === speechAttemptGeneration &&
+            huntListeningDesired && !shell.classList.contains("is-complete") && !huntAdvanceInProgress &&
+            attempt.index === speechAttemptItemIndex() && attempt.targetText === currentSpeechTarget());
+    }
+
+    function discardStaleSpeechStream(stream) {
+        stream?.getTracks?.().forEach(track => track.stop());
+    }
+
     function stopContinuousRecognitionByUser() {
+        invalidateSpeechAttempt();
         speechCaptureVersion++;
         huntListeningDesired = false;
         if (huntRecognitionRestartTimer) window.clearTimeout(huntRecognitionRestartTimer);
@@ -297,6 +380,22 @@
         updateReadingToggleButton();
         setHuntSpeechPanel("Speech check stopped", "Google Speech results will appear here while you read.");
         speechFeedback("Microphone stopped. Tap Start Reading to try again.");
+    }
+
+    function stopContinuousRecognitionAfterMicrophoneError() {
+        invalidateSpeechAttempt();
+        huntListeningDesired = false;
+        if (huntRecognitionRestartTimer) window.clearTimeout(huntRecognitionRestartTimer);
+        huntRecognitionRestartTimer = null;
+        if (huntRetryTimer) window.clearTimeout(huntRetryTimer);
+        huntRetryTimer = null;
+    }
+
+    function microphoneAccessErrorMessage(error) {
+        const errorName = String(error?.name || "").toLowerCase();
+        if (errorName === "notallowederror" || errorName === "securityerror") return "Please allow the microphone, then tap Start Reading.";
+        if (errorName === "notfounderror" || errorName === "overconstrainederror") return "No microphone was found. Check it, then tap Start Reading.";
+        return "Microphone is unavailable. Check it, then tap Start Reading.";
     }
 
     const colorModeStage = document.getElementById("colorModeStage");
@@ -409,6 +508,8 @@
     }
 
     window.addEventListener('pagehide', () => {
+        cancelPracticeReadAloud();
+        invalidateSpeechAttempt();
         speechCaptureVersion++;
         huntListeningDesired = false;
         if (huntRecognitionRestartTimer) window.clearTimeout(huntRecognitionRestartTimer);
@@ -494,8 +595,8 @@
         if (rawMic) rawMic.textContent = "Waiting for speech...";
     }
 
-    function classifyHuntSpeech(transcript, target, confidence) {
-        const exactMatch = normalizeHuntSpeech(transcript) === normalizeHuntSpeech(target);
+    function classifyHuntSpeech(transcript, target, confidence, recognizedMatch = false) {
+        const exactMatch = recognizedMatch || normalizeHuntSpeech(transcript) === normalizeHuntSpeech(target);
         const parsed = Number(confidence);
         const usable = Number.isFinite(parsed) && parsed >= 0 && parsed <= 1;
         if (!usable) return exactMatch ? { tier: "Excellent", points: 2, message: "Amazing! You said it clearly!" } : { tier: "Weak", points: 0, message: "Good try! Listen, then try the next word." };
@@ -527,9 +628,9 @@
         return request;
     }
 
-    function finalizeHuntSpeechResult(index, transcript, target, confidence) {
+    function finalizeHuntSpeechResult(index, transcript, target, confidence, recognizedMatch = false) {
         if (!isHuntMode || huntResults[index]) return null;
-        const result = classifyHuntSpeech(transcript, target, confidence);
+        const result = classifyHuntSpeech(transcript, target, confidence, recognizedMatch);
         huntResults[index] = result;
         huntPoints += result.points;
         if (huntPointsDisplay) huntPointsDisplay.textContent = `Points: ${huntPoints}/${HUNT_MAX_POINTS}`;
@@ -575,6 +676,7 @@
             starCounter?.classList.remove("is-twinkling");
             colorPracticeText?.classList.remove("is-correct");
             if (currentIndex < items.length - 1) {
+                invalidateSpeechAttempt();
                 currentIndex += 1;
                 practiceFeedback.textContent = idlePracticeInstruction();
                 practiceFeedback.classList.remove("is-warning");
@@ -590,7 +692,9 @@
         updateReadingToggleButton();
     }
 
-    async function submitPracticeSpeech(blob, targetText, button, speechItemIndex = (isFreeMode ? scrollCurrentIndex : currentIndex), version = speechCaptureVersion) {
+    async function submitPracticeSpeech(blob, targetText, button, attempt) {
+        if (!isSpeechAttemptCurrent(attempt)) return;
+        const speechItemIndex = attempt.index;
         let retryHuntRecognition = false;
         speechRequestActive = true;
         updateReadingToggleButton();
@@ -635,8 +739,7 @@
                     : "The speech service returned an invalid response.");
             }
             if (!response.ok || !data.success) throw new Error(data.error || "Speech recognition failed.");
-            if (version !== speechCaptureVersion || speechItemIndex !== (isFreeMode ? scrollCurrentIndex : currentIndex)
-                    || targetText !== currentSpeechTarget() || shell.classList.contains('is-complete')) return;
+            if (!isSpeechAttemptCurrent(attempt)) return;
 
             if (isFreeMode && urlParams.get("speech_debug") === "1") console.info("FREE_MODE_STT_DIAGNOSTIC final_json", {
                 language_code: data.language_code,
@@ -652,10 +755,10 @@
             }
             if (isHuntMode) {
                 if (speechItemIndex !== currentIndex || huntAdvanceInProgress || huntResults[speechItemIndex]) return;
-                const isCorrect = normalizeHuntSpeech(transcript) === normalizeHuntSpeech(targetText);
-                const candidate = classifyHuntSpeech(transcript, targetText, data.confidence);
+                const isCorrect = Boolean(data.complete);
+                const candidate = classifyHuntSpeech(transcript, targetText, data.confidence, isCorrect);
                 if (isCorrect && candidate.points > 0) {
-                    finalizeHuntSpeechResult(speechItemIndex, transcript, targetText, data.confidence);
+                    finalizeHuntSpeechResult(speechItemIndex, transcript, targetText, data.confidence, isCorrect);
                 } else {
                     setHuntSpeechPanel("Try again", `Final: ${normalizeHuntSpeech(transcript) || "No speech recognized"}`);
                     if (huntRawMicInput) huntRawMicInput.textContent = transcript || "No speech recognized";
@@ -669,8 +772,10 @@
                 completeRecognizedPracticeItem(button);
             } else {
                 const hint = data.next_word
-                    ? `Try again from “${data.next_word}”. I'm still listening.`
-                    : "Try reading again. I'm still listening.";
+                    ? `Try again from “${data.next_word}”.${transcript ? ` Heard: “${transcript}”` : ""}`
+                    : transcript
+                        ? `Please try again. Heard: “${transcript}”`
+                        : "I did not hear you. Try again.";
                 speechFeedback(hint, false);
                 restoreSpeechButton();
                 retryHuntRecognition = true;
@@ -688,12 +793,12 @@
             releaseSpeechStream();
             restoreSpeechButton();
             updateReadingToggleButton();
-            if (isHuntMode && huntListeningDesired && speechItemIndex === currentIndex && !huntAdvanceInProgress && !huntResults[speechItemIndex]) {
+            if (isHuntMode && isSpeechAttemptCurrent(attempt) && !huntResults[speechItemIndex]) {
                 if (retryHuntRecognition) setHuntSpeechPanel("Try again", "Google Speech is listening for the same word.", true);
                 scheduleContinuousRecognition(speechItemIndex, retryHuntRecognition ? 350 : 120);
-            } else if (!isHuntMode && huntListeningDesired) {
+            } else if (!isHuntMode && isSpeechAttemptCurrent(attempt)) {
                 window.setTimeout(() => {
-                    if (!huntListeningDesired) return;
+                    if (!isSpeechAttemptCurrent(attempt)) return;
                     scheduleContinuousRecognition(isFreeMode ? scrollCurrentIndex : currentIndex, 0);
                 }, retryHuntRecognition ? 350 : (isColorMode ? 1100 : 520));
             }
@@ -714,6 +819,7 @@
         if (!targetText || practiceControlsPending() || speechRecorder) return;
         const version = ++speechCaptureVersion;
         const speechItemIndex = isFreeMode ? scrollCurrentIndex : currentIndex;
+        const attempt = beginSpeechAttempt(targetText);
         if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
             huntListeningDesired = false;
             speechFeedback("Speech recording is not supported in this browser.", false);
@@ -741,8 +847,8 @@
             ]);
             permissionPending = false;
             window.clearTimeout(permissionTimer);
-            if (version !== speechCaptureVersion || speechItemIndex !== (isFreeMode ? scrollCurrentIndex : currentIndex)) {
-                grantedStream.getTracks().forEach(track => track.stop());
+            if (version !== speechCaptureVersion || !isSpeechAttemptCurrent(attempt)) {
+                discardStaleSpeechStream(grantedStream);
                 return;
             }
             speechStream = grantedStream;
@@ -766,7 +872,7 @@
                 purpose: 'practice', material_id: material.raw_id || material.id || materialId,
                 target_text: targetText, mode,
             }, transcript => {
-                if (version !== speechCaptureVersion || speechItemIndex !== (isFreeMode ? scrollCurrentIndex : currentIndex)) return;
+                if (version !== speechCaptureVersion || !isSpeechAttemptCurrent(attempt)) return;
                 setHuntSpeechPanel('Listening live with Google Speech…', `Interim: ${transcript}`, true);
             });
             const liveCapture = speechLiveCapture;
@@ -784,6 +890,11 @@
                     updateReadingToggleButton();
                     return;
                 }
+                if (!isSpeechAttemptCurrent(attempt)) {
+                    discardStaleSpeechStream(speechStream);
+                    if (speechStream) releaseSpeechStream();
+                    return;
+                }
                 if (!blob.size) {
                     speechRequestActive = false;
                     speechFeedback("I did not hear you. Try reading again.", false);
@@ -795,15 +906,26 @@
                 }
                 speechRequestActive = true;
                 try {
-                    if (liveCapture) await liveCapture.finish(blob);
-                    if (version !== speechCaptureVersion || speechItemIndex !== (isFreeMode ? scrollCurrentIndex : currentIndex)
-                            || targetText !== currentSpeechTarget() || shell.classList.contains('is-complete')) {
+                    if (liveCapture) {
+                        try {
+                            await liveCapture.finish(blob);
+                        } catch (error) {
+                            // Hunt still has the complete MediaRecorder clip. If
+                            // the parallel stream produced only interim speech,
+                            // fall back to the authoritative batch transcription
+                            // instead of leaving the item in Processing.
+                            const missingFinal = /no final speech was received/i.test(String(error?.message || ""));
+                            if (!isHuntMode || !missingFinal) throw error;
+                            liveCapture.stop();
+                        }
+                    }
+                    if (version !== speechCaptureVersion || !isSpeechAttemptCurrent(attempt)) {
                         releaseSpeechStream(); restoreSpeechButton(); updateReadingToggleButton();
                         speechRequestActive = false;
                         if (huntListeningDesired) scheduleContinuousRecognition(isFreeMode ? scrollCurrentIndex : currentIndex, 180);
                         return;
                     }
-                    await submitPracticeSpeech(blob, targetText, button, speechItemIndex, version);
+                    await submitPracticeSpeech(blob, targetText, button, attempt);
                 } catch (error) {
                     huntListeningDesired = false;
                     speechFeedback('Speech check interrupted. Tap Start Reading to try again.', false);
@@ -827,12 +949,10 @@
             // before sending the complete recording to Google Speech.
             speechStopTimer = window.setTimeout(stopPracticeSpeechRecording, practiceRecordingWindowMs(targetText));
         } catch (error) {
+            if (!isSpeechAttemptCurrent(attempt)) return;
             console.warn("PABASA [Practice]: Microphone unavailable", error);
-            huntListeningDesired = false;
-            speechFeedback(error.name === "NotAllowedError"
-                ? "Microphone blocked. Allow it in your browser, then try again."
-                : error.message?.includes("timed out") ? error.message
-                    : "Microphone unavailable. Check it, then try again.", false);
+            stopContinuousRecognitionAfterMicrophoneError();
+            speechFeedback(microphoneAccessErrorMessage(error), false);
             restoreSpeechButton();
             releaseSpeechStream();
             updateReadingToggleButton();
@@ -897,12 +1017,16 @@
     readAloudBtn?.addEventListener("click", async () => {
         const activeIndex = isFreeMode ? scrollCurrentIndex : currentIndex;
         if (practiceControlsPending() || shell.classList.contains("is-complete") || !items[activeIndex]) return;
+        const targetText = items[activeIndex];
+        const playbackGeneration = ++huntReadAloudGeneration;
+        const resumeListening = huntListeningDesired;
         huntReadAloudActive = true;
         practicePlaybackStarted = false;
+        huntListeningDesired = false;
+        invalidateSpeechAttempt();
         updateReadingToggleButton();
         speechFeedback("Loading the reading audio…");
         readAloudBtn.classList.add("is-playing");
-        const resumeListening = huntListeningDesired;
         if (speechRecorder?.state === "recording") {
             huntDiscardCurrentAudio = true;
             stopPracticeSpeechRecording();
@@ -911,12 +1035,11 @@
         }
         if (huntRecognitionRestartTimer) window.clearTimeout(huntRecognitionRestartTimer);
         huntRecognitionRestartTimer = null;
-        let playbackFailed = false;
         const audioRequest = new AbortController();
         const audioRequestTimer = window.setTimeout(() => audioRequest.abort(), 30000);
         try {
             const formData = new FormData();
-            formData.append("target_text", items[activeIndex]);
+            formData.append("target_text", targetText);
             formData.append("mode", mode);
             formData.append("tts_profile", "hunt");
             formData.append("language", getActiveMaterialMeta?.()?.language || document.documentElement.lang || "");
@@ -927,31 +1050,29 @@
                 body: formData,
             });
             const data = await response.json();
-            window.clearTimeout(audioRequestTimer);
             if (!response.ok || !data.success || !data.audio_content) throw new Error(data.error || "Read aloud is unavailable.");
-            setHuntSpeechPanel("Listen carefully", `Hear how to say: ${items[activeIndex]}`);
+            if (!isReadAloudCurrent(playbackGeneration, activeIndex, targetText)) return;
+            setHuntSpeechPanel("Listen carefully", `Hear how to say: ${targetText}`);
             const audio = new Audio(`data:${data.mime_type || "audio/mpeg"};base64,${data.audio_content}`);
+            huntReadAloudAudio = audio;
             practicePlaybackStarted = true;
             updateReadingToggleButton();
             speechFeedback("Listen to the text.");
-            await new Promise((resolve, reject) => {
-                audio.addEventListener("ended", resolve, { once: true });
-                audio.addEventListener("error", () => reject(new Error("The pronunciation audio could not play.")), { once: true });
-                audio.play().catch(reject);
-            });
+            await waitForPracticeReadAloud(audio);
         } catch (error) {
-            playbackFailed = true;
-            speechFeedback(resumeListening ? "Read Aloud is unavailable. Your microphone will continue." : "Read Aloud is unavailable. Try again or tap Start Reading.", false);
+            if (isReadAloudCurrent(playbackGeneration, activeIndex, targetText)) {
+                speechFeedback(error.message || "Read aloud is unavailable. Please try again.", false);
+            }
         } finally {
             window.clearTimeout(audioRequestTimer);
-            huntReadAloudActive = false;
-            practicePlaybackStarted = false;
-            updateReadingToggleButton();
-            readAloudBtn.classList.remove("is-playing");
-            resetHuntSpeechPanel();
-            if (!playbackFailed) speechFeedback(idlePracticeInstruction());
-            const resumeIndex = isFreeMode ? scrollCurrentIndex : currentIndex;
-            if (resumeListening && huntListeningDesired && (!isHuntMode || !huntResults[resumeIndex])) scheduleContinuousRecognition(resumeIndex, 180);
+            if (isReadAloudCurrent(playbackGeneration, activeIndex, targetText)) {
+                restoreReadAloudControls();
+                if (resumeListening && !shell.classList.contains("is-complete")) {
+                    huntListeningDesired = true;
+                    updateReadingToggleButton();
+                    scheduleContinuousRecognition(activeIndex, 180);
+                }
+            }
         }
     });
     let colorRevealedCount = 0;
@@ -1242,6 +1363,7 @@
 
     function handleColorModeKeyboard(event) {
         if (!isColorMode || !items.length) return false;
+        if (huntReadAloudActive) { event.preventDefault(); return true; }
         const activeElement = document.activeElement;
         if (isInteractiveElement(activeElement)) return false;
 
@@ -1347,6 +1469,7 @@
 
     function handleHuntModeKeyboard(event) {
         if (!isHuntMode || !items.length) return false;
+        if (huntReadAloudActive) { event.preventDefault(); return true; }
         const activeElement = document.activeElement;
         if (isInteractiveElement(activeElement)) return false;
 
@@ -2185,7 +2308,7 @@
     }
 
     function goToFreeModeCard(nextIndex, options = {}) {
-        if (!items.length) return false;
+        if (!items.length || huntReadAloudActive) return false;
         const safeIndex = Math.max(0, Math.min(items.length - 1, nextIndex));
         const movedForward = safeIndex > scrollCurrentIndex;
         if (movedForward) {
@@ -2195,9 +2318,11 @@
             persistFreeModeCardProgress(scrollCurrentIndex);
         }
 
+        if (safeIndex !== scrollCurrentIndex) invalidateSpeechAttempt();
         scrollCurrentIndex = safeIndex;
         if (scrollsTrack) scrollsTrack.style.transform = `translateY(-${scrollCurrentIndex * 100}%)`;
         updateFreeModeProgress();
+        if (movedForward && huntListeningDesired) scheduleContinuousRecognition(scrollCurrentIndex, 120);
         return false;
     }
 
@@ -2207,6 +2332,7 @@
 
     function handleFreeModeKeyboard(event) {
         if (!isFreeMode || !items.length) return false;
+        if (huntReadAloudActive) { event.preventDefault(); return true; }
         const activeElement = document.activeElement;
         if (isInteractiveElement(activeElement)) return false;
         if (event.repeat) return false;
@@ -2561,7 +2687,9 @@
     }
 
     function showCompletion() {
-        if (shell.classList.contains("is-complete")) return Promise.resolve(false);
+cancelPracticeReadAloud();
+        invalidateSpeechAttempt();
+                if (shell.classList.contains("is-complete")) return Promise.resolve(false);
         if (huntListeningDesired) stopContinuousRecognitionByUser();
         document.body.classList.add("practice-results-open");
         shell.classList.add("is-complete");
@@ -2632,6 +2760,8 @@
     }
 
     function restartPractice() {
+        cancelPracticeReadAloud();
+        invalidateSpeechAttempt();
         speechCaptureVersion++;
         releaseSpeechStream();
         document.body.classList.remove("practice-results-open");
@@ -2696,6 +2826,7 @@
     }
 
     skipBtn?.addEventListener("click", function () {
+        if (huntReadAloudActive) return;
         markPracticeSessionStarted();
         applyPracticeSkipOutcome(currentIndex);
         practiceFeedback.textContent = "Skipped. That item will count as a chance to improve next time.";
@@ -2705,6 +2836,7 @@
         playCoachAnimation('skip');
         updateCompletionSummary();
         if (isColorMode && currentIndex < items.length - 1) {
+            invalidateSpeechAttempt();
             currentIndex += 1;
             practiceFeedback.textContent = "New item ready. Take your time.";
             practiceFeedback.classList.remove("is-success", "is-warning");
@@ -2788,6 +2920,7 @@
                 updateReadingToggleButton();
             }, 250);
             if (currentIndex < items.length - 1) {
+                invalidateSpeechAttempt();
                 if (speechRecorder?.state === "recording") {
                     huntDiscardCurrentAudio = true;
                     stopPracticeSpeechRecording();
@@ -2814,6 +2947,7 @@
 
         if (isHuntMode) {
             if (huntAdvanceInProgress) return;
+            invalidateSpeechAttempt();
             huntAdvanceInProgress = true;
             if (huntRetryTimer) window.clearTimeout(huntRetryTimer);
             huntRetryTimer = null;
