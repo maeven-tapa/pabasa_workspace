@@ -4632,6 +4632,45 @@ class ReadingMatcherTests(TestCase):
             "pending",
         ])
 
+    def test_hunt_ana_spelling_variants_are_explicit_and_ordered(self):
+        expected = "May pusa si Ana. Ang pangalan nito ay Mimi."
+        for spoken in (
+            "May pusa si Anne. Ang pangalan nito ay Mimi.",
+            "May pusa si Anna. Ang pangalan nito ay Mimi.",
+        ):
+            result = align_story_transcript(
+                expected, spoken, language_code="fil-PH",
+                hunt_pronunciation_aliases=True,
+            )
+            self.assertEqual(result["correct_words"], result["total_words"], spoken)
+            self.assertEqual(result["miscues"], 0, spoken)
+
+    def test_hunt_different_name_and_scope_variants_remain_rejected(self):
+        expected = "May pusa si Ana. Ang pangalan nito ay Mimi."
+        for spoken in (
+            "May pusa si Anne. Ang pangalan nito ay Min.",
+            "May pusa si Anna. Mimi ay nito pangalan ang.",
+        ):
+            result = align_story_transcript(
+                expected, spoken, language_code="fil-PH",
+                hunt_pronunciation_aliases=True,
+            )
+            self.assertNotEqual(result["correct_words"], result["total_words"], spoken)
+            self.assertGreater(result["miscues"], 0, spoken)
+
+        ordinary = align_story_transcript(
+            expected,
+            "May pusa si Anne. Ang pangalan nito ay Mimi.",
+            language_code="fil-PH",
+        )
+        self.assertNotEqual(ordinary["correct_words"], ordinary["total_words"])
+        different_sound = align_story_transcript(
+            "cat", "cut", language_code="en-US",
+            hunt_pronunciation_aliases=True,
+        )
+        self.assertNotEqual(different_sound["correct_words"], different_sound["total_words"])
+
+
 class AdaptedReadingLevelTests(TestCase):
 
     def test_adapted_reading_level_label_uses_expected_thresholds(self):

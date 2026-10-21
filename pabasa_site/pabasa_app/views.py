@@ -26032,6 +26032,10 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
         # This enables precise miscue detection: distinguishes between STT segmentation artifacts 
         # (e.g., "pa gong" for "Pagong") and genuine student miscues (e.g., "bagong" for "Pagong")
         if mode == "paragraph":
+            hunt_aliases_enabled = (
+                request.POST.get('game') == 'hunt'
+                and request.POST.get('crla_story_reading') != '1'
+            )
             word_ranges = analysis.get('word_syllable_ranges', [])
             story_start_word_index = len(word_ranges)
             for word_index, word_range in enumerate(word_ranges):
@@ -26044,7 +26048,18 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
                 language_code,
                 start_word_index=story_start_word_index,
                 crla_story_reading=request.POST.get('crla_story_reading') == '1',
+                hunt_pronunciation_aliases=(
+                    mode == 'paragraph'
+                    and hunt_aliases_enabled
+                ),
             )
+            if (
+                hunt_aliases_enabled
+                and alignment_result.get('total_words')
+                and alignment_result.get('correct_words') == alignment_result.get('total_words')
+                and not alignment_result.get('miscues')
+            ):
+                analysis['complete'] = True
             analysis['word_results'] = alignment_result.get('word_results', [])
             analysis['word_alignment'] = {
                 'expected_words': alignment_result.get('expected_words', []),

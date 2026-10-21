@@ -705,6 +705,7 @@
         formData.append("target_text", targetText);
         formData.append("current_syllable_index", "0");
         formData.append("mode", mode);
+        formData.append("game", selectedGameMode || mode);
         formData.append('material_id', String(getActiveMaterialMeta()?.raw_id || getActiveMaterialMeta()?.id || materialId || ''));
         window.MaterialSpeechCapture?.attach(formData, blob);
         const materialMeta = getActiveMaterialMeta?.() || {};

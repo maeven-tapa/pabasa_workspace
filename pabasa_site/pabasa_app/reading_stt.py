@@ -972,6 +972,22 @@ def _story_words_are_equivalent(expected_word, recognized_word):
     return expected == recognized
 
 
+# Explicit, Hunt-only STT spelling variants observed for the Filipino proper
+# name "Ana". Ordinary paragraph and CRLA matching remain unchanged unless
+# the caller opts into this map.
+HUNT_WORD_ALIASES = {
+    "ana": frozenset({"anne", "anna"}),
+}
+
+
+def _hunt_story_words_are_equivalent(expected_word, recognized_word):
+    if _story_words_are_equivalent(expected_word, recognized_word):
+        return True
+    expected = _normalize_story_word_text(expected_word)
+    recognized = _normalize_story_word_text(recognized_word)
+    return recognized in HUNT_WORD_ALIASES.get(expected, ())
+
+
 CRLA_WORD_ALIASES = {
     "aling": frozenset({"aleng"}),
     "agiw": frozenset({"agyo"}),
@@ -1091,7 +1107,7 @@ def story_word_states_from_results(expected_text, recognized_text=None, total_wo
     return resolved
 
 
-def align_story_transcript(expected_text, recognized_text, language_code="en-US", start_word_index=None, crla_story_reading=False):
+def align_story_transcript(expected_text, recognized_text, language_code="en-US", start_word_index=None, crla_story_reading=False, hunt_pronunciation_aliases=False):
     """Align a story transcript against the expected text at the word level.
 
     This is intentionally conservative: it tolerates punctuation/case/spacing
@@ -1104,6 +1120,11 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
     cursor_relative = start_word_index is not None
     absolute_word_offset = min(max(0, int(start_word_index or 0)), len(all_expected_words))
     expected_words = all_expected_words[absolute_word_offset:] if cursor_relative else all_expected_words
+    words_equivalent = (
+        _crla_story_words_are_equivalent if crla_story_reading
+        else _hunt_story_words_are_equivalent if hunt_pronunciation_aliases
+        else _story_words_are_equivalent
+    )
     if not expected_words and not recognized_words:
         return {
             "expected_text": str(expected_text or ""),
@@ -1129,7 +1150,6 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
         for j in range(1, cols):
             expected_word = expected_words[i - 1]
             recognized_word = recognized_words[j - 1]
-            words_equivalent = (_crla_story_words_are_equivalent if crla_story_reading else _story_words_are_equivalent)
             substitution_cost = 0 if words_equivalent(expected_word, recognized_word) else 1
             candidates = [
                 dp[i - 1][j] + 1,
@@ -1200,7 +1220,6 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
         if i > 0 and j > 0:
             expected_word = expected_words[i - 1]
             recognized_word = recognized_words[j - 1]
-            words_equivalent = (_crla_story_words_are_equivalent if crla_story_reading else _story_words_are_equivalent)
             substitution_cost = 0 if words_equivalent(expected_word, recognized_word) else 1
             if dp[i][j] == dp[i - 1][j - 1] + substitution_cost:
                 if words_equivalent(expected_word, recognized_word):
@@ -1243,11 +1262,11 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
             if i > 0:
                 expected_word = expected_words[i - 1]
                 has_future_match = any(
-                    (_crla_story_words_are_equivalent if crla_story_reading else _story_words_are_equivalent)(expected_word, later_word)
+                    words_equivalent(expected_word, later_word)
                     for later_word in recognized_words[: j - 1]
                 )
                 if (
-                    not (_crla_story_words_are_equivalent if crla_story_reading else _story_words_are_equivalent)(expected_word, recognized_word)
+                    not words_equivalent(expected_word, recognized_word)
                     and has_future_match
                 ):
                     insertion_count += 1
