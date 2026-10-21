@@ -57,6 +57,16 @@ class RegistrationDefaultsTests(TestCase):
         session['user_role'] = user.role
         session.save()
 
+    def test_signup_contact_number_requires_eleven_digits_when_provided(self):
+        for role in ('student', 'teacher'):
+            for contact in ('0912345678', '091234567890', '0912345678x', '+639123456789'):
+                with self.subTest(role=role, contact=contact):
+                    response = self.signup(role, contact_no=contact)
+                    self.assertEqual(response.status_code, 400)
+                    self.assertEqual(response.json()['error'], 'Contact number must contain exactly 11 digits.')
+            response = self.signup(role, contact_no='09123456789')
+            self.assertEqual(response.status_code, 200)
+
     def test_model_does_not_unconditionally_assign_a_default_password(self):
         for role in ('admin', 'principal', 'teacher', 'student'):
             user = self.create_user(f'DEFAULT-{role}', role=role)

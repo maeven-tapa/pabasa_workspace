@@ -5212,6 +5212,8 @@ def register_teacher(request):
             except ValidationError:
                 return JsonResponse({'success': False, 'error': 'Enter a valid email address.'}, status=400)
         contact_no = _normalize_registration_value(data.get('contact_no'))
+        if contact_no and not re.fullmatch(r'[0-9]{11}', contact_no):
+            return JsonResponse({'success': False, 'error': 'Contact number must contain exactly 11 digits.'}, status=400)
         # Check if email already exists
         if email and User.objects.filter(email__iexact=email).exists():
             return JsonResponse({'success': False, 'error': 'This email address is already registered.'}, status=400)
@@ -5311,6 +5313,8 @@ def register_student(request):
         if raw_email and User.objects.filter(email__iexact=raw_email, is_archived=False).exists():
             return JsonResponse({'success': False, 'error': 'This email address is already registered.'}, status=400)
         contact_no = _normalize_registration_value(data.get('contact_no'))
+        if contact_no and not re.fullmatch(r'[0-9]{11}', contact_no):
+            return JsonResponse({'success': False, 'error': 'Contact number must contain exactly 11 digits.'}, status=400)
         if contact_no and User.objects.filter(contact_no=contact_no).exists():
             return JsonResponse({'success': False, 'error': 'This contact number is already registered.'}, status=400)
         
