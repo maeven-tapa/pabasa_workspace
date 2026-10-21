@@ -1223,7 +1223,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Contact number</label>
-                        <input class="form-control" type="tel" name="contact_no" placeholder="09XXXXXXXXX" inputmode="numeric" minlength="11" pattern="[0-9]{11}" title="Enter exactly 11 digits.">
+                        <input class="form-control" type="tel" name="contact_no" placeholder="09XXXXXXXXX" inputmode="numeric" minlength="11" maxlength="11" pattern="[0-9]{11}" title="Enter exactly 11 digits.">
                     </div>
                     <div class="col-12">
                         <label class="form-label">Section</label>
@@ -1379,6 +1379,26 @@
 <script>
     (() => {
         const form = document.getElementById("teacherSignupForm");
+        const contactInput = form.elements.contact_no;
+        contactInput.addEventListener('beforeinput', (event) => {
+            if (event.data && /[^0-9]/.test(event.data)) {
+                event.preventDefault();
+            }
+        });
+        contactInput.addEventListener('paste', (event) => {
+            const pasted = event.clipboardData.getData('text');
+            const start = contactInput.selectionStart ?? contactInput.value.length;
+            const end = contactInput.selectionEnd ?? start;
+            const proposed = contactInput.value.slice(0, start) + pasted + contactInput.value.slice(end);
+            if (!/^[0-9]{0,11}$/.test(proposed)) {
+                event.preventDefault();
+                contactInput.setCustomValidity('Paste digits only, with no more than 11 digits in total.');
+                contactInput.reportValidity();
+                // The rejected paste leaves the existing value unchanged.
+                contactInput.setCustomValidity('');
+            }
+        });
+
         const nameInputs = ["first_name", "middle_initial", "last_name"]
             .map((name) => form.elements[name])
             .filter(Boolean);
