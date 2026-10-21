@@ -21,7 +21,10 @@ from .prescribed_workbook import (
     initial_l23_g4_state, initial_l23_g7_state, l23_g3_pronunciation_match,
     l23_g7_pronunciation_match, normalize_l23_g4_syllables,
 )
-from .reading_stt import l22_c_pronunciation_match
+from .reading_stt import (
+    SESSION_8_SPEECH_ACTIVITY_KEYS, l22_c_pronunciation_match,
+    session8_transcript_uses_latin_script,
+)
 
 
 class WorkbookStateTests(SimpleTestCase):
@@ -563,6 +566,49 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertFalse(l22_c_pronunciation_match('ca', 'Cagayan', 'cactus', 'hard'))
         self.assertTrue(l22_c_pronunciation_match('Ce', 'Celeste', '  se!  ', 'soft'))
 
+    def test_lesson22_gawain1_ce_accepts_only_the_approved_accented_latin_alias(self):
+        key = 'aral-l22-g1-c-syllable-builder'
+        for expected, target in (('ce', 'Cebu'), ('Ce', 'Celeste')):
+            for transcript in ('ce', 'se', 'seh', 'sé', 'Sé', 'SÉ', 'sé.'):
+                with self.subTest(expected=expected, transcript=transcript):
+                    self.assertTrue(l22_c_pronunciation_match(expected, target, transcript, 'soft', key))
+        for transcript in ('', '...', 'see', 'sea', 'c', 'say', 'se seh', 'seसे'):
+            with self.subTest(transcript=transcript):
+                self.assertFalse(l22_c_pronunciation_match('ce', 'Cebu', transcript, 'soft', key))
+        self.assertFalse(l22_c_pronunciation_match('ca', 'Cagayan', 'sé', 'hard', key))
+        self.assertFalse(l22_c_pronunciation_match('ce', 'Cebu', 'sé', 'soft', 'aral-l22-g2-c-word-reading'))
+
+    def test_session8_script_guard_preserves_latin_accents_and_enye(self):
+        key = 'aral-l22-g1-c-syllable-builder'
+        for transcript in ('sé', 'se\u0301', 'Niño', 'ña', '  Niño, sé.  '):
+            with self.subTest(transcript=transcript):
+                self.assertTrue(session8_transcript_uses_latin_script(key, transcript))
+        for transcript in ('से', 'seसे', 'ñसे', '\u0301se', 'se🙂'):
+            with self.subTest(transcript=transcript):
+                self.assertFalse(session8_transcript_uses_latin_script(key, transcript))
+        self.assertTrue(session8_transcript_uses_latin_script('lesson-26-gawain-1', 'से'))
+
+    def test_session8_script_guard_covers_only_session8_speech_evaluation_routes(self):
+        self.assertEqual(SESSION_8_SPEECH_ACTIVITY_KEYS, {
+            'aral-l22-g1-c-syllable-builder',
+            'aral-l22-g2-c-word-reading',
+            'aral-l22-g3-c-word-search',
+            'aral-l22-g4-f-syllable-builder',
+            'aral-l22-g5-f-word-search',
+            'aral-l22-g6-f-word-reading',
+            'aral-l23-g1-n-syllable-builder',
+            'aral-l23-g2-n-word-reading',
+            'aral-l23-g3-j-word-reading',
+            'aral-l23-g6-q-syllable-builder',
+            'aral-l23-g7-q-word-reading',
+            'aral-l24-g1-v-syllable-builder',
+            'aral-l24-g2-v-word-reading',
+            'aral-l24-g3-x-repeat',
+            'aral-l24-g3-x-word-reading',
+            'aral-l24-g4-x-pictures',
+            'aral-l24-g7-z-word-reading',
+        })
+
     def test_lesson22_gawain1_bu_accepts_observed_boo_only_for_the_exact_target(self):
         activity = get_activity('aral-l22-g1-c-syllable-builder')
         match = lambda expected, transcript, key=activity['activity_key']: l22_c_pronunciation_match(
@@ -607,7 +653,7 @@ class WorkbookStateTests(SimpleTestCase):
         key = 'aral-l22-g1-c-syllable-builder'
         cells = (
             ('cac', 'cactus', 'hard', ('cac', 'kak', 'cock', 'cactus'), 'cake'),
-            ('ce', 'Cebu', 'soft', ('ce', 'se', 'seh', 'cebu'), 'see'),
+            ('ce', 'Cebu', 'soft', ('ce', 'se', 'seh', 'sé', 'cebu'), 'see'),
             ('ca', 'Cagayan', 'hard', ('ca', 'ka', 'cagayan'), 'kay'),
             ('bu', 'Cebu', 'soft', ('bu', 'boo'), 'bow'),
             ('com', 'computer', 'hard', ('com', 'kom', 'computer', 'comb'), 'come'),
@@ -622,7 +668,7 @@ class WorkbookStateTests(SimpleTestCase):
             ('ca', 'cabinet', 'hard', ('ca', 'ka', 'cabinet'), 'kay'),
             ('net', 'cabinet', 'hard', ('net', 'nett'), 'knit'),
             ('te', 'Celeste', 'soft', ('te', 't'), 'tea'),
-            ('Ce', 'Celeste', 'soft', ('ce', 'se', 'seh', 'celeste'), 'see'),
+            ('Ce', 'Celeste', 'soft', ('ce', 'se', 'seh', 'sé', 'celeste'), 'see'),
             ('les', 'Celeste', 'soft', ('les', 'less'), 'lease'),
         )
         self.assertEqual(
@@ -1485,7 +1531,7 @@ class PrescribedWorkbookFlowTests(TestCase):
         )
         self.assertEqual(response.status_code, 200, response.content)
         state = response.json()['state']
-        approved_transcripts = {'com': 'Comb.', 'pu': 'Poo.', 'tus': 'Tuss.', 'bi': 'B.', 'net': 'Nett.', 'te': 'T.', 'les': 'less'}
+        approved_transcripts = {'ce': 'Sé.', 'com': 'Comb.', 'pu': 'Poo.', 'tus': 'Tuss.', 'bi': 'B.', 'net': 'Nett.', 'te': 'T.', 'les': 'less'}
 
         def approved_alias_response(request):
             expected = request.POST['l22_c_syllable']
