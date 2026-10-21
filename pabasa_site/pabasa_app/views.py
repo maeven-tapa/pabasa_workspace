@@ -26644,7 +26644,11 @@ def award_hunt_mode_stars(request):
                     raise ValueError
                 confidence = data.get('confidence')
                 confidence = float(confidence) if confidence is not None else None
-                tier, star_delta = classify_speech(data.get('transcript'), material_items[word_index], confidence)
+                material_language = str(content_json.get('language') or material.language or 'English')
+                tier, star_delta = classify_speech(
+                    data.get('transcript'), material_items[word_index], confidence,
+                    language_code_for(material_language, 'word'),
+                )
                 award_key = f'word:{word_index}'
             else:
                 word_index = None

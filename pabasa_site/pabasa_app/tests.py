@@ -44,7 +44,7 @@ from .reading_stt import (
     v1_model_for_language,
     word_numbers_in_transcript,
 )
-from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
+from .hunt_scoring import classify_speech, normalize_speech, speech_matches_target, stars_for_points
 from .system_clock import now as system_now
 
 
@@ -4857,6 +4857,15 @@ class HuntScoringRuleTests(TestCase):
         self.assertEqual(classify_speech("cat", "cat", .49), ("Weak", 0))
         self.assertEqual(classify_speech("dog", "cat", .99), ("Weak", 0))
 
+    def test_hunt_uses_the_controlled_practice_matcher(self):
+        self.assertTrue(speech_matches_target("Cat!", "cat", "en-PH"))
+        self.assertTrue(speech_matches_target("too", "two", "en-PH"))
+        self.assertTrue(speech_matches_target("The cat sleeps.", "the cat sleeps", "en-PH"))
+        self.assertFalse(speech_matches_target("cut", "cat", "en-PH"))
+        self.assertFalse(speech_matches_target("sheep", "ship", "en-PH"))
+        self.assertFalse(speech_matches_target("tree", "three", "en-PH"))
+        self.assertFalse(speech_matches_target("the cat", "the cat sleeps", "en-PH"))
+
     def test_star_thresholds_never_award_zero(self):
         self.assertEqual([stars_for_points(p) for p in (0, 4, 5, 7, 8, 10)], [1, 1, 2, 2, 3, 3])
 
@@ -4902,6 +4911,71 @@ class HuntScoringRuleTests(TestCase):
         self.assertIn("body.dark-theme .practice-hunt-shell .hunt-card", template)
         self.assertIn("body.dark-theme .practice-hunt-shell .hunt-map-art", template)
         self.assertIn("filter:brightness(.72)", template)
+
+
+class PracticeReaderMicrophonePermissionTests(TestCase):
+    def setUp(self):
+        self.source = (Path(__file__).resolve().parent / "static" / "pabasa_app" / "js" / "practice_reader.js").read_text(encoding="utf-8")
+
+    def test_permission_errors_stop_automatic_retries(self):
+        self.assertIn("function stopContinuousRecognitionAfterMicrophoneError()", self.source)
+        self.assertIn("huntListeningDesired = false;", self.source)
+        self.assertIn("microphoneAccessErrorMessage(error)", self.source)
+
+    def test_permission_and_device_errors_require_a_new_start_action(self):
+        self.assertIn('errorName === "notallowederror"', self.source)
+        self.assertIn('errorName === "notfounderror"', self.source)
+        self.assertIn("tap Start Reading", self.source)
+
+    def test_recoverable_recognition_retries_remain_enabled(self):
+        self.assertIn("retryHuntRecognition ? 350 : 120", self.source)
+        self.assertIn("retryHuntRecognition ? 350 : (isColorMode ? 1100 : 520)", self.source)
+
+
+class PracticeReaderStaleRecordingTests(TestCase):
+    def setUp(self):
+        self.source = (Path(__file__).resolve().parent / "static" / "pabasa_app" / "js" / "practice_reader.js").read_text(encoding="utf-8")
+
+    def test_attempts_bind_generation_item_and_target(self):
+        self.assertIn("function beginSpeechAttempt(targetText)", self.source)
+        self.assertIn("function isSpeechAttemptCurrent(attempt)", self.source)
+        self.assertIn("attempt.targetText === currentSpeechTarget()", self.source)
+
+    def test_stop_and_navigation_invalidate_attempts(self):
+        self.assertIn("function stopContinuousRecognitionByUser() {\n        invalidateSpeechAttempt();", self.source)
+        self.assertIn("if (safeIndex !== scrollCurrentIndex) invalidateSpeechAttempt();", self.source)
+        self.assertIn("cancelPracticeReadAloud();\n        invalidateSpeechAttempt();", self.source)
+
+    def test_late_streams_and_stt_responses_are_discarded(self):
+        self.assertIn("function discardStaleSpeechStream(stream)", self.source)
+        self.assertIn("if (!isSpeechAttemptCurrent(attempt)) return;", self.source)
+        self.assertIn("Boolean(data.complete)", self.source)
+
+    def test_hunt_missing_live_final_falls_back_to_batch_transcription(self):
+        self.assertIn("const missingFinal = /no final speech was received/i.test", self.source)
+        self.assertIn("if (!isHuntMode || !missingFinal) throw error;", self.source)
+        self.assertIn("liveCapture.stop();", self.source)
+        self.assertIn("await submitPracticeSpeech(blob, targetText, button, attempt);", self.source)
+
+
+class PracticeReaderReadAloudTests(TestCase):
+    def setUp(self):
+        self.source = (Path(__file__).resolve().parent / "static" / "pabasa_app" / "js" / "practice_reader.js").read_text(encoding="utf-8")
+
+    def test_read_aloud_disables_recording_and_cancels_stale_audio(self):
+        self.assertIn("let huntReadAloudAudio = null;", self.source)
+        self.assertIn("function cancelPracticeReadAloud()", self.source)
+        self.assertIn("setDisabled(readAloudBtn, unavailable || pending);", self.source)
+        self.assertIn("huntReadAloudActive || huntAdvanceInProgress", self.source)
+
+    def test_read_aloud_blocks_navigation(self):
+        self.assertIn("if (!items.length || huntReadAloudActive) return false;", self.source)
+        self.assertIn("if (huntReadAloudActive) return;", self.source)
+
+    def test_read_aloud_cleans_up_on_exit_and_completion(self):
+        self.assertIn("function restoreReadAloudControls()", self.source)
+        self.assertIn("window.addEventListener('pagehide', () => {\n        cancelPracticeReadAloud();", self.source)
+        self.assertRegex(self.source, r"function showCompletion\(\) \{\s*cancelPracticeReadAloud\(\);")
 
 
 class StudentSignupCustomIdTests(TestCase):
