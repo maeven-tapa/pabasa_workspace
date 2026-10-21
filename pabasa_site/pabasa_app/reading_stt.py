@@ -1294,6 +1294,30 @@ def analyze_reading(target_text, current_syllable_index=0, transcript="", langua
     return matcher.payload(matched, transcript)
 
 
+def analyze_literal_word_reading(target_text, transcript, language_code="fil-PH"):
+    """Grade a fresh whole-word attempt without number meanings or fuzzy matches.
+
+    Case, accent marks, punctuation and provider syllable spacing are harmless.
+    Keep digits, other scripts and symbols as mismatches instead of stripping
+    them into a correct Filipino fragment. Never carry a previous attempt's
+    syllables or progress into this verdict.
+    """
+    def letters(text):
+        normalized = unicodedata.normalize("NFD", str(text or "").casefold())
+        return "".join(char for char in normalized
+                       if not (unicodedata.category(char).startswith(("P", "M"))
+                               or char.isspace()))
+
+    matcher = ReadingMatcher(target_text, 0, language_code)
+    expected = letters(target_text)
+    correct = bool(len(matcher.words) == 1 and expected.isalpha()
+                   and letters(transcript) == expected)
+    matched = len(matcher.syllables) if correct else 0
+    matcher.current_syllable_index = matched
+    matcher.current_word_index = int(correct)
+    return matcher.payload(matched, transcript)
+
+
 def analyze_sentence_reading(target_text, transcript="", prior_results=None, language_code="en-US", debug=False, crla_reading=False):
     """Resolve a sentence sequentially while allowing an immediate self-correction."""
     matcher = ReadingMatcher(target_text, 0, language_code, crla_reading=crla_reading)

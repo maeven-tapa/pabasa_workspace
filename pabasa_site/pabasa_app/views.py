@@ -91,6 +91,7 @@ from .reading_stt import (
     ReadingMatcher,
     align_story_transcript,
     analyze_reading,
+    analyze_literal_word_reading,
     analyze_sentence_reading,
     language_code_for,
     phrase_hints_for,
@@ -25553,6 +25554,13 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
     mode = (request.POST.get('mode') or '').strip().lower()
     language = (request.POST.get('language') or '').strip()
     language_code = language_code_for(language, mode)
+    lesson3_literal_reading = 'lesson-3-gawain-1' in {
+        request.POST.get('prescribed_activity_key'), request.POST.get('prescribed_stream_activity'),
+    }
+    if lesson3_literal_reading:
+        # These are Filipino words to read, never their numeric meanings.
+        language_code = 'fil-PH'
+        current_syllable_index = 0
     lesson14_g2_reading = request.POST.get('prescribed_activity_key') == 'lesson-14-gawain-2'
     lesson15_g2_reading = request.POST.get('prescribed_activity_key') == 'lesson-15-gawain-2-angkop-na-pantig'
     guarded_filipino_reading = lesson14_g2_reading or lesson15_g2_reading
@@ -25670,6 +25678,8 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
         ):
             transcript = target_text
         syllable_context = (request.POST.get('syllable_context') or '')[:80]
+        if lesson3_literal_reading:
+            syllable_context = ''
         try:
             activity_syllables = json.loads(request.POST.get('syllables') or '[]')
         except (TypeError, ValueError, json.JSONDecodeError):
@@ -25902,7 +25912,9 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
             language_code,
             allow_non_filipino=is_clap_phase2 and mode == "word",
         )
-        if (request.POST.get('prescribed_activity_key') == 'lesson-27-gawain-1'
+        if lesson3_literal_reading:
+            analysis = analyze_literal_word_reading(target_text, transcript, language_code)
+        elif (request.POST.get('prescribed_activity_key') == 'lesson-27-gawain-1'
                 and language_code.lower().startswith('en') and mode == 'sentence'
                 and not official_crla_assessment):
             analysis = analyze_verse_reading(
@@ -25946,7 +25958,7 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
                 crla_story_reading=mode == 'paragraph' and request.POST.get('crla_story_reading') == '1',
                 crla_reading=official_crla_assessment,
             )
-        if l22_c_pronunciation:
+        if l22_c_pronunciation and not lesson3_literal_reading:
             l22_match = l22_c_pronunciation_match(
                 request.POST.get('l22_c_syllable'),
                 target_text,
@@ -25966,9 +25978,9 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
             target_syllables=activity_syllables if is_clap_phase2 and mode == "word" else None,
         )
         analysis['raw_transcript'] = transcript
-        analysis['transcript'] = word_numbers_in_transcript(transcript, language_code)
+        analysis['transcript'] = transcript if lesson3_literal_reading else word_numbers_in_transcript(transcript, language_code)
         salitang_magkatugma_exact = request.POST.get('salitang_magkatugma_exact') == '1'
-        if salitang_magkatugma_exact:
+        if salitang_magkatugma_exact and not lesson3_literal_reading:
             expected_words = ReadingMatcher.normalize_spoken_words(target_text)
             spoken_words = ReadingMatcher.normalize_spoken_words(transcript)
             expected_word = ''.join(expected_words) if len(expected_words) == 1 else ''
@@ -25990,6 +26002,7 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
             and analysis.get('complete')
             and len(ReadingMatcher.readable_words(target_text)) == 1
             and not salitang_magkatugma_exact
+            and not lesson3_literal_reading
         ):
             analysis['transcript'] = target_text
         if g3_c_to_se:
