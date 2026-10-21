@@ -246,7 +246,7 @@
       const item = items[index];
       if (phase === 'oral') {
         const listen = oralMode === 'aloud';
-        const reminder = isLesson16Gawain1 || isLesson16Gawain2 ? `<div class="reading-reminder"><p>Basahin nang malakas: <strong data-expected-text="${escape(item.word)}">${escape(item.word)}</strong>.</p><p>May tatlong pagkakataon kang basahin ang salita.</p></div>` : `<p class="oral">Basahin nang malakas: <strong data-expected-text="${escape(item.word)}">${escape(item.word)}</strong>.</p><p class="hint">${listen ? 'Pakinggan ang salita nang tatlong beses bago muling magbasa.' : 'May tatlong pagkakataon kang basahin ang salita.'}</p>`;
+        const reminder = isLesson16Gawain1 || isLesson16Gawain2 ? `<div class="reading-reminder"><p class="reading-word" data-expected-text="${escape(item.word)}">${escape(item.word)}</p></div>` : `<p class="oral">Basahin nang malakas: <strong data-expected-text="${escape(item.word)}">${escape(item.word)}</strong>.</p><p class="hint">${listen ? 'Pakinggan ang salita nang tatlong beses bago muling magbasa.' : 'May tatlong pagkakataon kang basahin ang salita.'}</p>`;
         const oralStatus = isLesson16Gawain1 && listen ? `Pakinggan ang salita. (${aloudAttempts}/3)` : '';
         app.innerHTML = heading() + reminder + picture(item) + `<button class="button ${listen ? 'gold' : ''}" id="oralAction" type="button" ${listen ? '' : 'data-basahin-button data-basahin-state="idle" aria-busy="false"'}>${listen ? (isLesson16Gawain2 ? 'Pakinggan' : '🔊 Pakinggan') : (isLesson16Gawain2 ? 'Simulan ang Pagbasa' : '🎙 Simulan ang Pagbasa')}</button><p class="hint" id="oralStatus">${oralStatus}</p>`;
         const oralAction = document.getElementById('oralAction');

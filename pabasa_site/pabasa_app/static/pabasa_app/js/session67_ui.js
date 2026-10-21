@@ -5,11 +5,30 @@
   const key=String(data.activity_key||'');
   const session6=new Set(['lesson-16-gawain-1','lesson-16-gawain-2','lesson-16-gawain-3','session-6-lesson-16-gawain-4','lesson-17-18-gawain-5','lesson-17-18-gawain-6','lesson-17-18-gawain-7','lesson-17-18-gawain-8','lesson-17-18-gawain-9']);
   if(!session6.has(key)&&!key.startsWith('session-7-'))return;
+  const layoutActivities=new Set(['lesson-16-gawain-1','lesson-16-gawain-2','lesson-16-gawain-3','session-6-lesson-16-gawain-4','lesson-17-18-gawain-5','lesson-17-18-gawain-6','session-7-lesson-19-gawain-2','session-7-lesson-19-gawain-3','session-7-lesson-19-gawain-4','session-7-lesson-20-21-gawain-2']);
+  if(layoutActivities.has(key))document.body.dataset.session67Layout=key;
+  const centerContent=new Set(['lesson-16-gawain-1','lesson-16-gawain-2','session-6-lesson-16-gawain-4','lesson-17-18-gawain-5','lesson-17-18-gawain-6','session-7-lesson-19-gawain-1','session-7-lesson-19-gawain-2','session-7-lesson-19-gawain-3','session-7-lesson-19-gawain-4','session-7-lesson-20-21-gawain-2']);
+  if(centerContent.has(key))document.body.setAttribute('data-center-activity','');
   const label='Bumalik sa Aking Gawain';
   const listUrl=document.querySelector('a.back,a.l16g3-back')?.getAttribute('href')||'/dashboard/assessment/';
+  // This route's outer card has a different intrinsic height in each phase.
+  // Measure its original desktop layout before sizing the inner reading panel.
+  function preserveDesktopCard(){
+    if(key!=='session-7-lesson-19-gawain-2')return;
+    const card=document.querySelector('#app');if(!card)return;
+    card.style.removeProperty('--session67-desktop-card-height');
+    if(!matchMedia('(min-width:851px) and (min-height:701px)').matches)return;
+    delete document.body.dataset.session67Layout;
+    const height=card.getBoundingClientRect().height;
+    card.style.setProperty('--session67-desktop-card-height',`${height}px`);
+    document.body.dataset.session67Layout=key;
+  }
   // Load last so activity-specific historical back-link rules cannot override it.
-  const css=document.createElement('link');css.rel='stylesheet';css.href='/static/pabasa_app/css/session67_reference.css?v=2';document.head.append(css);
+  const css=document.createElement('link');css.rel='stylesheet';css.href='/static/pabasa_app/css/session67_reference.css?v=20261021-requested-layout';document.head.append(css);
+  css.addEventListener('load',preserveDesktopCard);
+  if(key==='session-7-lesson-19-gawain-2')addEventListener('resize',preserveDesktopCard);
   function refresh(){
+    preserveDesktopCard();
     document.querySelectorAll('[data-session6-controls],[data-prescribed-session-controls]').forEach(root=>{
       const buttons=['-help-btn','-mic-toggle','-audio-settings-btn'].map(suffix=>root.querySelector(`[id$="${suffix}"]`));
       if(buttons.every(Boolean)&&buttons.some((button,index)=>root.children[index]!==button))root.append(...buttons);

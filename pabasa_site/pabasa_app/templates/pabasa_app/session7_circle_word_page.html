@@ -215,7 +215,7 @@
         if (state.phase === 'feedback') {
           const answer = state.completed_correct_answers.at(-1) || item.answer;
           const previousItem = items[Math.max(0, state.completed_correct_answers.length - 1)];
-          app.innerHTML = `${head('Tama! Napili mo ang salitang tumutukoy sa larawan.', Math.max(0,state.completed_correct_answers.length - 1))}${picture(previousItem)}<div class="words"><button class="word locked" type="button" disabled>${esc(answer)}</button></div><p class="status good" role="status">Tama! Magaling ang iyong sagot.</p><button class="button" id="next" type="button" ${feedbackReady?'':'disabled'}>${state.completed_correct_answers.length === total ? 'TAPUSIN' : 'SUSUNOD'}</button>`;
+          app.innerHTML = `${head('Tama! Napili mo ang salitang tumutukoy sa larawan.', Math.max(0,state.completed_correct_answers.length - 1))}${picture(previousItem)}<div class="words correct-answer"><button class="word locked" type="button" disabled>${esc(answer)}</button></div><p class="status good" role="status">Tama! Magaling ang iyong sagot.</p><button class="button" id="next" type="button" ${feedbackReady?'':'disabled'}>${state.completed_correct_answers.length === total ? 'TAPUSIN' : 'SUSUNOD'}</button>`;
           app.querySelector('#next').onclick = async () => {
             if (!feedbackReady || busy || narrationBusy) return;
             if (state.completed_correct_answers.length === total) { await finish(); return; }

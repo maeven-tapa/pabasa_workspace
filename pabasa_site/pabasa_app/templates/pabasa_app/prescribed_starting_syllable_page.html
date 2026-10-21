@@ -43,7 +43,7 @@ function render(message='',kind='',options={}){
         publishExpected(s.phase==='intro'||s.phase==='feedback'||s.phase==='completion'?null:current());
         if(d.progress?.activity_completed||s.phase==='completion'){
           app.innerHTML=`${eyebrow()}<div class="done"><div class="feedback-symbol" aria-hidden="true">🎉</div><h1>Magaling!</h1><p class="feedback-copy">Natapos mo ang lahat ng larawan.</p><p class="progress-label">${total} sa ${total} larawan ang natapos</p><div class="progress-dots" aria-label="Lahat ng larawan ay natapos">${items.map(()=>'<span class="progress-dot is-done"></span>').join('')}</div><div class="completion-actions"><button class="button" id="restart" type="button">Ulitin</button><a class="button secondary" href="{% url 'assessment' %}">Bumalik sa Aralin</a></div></div>`;
-          app.querySelector('#restart').onclick=async()=>{const r=await fetch(d.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({reset:true})}),j=await r.json().catch(()=>({}));if(!r.ok||!j.success){render(j.error||'Hindi na-reset ang gawain. Subukan muli.','bad');return}window.location.reload()};
+          app.querySelector('#restart').onclick=async()=>{const r=await fetch(d.progress_url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({reset:true})}),j=await r.json().catch(()=>({}));if(!r.ok||!j.success){render(j.error||'Hindi na-reset ang gawain. Subukan muli.','bad');return}await window.PabasaPrescribedPending?.flush();window.location.reload()};
           narrate('Magaling! Natapos mo ang Lesson 19: Gawain 1.','completion');return
         }
         const n=current(),item=items[n];
@@ -88,6 +88,7 @@ function render(message='',kind='',options={}){
       listen=async function(n){if(busy)return;busy=true;const mine=++request,b=app.querySelector('#oral, #oral-retry');try{b.disabled=true;b.textContent='Nilo-load...';await speak(items[n].word);if(mine!==request)return;const plays=Math.min(3,(s.tts_plays[key(n)]||0)+1),third=plays===3;s.tts_plays[key(n)]=third?0:plays;if(third)s.stt_attempts[key(n)]=0;s.phase='oral_reading';await save();render('Subukan mong basahin ang salita.')}catch(e){if(mine===request)render(e.message||'Hindi available ang audio. Subukan muli.','bad')}finally{busy=false}};
       addEventListener('pagehide',stop);addEventListener('prescribed-session-paused',stop);addEventListener('session7-prescribed-cancel',stop);render('', '', {suppressNarration:true});addEventListener('session7-prescribed-resume',()=>{narrated='';render()},{once:true});
       window.__session7LeaveAdapter={saveCurrentProgress:()=>save(),cleanup:()=>{request++;stop()}};
+      window.__session7L19G1Restart={cancel:()=>{request++;busy=false;stop()},waitForPendingSaves:()=>activitySaveQueue};
     })();
   </script>
 {% include 'pabasa_app/session8_11_prescribed_controls.html' with prefix='prescribed-s7-l19-g1' help_text='Basahin ang ngalan ng larawan, pagkatapos piliin ang simulang pantig. Maaari kang mag-pause o magbukas ng Audio Settings anumang oras.' %}

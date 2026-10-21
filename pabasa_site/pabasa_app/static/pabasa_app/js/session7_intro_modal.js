@@ -229,6 +229,7 @@
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result.success) throw new Error(result.error || 'Hindi na-reset ang gawain.');
+      await window.PabasaPrescribedPending?.flush();
       if (lesson19Gawain4) {
         window.location.replace(`${window.location.pathname}?restart=${Date.now()}`);
       } else {

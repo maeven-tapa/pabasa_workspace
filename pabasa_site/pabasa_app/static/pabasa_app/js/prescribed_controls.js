@@ -164,6 +164,9 @@
           }
           leaveStage = 'save';
           await adapter.saveCurrentProgress();
+          // The fetch response can arrive before its tracked JSON clone settles.
+          // Drain that final save before navigating so beforeunload stays quiet.
+          if (session7LeaveEnabled) await window.PabasaPrescribedPending?.flush();
           if (!window.__leaveNavigationStarted) { leaveStage = 'navigation'; window.__leaveNavigationStarted = true; window.location.assign('/dashboard/assessment/'); }
         } catch (e) {
           console.error(`Leave ${leaveStage} failed`, e);

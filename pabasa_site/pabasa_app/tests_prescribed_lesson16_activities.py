@@ -250,7 +250,8 @@ class PrescribedLesson16ActivityTests(TestCase):
         template = Path(__file__).parent / 'templates' / 'pabasa_app' / 'prescribed_picture_word_write_page.html'
         source = template.read_text(encoding='utf-8')
         style = source.split('/* Gawain 4 visual system.', 1)[1].split('</style>', 1)[0]
-        self.assertIn("'Isulat ang wastong salita para sa larawan'", source)
+        self.assertIn("'Basahin muna ang ngalan ng larawan.'", source)
+        self.assertIn("'Isulat ang wastong salita para sa larawan.'", source)
         self.assertIn('Session 6 · Lesson 16 · Gawain 4', source)
         self.assertIn('index<answers.length', source)
         self.assertIn('index===answers.length', source)
