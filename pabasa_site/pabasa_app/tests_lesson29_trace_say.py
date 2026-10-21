@@ -84,3 +84,40 @@ class Lesson29TraceGroupingTests(SimpleTestCase):
         ]
 
         self.assertFalse(_lesson29_trace_is_recognizable(traces, 'Hh'))
+
+
+class Lesson29SingleStoreyATests(SimpleTestCase):
+    def capital(self):
+        return [stroke([(0.12, .78), (.25, .18), (.39, .78)]),
+                stroke([(.18, .52), (.33, .52)])]
+
+    def bowl(self):
+        from math import cos, sin, pi
+        return stroke([(.68 + .08*cos(i*2*pi/40), .61 + .15*sin(i*2*pi/40))
+                       for i in range(41)])
+
+    def test_accepts_single_storey_a_with_separate_right_stem(self):
+        traces = self.capital() + [self.bowl(), stroke([(.76, .46), (.76, .77)])]
+        self.assertTrue(_lesson29_trace_is_recognizable(traces, 'Aa'))
+
+    def test_accepts_single_storey_a_drawn_continuously_in_either_direction(self):
+        lower = self.bowl() + stroke([(.76, .46), (.76, .77)])
+        for points in (lower, list(reversed(lower))):
+            self.assertTrue(_lesson29_trace_is_recognizable(self.capital() + [points], 'Aa'))
+
+    def test_rejects_a_circle_without_the_right_stem(self):
+        self.assertFalse(_lesson29_trace_is_recognizable(self.capital() + [self.bowl()], 'Aa'))
+
+    def test_rejects_lowercase_d_and_straight_marks(self):
+        for lower in ([self.bowl(), stroke([(.76, .20), (.76, .77)])],
+                      [stroke([(.60, .46), (.76, .77)])]):
+            self.assertFalse(_lesson29_trace_is_recognizable(self.capital() + lower, 'Aa'))
+
+    def test_rejects_repeated_bowl_overdrawing(self):
+        loop = self.bowl()
+        traces = self.capital() + [loop + loop + loop, stroke([(.76, .46), (.76, .77)])]
+        self.assertFalse(_lesson29_trace_is_recognizable(traces, 'Aa'))
+
+    def test_accepts_densely_sampled_right_stem(self):
+        stem = stroke([(.76, .46 + .31*i/30) for i in range(31)])
+        self.assertTrue(_lesson29_trace_is_recognizable(self.capital() + [self.bowl(), stem], 'Aa'))

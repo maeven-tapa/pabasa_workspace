@@ -17,6 +17,11 @@
   const nextLetterAudio = '/static/pabasa_app/audio/lesson_29_next_letter.mp3';
   let state = {...(data.progress?.state || {})}, busy = false, canvas, ctx, strokes = [], activeStroke = null;
   let paused = false, muted = false, speechAbort = null;
+  let elapsedMs = Math.max(0, Number(state.elapsed_seconds) || 0) * 1000, activeSince = null;
+  const elapsedSeconds = () => Math.floor((elapsedMs + (activeSince === null ? 0 : performance.now() - activeSince)) / 1000);
+  const startTimer = () => { if (activeSince === null && !state.submitted && !data.progress?.activity_completed) activeSince = performance.now(); };
+  const stopTimer = () => { if (activeSince !== null) { elapsedMs += performance.now() - activeSince; activeSince = null; } };
+
   const audioPlayer = window.PrescribedAudioPlayer.create();
   const pendingWrites = new Set();
   const current = token => audioPlayer.isCurrent(token) && !paused;
@@ -30,15 +35,19 @@
     async waitForPendingSaves() { await Promise.all([...pendingWrites]); },
   };
   const hydrate = () => { state.current_item = Math.max(0, Number(state.current_item || 0)); state.phase ||= 'sound'; state.traces = Array.isArray(state.traces) ? state.traces : []; state.draft_item = Number(state.draft_item ?? state.current_item); state.draft_strokes = Array.isArray(state.draft_strokes) ? state.draft_strokes : []; };
-  const post = (url, body) => write((async () => { const r = await fetch(url, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':csrf()}, body:JSON.stringify(body)}); const j = await r.json().catch(()=>({})); if (!r.ok || !j.success) throw Error(j.error || 'Could not save your progress.'); if (j.progress?.state) state = {...j.progress.state}; hydrate(); return j; })());
+  const post = (url, body) => write((async () => { const r = await fetch(url, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-CSRFToken':csrf()}, body:JSON.stringify({...body, elapsed_seconds:elapsedSeconds()})}); const j = await r.json().catch(()=>({})); if (!r.ok || !j.success) throw Error(j.error || 'Could not save your progress.'); if (j.progress?.state) state = {...j.progress.state}; hydrate(); return j; })());
   const tracesForCurrent = () => state.traces.slice(state.current_item * 3, state.current_item * 3 + 3);
   const progress = () => `<div class="progress">${data.items.map((_, i) => `<span class="step ${i < state.current_item ? 'done' : ''} ${i === state.current_item && state.phase !== 'awaiting_teacher' ? 'active' : ''}">${i + 1}</span>`).join('')}</div>`;
   const playFile = src => audioPlayer.play(src);
   async function saveRecording(blob, itemIndex) { const form = new FormData(); form.append('audio', blob, blob.type.includes('ogg') ? 'lesson-29-letter-sound.ogg' : 'lesson-29-letter-sound.webm'); form.append('item_index', itemIndex); form.append('duration_seconds', Math.ceil((blob.size || 0) / 16000)); const r = await fetch(data.recording_url, {method:'POST', credentials:'same-origin', headers:{'X-CSRFToken':csrf()}, body:form}); const j = await r.json().catch(()=>({})); if (!r.ok || !j.success) throw Error(j.error || 'Could not save your recording.'); }
   function render(message='', kind='') {
     hydrate(); const stage = document.getElementById('lesson29a3-stage');
-    if (state.phase === 'awaiting_teacher' || state.submitted && state.current_item >= total) { stage?.classList.remove('is-tracing'); app.innerHTML = `<div class="complete"><div><h1>Attempt submitted</h1><p>Your teacher will review your recordings and tracing. Please wait for their verdict.</p></div></div>`; return; }
-    if (data.progress?.activity_completed || state.checked) { window.PrescribedLessonUi?.showCompletion(app); return; }
+    if (state.phase === 'awaiting_teacher' || state.submitted && state.current_item >= total || data.progress?.activity_completed || state.checked) {
+      stopTimer();
+      stage?.classList.remove('is-tracing');
+      window.PrescribedLessonUi?.showCompletion(app);
+      return;
+    }
     const item = data.items[state.current_item], tracing = state.phase === 'trace', recorded = state.phase === 'recorded'; stage?.classList.toggle('is-tracing', tracing);
     const letter = String(item.letter || ''), capital = letter.slice(0, 1), lower = letter.slice(1);
     const traceGuide = `<span class="trace-model" aria-hidden="true"><span class="trace-capital">${esc(capital)}</span>${lower ? `<span class="trace-lower">${esc(lower)}</span>` : ''}</span>`;
@@ -157,18 +166,20 @@
   async function leave(e){e.preventDefault();if(busy)return;busy=true;try{await post(data.progress_url,{reset:true});location.reload();}catch(err){busy=false;alert(err.message||'Could not reset the activity.');}}
   document.getElementById('lesson29a3-later').addEventListener('click',leave);
   document.getElementById('lesson29a3-go').addEventListener('click',async()=>{
+    startTimer();
     document.getElementById('lesson29a3-start').hidden=true;
     document.getElementById('lesson29a3-stage').classList.remove('waiting');
     render(); await speak('Trace and Say. Say each letter sound, then trace the letter three times.');
   });
   const prefix = 'session13-prescribed-s13l29g3';
-  const pause = () => { paused = true; cancelActivity(); };
+  const pause = () => { stopTimer(); paused = true; cancelActivity(); };
   window.addEventListener('pagehide', pause);
   window.addEventListener('pageshow', event => { if (event.persisted) window.location.reload(); });
   for (const event of ['pause', 'help', 'cleanup', 'restart']) window.addEventListener(`${prefix}-${event}`, pause);
   window.addEventListener(`${prefix}-resume`, async () => {
     if (!paused) return;
     paused = false;
+    startTimer();
     const token = audioPlayer.generation;
     busy = true;
     await Promise.allSettled([...pendingWrites]);
@@ -182,7 +193,9 @@
   window.__prescribedLeaveAdapters['prescribed-s13l29g3'] = {
     async saveCurrentProgress() {
       await Promise.all([...pendingWrites]);
-      if (state.phase === 'trace') await post(data.progress_url, {action:'save_draft_trace', item_index:state.current_item, strokes});
+      if (!state.submitted) await post(data.progress_url, state.phase === 'trace'
+        ? {action:'save_draft_trace', item_index:state.current_item, strokes}
+        : {action:'save_elapsed'});
     },
     cleanup: pause,
   };

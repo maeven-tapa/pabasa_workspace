@@ -13581,8 +13581,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             return [String(rawId), { attempts: [{
                             student_id: window.__studentProgressStudentId,
                             student_name: window.__studentProgressStudentName || '',
-                            status: data.completed ? 'completed' : 'in_progress',
-                            completed_at: data.completed_at,
+                            status: data.completed ? 'completed' : data.submitted ? 'submitted' : data.started ? 'in_progress' : 'not_started',
+                            completed_at: data.completed_at || data.submitted_at,
+                            duration_seconds: data.duration_seconds,
                             activity_type: 'lesson_29_trace_say',
                             session4_recordings: recordings,
                             session4_correct_items: recordings.filter(item => item.teacher_score !== null && item.teacher_score !== undefined).reduce((sum, item) => sum + Number(item.teacher_score), 0),
@@ -13600,7 +13601,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         if (res.ok && data.success) return [String(rawId), { attempts: [{
                             student_id: window.__studentProgressStudentId,
                             student_name: window.__studentProgressStudentName || '',
-                            status: data.completed ? 'completed' : 'in_progress',
+                            status: data.completed ? 'completed' : data.started ? 'in_progress' : 'not_started',
                             completed_at: data.completed_at,
                             duration_seconds: data.duration_seconds,
                             activity_type: 'session_4_gawain_1',
@@ -13637,7 +13638,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         if (res.ok && data.success) return [String(rawId), { attempts: [{
                             student_id: window.__studentProgressStudentId,
                             student_name: window.__studentProgressStudentName || '',
-                            status: data.completed ? 'completed' : 'in_progress',
+                            status: data.completed ? 'completed' : data.started ? 'in_progress' : 'not_started',
                             completed_at: data.completed_at,
                             duration_seconds: data.duration_seconds,
                             activity_type: 'session_4_gawain_2',
@@ -13655,7 +13656,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         if (res.ok && data.success) return [String(rawId), { attempts: [{
                             student_id: window.__studentProgressStudentId,
                             student_name: window.__studentProgressStudentName || '',
-                            status: data.completed ? 'completed' : 'in_progress',
+                            status: data.completed ? 'completed' : data.started ? 'in_progress' : 'not_started',
                             completed_at: data.completed_at,
                             duration_seconds: data.duration_seconds,
                             activity_type: 'lesson_13_gawain_1',
@@ -14877,6 +14878,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             activeStudentProgressAudio.currentTime = 0;
             activeStudentProgressAudio = null;
         }
+        clearStudentProgressRecordingCache();
         document.querySelectorAll('.student-progress-retell-play').forEach(button => {
             button.innerHTML = '<i class="bi bi-play-fill"></i>';
             button.setAttribute('aria-label', 'Play recording');
@@ -14888,20 +14890,104 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
         return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
     };
+    const studentProgressDurationLoads = new Map();
+    const studentProgressPlaybackUrls = new Set();
+    let studentProgressCacheVersion = 0;
+    const clearStudentProgressRecordingCache = () => {
+        studentProgressCacheVersion++;
+        studentProgressPlaybackUrls.forEach(url => URL.revokeObjectURL(url));
+        studentProgressPlaybackUrls.clear();
+        studentProgressDurationLoads.clear();
+        document.querySelectorAll('.student-progress-retell-play').forEach(button => { delete button.dataset.playbackUrl; });
+    };
+
+    window.addEventListener('pagehide', clearStudentProgressRecordingCache);
+    const prepareStudentProgressRecording = url => {
+        if (!studentProgressDurationLoads.has(url)) {
+            const version = studentProgressCacheVersion;
+            const load = (async () => {
+                const response = await fetch(url, {credentials: 'same-origin', cache: 'no-store'});
+                if (!response.ok) throw new Error('Recording unavailable');
+                const data = await response.arrayBuffer();
+                const context = new (window.AudioContext || window.webkitAudioContext)();
+                try {
+                    const buffer = await context.decodeAudioData(data);
+                    // A PCM WAV provides duration and random access even when the
+                    // original MediaRecorder WebM has no duration or seek index.
+                    const channels = buffer.numberOfChannels;
+                    const bytes = new ArrayBuffer(44 + buffer.length * channels * 2);
+                    const view = new DataView(bytes);
+                    const text = (offset, value) => [...value].forEach((c, i) => view.setUint8(offset + i, c.charCodeAt(0)));
+                    text(0, 'RIFF'); view.setUint32(4, bytes.byteLength - 8, true);
+                    text(8, 'WAVE'); text(12, 'fmt '); view.setUint32(16, 16, true);
+                    view.setUint16(20, 1, true); view.setUint16(22, channels, true);
+                    view.setUint32(24, buffer.sampleRate, true);
+                    view.setUint32(28, buffer.sampleRate * channels * 2, true);
+                    view.setUint16(32, channels * 2, true); view.setUint16(34, 16, true);
+                    text(36, 'data'); view.setUint32(40, bytes.byteLength - 44, true);
+                    const samples = Array.from({length: channels}, (_, i) => buffer.getChannelData(i));
+                    let offset = 44;
+                    for (let i = 0; i < buffer.length; i++) {
+                        for (let channel = 0; channel < channels; channel++) {
+                            const sample = Math.max(-1, Math.min(1, samples[channel][i]));
+                            view.setInt16(offset, sample * (sample < 0 ? 32768 : 32767), true);
+                            offset += 2;
+                        }
+                    }
+                    if (version !== studentProgressCacheVersion) throw new Error('Recording review changed');
+                    const playbackUrl = URL.createObjectURL(new Blob([bytes], {type: 'audio/wav'}));
+                    studentProgressPlaybackUrls.add(playbackUrl);
+                    return {duration: buffer.duration, playbackUrl};
+                } finally { await context.close(); }
+            })();
+            studentProgressDurationLoads.set(url, load);
+            load.catch(() => { if (studentProgressDurationLoads.get(url) === load) studentProgressDurationLoads.delete(url); });
+        }
+        return studentProgressDurationLoads.get(url);
+    };
+    const updateStudentProgressAudioTime = (button, audio = null) => {
+        const controls = button.closest('.student-progress-audio-controls');
+        const progress = controls?.querySelector('.student-progress-retell-progress');
+        const time = controls?.querySelector('.student-progress-retell-time');
+        if (!progress || !time) return;
+        const duration = Number.isFinite(audio?.duration) && audio.duration > 0
+            ? audio.duration : Number(button.dataset.duration) || 0;
+        if (duration > 0) {
+            button.dataset.duration = String(duration);
+            const card = button.closest('.lesson1-recording-card');
+            const timeSpent = card?.querySelector('.student-progress-time-spent');
+            if (timeSpent) timeSpent.textContent = formatStudentProgressAudioTime(duration).padStart(5, '0');
+        }
+        progress.max = duration;
+        progress.value = audio?.currentTime || 0;
+        time.textContent = `${formatStudentProgressAudioTime(audio?.currentTime || 0)} / ${duration > 0 ? formatStudentProgressAudioTime(duration) : '--:--'}`;
+    };
     const hydrateStudentProgressAudioDurations = (root = document) => {
         root.querySelectorAll('.student-progress-retell-play[data-url]').forEach(button => {
-            const controls = button.closest('.student-progress-audio-controls');
-            const progress = controls?.querySelector('.student-progress-retell-progress');
-            const time = controls?.querySelector('.student-progress-retell-time');
-            if (!controls || !progress || !time || button.dataset.durationHydrated === 'true') return;
+            if (button.dataset.durationHydrated === 'true') return;
             button.dataset.durationHydrated = 'true';
-            const audio = new Audio(button.dataset.url);
+            updateStudentProgressAudioTime(button);
+            const audio = new Audio();
             audio.preload = 'metadata';
-            audio.addEventListener('loadedmetadata', () => {
-                const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
-                progress.max = duration;
-                time.textContent = `0:00 / ${formatStudentProgressAudioTime(duration)}`;
-            }, { once: true });
+            const resolveDuration = async () => {
+                if (Number.isFinite(audio.duration) && audio.duration > 0) {
+                    button.dataset.duration = String(audio.duration);
+                } else {
+                    try {
+                        const recording = await prepareStudentProgressRecording(button.dataset.url);
+                        button.dataset.duration = String(recording.duration);
+                        button.dataset.playbackUrl = recording.playbackUrl;
+                    } catch (_) { /* Preserve the saved duration if decoding fails. */ }
+                }
+                if (button.isConnected) updateStudentProgressAudioTime(button,
+                    activeStudentProgressAudio?.datasetUrl === button.dataset.url ? activeStudentProgressAudio : null);
+            };
+            audio.addEventListener('loadedmetadata', resolveDuration, {once: true});
+            audio.addEventListener('error', () => {
+                const time = button.closest('.student-progress-audio-controls')?.querySelector('.student-progress-retell-time');
+                if (time) time.textContent = 'Unavailable';
+            }, {once: true});
+            audio.src = button.dataset.url;
         });
     };
 
@@ -14918,7 +15004,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         function normalizeProgressStatus(attempts) {
-            if (!attempts.length) return { label: 'Not Started', className: 'bg-secondary' };
+            const statusKey = attempt => String(attempt?.status || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+            if (!attempts.length || attempts.every(attempt => statusKey(attempt) === 'not_started')) {
+                return { label: 'Not Started', className: 'bg-secondary' };
+            }
+            if (attempts.every(attempt => statusKey(attempt) === 'submitted')) return {label: 'Pending review', className: 'bg-warning text-dark'};
             if (attempts.some(att => String(att.status || '').toLowerCase() === 'completed' || att.completed_at)) {
                 return { label: 'Completed', className: 'bg-success' };
             }
@@ -15231,7 +15321,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         : window.StudentActivityReview.renderFluency(session5Recordings, escapeHtml);
                     const session4Reviewed = usesLetterSoundScores && session4Recordings.length > 0 && session4Recordings.every(recording => recording.teacher_score !== null && recording.teacher_score !== undefined);
                     const session4Score = usesLetterSoundScores
-                        ? (session4Reviewed ? `${attempt.session4_correct_items}/${attempt.session4_total_items}` : 'Awaiting teacher')
+                        ? (status.label === 'Not Started' ? '—' : session4Reviewed ? `${attempt.session4_correct_items}/${attempt.session4_total_items}` : 'Awaiting teacher')
                         : null;
                     const session4RecordingHtml = session4Recordings.map(recording => {
                         const score = recording.teacher_score;
@@ -15243,14 +15333,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         .map((recording, recordingIndex) => {
                             const letterLabel = escapeHtml(recording.letter || ('Letter ' + (recordingIndex + 1)));
                             const duration = escapeHtml(formatStudentProgressAudioTime(recording.recording_duration_seconds));
-                            return `<div class="student-progress-audio-controls lesson29-letter-recording"><span class="me-2">${letterLabel}</span><button type="button" class="student-progress-retell-play" data-url="${escapeHtml(recording.recording_url)}" aria-label="Play letter recording ${recordingIndex + 1}"><i class="bi bi-play-fill"></i></button><input class="student-progress-retell-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"><span class="student-progress-retell-time">0:00 / ${duration}</span></div>`;
+                            return `<div class="student-progress-audio-controls lesson29-letter-recording"><span class="me-2">${letterLabel}</span><button type="button" class="student-progress-retell-play" data-duration="${Number(recording.recording_duration_seconds) || 0}" data-url="${escapeHtml(recording.recording_url)}" aria-label="Play letter recording ${recordingIndex + 1}"><i class="bi bi-play-fill"></i></button><input class="student-progress-retell-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"><span class="student-progress-retell-time">0:00 / ${duration}</span></div>`;
                         }).join('');
                     const recordingHtml = usesLetterSoundScores
                             ? (isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1 || isLesson29TraceSay
                                 ? window.StudentActivityReview.renderLetterScores(session4Recordings, task.assessmentId, studentId, escapeHtml)
                                 : `<div class="session4-recording-review"><h6>Teacher Review</h6><p>Listen to each recording and score the student's letter sound.</p><div class="session4-recording-list">${session4RecordingHtml}</div></div>`)
                         : (retellRecordingAvailable
-                            ? `<div class="student-progress-audio-controls"><button type="button" class="student-progress-retell-play" data-url="${escapeHtml(attempt.recording_url)}" aria-label="Play recording"><i class="bi bi-play-fill"></i></button><input class="student-progress-retell-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"><span class="student-progress-retell-time">0:00 / ${escapeHtml(formatStudentProgressAudioTime(attempt.recording_duration_seconds))}</span></div>`
+                            ? `<div class="student-progress-audio-controls"><button type="button" class="student-progress-retell-play" data-duration="${Number(attempt.recording_duration_seconds) || 0}" data-url="${escapeHtml(attempt.recording_url)}" aria-label="Play recording"><i class="bi bi-play-fill"></i></button><input class="student-progress-retell-progress" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording progress"><span class="student-progress-retell-time">0:00 / ${escapeHtml(formatStudentProgressAudioTime(attempt.recording_duration_seconds))}</span></div>`
                             : '<span class="student-progress-recording-unavailable">Recording unavailable</span>');
                     const scoreValue = usesLetterSoundScores
                         ? session4Score
@@ -15270,8 +15360,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <span class="badge ${cardStatus.className}">${cardStatus.label}</span>
                             </div>
                             <div class="student-progress-stats">
-                                <div class="student-progress-stat"><span class="student-progress-stat-label">${isLesson1Recording ? 'Date Submitted' : 'Date Completed'}</span><span class="student-progress-stat-value">${completedAt ? escapeHtml(formatDateTime(completedAt)) : '—'}</span></div>
-                                <div class="student-progress-stat"><span class="student-progress-stat-label">Time Spent</span><span class="student-progress-stat-value">${timeSpent !== undefined && timeSpent !== null && timeSpent !== '' ? escapeHtml(formatCourseReportDuration(timeSpent)) : '—'}</span></div>
+                                <div class="student-progress-stat"><span class="student-progress-stat-label">${isLesson1Recording || isLesson29TraceSay ? 'Date Submitted' : 'Date Completed'}</span><span class="student-progress-stat-value">${completedAt ? escapeHtml(formatDateTime(completedAt)) : '—'}</span></div>
+                                <div class="student-progress-stat"><span class="student-progress-stat-label">Time Spent</span><span class="student-progress-stat-value student-progress-time-spent">${timeSpent !== undefined && timeSpent !== null && timeSpent !== '' ? escapeHtml(formatCourseReportDuration(timeSpent)) : '—'}</span></div>
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Score</span><span class="student-progress-stat-value student-progress-score">${scoreValue}</span></div>
                             </div>
                             ${(isRetellStory || isStoryResponse || isLesson1Recording || isLesson29TraceSay || isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1 || isSession5Fluency) ? `<div class="student-progress-recording" data-recording-key="${escapeHtml(retellRecordingKey)}">
@@ -15451,26 +15541,42 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const progress = controls?.querySelector('.student-progress-retell-progress');
         const time = controls?.querySelector('.student-progress-retell-time');
         if (!controls || !progress || !time) return;
-        if (activeStudentProgressAudio && activeStudentProgressAudio.src === new URL(button.dataset.url, window.location.href).href) {
+        if (activeStudentProgressAudio && activeStudentProgressAudio.datasetUrl === button.dataset.url) {
             if (activeStudentProgressAudio.paused) activeStudentProgressAudio.play(); else activeStudentProgressAudio.pause();
             return;
         }
         stopStudentProgressAudio();
-        const audio = new Audio(button.dataset.url);
+        const audio = new Audio();
+        audio.datasetUrl = button.dataset.url;
         activeStudentProgressAudio = audio;
-        audio.addEventListener('loadedmetadata', () => { progress.max = audio.duration || 0; time.textContent = `${formatStudentProgressAudioTime(audio.currentTime)} / ${formatStudentProgressAudioTime(audio.duration)}`; });
-        audio.addEventListener('timeupdate', () => { progress.value = audio.currentTime; time.textContent = `${formatStudentProgressAudioTime(audio.currentTime)} / ${formatStudentProgressAudioTime(audio.duration)}`; });
+        audio.addEventListener('loadedmetadata', () => updateStudentProgressAudioTime(button, audio));
+        audio.addEventListener('durationchange', () => updateStudentProgressAudioTime(button, audio));
+        audio.addEventListener('timeupdate', () => updateStudentProgressAudioTime(button, audio));
         audio.addEventListener('play', () => { button.innerHTML = '<i class="bi bi-pause-fill"></i>'; button.setAttribute('aria-label', 'Pause recording'); });
         audio.addEventListener('pause', () => { if (!audio.ended) { button.innerHTML = '<i class="bi bi-play-fill"></i>'; button.setAttribute('aria-label', 'Play recording'); } });
         audio.addEventListener('ended', () => { button.innerHTML = '<i class="bi bi-play-fill"></i>'; button.setAttribute('aria-label', 'Play recording'); progress.value = 0; });
         audio.addEventListener('error', () => { time.textContent = 'Unavailable'; button.disabled = true; });
-        audio.play().catch(error => { console.error('Student Progress Retell playback failed', { url: button.dataset.url, error }); time.textContent = 'Unavailable'; button.disabled = true; });
+        (async () => {
+            // Also prepare on click if metadata is still loading. Use the same
+            // cached conversion as hydration, without changing the stored audio.
+            try {
+                const recording = await prepareStudentProgressRecording(button.dataset.url);
+                button.dataset.duration = String(recording.duration);
+                button.dataset.playbackUrl = recording.playbackUrl;
+            } catch (_) { /* Browsers may still play formats they cannot decode. */ }
+            if (activeStudentProgressAudio !== audio) return;
+            audio.src = button.dataset.playbackUrl || button.dataset.url;
+            await audio.play();
+        })().catch(() => { time.textContent = 'Unavailable'; button.disabled = true; });
     });
 
     document.addEventListener('input', function(event) {
         const progress = event.target.closest('.student-progress-retell-progress');
         if (!progress || !activeStudentProgressAudio) return;
+        const button = progress.closest('.student-progress-audio-controls')?.querySelector('.student-progress-retell-play');
+        if (activeStudentProgressAudio.datasetUrl !== button?.dataset.url) return;
         activeStudentProgressAudio.currentTime = Number(progress.value) || 0;
+        updateStudentProgressAudioTime(button, activeStudentProgressAudio);
     });
     
     // Toast notification function

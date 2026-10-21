@@ -229,6 +229,29 @@ class StudentAchievementTests(TestCase):
         self.assertTrue(StudentAchievement.objects.filter(student=self.student, achievement_key='star-collector').exists())
         self.assertTrue(StudentLearningDay.objects.filter(student=self.student, date=self.today).exists())
 
+    @patch('pabasa_app.achievements.prescribed_catalog')
+    def test_profile_uses_dashboard_badges_and_completed_sessions(self, catalog):
+        catalog.return_value = self.catalog
+        self.progress(list(self.catalog)[:5])
+        self.progress([list(self.catalog)[5]], term=2)
+        self.progress(list(self.catalog), student=self.other)
+        session = self.client.session
+        session.update({'user_id': self.student.pk, 'user_role': 'student'})
+        session.save()
+        with patch('pabasa_app.views._current_learning_context', return_value=self.scope):
+            expected = refresh_student_achievements(self.student, self.scope)
+            response = self.client.get(reverse('profile'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['student_achievements']['badges'], expected['badges'])
+        self.assertEqual(response.context['achievement_completed_sessions'], 1)
+        self.assertEqual(response.context['achievement_total_sessions'], 15)
+        self.assertEqual(response.context['achievement_earned_count'],
+                         sum(badge['unlocked'] for badge in expected['badges']))
+        self.assertContains(response, 'Sessions Completed')
+        self.assertContains(response, '1 of 15 sessions finished')
+        self.assertNotContains(response, 'Sets Completed')
+        self.assertNotContains(response, 'First Adventure')
+
     def test_profile_matches_one_hundred_star_threshold_and_keeps_earned_badge(self):
         session = self.client.session
         session['user_id'] = self.student.pk
@@ -297,6 +320,7 @@ class StudentAchievementTests(TestCase):
             StudentLearningDay.objects.create(student=self.student, date=self.today - timedelta(days=i))
         submission = StudentActivityRecordingSubmission.objects.create(
             student=self.student, activity_key='lesson-29-gawain-3', item_index=0,
+            school_calendar=self.calendar, term=1,
             audio_file='old-synthetic.webm', status='retry',
         )
         StudentActivityRecordingSubmission.objects.filter(pk=submission.pk).update(
