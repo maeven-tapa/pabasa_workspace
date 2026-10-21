@@ -280,12 +280,17 @@ def l22_c_pronunciation_match(expected_syllable, target_word, transcript, c_soun
     one-token results are accepted, plus an explicitly paired context-word
     result when English STT has expanded the first Cc pantig to its hint.
     This intentionally avoids the shared homophone/CV heuristics so another
-    Big Box item or an unrelated word cannot advance the current item.
+    Big Box item or an unrelated word cannot advance the current item. Natural
+    speech may contain other words; only an accepted whole token can advance.
     """
     expected = ReadingMatcher.normalize_word(expected_syllable)
     target = ReadingMatcher.normalize_word(target_word)
     heard_words = ReadingMatcher.normalize_spoken_words(transcript)
-    if not expected or len(heard_words) != 1:
+    if not expected or not heard_words:
+        return False
+    # Natural conversational speech is approved only for Gawain 1; all other
+    # callers retain the established isolated-token contract.
+    if activity_key != 'aral-l22-g1-c-syllable-builder' and len(heard_words) != 1:
         return False
 
     accepted = set(L22_C_SYLLABLE_ALIASES.get(expected, {expected}))
@@ -298,7 +303,7 @@ def l22_c_pronunciation_match(expected_syllable, target_word, transcript, c_soun
         elif sound == 'soft':
             accepted.add('s' + expected[1:])
     accepted.update(L22_C_CONTEXT_ALIASES.get((expected, target), ()))
-    return heard_words[0] in accepted
+    return any(token in accepted for token in heard_words)
 
 
 def phrase_hints_for(language="", mode=""):

@@ -572,8 +572,9 @@ class WorkbookStateTests(SimpleTestCase):
         self.assertTrue(match('bu', 'bu'))
         self.assertTrue(match('bu', 'Boo.'))
         self.assertTrue(match('bu', '  BOO  '))
-        for rejected in ('bow', 'bo', 'ba', 'bi', 'be', 'bus', 'book', 'boo now'):
+        for rejected in ('bow', 'bo', 'ba', 'bi', 'be', 'bus', 'book'):
             self.assertFalse(match('bu', rejected), rejected)
+        self.assertTrue(match('bu', 'boo now'))
         self.assertFalse(match('ca', 'boo'))
         self.assertFalse(match('bu', 'boo', 'aral-l22-g2-c-word-reading'))
 
@@ -595,9 +596,10 @@ class WorkbookStateTests(SimpleTestCase):
         for transcript in ('com', 'kom', 'computer', 'comb', 'Comb.', 'COMB.'):
             with self.subTest(transcript=transcript):
                 self.assertTrue(match('com', transcript))
-        for transcript in ('come', 'calm', 'um', 'comb comb', 'unrelated'):
+        for transcript in ('come', 'calm', 'um', 'unrelated'):
             with self.subTest(transcript=transcript):
                 self.assertFalse(match('com', transcript))
+        self.assertTrue(match('com', 'comb comb'))
         self.assertFalse(match('ca', 'comb'))
         self.assertFalse(match('com', 'comb', 'aral-l22-g2-c-word-reading'))
 
@@ -636,7 +638,7 @@ class WorkbookStateTests(SimpleTestCase):
                 if other.casefold() != expected.casefold():
                     self.assertFalse(l22_c_pronunciation_match(other, other_word, expected, other_sound, key), (expected, other))
 
-    def test_lesson22_gawain1_new_aliases_are_activity_scoped_and_reject_phrases(self):
+    def test_lesson22_gawain1_new_aliases_are_activity_scoped_and_accept_repetition(self):
         key = 'aral-l22-g1-c-syllable-builder'
         aliases = {
             'pu': ('computer', 'hard', ('pooh', 'poo'), 'pew'),
@@ -650,7 +652,7 @@ class WorkbookStateTests(SimpleTestCase):
             for alias in accepted:
                 self.assertTrue(l22_c_pronunciation_match(expected, word, alias, sound, key))
                 self.assertFalse(l22_c_pronunciation_match(expected, word, alias, sound, 'aral-l22-g2-c-word-reading'))
-                self.assertFalse(l22_c_pronunciation_match(expected, word, f'{alias} {alias}', sound, key))
+                self.assertTrue(l22_c_pronunciation_match(expected, word, f'{alias} {alias}', sound, key))
                 for other, (other_word, other_sound, _, _) in aliases.items():
                     if other != expected:
                         self.assertFalse(l22_c_pronunciation_match(other, other_word, alias, other_sound, key))
@@ -673,6 +675,16 @@ class WorkbookStateTests(SimpleTestCase):
             self.assertFalse(l22_c_pronunciation_match(expected, word, 'T.', sound, key))
         self.assertFalse(l22_c_pronunciation_match('te', 'Celeste', 'tea', 'soft', key))
         self.assertFalse(l22_c_pronunciation_match('te', 'Celeste', 'tee', 'soft', key))
+
+    def test_lesson22_gawain1_accepts_target_token_in_natural_speech_only(self):
+        key = 'aral-l22-g1-c-syllable-builder'
+        self.assertTrue(l22_c_pronunciation_match('ga', 'Cagayan', 'ga ga ga ga ga', 'hard', key))
+        self.assertTrue(l22_c_pronunciation_match('ga', 'Cagayan', 'ga ga ay ga', 'hard', key))
+        self.assertTrue(l22_c_pronunciation_match('te', 'Celeste', 'te te ay alam ko yan eh te', 'soft', key))
+        self.assertTrue(l22_c_pronunciation_match('te', 'Celeste', 'ay alam ko yan te', 'soft', key))
+        self.assertFalse(l22_c_pronunciation_match('ga', 'Cagayan', 'ka ka ka', 'hard', key))
+        self.assertFalse(l22_c_pronunciation_match('te', 'Celeste', 'alam', 'soft', key))
+        self.assertFalse(l22_c_pronunciation_match('te', 'Celeste', 'malayo', 'soft', key))
 
     def test_lesson22_cock_alias_does_not_leak_to_other_pantig(self):
         self.assertFalse(l22_c_pronunciation_match('ce', 'Cebu', 'cock', 'soft'))
