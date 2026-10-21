@@ -6325,9 +6325,16 @@
         body.dark-theme .practice-hunt-shell .hunt-card::before {border-color:rgba(255,225,151,.34)}
         body.dark-theme .practice-hunt-shell :is(.hunt-map-dot,.hunt-checkpoint) {filter:brightness(1.08)}
         body.dark-theme .practice-hunt-shell .hunt-destination {filter:brightness(1.18);text-shadow:0 2px rgba(255,240,195,.38)}
+        .practice-shell [hidden] { display: none !important; }
+        .practice-shell .practice-feedback:empty { display: none; }
+        .practice-scrolls-shell .scrolls-card-actions button:disabled {
+            cursor: not-allowed; filter: grayscale(.7); opacity: .5;
+        }
+        .practice-shell button:focus-visible { outline: 3px solid #174f70; outline-offset: 4px; }
     </style>
     {% include "pabasa_app/includes/student_theme_stylesheet.html" %}
 {% include "pabasa_app/includes/typography.html" %}
+    <link rel="stylesheet" href="{% static 'pabasa_app/css/practice_material_layout.css' %}">
 </head>
 <body data-student-theme="{{ student_theme_slug|default:'sky' }}">
     {% include "pabasa_app/partials/_forest_world.html" %}
@@ -6341,8 +6348,9 @@
                 <div class="reading-help-head"><h2 id="practiceHelpTitle">How to practice reading</h2><button class="reading-help-close" id="practiceHelpClose" type="button" aria-label="Close help"><i class="bi bi-x-lg"></i></button></div>
                 <div class="reading-help-steps">
                     <div class="reading-help-step"><i class="bi bi-eye-fill"></i><div><strong>Look at the text</strong><span>Look at the words. Take your time.</span></div></div>
-                    <div class="reading-help-step"><i class="bi bi-mic-fill"></i><div><strong>Read aloud</strong><span>Tap Start Reading. Speak clearly.</span></div></div>
-                    <div class="reading-help-step"><i class="bi bi-arrow-right-circle-fill"></i><div><strong>Continue when ready</strong><span>{% if request.GET.game == 'hunt' %}Tap Skip to skip.{% elif request.GET.game == 'free' %}Swipe up for the next card. Swipe down to skip.{% else %}Tap Next to continue.{% endif %}</span></div></div>
+                    <div class="reading-help-step"><i class="bi bi-volume-up-fill"></i><div><strong>Listen to the text</strong><span>Read Aloud plays it for you.</span></div></div>
+                    <div class="reading-help-step"><i class="bi bi-mic-fill"></i><div><strong>Read the text</strong><span>Start Reading turns on the microphone. Stop turns it off.</span></div></div>
+                    <div class="reading-help-step"><i class="bi bi-arrow-right-circle-fill"></i><div><strong>Continue</strong><span>After a correct read, the next item appears.{% if request.GET.game == 'free' %} Tap Skip or swipe up to skip a card.{% else %} Tap Skip to skip an item.{% endif %}</span></div></div>
                 </div>
             </section>
         </div>
@@ -6372,8 +6380,6 @@
                             <div class="scrolls-header-meta">
                                 <span class="scrolls-meta-pill" id="scrollsDifficultyPill">Easy</span>
                                 <span class="scrolls-meta-pill" id="scrollsLevelPill">Level 2</span>
-                                <span class="scrolls-meta-pill scrolls-progress-pill" id="scrollsProgressPill">Card 1 of 1</span>
-                                <div class="scrolls-status-pill" id="scrollsStatusPill">Ready</div>
                             </div>
                         </div>
                     </header>
@@ -6393,11 +6399,10 @@
                     </div>
                     <div class="scrolls-progress">
                         <div class="scrolls-progress-bar" aria-hidden="true"><span id="scrollsProgressBarFill"></span></div>
-                        <div class="scrolls-progress-meta" id="scrollsProgressMeta">Swipe up for the next challenge</div>
+                        <div class="scrolls-progress-meta" id="scrollsProgressMeta">Swipe up to skip</div>
                     </div>
-                    <div class="scrolls-dots" id="scrollsDots" aria-label="Reading progress"></div>
-                    <p class="scrolls-feedback" id="scrollsFeedback">Tap the mic. Read aloud.</p>
-                    <div class="scrolls-speech-debug-settings">
+                    <p class="scrolls-feedback" id="scrollsFeedback" role="status">Read the card aloud.</p>
+                    <div class="scrolls-speech-debug-settings" hidden>
                         <label><input id="practiceSpeechDebugToggle" type="checkbox"> <span>Show speech debug panel</span></label>
                     </div>
                     <div class="hunt-speech-panel d-none" id="practiceSpeechPanel" hidden aria-live="polite">
@@ -6408,7 +6413,7 @@
                     <div class="scrolls-card-actions">
                         <button class="scrolls-record-btn" id="readAloudBtn" type="button"><i class="bi bi-volume-up-fill" aria-hidden="true"></i> Read Aloud</button>
                         <button class="scrolls-record-btn" id="scrollRecordBtn" type="button"><i class="bi bi-mic-fill" aria-hidden="true"></i> Start Reading</button>
-                        <button class="scrolls-skip-btn" id="scrollSkipBtn" type="button">Next</button>
+                        <button class="scrolls-skip-btn" id="scrollSkipBtn" type="button">Skip</button>
                     </div>
                 </div>
             </section>
@@ -6464,13 +6469,13 @@
                     <div class="hunt-checkpoint-toast" id="huntCheckpointToast" role="status" hidden><i class="bi bi-flag-fill"></i> Great exploring! Checkpoint reached!</div>
                     <aside class="hunt-guide" aria-label="PABASA bird reading guide">
                         <div class="hunt-bird-wrap"><img src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA bird guide looking toward the word"></div>
-                        <div class="hunt-guide-copy" id="huntGuideMessage">Look at the word. Read it aloud.</div>
+                        <div class="hunt-guide-copy" id="huntGuideMessage" hidden></div>
                     </aside>
                     <div class="hunt-word-area">
                         <span class="hunt-word-position" id="huntWordPosition">Word 1 of 5</span>
                         <h2 class="practice-text" id="practiceText">Ready?</h2>
-                        <p class="hunt-word-instruction">Look at the word. Read it aloud.</p>
-                        <div class="hunt-speech-panel" id="huntSpeechPanel" aria-live="polite">
+                        <p class="hunt-word-instruction" id="huntWordInstruction">Read the text aloud.</p>
+                        <div class="hunt-speech-panel" id="huntSpeechPanel" hidden aria-live="polite">
                             <strong class="hunt-speech-status" id="huntSpeechStatus">Ready to start reading</strong>
                             <span class="hunt-speech-transcript" id="huntSpeechTranscript">Google Speech results will appear here while you read.</span>
                             <div class="hunt-raw-mic"><strong>Raw mic input</strong><code id="huntRawMicInput">Waiting for speech...</code></div>
@@ -6479,7 +6484,7 @@
                 </section>
 
                 <div class="hunt-actions">
-                    <p class="practice-feedback" id="practiceFeedback">Read when you are ready.</p>
+                    <p class="practice-feedback" id="practiceFeedback" role="status"></p>
                     <div class="practice-controls">
                         <button class="record-btn" id="huntReadAloudBtn" type="button"><i class="bi bi-volume-up-fill me-1"></i> Read Aloud</button>
                         <button class="record-btn" id="recordBtn" type="button"><i class="bi bi-mic-fill me-1"></i> Start Reading</button>
@@ -6578,12 +6583,12 @@
                 </section>
 
                 <div class="practice-action-shell">
-                    <p class="practice-feedback" id="practiceFeedback">Read when you are ready.</p>
+                    <p class="practice-feedback" id="practiceFeedback" role="status">Read the text aloud.</p>
 
                     <div class="practice-controls">
                         <button class="record-btn" id="readAloudBtn" type="button"><i class="bi bi-volume-up-fill me-1"></i> Read Aloud</button>
                         <button class="record-btn" id="recordBtn" type="button"><i class="bi bi-mic-fill me-1"></i> Start Reading</button>
-                        <button class="next-btn" id="practiceNextBtn" type="button">Next</button>
+                        <button class="next-btn" id="practiceNextBtn" type="button">Skip</button>
                     </div>
                 </div>
             </article>
@@ -6771,5 +6776,6 @@
     <script src="{% static 'pabasa_app/js/material_speech_capture.js' %}?v=1"></script>
     <script src="{% static 'pabasa_app/js/practice_completion_queue.js' %}?v=1"></script>
     <script src="{% static 'pabasa_app/js/practice_reader.js' %}?v={% now 'U' %}"></script>
+    <script src="{% static 'pabasa_app/js/practice_material_layout.js' %}"></script>
 </body>
 </html>

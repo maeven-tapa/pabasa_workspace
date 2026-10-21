@@ -1,0 +1,278 @@
+/* Reading material layout only. Activity state and progress remain in practice_reader.js. */
+.practice-scrolls-shell { --free-word-size: clamp(3.6rem, 9vw, 6rem); }
+.practice-color { --color-text-size: clamp(1.25rem, 2.7vw, 1.75rem); }
+.practice-color[data-practice-difficulty="hard"] { --color-text-size: clamp(.72rem, 1.25vw, .96rem); }
+
+body.practice-free-mode:not(.practice-results-open) {
+    height: 100dvh;
+    min-height: 0;
+    overflow: visible;
+}
+.practice-shell.practice-scrolls-shell:not(.is-complete),
+.practice-shell.practice-color:not(.is-complete) {
+    height: 100dvh;
+    min-height: 0;
+    padding: clamp(8px, 2dvh, 20px) clamp(8px, 2vw, 28px);
+}
+.practice-shell.practice-scrolls-shell:not(.is-complete) {
+    max-width: none;
+    width: 100%;
+}
+.practice-scrolls-shell:not(.is-complete) .scrolls-desktop-stage {
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+}
+.practice-shell.practice-scrolls-shell:not(.is-complete) .scrolls-phone-device {
+    aspect-ratio: auto !important;
+    height: min(86dvh, 880px) !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+    width: min(100%, 1400px) !important;
+    max-width: 100% !important;
+    gap: 0 !important;
+}
+.practice-scrolls-shell:not(.is-complete) .scrolls-phone-shell {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+.practice-shell.practice-scrolls-shell:not(.is-complete) .scrolls-screen {
+    display: grid !important;
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto auto !important;
+    height: 100%;
+    min-height: 0;
+    gap: clamp(6px, 1.2dvh, 12px);
+    overflow: visible;
+}
+.practice-scrolls-shell:not(.is-complete) .scrolls-phone-header {
+    --header-side: clamp(44px, 3.4vw, 64px);
+    grid-template-columns: var(--header-side) minmax(0, 1fr) var(--header-side);
+    grid-template-rows: auto;
+    column-gap: 8px;
+    row-gap: 0;
+}
+.practice-scrolls-shell:not(.is-complete) .scrolls-phone-header > .back-link,
+.practice-scrolls-shell:not(.is-complete) .scrolls-phone-header::after {
+    grid-row: 1;
+    width: var(--header-side);
+    min-width: 0;
+    min-height: 44px;
+}
+.practice-scrolls-shell .scrolls-header-meta { justify-content: center; flex-wrap: nowrap; }
+.practice-scrolls-shell:not(.is-complete) .scrolls-feed { height: 100%; min-height: 0; }
+.practice-scrolls-shell:not(.is-complete) .scrolls-track { height: 100%; }
+.practice-scrolls-shell:not(.is-complete) .scrolls-card {
+    flex: 0 0 100%;
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+    padding: clamp(8px, 2dvh, 22px);
+    overflow: visible;
+}
+.practice-shell.practice-scrolls-shell .scrolls-card.practice-word .scrolls-card-text {
+    font-size: calc(var(--free-word-size) + 5px);
+    max-width: 100%;
+}
+.practice-scrolls-shell .scrolls-progress {
+    margin: 0;
+    gap: 6px;
+    min-width: 0;
+    align-self: center;
+    width: 100%;
+}
+.practice-scrolls-shell .scrolls-progress-meta { min-height: 1.25em; line-height: 1.25; }
+.practice-scrolls-shell .scrolls-feedback {
+    font-size: clamp(14px, 1.05vw, 18px);
+    line-height: 1.25;
+    padding: 0;
+    overflow-wrap: anywhere;
+}
+.practice-shell.practice-scrolls-shell .scrolls-card-actions {
+    display: grid;
+    grid-template-columns: 1.25fr 1.25fr 1fr;
+    width: min(100%, 600px);
+    max-width: 100%;
+    justify-self: center;
+    margin-inline: auto;
+    padding: 0;
+    gap: clamp(6px, 1vw, 16px);
+}
+.practice-shell.practice-scrolls-shell .scrolls-card-actions button {
+    display: block;
+    width: 100% !important;
+    min-width: 0;
+    min-height: 44px;
+    line-height: 1.2;
+    white-space: normal;
+    padding: 10px 8px;
+}
+
+/* Reserve separate rows for the text and action dock, including multi-line errors. */
+.practice-shell.practice-color:not(.is-complete) { grid-template-rows: auto minmax(0, 1fr); }
+.practice-color:not(.is-complete) .practice-board { min-height: 0; height: 100%; }
+.practice-color:not(.is-complete) .play-card {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: clamp(6px, 1.2dvh, 12px);
+    height: 100%;
+    min-height: 0;
+    padding: clamp(8px, 1vw, 14px);
+    overflow: visible;
+}
+.practice-color .color-scene { border-radius: inherit; }
+.practice-color:not(.is-complete) .practice-stage {
+    align-items: center;
+    min-height: 0;
+    min-width: 0;
+    padding: clamp(4px, 1dvh, 12px);
+    overflow: visible;
+}
+.practice-color .color-guide-panel {
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, 1.5vw, 16px);
+    width: fit-content;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+}
+.practice-color .color-guide-mascot {
+    flex: 0 0 clamp(64px, 12vw, 160px);
+    width: clamp(64px, 12vw, 160px);
+    min-width: 0;
+    max-width: 160px;
+    height: clamp(64px, 16dvh, 156px);
+    min-height: 0;
+    max-height: 156px;
+    order: 0;
+    margin: 0;
+    transform: none !important;
+}
+.practice-color .color-dialogue {
+    flex: 0 1 auto;
+    order: 1;
+    width: max-content;
+    min-width: min(300px, 40vw);
+    max-width: 720px;
+    min-height: min(94px, 16dvh);
+    padding: clamp(10px, 1.4vw, 16px);
+    transform: none;
+}
+.practice-color .color-dialogue::before {
+    left: -9px;
+    top: 52%;
+    bottom: auto;
+    transform: rotate(45deg) translateY(-50%);
+}
+.practice-shell.practice-color .color-dialogue .practice-text {
+    font-size: calc(var(--color-text-size) + 8px) !important;
+    line-height: 1.15 !important;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    text-wrap: pretty;
+    padding: 0;
+}
+.practice-color:not(.is-complete) .practice-action-shell {
+    position: relative;
+    inset: auto;
+    align-self: end;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+}
+.practice-color .practice-feedback {
+    font-size: clamp(14px, 1vw, 16px);
+    max-width: min(100%, 600px);
+    width: fit-content;
+    min-height: 0;
+    line-height: 1.25;
+    padding: 8px 12px;
+    overflow-wrap: anywhere;
+    justify-self: center;
+}
+.practice-color .practice-controls {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: min(100%, 480px);
+    max-width: 100%;
+    gap: 8px;
+    grid-auto-rows: auto;
+}
+.practice-color .practice-controls button {
+    display: block;
+    min-width: 0;
+    min-height: 44px;
+    width: 100%;
+    white-space: normal;
+    padding: 10px 8px;
+    line-height: 1.2;
+}
+
+@media (max-width: 767px) {
+    .practice-scrolls-shell { --free-word-size: clamp(3rem, 8vw, 5rem); }
+    .practice-shell.practice-scrolls-shell:not(.is-complete) .scrolls-phone-device { height: 100% !important; }
+    .practice-scrolls-shell .scrolls-bottom-nav,
+    .practice-scrolls-shell .scrolls-phone-notch { display: none; }
+    .practice-scrolls-shell:not(.is-complete) .scrolls-screen { padding: 8px; }
+    .practice-scrolls-shell .scrolls-header-copy h1 { font-size: clamp(18px, 4vw, 24px); }
+    .practice-scrolls-shell .scrolls-meta-pill { font-size: 12px; padding: 4px 8px; }
+    .practice-scrolls-shell .scrolls-progress-meta { font-size: 12px; }
+    .practice-shell.practice-scrolls-shell .scrolls-card-actions button,
+    .practice-color .practice-controls button { font-size: 14px; }
+    .practice-color { --color-text-size: clamp(1.05rem, 4.2vw, 1.45rem); }
+    .practice-color .color-guide-mascot { flex-basis: 64px; width: 64px; }
+    .practice-color .color-dialogue { min-width: 0; padding: 10px; }
+}
+@media (max-width: 540px) { .practice-scrolls-shell { --free-word-size: clamp(2.75rem, 7.2vw, 4.4rem); } }
+@media (max-width: 390px) {
+    .practice-color { --color-text-size: 1.25rem; }
+    .practice-color[data-practice-difficulty="hard"] { --color-text-size: .58rem; }
+}
+@media (max-width: 375px) { .practice-scrolls-shell { --free-word-size: clamp(2.4rem, 6.8vw, 3.8rem); } }
+@media (max-width: 360px) { .practice-scrolls-shell { --free-word-size: clamp(2.15rem, 6.4vw, 3.4rem); } }
+@media (max-width: 344px) { .practice-scrolls-shell { --free-word-size: clamp(2rem, 6vw, 3rem); } }
+@media (max-height: 500px) {
+    .practice-shell.practice-scrolls-shell:not(.is-complete),
+    .practice-shell.practice-color:not(.is-complete) { padding: 6px; gap: 6px; }
+    .practice-shell.practice-scrolls-shell:not(.is-complete) .scrolls-phone-device { height: 100% !important; padding: 6px !important; }
+    .practice-scrolls-shell .scrolls-status-bar { display: none !important; }
+    .practice-shell.practice-scrolls-shell:not(.is-complete) .scrolls-screen { grid-template-rows: auto minmax(0, 1fr) auto auto auto !important; gap: 5px; padding: 6px; }
+    .practice-scrolls-shell:not(.is-complete) .scrolls-phone-header { padding: 4px 8px; }
+    .practice-color .color-guide-mascot { height: 64px; }
+    .practice-color .practice-feedback { padding: 6px 10px; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+    .practice-color:not(.is-complete) .practice-top {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-rows: auto;
+        min-height: 52px;
+        padding: 4px 8px;
+        margin: 0;
+        gap: 6px;
+    }
+    .practice-color .practice-color-hud,
+    .practice-color .practice-title > .practice-title-icon { display: none; }
+    .practice-color .practice-title { display: block; grid-column: 2; grid-row: 1; }
+    .practice-color .practice-title > h1 { display: block; font-size: 22px; line-height: 1.05; margin: 0; }
+    .practice-color .practice-title > .practice-journey-subtitle { display: flex; justify-content: center; font-size: 11px; line-height: 1.2; margin: 2px 0 0; }
+    .practice-color .practice-meta-row { display: flex; grid-column: 3; grid-row: 1; gap: 6px; }
+    .practice-color .practice-top > .back-link,
+    .practice-color .practice-meta-row > .practice-help-pill,
+    .practice-color .practice-meta-row > .star-counter { display: inline-flex; min-height: 44px; font-size: 13px; padding: 6px 8px; }
+    .practice-color .practice-top > .back-link { grid-column: 1; grid-row: 1; }
+    .practice-color .play-status { gap: 8px; }
+    .practice-color .round-pill { min-height: 0; font-size: 13px; line-height: 1.2; padding: 4px 8px; }
+    .practice-color .practice-controls button { font-size: 13px; padding: 6px 4px; }
+}
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 420px) {
+    .practice-color .practice-title > h1 { font-size: 16px; }
+    .practice-color .practice-journey-subtitle > span { font-size: 11px; line-height: 1.2; }
+    .practice-color .color-guide-mascot { flex-basis: 48px; width: 48px; height: 48px; }
+    .practice-color .color-dialogue { padding: 8px; }
+    .practice-color:not(.is-complete) .play-card { padding: 4px; gap: 4px; }
+}

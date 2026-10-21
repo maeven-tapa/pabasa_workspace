@@ -4867,7 +4867,7 @@ class HuntScoringRuleTests(TestCase):
         self.assertIn("if (currentIndex === 3 && huntCheckpointToast)", source)
         self.assertIn("if (result.points > 0)", source)
         self.assertIn("speechItemIndex !== currentIndex || huntAdvanceInProgress", source)
-        self.assertIn("Try again — keep reading the same word.", source)
+        self.assertIn("Try this text again. I'm still listening.", source)
         self.assertIn("if (!huntResults[currentIndex]) finalizeHuntSpeechResult", source)
         self.assertIn("updateReadingToggleButton()", source)
         self.assertIn("practiceRecordingWindowMs(targetText)", source)
