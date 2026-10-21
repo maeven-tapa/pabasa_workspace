@@ -607,7 +607,7 @@ class WorkbookStateTests(SimpleTestCase):
         key = 'aral-l22-g1-c-syllable-builder'
         cells = (
             ('cac', 'cactus', 'hard', ('cac', 'kak', 'cock', 'cactus'), 'cake'),
-            ('ce', 'Cebu', 'soft', ('ce', 'se', 'cebu'), 'see'),
+            ('ce', 'Cebu', 'soft', ('ce', 'se', 'seh', 'cebu'), 'see'),
             ('ca', 'Cagayan', 'hard', ('ca', 'ka', 'cagayan'), 'kay'),
             ('bu', 'Cebu', 'soft', ('bu', 'boo'), 'bow'),
             ('com', 'computer', 'hard', ('com', 'kom', 'computer', 'comb'), 'come'),
@@ -622,7 +622,7 @@ class WorkbookStateTests(SimpleTestCase):
             ('ca', 'cabinet', 'hard', ('ca', 'ka', 'cabinet'), 'kay'),
             ('net', 'cabinet', 'hard', ('net', 'nett'), 'knit'),
             ('te', 'Celeste', 'soft', ('te', 't'), 'tea'),
-            ('Ce', 'Celeste', 'soft', ('ce', 'se', 'celeste'), 'see'),
+            ('Ce', 'Celeste', 'soft', ('ce', 'se', 'seh', 'celeste'), 'see'),
             ('les', 'Celeste', 'soft', ('les', 'less'), 'lease'),
         )
         self.assertEqual(
@@ -637,6 +637,40 @@ class WorkbookStateTests(SimpleTestCase):
             for other, other_word, other_sound, *_ in cells:
                 if other.casefold() != expected.casefold():
                     self.assertFalse(l22_c_pronunciation_match(other, other_word, expected, other_sound, key), (expected, other))
+
+    def test_lesson22_gawain1_ce_accepts_approved_whole_tokens_at_both_positions_only(self):
+        activity = get_activity('aral-l22-g1-c-syllable-builder')
+        key = activity['activity_key']
+        positions = ((1, 'ce', 'Cebu'), (16, 'Ce', 'Celeste'))
+        approved = ('ce', 'se', 'seh', 'Seh.', 'SEH', 'Se.')
+
+        for index, expected, word in positions:
+            for transcript in approved:
+                with self.subTest(index=index, transcript=transcript):
+                    self.assertTrue(l22_c_pronunciation_match(expected, word, transcript, 'soft', key))
+                    state = initial_state()
+                    apply_event(activity, state, {'action': 'reading_started'})
+                    for item in activity['items'][:index]:
+                        apply_event(activity, state, {
+                            'action': 'reading_syllable_attempt', 'transcript': item['text'],
+                        }, True)
+                    apply_event(activity, state, {
+                        'action': 'reading_syllable_attempt', 'transcript': transcript,
+                    }, True)
+                    self.assertEqual(state['index'], index + 1)
+                    self.assertEqual(state['last_feedback'], 'Tama!')
+                    self.assertEqual(state['reading_attempts'], 0)
+
+            for transcript in ('see', 'sea', 'c', 'say', 'seh seh', 'unrelated'):
+                with self.subTest(index=index, rejected=transcript):
+                    self.assertFalse(l22_c_pronunciation_match(expected, word, transcript, 'soft', key))
+
+        self.assertTrue(l22_c_pronunciation_match('ce', 'Cebu', 'cebu', 'soft', key))
+        self.assertFalse(l22_c_pronunciation_match('Ce', 'Celeste', 'cebu', 'soft', key))
+        self.assertTrue(l22_c_pronunciation_match('Ce', 'Celeste', 'celeste', 'soft', key))
+        self.assertFalse(l22_c_pronunciation_match('ce', 'Cebu', 'celeste', 'soft', key))
+        self.assertFalse(l22_c_pronunciation_match('ca', 'Cagayan', 'seh', 'hard', key))
+        self.assertFalse(l22_c_pronunciation_match('ce', 'Cebu', 'seh', 'soft', 'aral-l22-g2-c-word-reading'))
 
     def test_lesson22_gawain1_new_aliases_are_activity_scoped_and_accept_repetition(self):
         key = 'aral-l22-g1-c-syllable-builder'
