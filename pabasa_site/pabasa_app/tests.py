@@ -4957,6 +4957,12 @@ class PracticeReaderStaleRecordingTests(TestCase):
         self.assertIn("liveCapture.stop();", self.source)
         self.assertIn("await submitPracticeSpeech(blob, targetText, button, attempt);", self.source)
 
+    def test_recording_flushes_final_chunk_before_stop(self):
+        self.assertIn("if (isHuntMode && typeof speechRecorder.requestData === \"function\")", self.source)
+        request_data = self.source.index("speechRecorder.requestData();")
+        stop_call = self.source.index("speechRecorder.stop();", request_data)
+        self.assertLess(request_data, stop_call)
+
 
 class PracticeReaderReadAloudTests(TestCase):
     def setUp(self):

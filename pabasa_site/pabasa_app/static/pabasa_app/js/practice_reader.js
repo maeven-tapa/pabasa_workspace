@@ -811,6 +811,12 @@
         speechRequestActive = !huntDiscardCurrentAudio;
         if (speechRequestActive) speechFeedback("Checking your reading…");
         updateReadingToggleButton();
+        // Hunt's batch fallback must receive the complete clip. Keep this
+        // flush scoped to Hunt so Free and Color recording behavior is unchanged.
+        if (isHuntMode && typeof speechRecorder.requestData === "function") {
+            try { speechRecorder.requestData(); }
+            catch (error) { console.warn("PABASA [Practice]: Could not flush Hunt speech data", error); }
+        }
         speechRecorder.stop();
     }
 
