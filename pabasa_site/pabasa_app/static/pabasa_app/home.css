@@ -3608,20 +3608,6 @@ section.pb-md-5 h2::after {
     width: 100%;
 }
 
-.turning-pages-count {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    z-index: 30;
-    transform: translateX(-50%);
-    color: var(--pabasa-blue-deep);
-    font-family: var(--font-family-primary);
-    font-size: 0.78rem;
-    font-weight: 900;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
 .section-container-gallery .turning-pages-slider {
     position: relative;
     display: block !important;

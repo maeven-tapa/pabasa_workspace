@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}?v=20261010-centered-nav">
 <link rel="stylesheet" href="{% static 'pabasa_app/home_features.css' %}?v=20261016-paper-to-pabasa">
 <link rel="stylesheet" href="{% static 'pabasa_app/home_audience.css' %}?v=20261016-salawag-refined">
-<link rel="stylesheet" href="{% static 'pabasa_app/home_gallery.css' %}?v=20261016-turning-pages-no-caption-v3">
+<link rel="stylesheet" href="{% static 'pabasa_app/home_gallery.css' %}?v=20261021-turning-pages-no-indicators">
 {% if reading_animation_frames %}
     {% for frame in reading_animation_frames %}
 <link rel="preload" as="image" href="{% static frame %}">
@@ -344,8 +344,6 @@
                 <span aria-hidden="true">&#8250;</span>
             </button>
         </div>
-        <div class="turning-pages-count" aria-label="Current photo" aria-live="polite"><span id="turningPagesCurrent">03</span><span class="turning-pages-count-divider" aria-hidden="true">/</span><span id="turningPagesTotal"></span></div>
-        <div class="turning-pages-indicators" id="turningPagesIndicators" role="group" aria-label="Choose a deployment photo"></div>
     </div>
 </section>
 
@@ -389,26 +387,14 @@
     const sliderGrid = document.getElementById('turningPagesGrid');
     const sliderLeftBtn = document.getElementById('sliderLeftBtn');
     const sliderRightBtn = document.getElementById('sliderRightBtn');
-    const turningPagesCurrent = document.getElementById('turningPagesCurrent');
-    const turningPagesTotal = document.getElementById('turningPagesTotal');
     const turningPagesStage = document.getElementById('turningPagesStage');
-    const turningPagesIndicators = document.getElementById('turningPagesIndicators');
 
-    if (sliderLeftBtn && sliderRightBtn && sliderGrid && turningPagesStage && turningPagesIndicators) {
+    if (sliderLeftBtn && sliderRightBtn && sliderGrid && turningPagesStage) {
         const pages = Array.from(sliderGrid.querySelectorAll('.turning-pages-image'));
         const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         let currentPage = Math.min(2, pages.length - 1);
         let autoplayTimer = null;
         let pointerStartX = null;
-        const progressButtons = pages.map((page, pageIndex) => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'turning-pages-indicator';
-            button.setAttribute('aria-label', `Show photo ${pageIndex + 1}`);
-            button.addEventListener('click', () => { goToPageIndex(pageIndex); startAutoplay(); });
-            turningPagesIndicators.appendChild(button);
-            return button;
-        });
 
         const renderTurningPages = () => {
             if (!pages.length) return;
@@ -428,17 +414,6 @@
                 page.tabIndex = (isPrevious || isNext) ? 0 : -1;
                 page.setAttribute('aria-roledescription', (isPrevious || isNext) ? 'navigation control' : 'slide');
                 page.setAttribute('aria-label', isPrevious ? `Previous photo: ${page.dataset.title}` : isNext ? `Next photo: ${page.dataset.title}` : `Photo ${pageIndex + 1} of ${pages.length}: ${page.dataset.title}`);
-            });
-            if (turningPagesCurrent) turningPagesCurrent.textContent = String(currentPage + 1).padStart(2, '0');
-            if (turningPagesTotal) turningPagesTotal.textContent = String(pages.length).padStart(2, '0');
-            progressButtons.forEach((button, pageIndex) => {
-                if (pageIndex === currentPage) {
-                    button.classList.add('is-active');
-                    button.setAttribute('aria-current', 'true');
-                } else {
-                    button.classList.remove('is-active');
-                    button.removeAttribute('aria-current');
-                }
             });
         };
 
