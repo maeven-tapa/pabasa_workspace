@@ -1,0 +1,74 @@
+/* Lesson 7 Gawain 2C only: card spacing leaves the writing sheet, canvas,
+   guidelines, and controls intact. Guide typography is handled separately below. */
+html:has(body.lesson7-g2c-compact):not(:has(#app .done)),
+body.lesson7-g2c-compact:not(:has(#app .done)) {
+  height: auto !important;
+  overflow-y: auto !important;
+}
+
+body.lesson7-g2c-compact:not(:has(#app .done)) > .page {
+  height: auto !important;
+  min-height: 100dvh !important;
+  padding-block: 16px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr);
+  /* Equal navigation clearances keep the card at the viewport's center. */
+  grid-template-rows: minmax(64px, 1fr) auto minmax(64px, 1fr);
+  gap: 0 !important;
+  align-content: stretch !important;
+  justify-items: center;
+  overflow: visible !important;
+}
+
+body.lesson7-g2c-compact:not(:has(#app .done)) > .page > .back {
+  grid-area: 1 / 1;
+  align-self: start !important;
+  justify-self: start;
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+}
+
+body.lesson7-g2c-compact > .page > #app.card:not(:has(.done)) {
+  grid-area: 2 / 1;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  flex: 0 0 auto;
+  margin: 0 auto !important;
+  padding-block: clamp(24px, 3vh, 42px);
+  overflow: visible;
+}
+
+body.lesson7-g2c-compact #app.card:not(:has(.done)) > .numbered-progress {
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  margin: 20px auto 0;
+}
+
+@media (max-width: 600px) {
+  body.lesson7-g2c-compact:not(:has(#app .done)) > .page {
+    /* Reserve the fixed mobile tools (52px at top:14px) and their clearance. */
+    padding-top: calc(52px + 14px + 14px) !important;
+    grid-template-rows: auto minmax(min-content, 1fr);
+    row-gap: 12px !important;
+  }
+}
+/* Glyph placement is independent of the font's HTML line box. The visual-only
+   guide module supplies ink-based bounds; the actual writing canvas is intact. */
+body.lesson7-g2c-compact #app .canvas-wrap > .model[data-guide-aligned] {
+  /* Retain the activity's original left-side guide inset. */
+  left: 13%;
+  right: 0;
+  width: auto;
+  line-height: 1;
+}
+
+body.lesson7-g2c-compact .model[data-guide-aligned] > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+

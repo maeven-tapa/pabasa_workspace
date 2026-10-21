@@ -1,0 +1,48 @@
+/* Lesson 7 Gawain 2B only. Preserve the card's width and all internal sizing;
+   equal navigation tracks center its content-fitting outer box. */
+html:has(body.lesson7-g2b-centered):not(:has(#app .done)),
+body.lesson7-g2b-centered:not(:has(#app .done)) {
+  height: auto !important;
+  overflow-y: auto !important;
+}
+
+body.lesson7-g2b-centered:not(:has(#app .done)) > .page {
+  height: auto !important;
+  min-height: 100dvh !important;
+  /* Match the fixed desktop tools' top clearance and 64px control height. */
+  padding-block: 22px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(64px, 1fr) auto minmax(64px, 1fr);
+  gap: 0 !important;
+  align-content: stretch !important;
+  justify-items: center;
+  overflow: visible !important;
+}
+
+body.lesson7-g2b-centered:not(:has(#app .done)) > .page > .back {
+  grid-area: 1 / 1;
+  align-self: start !important;
+  justify-self: start;
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+}
+
+body.lesson7-g2b-centered:has(#activity-data) > .page > #app.card:not(:has(.done)) {
+  grid-area: 2 / 1;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin-block: 0 !important;
+}
+
+@media (max-width: 800px) {
+  body.lesson7-g2b-centered:not(:has(#app .done)) > .page {
+    /* Keep mobile navigation below the fixed 52px tools at top:14px. */
+    padding-top: calc(52px + 14px + 14px) !important;
+    padding-bottom: 14px !important;
+    grid-template-rows: auto minmax(min-content, 1fr);
+    row-gap: 12px !important;
+  }
+}

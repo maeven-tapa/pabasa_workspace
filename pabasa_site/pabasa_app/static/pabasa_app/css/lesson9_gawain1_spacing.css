@@ -1,0 +1,71 @@
+/* Lesson 9 Gawain 1 only. Keep the existing activity dimensions and let the
+   outer card fit its contents between equal navigation clearances. */
+html:has(body.lesson9-g1-compact):not(:has(#app > .done)),
+body.lesson9-g1-compact:not(:has(#app > .done)) {
+  height: auto !important;
+  overflow-y: auto !important;
+}
+
+body.lesson9-g1-compact:not(:has(#app > .done)) > .page {
+  height: auto !important;
+  min-height: 100dvh !important;
+  padding-block: 22px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(64px, 1fr) auto minmax(64px, 1fr);
+  align-content: stretch !important;
+  gap: 0 !important;
+  justify-items: center;
+  overflow: visible !important;
+}
+
+body.lesson9-g1-compact:not(:has(#app > .done)) > .page > .back {
+  grid-area: 1 / 1;
+  align-self: start !important;
+  justify-self: start;
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+}
+
+body.lesson9-g1-compact:has(#lesson9-data) > .page > #app.card:not(:has(> .done)) {
+  grid-area: 2 / 1;
+  justify-self: center;
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  /* Preserve the old absolute card's width relative to its page padding box.
+     The shared large-screen width remains the same when that rule applies. */
+  width: var(--activity-large-width, min(1218px, calc(100vw - 32px))) !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  flex: 0 0 auto;
+  margin: 0 !important;
+  overflow: visible;
+}
+
+body.lesson9-g1-compact #app.card:not(:has(> .done)) > .numbered-progress {
+  position: static;
+  flex-wrap: wrap;
+}
+
+body.lesson9-g1-compact #app.card:not(:has(> .done)) .numbered-progress__circle {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 800px) {
+  body.lesson9-g1-compact:not(:has(#app > .done)) > .page {
+    /* Clear the existing fixed tools before the back link and activity. */
+    padding-top: calc(52px + 14px + 14px) !important;
+    padding-bottom: 14px !important;
+    grid-template-rows: auto minmax(min-content, 1fr);
+    row-gap: 12px !important;
+  }
+
+  body.lesson9-g1-compact:has(#lesson9-data) > .page > #app.card:not(:has(> .done)) {
+    /* The old absolute card spans the viewport at these widths. */
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+}

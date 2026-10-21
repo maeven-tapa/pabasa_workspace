@@ -1,0 +1,285 @@
+/* Additional large-monitor sizing only. The important cascade layer keeps
+   these dimensions ahead of legacy, unlayered template overrides without
+   changing their colors, fonts, states, or interaction code. One fluid unit
+   reaches 1.25px at 1440px height, and tapers near the height breakpoint. */
+@media (min-width: 2500px) and (min-height: 1200px) {
+  html:has(body.pabasa-prescribed-responsive) {
+    --activity-unit: clamp(1px, .08680556dvh, 1.25px);
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow-y: auto !important;
+  }
+
+  body.pabasa-prescribed-responsive {
+    --activity-large-width: min(calc(1780 * var(--activity-unit)), calc(100vw - 80px)) !important;
+    --heading-size: 59.2;
+    --badge-size: 16.8;
+    --read-size: 21.6;
+    --listen-size: var(--read-size);
+    --control-height: 72;
+    --control-width: 330;
+    --progress-size: 32;
+    --progress-font: 15;
+    --card-top: 42;
+    --card-bottom: 20;
+    --card-inline: 80;
+    font-size: clamp(calc(16 * var(--activity-unit)), .95vw, calc(20 * var(--activity-unit))) !important;
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow-y: auto !important;
+  }
+
+  /* Use the same normal-flow navigation/content tracks on large displays.
+     The minimum tracks protect the top controls; taller content can scroll. */
+  body.pabasa-prescribed-responsive > .page,
+  body.pabasa-prescribed-responsive > .app:not(.activity-page-wrapper > .app),
+  body.pabasa-prescribed-responsive > .activity-page-wrapper,
+  body.pabasa-prescribed-responsive.lesson9-g3-compact > .shell {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 100dvh !important;
+    padding: calc(22 * var(--activity-unit)) calc(24 * var(--activity-unit)) !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(calc(64 * var(--activity-unit)), 1fr) auto minmax(calc(64 * var(--activity-unit)), 1fr) !important;
+    align-content: stretch !important;
+    justify-items: center !important;
+    gap: 0 !important;
+    overflow: visible !important;
+  }
+
+  body.pabasa-prescribed-responsive > .page > :is(.back, .activity-topbar),
+  body.pabasa-prescribed-responsive > .app > .nav,
+  body.pabasa-prescribed-responsive .activity-back-row,
+  body.pabasa-prescribed-responsive.lesson9-g3-compact > .shell > .back {
+    grid-area: 1 / 1 !important;
+    align-self: start !important;
+    justify-self: start !important;
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
+    margin: 0 !important;
+    width: auto !important;
+  }
+
+  body.pabasa-prescribed-responsive :is(.page > .card, .app > .game, .activity-page-wrapper > .app, .shell > .card):not(:has(> :is(.done, .complete, .complete-screen, .completion-state, .complete-card, .lesson7-completion))) {
+    grid-area: 2 / 1 !important;
+    align-self: center !important;
+    justify-self: center !important;
+    position: relative !important;
+    inset: auto !important;
+    transform: none !important;
+    width: var(--activity-large-width) !important;
+    max-width: calc(1780 * var(--activity-unit)) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+    padding: calc(var(--card-top) * var(--activity-unit)) calc(var(--card-inline) * var(--activity-unit)) calc(var(--card-bottom) * var(--activity-unit)) !important;
+    border-radius: calc(42 * var(--activity-unit)) !important;
+    overflow: visible !important;
+  }
+
+  body.pabasa-prescribed-responsive :is(.card, .game, .activity-title) :is(h1, h2):not(:is(.done, .complete, .complete-screen, .completion-state, .complete-card, .completion-card, .lesson7-completion) *) {
+    font-size: calc(var(--heading-size) * var(--activity-unit)) !important;
+  }
+  body.pabasa-prescribed-responsive :is(.eyebrow, .lesson9-g2-eyebrow) {
+    font-size: calc(var(--badge-size) * var(--activity-unit)) !important;
+    padding: calc(10 * var(--activity-unit)) calc(30 * var(--activity-unit)) !important;
+  }
+  body.pabasa-prescribed-responsive :is(.numbered-progress, .lesson7-g4-progress, .lesson8-g1-progress, .segments) {
+    gap: calc(8 * var(--activity-unit)) !important;
+    flex-wrap: wrap !important;
+  }
+  body.pabasa-prescribed-responsive :is(.numbered-progress__circle, .segments > *, .lesson7-g4-progress > span, .lesson8-g1-progress > span) {
+    width: calc(var(--progress-size) * var(--activity-unit)) !important;
+    height: calc(var(--progress-size) * var(--activity-unit)) !important;
+    min-width: calc(var(--progress-size) * var(--activity-unit)) !important;
+    flex: 0 0 auto !important;
+    font-size: calc(var(--progress-font) * var(--activity-unit)) !important;
+  }
+
+  body.pabasa-prescribed-responsive :is(.actions, .reading-actions, .oral-actions, .lesson3-read-actions, .lesson3-g2-actions, .lesson4-audio-actions, .lesson7-g2a-reading-actions) {
+    width: min(100%, calc(var(--actions-width, 680) * var(--activity-unit))) !important;
+    min-height: 0 !important;
+    gap: calc(var(--actions-gap, 16) * var(--activity-unit)) !important;
+  }
+  body.pabasa-prescribed-responsive :is(.actions, .reading-actions, .oral-actions, .lesson3-read-actions, .lesson3-g2-actions, .lesson4-audio-actions, .lesson7-g2a-reading-actions) > button,
+  body.pabasa-prescribed-responsive :is(#read, #oral, #identify, #listen, #prescribed-listen, #aloud, #start, #lesson7Start, #submit, #combine, #reset, #next) {
+    min-height: calc(var(--control-height) * var(--activity-unit)) !important;
+    padding: calc(14 * var(--activity-unit)) calc(24 * var(--activity-unit)) !important;
+    border-radius: calc(999 * var(--activity-unit)) !important;
+  }
+  body.pabasa-prescribed-responsive :is(.actions, .reading-actions, .oral-actions, .lesson3-read-actions, .lesson3-g2-actions, .lesson4-audio-actions, .lesson7-g2a-reading-actions) > button,
+  body.pabasa-prescribed-responsive :is(#read, #oral, #identify, #listen, #prescribed-listen, #aloud, #submit, #combine, #reset, #clear, #next) {
+    width: calc(var(--control-width) * var(--activity-unit)) !important;
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
+  }
+  body.pabasa-prescribed-responsive button[data-basahin-button],
+  body.pabasa-prescribed-responsive :is(#start, #lesson7Start, #clear, #next, #submit, #combine, #reset) {
+    font-size: calc(var(--read-size) * var(--activity-unit)) !important;
+  }
+  body.pabasa-prescribed-responsive :is(#listen, #prescribed-listen),
+  body.pabasa-prescribed-responsive:not(.lesson-6-responsive) #aloud {
+    font-size: calc(var(--listen-size) * var(--activity-unit)) !important;
+  }
+  body.pabasa-prescribed-responsive button[data-basahin-button] { gap: calc(14 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive button[data-basahin-button] [data-basahin-label] { font-size: inherit !important; }
+  body.pabasa-prescribed-responsive :is(.actions, .reading-actions, .oral-actions) > button {
+    font-size: calc(var(--read-size) * var(--activity-unit)) !important;
+  }
+  body.pabasa-prescribed-responsive :is(.answers button, .choices button:not(:has(img)), .choice-row button) {
+    min-height: calc(var(--control-height) * var(--activity-unit)) !important;
+    padding: calc(14 * var(--activity-unit)) calc(24 * var(--activity-unit)) !important;
+    font-size: calc(var(--read-size) * var(--activity-unit)) !important;
+  }
+  /* This existing Listen label is supplied by its pseudo-element. */
+  body.lesson-6-responsive #aloud { font-size: 0 !important; }
+
+  /* Session 1: retain the paired-picture arrangement and connector. */
+  body.session-one-rhyme { --read-size: 26.88; --heading-size: 57.6; --listen-size: 20; --card-top: 32; --control-width: 652.5; }
+  body.session-one-rhyme .pair .word strong { font-size: calc(48 * var(--activity-unit)) !important; }
+  body.session-one-rhyme .salitang-progress-steps { gap: calc(9 * var(--activity-unit)) !important; }
+  body.session-one-rhyme .salitang-progress-step { width: calc(36 * var(--activity-unit)) !important; height: calc(36 * var(--activity-unit)) !important; font-size: calc(14.4 * var(--activity-unit)) !important; }
+  body.lesson-3-responsive { --heading-size: 59.2; --listen-size: 23.2; --progress-size: 36; --actions-width: 960; --actions-gap: 14; }
+  body.lesson-3-responsive .answers small { font-size: calc(9.92 * var(--activity-unit)) !important; }
+  body.lesson-3-responsive #read { --control-width: 469; }
+  body.lesson-3-responsive #prescribed-listen { --control-width: 477; --control-height: 76; }
+  body.lesson3-g2-spacing { --read-size: 20; --listen-size: 20; --control-height: 68; --progress-size: 36; --actions-width: 760; }
+  body.session-one-rhyme .stage > .card:not(.completion-card) { width: min(100%, calc(1320 * var(--activity-unit))) !important; max-width: none !important; }
+  body.pabasa-prescribed-responsive :is(.pair, .pairs) { width: min(100%, calc(1320 * var(--activity-unit))) !important; max-width: none !important; gap: calc(30 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive :is(.pair, .pairs) .word { width: calc(565 * var(--activity-unit)) !important; height: calc(380 * var(--activity-unit)) !important; min-height: 0 !important; padding: calc(18 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive :is(.pair, .pairs) .word img { width: auto !important; height: calc(260 * var(--activity-unit)) !important; max-width: 100% !important; max-height: 100% !important; object-fit: contain !important; }
+  body.lesson3-g2-spacing #game .pairs { width: min(100%, calc(900 * var(--activity-unit))) !important; }
+  body.lesson3-g2-spacing #game .pairs .word { width: calc(380 * var(--activity-unit)) !important; height: calc(270 * var(--activity-unit)) !important; padding: calc(12 * var(--activity-unit)) !important; }
+
+  /* Wheels: percentage-based sectors keep their positions as the wheel grows. */
+  body.pabasa-prescribed-responsive .card .wheel { box-sizing: border-box !important; width: calc(644 * var(--activity-unit)) !important; height: calc(644 * var(--activity-unit)) !important; border-width: calc(12 * var(--activity-unit)) !important; max-width: none !important; min-height: 0 !important; }
+  body.lesson-4-responsive .card .wheel { border-width: calc(14 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive .card .wheel .center { font-size: calc(48 * var(--activity-unit)) !important; }
+  body.lesson-4-responsive { --heading-size: 52; --read-size: 16.8; --progress-size: 36; }
+  body.lesson-4-responsive #app > .overview { width: auto !important; height: auto !important; }
+  body.lesson-4-responsive #app .overview .wheel { width: calc(648 * var(--activity-unit)) !important; height: calc(648 * var(--activity-unit)) !important; }
+  body.lesson-4-responsive #app .overview .wheel .center { font-size: calc(37.6 * var(--activity-unit)) !important; }
+  body.lesson-4-responsive #start { --control-height: 52; padding: calc(12 * var(--activity-unit)) calc(28 * var(--activity-unit)) !important; }
+  body.lesson-4-responsive #app > .focused { flex: 0 0 auto !important; height: auto !important; max-width: calc(1280 * var(--activity-unit)) !important; grid-template-columns: minmax(0, 1fr) calc(370 * var(--activity-unit)) !important; column-gap: calc(64 * var(--activity-unit)) !important; }
+  body.lesson-4-responsive #app .focus-picture { height: calc(680 * var(--activity-unit)) !important; padding: calc(8 * var(--activity-unit)) !important; }
+  body.lesson-4-responsive #app .focused > .controls { box-sizing: border-box !important; width: 100% !important; max-width: none !important; padding: calc(14 * var(--activity-unit)) calc(18 * var(--activity-unit)) !important; border-width: calc(2 * var(--activity-unit)) !important; }
+  body.lesson-4-responsive #app .question { font-size: calc(20 * var(--activity-unit)) !important; }
+  body.lesson-4-responsive #app .lesson4-audio-actions { --actions-width: 330; --actions-gap: 10; }
+  body.lesson-4-responsive #read { --control-width: 164; }
+  body.lesson-4-responsive #listen { --control-width: 156; }
+  body.lesson7-centered-activity { --heading-size: 38.912; --card-top: 16; --card-inline: 28; }
+  body.lesson7-centered-activity .lesson7-overview { width: calc(652 * var(--activity-unit)) !important; }
+  body.lesson7-centered-activity #lesson7Start { font-size: calc(13.333333 * var(--activity-unit)) !important; padding: calc(13 * var(--activity-unit)) calc(28 * var(--activity-unit)) !important; }
+  body.lesson7-centered-activity:has(.layout) { --heading-size: 59.2; --read-size: 16; --control-width: 167; }
+  body.lesson7-centered-activity .layout { width: calc(1136 * var(--activity-unit)) !important; grid-template-columns: calc(644 * var(--activity-unit)) calc(420 * var(--activity-unit)) !important; gap: calc(72 * var(--activity-unit)) !important; }
+  body.lesson7-centered-activity .layout .lesson7-focus-picture { box-sizing: border-box !important; width: 100% !important; height: 100% !important; padding: 0 !important; object-fit: contain !important; }
+  body.lesson7-centered-activity .layout > .controls { box-sizing: border-box !important; width: calc(420 * var(--activity-unit)) !important; padding: calc(34 * var(--activity-unit)) !important; border-width: calc(2 * var(--activity-unit)) !important; }
+  body.lesson7-centered-activity .layout > .controls .status { font-size: calc(24.8 * var(--activity-unit)) !important; min-height: calc(48 * var(--activity-unit)) !important; }
+
+  /* Picture-reading compositions, including the actual image constraints. */
+  body.pabasa-prescribed-responsive .card :is(.lesson5-golden-picture-box, .lesson7-golden-picture-box, .lesson8-g1a-picture-box, .lesson9-g2-picture-box) {
+    width: calc(420 * var(--activity-unit)) !important; height: calc(200 * var(--activity-unit)) !important; min-height: 0 !important; padding: calc(10 * var(--activity-unit)) calc(16 * var(--activity-unit)) !important;
+  }
+  body.pabasa-prescribed-responsive .card :is(.lesson5-golden-picture-box, .lesson7-golden-picture-box, .lesson8-g1a-picture-box, .lesson9-g2-picture-box) > img {
+    width: calc(220 * var(--activity-unit)) !important; height: calc(170 * var(--activity-unit)) !important; max-width: 100% !important; max-height: 100% !important; object-fit: contain !important;
+  }
+  body.session2-centered-activity:has(#activity-data) { --heading-size: 56; --read-size: 23.2; --card-top: 36; --card-bottom: 36; --actions-width: 700; }
+  body.session2-centered-activity:has(#activity-data) .focus { width: min(100%, calc(820 * var(--activity-unit))) !important; gap: calc(10 * var(--activity-unit)) !important; }
+  body.session2-centered-activity:has(#activity-data) .image-card { width: calc(640 * var(--activity-unit)) !important; height: calc(480 * var(--activity-unit)) !important; padding: calc(10 * var(--activity-unit)) calc(16 * var(--activity-unit)) !important; }
+  body.session2-centered-activity:has(#activity-data) #picture { width: calc(220 * var(--activity-unit)) !important; height: calc(170 * var(--activity-unit)) !important; }
+  body.session2-centered-activity:has(#activity-data) .word { font-size: calc(48 * var(--activity-unit)) !important; }
+  body.session2-centered-activity:has(#activity-data) #oral { --control-width: 337; }
+  body.session2-centered-activity:has(#activity-data) #listen { --control-width: 345; }
+  body.lesson5-compact-activity { --card-bottom: 42; --badge-size: 18.4; }
+  body.lesson5-compact-activity #app .grid { width: calc(720 * var(--activity-unit)) !important; gap: calc(10 * var(--activity-unit)) !important; }
+  body.lesson5-compact-activity #app .tile { height: calc(140 * var(--activity-unit)) !important; padding: calc(6 * var(--activity-unit)) !important; }
+  body.lesson5-compact-activity #app .tile img { height: 100% !important; max-width: 100% !important; object-fit: contain !important; }
+  body.lesson5-compact-activity #app > .focus { width: min(100%, calc(760 * var(--activity-unit))) !important; }
+  body.lesson5-compact-activity #start { --control-height: 60; width: calc(330 * var(--activity-unit)) !important; }
+  body.lesson-6-responsive { --read-size: 18.4; --badge-size: 19.456; --control-width: 281.171875; }
+  body.lesson-6-responsive .focus { flex: 0 0 auto !important; gap: calc(24 * var(--activity-unit)) !important; margin-top: calc(16 * var(--activity-unit)) !important; }
+  body.lesson-6-responsive .focus .picture { width: calc(399.2 * var(--activity-unit)) !important; height: calc(318 * var(--activity-unit)) !important; padding: calc(14 * var(--activity-unit)) !important; }
+  body.lesson-6-responsive .focus .picture img { width: calc(360 * var(--activity-unit)) !important; height: calc(280 * var(--activity-unit)) !important; object-fit: contain !important; }
+  body.lesson-6-responsive .wordbox { font-size: calc(54.4 * var(--activity-unit)) !important; }
+  body.lesson-6-responsive #aloud::after { font-size: calc(18.4 * var(--activity-unit)) !important; }
+  body.lesson7-g2b-centered { --card-top: 16; --card-inline: 24; --read-size: 21.6; --actions-width: 650; --control-height: 68; }
+  body.lesson7-g2b-centered #read { --control-width: 314; }
+  body.lesson7-g2b-centered #listen { --control-width: 320; }
+  body.lesson7-g3-compact { --heading-size: 51.2; --card-top: 24; --card-bottom: 14; --card-inline: 64; --badge-size: 18.4; --read-size: 23.2; }
+  body.pabasa-prescribed-responsive:is(.lesson7-g3-compact, .lesson7-gawain4b-page) .lesson7-golden-picture-box { height: calc(390 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive:is(.lesson7-g3-compact, .lesson7-gawain4b-page) .lesson7-golden-picture-box > img { width: 100% !important; height: calc(360 * var(--activity-unit)) !important; }
+  body.lesson7-gawain4b-page { --heading-size: 56; --badge-size: 14.4; --control-width: 322; }
+
+  /* Handwriting: resize CSS rows, not the coordinate/recognition routines.
+     Existing resize observers update each backing canvas and decorative guide. */
+  body.pabasa-prescribed-responsive :is(.card .sheet:has(canvas)) { width: calc(1200 * var(--activity-unit)) !important; max-width: 100% !important; padding: calc(14 * var(--activity-unit)) calc(30 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive .canvas-wrap { height: calc(96 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive:is(.lesson7-g4-compact, .lesson8-gawain1-page) .row { height: calc(150 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive:is(.lesson7-g2c-compact, .lesson7-g4-compact, .lesson8-gawain1-page) { --heading-size: 62.4; --badge-size: 18.4; --read-size: 23.2; --progress-size: 38; --progress-font: 17; }
+  body.lesson7-g2c-compact { --card-bottom: 42; }
+  body.pabasa-prescribed-responsive:is(.lesson7-g4-compact, .lesson8-gawain1-page) { --card-top: 36; --card-bottom: 18; }
+  body.pabasa-prescribed-responsive:has(#activity-data) .reading:has(.lesson7-g2a-reading-actions) { grid-template-rows: calc(400 * var(--activity-unit)) auto !important; width: calc(572 * var(--activity-unit)) !important; row-gap: calc(24 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive .reading:has(.lesson7-g2a-reading-actions) .lesson7-golden-picture-box { width: calc(520 * var(--activity-unit)) !important; height: calc(400 * var(--activity-unit)) !important; padding: calc(20 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive .reading:has(.lesson7-g2a-reading-actions) .lesson7-golden-picture-box > img { width: 100% !important; height: calc(350 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive .lesson7-g2a-reading-actions { --actions-width: 572; --read-size: 16; --listen-size: 16; --control-height: 54; }
+  body.pabasa-prescribed-responsive:has(.lesson7-g2a-reading-actions, .grid canvas) { --heading-size: 56; --card-top: 16; --card-inline: 24; --read-size: 16; --control-width: 180; --control-height: 58; }
+  body.pabasa-prescribed-responsive .lesson7-g2a-reading-actions #read { --control-width: 288; }
+  body.pabasa-prescribed-responsive .lesson7-g2a-reading-actions #listen { --control-width: 272; }
+  body.pabasa-prescribed-responsive .card .grid:has(canvas) { width: calc(980 * var(--activity-unit)) !important; max-width: 100% !important; gap: calc(12 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive .card .grid:has(canvas) .item { padding: calc(9 * var(--activity-unit)) !important; gap: calc(8 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive .card .grid:has(canvas) img { height: calc(120 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive .card .grid canvas { height: calc(92 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive .action-cue { gap: calc(10 * var(--activity-unit)) !important; margin-block: calc(10 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive .action-cue > span { font-size: calc(20 * var(--activity-unit)) !important; padding: calc(7 * var(--activity-unit)) calc(13 * var(--activity-unit)) !important; gap: calc(5 * var(--activity-unit)) !important; border-width: calc(2 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive .action-cue small { font-size: calc(11.2 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive .action-cue b { font-size: calc(18.4 * var(--activity-unit)) !important; }
+
+  /* Letter/shape selection: retain the existing three columns and all cells. */
+  body.lesson7-gawain4a-page { --activity-large-width: min(calc(1300 * var(--activity-unit)), calc(100vw - 80px)) !important; --heading-size: 52; --badge-size: 18; --card-top: 23.04; --card-bottom: 23.04; --card-inline: 28; }
+  body.lesson7-gawain4a-page .card > :is(.toolbox, .sheet) { width: calc(784 * var(--activity-unit)) !important; max-width: 100% !important; padding: calc(6 * var(--activity-unit)) !important; }
+  body.lesson7-gawain4a-page .toolbox { gap: calc(12 * var(--activity-unit)) !important; }
+  body.lesson7-gawain4a-page .tool { padding: calc(4 * var(--activity-unit)) calc(8 * var(--activity-unit)) !important; font-size: calc(17.6 * var(--activity-unit)) !important; }
+  body.lesson7-gawain4a-page .tool .shape { width: calc(48.3 * var(--activity-unit)) !important; height: calc(48.3 * var(--activity-unit)) !important; }
+  body.lesson7-gawain4a-page .sheet { gap: calc(6 * var(--activity-unit)) !important; }
+  body.lesson7-gawain4a-page .cell { min-height: calc(91.2 * var(--activity-unit)) !important; font-size: calc(49.56 * var(--activity-unit)) !important; }
+  body.lesson7-gawain4a-page #submit { width: calc(330 * var(--activity-unit)) !important; --control-height: 64; --read-size: 20; }
+  body.pabasa-prescribed-responsive .card .grid:has(.choice img) { width: calc(720 * var(--activity-unit)) !important; max-width: 100% !important; gap: calc(12 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive .card .grid .choice { padding: calc(6 * var(--activity-unit)) !important; }
+  body.pabasa-prescribed-responsive .card .grid .choice img { height: calc(84 * var(--activity-unit)) !important; object-fit: contain !important; }
+  body.lesson7-g2b-centered .card .grid { width: calc(900 * var(--activity-unit)) !important; gap: calc(18 * var(--activity-unit)) !important; }
+  body.lesson7-g2b-centered .card .grid .choice { height: calc(190 * var(--activity-unit)) !important; padding: calc(8 * var(--activity-unit)) !important; }
+  body.lesson7-g2b-centered .card .grid .choice img { height: calc(150 * var(--activity-unit)) !important; }
+  body.lesson7-g2b-centered #submit { --control-width: 300; --control-height: 64; }
+  body.pabasa-prescribed-responsive:has(#app .grid .choice):not(.lesson7-g2b-centered) { --heading-size: 49.6; }
+
+  /* Syllable/word reading and picture selection. */
+  body.lesson9-g1-compact .task { width: calc(860 * var(--activity-unit)) !important; }
+  body.lesson9-g1-compact .syllables { height: calc(130 * var(--activity-unit)) !important; font-size: calc(60.8 * var(--activity-unit)) !important; gap: calc(36 * var(--activity-unit)) !important; }
+  body.lesson9-g1-compact .word { width: calc(560 * var(--activity-unit)) !important; padding: calc(18 * var(--activity-unit)) calc(28 * var(--activity-unit)) !important; font-size: calc(88 * var(--activity-unit)) !important; }
+  body.lesson9-g1-compact .tile { font-size: calc(21.6 * var(--activity-unit)) !important; min-height: calc(72 * var(--activity-unit)) !important; padding: calc(14 * var(--activity-unit)) calc(24 * var(--activity-unit)) !important; }
+  body.lesson9-g1-compact :is(.building, .tiles) { gap: calc(14 * var(--activity-unit)) !important; }
+  body.lesson9-g1-compact .oral-actions { --control-width: 319; }
+  body.lesson9-g2-compact .task { width: calc(950 * var(--activity-unit)) !important; max-width: 100% !important; }
+  body.lesson9-g2-compact #selection-row { width: calc(900 * var(--activity-unit)) !important; height: auto !important; gap: calc(14 * var(--activity-unit)) !important; }
+  body.lesson9-g2-compact #selection-row .ref { width: calc(90 * var(--activity-unit)) !important; height: calc(70 * var(--activity-unit)) !important; font-size: calc(43.2 * var(--activity-unit)) !important; }
+  body.lesson9-g2-compact #selection-row .choice { width: calc(256 * var(--activity-unit)) !important; padding: calc(10 * var(--activity-unit)) !important; }
+  body.lesson9-g2-compact #selection-row img { height: calc(180 * var(--activity-unit)) !important; object-fit: contain !important; }
+  body.lesson9-g2-compact .oral-actions { --control-width: 321; }
+  body.lesson9-g2-compact #next { --control-width: 300; }
+  body.lesson9-g3-compact { padding: 0 !important; --read-size: 23.2; --card-inline: 70; --card-bottom: 42; }
+  body.lesson9-g3-compact .task { width: calc(760 * var(--activity-unit)) !important; }
+  body.lesson9-g3-compact .item { width: calc(620 * var(--activity-unit)) !important; height: calc(230 * var(--activity-unit)) !important; padding: calc(38 * var(--activity-unit)) !important; font-size: calc(83.2 * var(--activity-unit)) !important; }
+  body.lesson9-g3-compact .reading-actions { --actions-width: 532; --actions-gap: 12; --control-height: 65; }
+  body.lesson9-g3-compact :is(#read, #listen) { --control-width: 260; }
+
+  /* Video is already viewport-height limited. Grow its width while retaining
+     the original contained video and enough height for navigation. */
+  body.lesson-one-page .page > .shell { grid-area: 2 / 1 !important; width: var(--activity-large-width) !important; max-width: none !important; height: calc(100dvh - 180 * var(--activity-unit)) !important; min-height: 0 !important; padding: calc(24 * var(--activity-unit)) !important; }
+  body.lesson-one-page #alphabet-video { width: 100% !important; height: 100% !important; object-fit: contain !important; }
+}

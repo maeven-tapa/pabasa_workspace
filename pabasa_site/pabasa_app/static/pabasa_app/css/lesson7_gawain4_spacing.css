@@ -1,0 +1,70 @@
+/* Gawain 4 only: keep the handwriting row and controls at their existing sizes,
+   and center the content-fitting card between equal navigation clearances. */
+html:has(body.lesson7-g4-compact):not(:has(#app .done)),
+body.lesson7-g4-compact:not(:has(#app .done)) {
+  height: auto !important;
+  overflow-y: auto !important;
+}
+
+body.lesson7-g4-compact:not(:has(#app .done)) > .page {
+  height: auto !important;
+  min-height: 100dvh !important;
+  padding-block: 22px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(64px, 1fr) auto minmax(64px, 1fr);
+  align-content: stretch !important;
+  gap: 0 !important;
+  justify-items: center;
+  overflow: visible !important;
+}
+
+body.lesson7-g4-compact:not(:has(#app .done)) > .page > .back {
+  grid-area: 1 / 1;
+  align-self: start !important;
+  justify-self: start;
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+}
+
+body.lesson7-g4-compact:has(#handwriting-data) > .page > #app.card:not(:has(.done)) {
+  grid-area: 2 / 1;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  flex: 0 0 auto;
+  margin-block: 0 !important;
+  overflow: visible;
+}
+
+/* This indicator already follows the actions in normal document flow. */
+body.lesson7-g4-compact #app.card:not(:has(.done)) > .lesson7-g4-progress {
+  position: static;
+}
+
+/* Ink bounds supply vertical placement, independent of HTML font leading.
+   Retain the existing left-side guide inset, color, and writing guidelines. */
+body.lesson7-g4-compact #app .row > .model[data-guide-aligned] {
+  display: block;
+  right: 0;
+  width: auto;
+  line-height: 1;
+}
+
+body.lesson7-g4-compact .model[data-guide-aligned] > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+@media (max-width: 800px) {
+  body.lesson7-g4-compact:not(:has(#app .done)) > .page {
+    /* Fixed mobile tools occupy 52px at top:14px, with 14px clearance. */
+    padding-top: calc(52px + 14px + 14px) !important;
+    padding-bottom: 14px !important;
+    grid-template-rows: auto minmax(min-content, 1fr);
+    row-gap: 12px !important;
+  }
+}

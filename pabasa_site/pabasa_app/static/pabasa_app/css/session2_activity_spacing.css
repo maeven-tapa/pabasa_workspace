@@ -1,0 +1,140 @@
+/* Only Session 2 Lesson 4 Gawain 2 and Lesson 5 Gawain 1 load these rules.
+   Navigation occupies its own row; the card centers in the remaining space.
+   A content-sized minimum row allows tall content to scroll without clipping. */
+html:has(body.session2-centered-activity:not(:has(.completion-state, .complete-screen, #picture[hidden]))),
+body.session2-centered-activity:not(:has(.completion-state, .complete-screen, #picture[hidden])) {
+  height: auto !important;
+  min-height: 100%;
+  overflow-y: auto !important;
+}
+
+body.session2-centered-activity:not(:has(.completion-state, .complete-screen, #picture[hidden])) {
+  --activity-page-gap: 18px;
+  --activity-page-padding: 18px 16px 24px;
+  display: block !important;
+}
+
+body.session2-centered-activity:not(:has(.completion-state, .complete-screen, #picture[hidden])) > .page {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: auto minmax(min-content, 1fr) !important;
+  align-content: stretch !important;
+  justify-content: stretch !important;
+  align-items: center !important;
+  gap: var(--activity-page-gap) !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 100dvh !important;
+  padding: var(--activity-page-padding) !important;
+  overflow: visible !important;
+}
+
+body.session2-centered-activity:not(:has(.completion-state, .complete-screen, #picture[hidden])) > .page > :is(.activity-topbar, .back) {
+  grid-row: 1;
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+}
+
+body.session2-centered-activity:not(:has(.completion-state, .complete-screen, #picture[hidden])) > .page > .activity-topbar {
+  width: var(--activity-large-width, min(1250px, 100%)) !important;
+  justify-self: center;
+}
+
+body.session2-centered-activity:not(:has(.completion-state, .complete-screen, #picture[hidden])) > .page > .card:not(:has(.complete-screen, .completion-state, #picture[hidden])) {
+  grid-row: 2;
+  align-self: center !important;
+  justify-self: center;
+  margin: 0 !important;
+}
+
+/* Lesson 4 Gawain 2 already hides feedback/status visually. Their empty
+   flex rows still reserved space below the progress circles. Remove those
+   rows from layout, and let the card fit its unchanged activity components. */
+body.session2-centered-activity:has(#activity-data):not(:has(.complete-screen, #picture[hidden])) > .page > .card {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  padding-block: clamp(24px, 3vh, 36px) !important;
+}
+
+body.session2-centered-activity:has(#activity-data):not(:has(.complete-screen, #picture[hidden])) :is(#feedback, #status) {
+  display: none !important;
+}
+
+/* Keep the muted disabled surface and all state transitions. Only idle
+   Read/Listen labels need darker ink; recording/processing retain their
+   existing active-state presentation. */
+:root body.session2-centered-activity:has(#activity-data) #actions > button.oral-button:disabled:not(.is-recording):is(:not([data-basahin-state]), [data-basahin-state='idle'], [data-basahin-state='model']) {
+  color: #183e63 !important;
+}
+
+/* Lesson 5's intro and active card use their natural content height. The
+   old viewport height and flex-growing focus section created the large gaps. */
+body.lesson5-compact-activity:has(#lesson-five-data):not(:has(.completion-state)) {
+  --activity-page-gap: 12px;
+  --activity-page-padding: 16px clamp(10px, 4vw, 42px) 22px;
+}
+
+body.lesson5-compact-activity:has(#lesson-five-data):not(:has(.completion-state)) > .page {
+  height: auto !important;
+  min-height: 100dvh !important;
+  padding: var(--activity-page-padding) !important;
+}
+
+body.lesson5-compact-activity:has(#lesson-five-data):not(:has(.completion-state)) > .page > .back {
+  justify-self: start;
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+}
+
+body.lesson5-compact-activity:has(#lesson-five-data):not(:has(.completion-state)) > .page > .card:not(:has(.completion-state)) {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  flex: 0 0 auto !important;
+  padding-block: clamp(24px, 3vh, 42px) !important;
+  overflow: visible !important;
+}
+
+body.lesson5-compact-activity:has(#lesson-five-data):not(:has(.completion-state)) .card > #app:not(:has(.completion-state)) {
+  height: auto !important;
+  min-height: 0 !important;
+  padding-top: 0 !important;
+  gap: 0;
+}
+
+body.lesson5-compact-activity:has(#lesson-five-data):not(:has(.completion-state)) .card > #app:has(> .focus) {
+  gap: clamp(18px, 2vh, 28px);
+}
+
+body.lesson5-compact-activity:has(#lesson-five-data):not(:has(.completion-state)) #app > .focus {
+  flex: 0 0 auto;
+  gap: 12px;
+}
+
+body.lesson5-compact-activity:has(#lesson-five-data):not(:has(.completion-state)) #app > .numbered-progress {
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  margin: 0 auto !important;
+}
+
+@media (max-width: 600px) {
+  body.session2-centered-activity:not(:has(.completion-state, .complete-screen, #picture[hidden])) {
+    --activity-page-gap: 12px;
+    /* The persistent mobile tools are 52px tall at top:14px. Reserve that
+       row plus its two 14px clearances before the back link's normal row. */
+    --activity-page-padding: calc(52px + 14px + 14px) 12px 22px;
+  }
+
+  body.lesson5-compact-activity:has(#lesson-five-data):not(:has(.completion-state)) {
+    --activity-page-gap: 12px;
+    --activity-page-padding: calc(52px + 14px + 14px) 12px 22px;
+  }
+
+  body.lesson5-compact-activity:has(#lesson-five-data):not(:has(.completion-state)) > .page > .back {
+    margin-left: 0 !important;
+  }
+}

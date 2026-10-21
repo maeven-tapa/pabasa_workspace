@@ -1,0 +1,568 @@
+@import url("prescribed_session123_large.css?v=20261021-1") layer(prescribed-large);
+
+/* Responsive layout adjustments for the Prescribed Activities in Sessions 1–3.
+   Rules activate only for narrow screens or large displays; standard desktop
+   dimensions continue to use each activity's existing styles, except for the
+   explicitly requested Session 1 rhyming label/centering corrections below. */
+/* These two Session 1 pages inherit an invalid legacy font shorthand on the
+   Read control. Set its typography locally, including the decorated label. */
+:root body.session-one-rhyme button[data-basahin-button] {
+  font-family: var(--font-family-primary) !important;
+  font-size: clamp(1rem, 1.7vw, 1.25rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.25 !important;
+}
+
+@media (min-width: 2500px) and (min-height: 1000px) {
+  body.pabasa-prescribed-responsive {
+    --activity-large-width: min(78vw, 1780px);
+    box-sizing: border-box;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: clamp(16px, .76vw, 20px);
+    overflow-x: hidden;
+  }
+
+  body.pabasa-prescribed-responsive.lesson-one-page {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    padding: 0 !important;
+    overflow-y: auto;
+  }
+
+  body.pabasa-prescribed-responsive .page {
+    box-sizing: border-box;
+    width: 100% !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-width: none !important;
+    margin-inline: auto;
+    padding: clamp(20px, 2.5vh, 42px) clamp(24px, 4vw, 100px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(14px, 1.4vw, 34px);
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  body.pabasa-prescribed-responsive .app {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    min-height: 100dvh !important;
+    height: 100dvh !important;
+    padding: clamp(20px, 2.5vh, 42px) clamp(24px, 4vw, 100px);
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  body.pabasa-prescribed-responsive .shell,
+  body.pabasa-prescribed-responsive .page > .card,
+  body.pabasa-prescribed-responsive .page > #app.card,
+  body.pabasa-prescribed-responsive .page > section.card,
+  body.pabasa-prescribed-responsive .app > .game,
+  body.pabasa-prescribed-responsive .app .shell > .game {
+    box-sizing: border-box;
+    width: var(--activity-large-width) !important;
+    max-width: 1780px !important;
+    margin-inline: auto !important;
+  }
+
+  body.pabasa-prescribed-responsive .app .shell {
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body.pabasa-prescribed-responsive .page > .card,
+  body.pabasa-prescribed-responsive .page > #app.card,
+  body.pabasa-prescribed-responsive .app > .game,
+  body.pabasa-prescribed-responsive .app .shell > .game {
+    min-height: min(76dvh, 1060px) !important;
+  }
+
+  /* Older pages place the activity card with transforms and fixed offsets.
+     Restore it to normal flow so it centers inside the same viewport as its
+     navigation and can grow when the activity needs more room. */
+  body.pabasa-prescribed-responsive .page > .card,
+  body.pabasa-prescribed-responsive .page > #app.card,
+  body.pabasa-prescribed-responsive .page > section.card,
+  body.pabasa-prescribed-responsive .app .shell > .game {
+    position: relative !important;
+    inset: auto !important;
+    transform: none !important;
+    max-height: none !important;
+    height: auto !important;
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+
+  body.pabasa-prescribed-responsive .page > .card,
+  body.pabasa-prescribed-responsive .page > #app.card,
+  body.pabasa-prescribed-responsive .page > section.card {
+    min-height: min(76dvh, 1060px) !important;
+  }
+
+  body.pabasa-prescribed-responsive .page > .back {
+    align-self: center !important;
+    position: relative !important;
+    inset: auto !important;
+    transform: none !important;
+    flex: 0 0 auto;
+  }
+
+  body.pabasa-prescribed-responsive .card img,
+  body.pabasa-prescribed-responsive .game img {
+    max-width: 100%;
+    object-fit: contain;
+  }
+
+  body.pabasa-prescribed-responsive .card .image-card,
+  body.pabasa-prescribed-responsive .game .pairs,
+  body.pabasa-prescribed-responsive .card .sheet,
+  body.pabasa-prescribed-responsive .card .grid {
+    max-width: min(100%, 1450px);
+  }
+
+  body.pabasa-prescribed-responsive .card .image-card {
+    width: min(100%, 640px) !important;
+    height: clamp(320px, 34dvh, 480px) !important;
+  }
+
+  body.pabasa-prescribed-responsive .game .pairs .word {
+    min-height: clamp(300px, 32dvh, 460px);
+  }
+
+  body.pabasa-prescribed-responsive .game .pairs .word img {
+    height: clamp(150px, 20dvh, 280px);
+  }
+
+  body.pabasa-prescribed-responsive .card button,
+  body.pabasa-prescribed-responsive .game button {
+    min-height: clamp(60px, 5dvh, 88px);
+  }
+
+  body.pabasa-prescribed-responsive .card .row {
+    height: clamp(90px, 13vh, 150px);
+  }
+
+  /* Session 2 Lesson 4 Gawain 2 had a late override that top-aligned its
+     composition and reserved an oversized bottom gap. */
+  body.pabasa-prescribed-responsive .page:has(> .card) {
+    justify-content: center !important;
+    padding-block: clamp(24px, 3vh, 48px) !important;
+    gap: 0 !important;
+  }
+
+  body.pabasa-prescribed-responsive .page > .card .activity-topbar {
+    left: clamp(20px, 4vw, 72px);
+    right: clamp(20px, 4vw, 72px);
+  }
+
+  /* This activity's .app is the panel itself, inside a navigation wrapper. */
+  body.pabasa-prescribed-responsive .activity-page-wrapper {
+    box-sizing: border-box;
+    height: 100dvh;
+    padding: 36px 24px;
+    justify-content: center;
+    gap: 24px;
+  }
+
+  body.pabasa-prescribed-responsive .activity-back-row {
+    width: var(--activity-large-width);
+    margin: 0 auto;
+  }
+
+  body.pabasa-prescribed-responsive .activity-page-wrapper > .app {
+    width: var(--activity-large-width) !important;
+    max-width: 1780px !important;
+    height: min(76dvh, 1060px) !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 36px 80px !important;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    align-items: stretch;
+    justify-content: stretch;
+  }
+
+  body.pabasa-prescribed-responsive .activity-page-wrapper .stage {
+    width: 100%;
+    align-items: center !important;
+    transform: none;
+  }
+
+  body.pabasa-prescribed-responsive .stage > .card {
+    width: 100%;
+    max-width: 1320px;
+    height: auto !important;
+    grid-template-rows: auto;
+  }
+
+  body.pabasa-prescribed-responsive .pair .word,
+  body.pabasa-prescribed-responsive .pairs .word {
+    min-height: 380px;
+  }
+
+  body.pabasa-prescribed-responsive .pair .word img,
+  body.pabasa-prescribed-responsive .pairs .word img {
+    width: min(100%, 320px);
+    height: 260px;
+  }
+
+  body.pabasa-prescribed-responsive.gawain-2 .app {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  body.pabasa-prescribed-responsive.gawain-2 .app > .nav {
+    position: static;
+    width: var(--activity-large-width);
+    max-width: 1780px;
+    margin: 0 auto;
+    flex: 0 0 auto;
+  }
+
+  body.pabasa-prescribed-responsive.gawain-2 .app > #game.game,
+  body.pabasa-prescribed-responsive.gawain-2 .app > #game.game:has(#listen) {
+    position: relative !important;
+    inset: auto !important;
+    transform: none !important;
+    width: var(--activity-large-width) !important;
+    max-width: 1780px !important;
+    height: auto !important;
+    min-height: 1060px !important;
+    max-height: none !important;
+    margin: 0 auto !important;
+    flex: 0 0 auto;
+  }
+
+  body.pabasa-prescribed-responsive:has(#lesson9-g3-data) > .shell {
+    box-sizing: border-box;
+    height: 100dvh;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 24px;
+    padding-block: 36px;
+  }
+
+  body.pabasa-prescribed-responsive:has(#lesson9-g3-data) > .shell > .card {
+    position: relative !important;
+    inset: auto !important;
+    transform: none !important;
+    height: 1060px !important;
+    max-height: none !important;
+    margin: 0 !important;
+    flex: 0 0 auto;
+    justify-content: center;
+  }
+
+  body.pabasa-prescribed-responsive:has(#lesson9-g3-data) > .shell > .back {
+    position: static;
+    align-self: center;
+    flex: 0 0 auto;
+  }
+
+  body.pabasa-prescribed-responsive:has(#lesson9-g3-data) #app .task {
+    height: auto !important;
+    min-height: 0;
+    flex: 0 0 auto;
+    justify-content: center !important;
+  }
+
+  body.pabasa-prescribed-responsive .card .sheet {
+    width: min(100%, 1200px) !important;
+    max-width: 1200px;
+  }
+
+  body.pabasa-prescribed-responsive .canvas-wrap {
+    height: 120px;
+  }
+
+  body.pabasa-prescribed-responsive .canvas-wrap .model {
+    font-size: 112px;
+  }
+
+  body.pabasa-prescribed-responsive .card .wheel {
+    width: min(42vw, 620px) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-width: 620px;
+    aspect-ratio: 1;
+  }
+
+  body.pabasa-prescribed-responsive .card .reading img {
+    width: 420px;
+    height: 360px;
+  }
+
+  body.pabasa-prescribed-responsive:has(#activity-data) > .page > #app.card .reading:has(.lesson7-g2a-reading-actions) {
+    grid-template-rows: 400px auto;
+    row-gap: 24px;
+    margin-top: 20px;
+  }
+
+  body.pabasa-prescribed-responsive:has(#activity-data) #app .reading:has(.lesson7-g2a-reading-actions) .lesson7-golden-picture-box {
+    box-sizing: border-box;
+    width: 520px;
+    height: 400px;
+    min-height: 0;
+    margin: 0;
+    padding: 20px;
+  }
+
+  body.pabasa-prescribed-responsive:has(#activity-data) #app .reading:has(.lesson7-g2a-reading-actions) .lesson7-golden-picture-box > img {
+    width: 100% !important;
+    height: 350px !important;
+    max-width: 100%;
+    max-height: 350px !important;
+    min-height: 0;
+    min-width: 0;
+    margin: 0 !important;
+  }
+
+  body.pabasa-prescribed-responsive:has(#lesson-five-data) .card > #app {
+    height: auto !important;
+    justify-content: center;
+  }
+
+  body.pabasa-prescribed-responsive:has(#lesson-five-data) {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body.pabasa-prescribed-responsive:has(#lesson-five-data) > .page {
+    height: auto !important;
+    min-height: 0 !important;
+    padding-block: 24px !important;
+  }
+
+  body.pabasa-prescribed-responsive:has(#lesson-five-data) > .back {
+    position: static !important;
+    order: -1;
+    flex: 0 0 auto;
+  }
+
+  body.pabasa-prescribed-responsive:has(#lesson9-g2-data) #app.card {
+    display: grid !important;
+    place-items: center;
+  }
+
+  body.pabasa-prescribed-responsive .page > .card:has(.focus) {
+    justify-content: center;
+  }
+
+  body.pabasa-prescribed-responsive:has(#start) > .page > .card,
+  body.pabasa-prescribed-responsive:has(#activity-data) > .page > #app.card {
+    min-height: 1060px !important;
+    margin-block: 0 !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  body.pabasa-prescribed-responsive .page > .card:has(.focus) .image-card img {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+  }
+}
+
+/* Session 1 rhyming activities also need centering in a large monitor's
+   smaller CSS viewport (display scaling / browser zoom). Keep each content
+   group in natural flow, rather than distributing rows through a tall card. */
+@media (min-width: 1600px) and (min-height: 900px) {
+  body.session-one-rhyme {
+    /* The legacy progress placement scripts retain their original fallbacks
+       outside this breakpoint. These values keep progress in the composition. */
+    --rhyme-progress-position: static;
+    --rhyme-progress-transform: none;
+    --rhyme-progress-margin: 20px auto 0;
+    display: block;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow-y: auto !important;
+  }
+
+  body.session-one-rhyme .activity-page-wrapper {
+    height: 100dvh;
+    padding: 24px;
+    gap: 14px;
+    justify-content: safe center;
+    overflow-y: auto;
+  }
+
+  body.session-one-rhyme .activity-back-row {
+    margin: 0 auto !important;
+  }
+
+  body.session-one-rhyme .activity-page-wrapper > .app {
+    height: auto !important;
+    min-height: min(76dvh, 1060px) !important;
+    flex: 0 0 auto;
+    margin: 0 !important;
+    padding-block: 32px !important;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    align-content: center;
+    gap: 16px;
+  }
+
+  body.session-one-rhyme .app:not(:has(.completion-card)) > .head {
+    display: contents !important;
+  }
+
+  body.session-one-rhyme .head > .activity-title {
+    grid-row: 1;
+  }
+
+  body.session-one-rhyme .head > .progress {
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
+    grid-row: 3;
+    justify-self: center;
+    width: max-content;
+  }
+
+  body.session-one-rhyme .activity-page-wrapper .stage {
+    grid-row: 2;
+    height: auto !important;
+    transform: none !important;
+    align-items: center !important;
+    overflow: visible !important;
+  }
+
+  body.session-one-rhyme .stage > .card:not(.completion-card) {
+    height: auto !important;
+    max-height: none !important;
+    grid-template-rows: none !important;
+    grid-auto-rows: max-content;
+    align-content: center;
+  }
+
+  body.session-one-rhyme .stage .pair {
+    max-height: none;
+  }
+
+  body.session-one-rhyme .stage :is(#read, #listen) {
+    inset: auto !important;
+  }
+
+  body.session-one-rhyme.lesson-3-responsive .app {
+    justify-content: safe center;
+  }
+
+  body.session-one-rhyme.lesson-3-responsive #game:not(:has(.complete)) {
+    height: auto !important;
+    max-height: none !important;
+    min-height: min(76dvh, 1060px) !important;
+    flex: 0 0 auto !important;
+    justify-content: center;
+    overflow: visible !important;
+    padding-block: 32px !important;
+  }
+
+  body.session-one-rhyme.lesson-3-responsive #game:not(:has(.complete)) .progress {
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
+    margin: 20px auto 0 !important;
+  }
+}
+
+@media (min-width: 2500px) and (min-height: 1000px) {
+  :root body.session-one-rhyme button[data-basahin-button] {
+    font-size: clamp(22px, 1.05vw, 28px) !important;
+  }
+
+  body.session-one-rhyme.lesson-3-responsive #game .pairs {
+    width: min(100%, 1320px) !important;
+  }
+
+  body.session-one-rhyme :is(.pair, .pairs) .word {
+    min-height: 380px !important;
+  }
+
+  body.session-one-rhyme.lesson-3-responsive #game .word img {
+    height: 260px !important;
+  }
+
+  body.session-one-rhyme.lesson-3-responsive #game .lesson3-read-actions {
+    width: min(960px, 100%) !important;
+  }
+
+  body.session-one-rhyme.lesson-3-responsive #game .lesson3-read-actions > :is(#read, #listen, #prescribed-listen) {
+    flex: 1 1 0 !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+}
+
+@media (max-width: 800px) {
+  body.pabasa-prescribed-responsive {
+    min-height: 100dvh;
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  body.pabasa-prescribed-responsive.lesson-one-page {
+    padding: 0 !important;
+  }
+
+  body.pabasa-prescribed-responsive .page,
+  body.pabasa-prescribed-responsive .app {
+    box-sizing: border-box;
+    min-height: 100dvh;
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+
+  body.pabasa-prescribed-responsive .page:has(> .card) {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    display: grid !important;
+    place-items: center !important;
+    justify-content: stretch !important;
+    align-content: center !important;
+    height: auto !important;
+    min-height: 100dvh !important;
+    padding: clamp(12px, 2vh, 24px) !important;
+    gap: 0 !important;
+    overflow-y: auto !important;
+  }
+
+  body.pabasa-prescribed-responsive .page:has(> .card) > .card {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  body.pabasa-prescribed-responsive .page > .card,
+  body.pabasa-prescribed-responsive .page > #app.card,
+  body.pabasa-prescribed-responsive .page > section.card,
+  body.pabasa-prescribed-responsive .app > .game,
+  body.pabasa-prescribed-responsive .app .shell > .game {
+    max-height: none;
+    overflow: visible;
+  }
+}
+

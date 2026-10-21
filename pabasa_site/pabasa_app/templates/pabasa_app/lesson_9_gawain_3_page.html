@@ -26,7 +26,7 @@
   </style>
 {% include "pabasa_app/includes/typography.html" %}
 </head>
-<body class="page">
+<body class="page pabasa-prescribed-responsive lesson9-g3-compact">
   <main class="shell">
     <a class="back" href="{% url 'assessment' %}"><i class="bi-arrow-left" aria-hidden="true"></i><span>Bumalik sa<br>Aking Aralin</span></a>
     <section id="app" class="card" aria-live="polite"></section>
@@ -54,7 +54,8 @@
  finally{busy=false;if(id===requestId){button.disabled=false;window.BasahinButton.setState(button,'idle');if(listen){listen.dataset.activityBusy='false';listen.disabled=false;listen.setAttribute('aria-disabled','false')}}}
 }__runWhenLessonStarted(()=>render())})();
   </script>
-{% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l9g3' help_text='Basahin nang malinaw ang bawat salita at pangungusap.' %}</body>
+{% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l9g3' help_text='Basahin nang malinaw ang bawat salita at pangungusap.' %}
+</body>
 </html>
 <style>
   html body .card:has(.done) .done h1,

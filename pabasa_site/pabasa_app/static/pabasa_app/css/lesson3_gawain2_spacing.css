@@ -1,0 +1,76 @@
+/* Lesson 3 Gawain 2 only. Include a large monitor's smaller CSS viewport after
+   display scaling. The working 1366/1440/1536px and narrow layouts keep their
+   existing rules; the activity keeps its existing component dimensions. */
+@media (min-width: 1600px) and (min-height: 900px) {
+  html:has(body.lesson3-g2-spacing):not(:has(#game .complete)) {
+    height: auto;
+    min-height: 100dvh;
+    overflow-y: auto;
+  }
+
+  body.lesson3-g2-spacing:not(:has(#game .complete)) {
+    height: auto;
+    min-height: 100dvh;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow-y: auto;
+  }
+
+  body.lesson3-g2-spacing:not(:has(#game .complete)) .app {
+    height: auto !important;
+    min-height: 100dvh !important;
+    padding: clamp(20px, 2.5dvh, 36px) clamp(16px, 4vw, 100px);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(64px, 1fr) auto minmax(64px, 1fr);
+    gap: 0;
+    overflow: visible;
+  }
+
+  body.lesson3-g2-spacing:not(:has(#game .complete)) .app > .nav {
+    grid-row: 1;
+    align-self: start;
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
+    width: var(--activity-large-width, min(1250px, 100%)) !important;
+    margin: 0 auto;
+  }
+
+  body.gawain-2.lesson3-g2-spacing .app > #game.game:has(#read, .answers) {
+    --rhyme-heading-gap: clamp(40px, 4.8dvh, 72px);
+    --rhyme-picture-actions-gap: clamp(8px, 1.1dvh, 16px);
+    --rhyme-actions-progress-gap: clamp(24px, 2.2dvh, 32px);
+    grid-row: 2;
+    align-self: center;
+    position: relative !important;
+    inset: auto !important;
+    transform: none !important;
+    margin: 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    /* The existing progress script uses an automatic top margin. With no
+       forced card height it has no surplus space to absorb. */
+    justify-content: flex-start !important;
+    align-content: start;
+    row-gap: 0;
+    overflow: visible !important;
+  }
+
+  body.lesson3-g2-spacing #game.game:has(#read) .pairs {
+    margin-block: var(--rhyme-heading-gap) var(--rhyme-picture-actions-gap) !important;
+  }
+
+  body.lesson3-g2-spacing #game.game:has(#read) .lesson3-g2-actions {
+    margin-bottom: var(--rhyme-actions-progress-gap) !important;
+  }
+}
+
+@media (min-width: 2500px) and (min-height: 1000px) {
+  /* The answer phase already has comfortable picture/action/progress gaps.
+     Keep those gaps; replace only its expansive automatic picture margin. */
+  body.lesson3-g2-spacing #game.game:has(.answers) .pairs {
+    margin-top: clamp(32px, 4.5dvh, 64px) !important;
+  }
+}

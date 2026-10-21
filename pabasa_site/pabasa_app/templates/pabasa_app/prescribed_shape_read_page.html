@@ -49,7 +49,7 @@
   {% endif %}
 {% include "pabasa_app/includes/typography.html" %}
 </head>
-<body class="{% if shape_read_activity_data.activity_key == 'lesson7-gawain4b' %}lesson7-gawain4b-page{% endif %}">
+<body class="pabasa-prescribed-responsive {% if shape_read_activity_data.activity_key == 'lesson7-gawain4b' %}lesson7-gawain4b-page{% endif %}">
   <main class="page">
     <a class="back"{% if shape_read_activity_data.activity_key == 'lesson7-gawain4b' %} data-leave-label="← Bumalik sa Aking Aralin"{% endif %} href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a>
     <section id="app" class="card"></section>
@@ -123,7 +123,8 @@
     </script>
   {% endif %}
 <script>(function(){function strip(){document.querySelectorAll('#app h1').forEach(function(h){var text=h.textContent,next=text.replace(/^GAWAIN 4B:\\s*/,'');if(next!==text)h.textContent=next})}new MutationObserver(strip).observe(document.getElementById('app'),{subtree:true,childList:true,characterData:true});strip()})();</script>
-{% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g4b' help_text='Basahin ang salita at ilagay ang tamang sagot.' %}</body>
+{% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g4b' help_text='Basahin ang salita at ilagay ang tamang sagot.' %}
+</body>
 </html>
 <style>.done,.done-card,.complete{display:grid;place-items:center;width:min(100%,540px);margin:auto;padding:42px 38px;border-radius:32px;background:#fff;color:#183e63;text-align:center;box-shadow:0 14px 30px #1e5b7a25;overflow:visible}.done h1,.done p,.done a,.done-card h1,.done-card p,.done-card a,.complete h1,.complete p,.complete a{font-size:0}.done h1:after,.done-card h1:after,.complete h1:after{content:'Tapos na ang gawain! 🎉';font-size:2rem}.done p:after,.done-card p:after,.complete p:after{content:'Mahusay! Nakumpleto mo na ang aktibidad.';font-size:1.15rem}.done a,.done-card a,.complete a{display:inline-flex;padding:14px 24px;border-radius:999px;background:#299e9a;color:#fff;text-decoration:none;box-shadow:0 7px #187b7a}.done a:after,.done-card a:after,.complete a:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}.done .button,.complete .done{font-size:0}.done .button:after,.complete .done:after{content:'BALIK SA AKING ARALIN';font-size:1.15rem}</style>
 <style>.card:has(.done) .done,.card:has(.done) .done-card,.card:has(.complete) .complete{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:18px!important;grid-template-columns:1fr!important;width:min(540px,92vw)!important;min-height:0!important;margin:auto!important;padding:40px 38px!important;border-radius:32px!important;background:#fff!important;color:#183e63!important;text-align:center!important;box-shadow:0 14px 30px rgba(30,91,122,.16)!important;overflow:visible!important}.card:has(.done) .done h1,.card:has(.done) .done-card h1,.card:has(.complete) .complete h1{max-width:100%!important;font-size:clamp(1.6rem,3vw,1.9rem)!important;line-height:1.15!important;white-space:normal!important}.card:has(.done) .done p,.card:has(.done) .done-card p,.card:has(.complete) .complete p{max-width:100%!important;margin:0!important;font-size:1.15rem!important;line-height:1.35!important}.card:has(.done) .done a,.card:has(.done) .done-card a,.card:has(.complete) .complete a,.card:has(.done) .done .button{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:330px!important;min-height:58px!important;padding:14px 28px!important;border-radius:999px!important;background:#299e9a!important;color:#fff!important;text-decoration:none!important;box-shadow:0 7px #187b7a!important;pointer-events:auto!important;position:relative!important;z-index:2!important}@media(max-width:620px){.card:has(.done) .done,.card:has(.done) .done-card,.card:has(.complete) .complete{width:min(540px,92vw)!important;padding:34px 24px!important}.card:has(.done) .done a,.card:has(.done) .done-card a,.card:has(.complete) .complete a,.card:has(.done) .done .button{width:100%!important;min-width:0!important}}</style>
@@ -137,3 +138,4 @@
 <script>
 (()=>{if(!document.body.classList.contains('lesson7-gawain4b-page'))return;const wrap=()=>{document.querySelectorAll('#app .reading>img').forEach(image=>{if(image.parentElement.classList.contains('lesson7-golden-picture-box'))return;const box=document.createElement('div');box.className='lesson7-golden-picture-box';image.replaceWith(box);box.appendChild(image)})};const app=document.getElementById('app');if(app){new MutationObserver(wrap).observe(app,{childList:true,subtree:true});wrap()}})();
 </script>
+<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_session123_responsive.css' %}?v=20261021-1">

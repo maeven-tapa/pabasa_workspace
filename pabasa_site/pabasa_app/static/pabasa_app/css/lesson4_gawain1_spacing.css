@@ -1,0 +1,73 @@
+/* Session 2 Lesson 4 Gawain 1. Intro layout and local Read typography only;
+   focused pictures, controls, wheel artwork and completion keep their sizing. */
+html:has(body.lesson-4-responsive #app > .overview):not(:has(.complete)),
+body.lesson-4-responsive:has(#app > .overview):not(:has(.complete)) {
+  height: auto !important;
+  min-height: 100dvh;
+  overflow-y: auto !important;
+}
+
+body.lesson-4-responsive .page:has(> #app > .overview):not(:has(.complete)) {
+  height: auto !important;
+  min-height: 100dvh !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(64px, max-content) minmax(min-content, 1fr);
+  align-content: stretch !important;
+  align-items: normal !important;
+  justify-content: stretch !important;
+  row-gap: 16px !important;
+  overflow: visible !important;
+}
+
+body.lesson-4-responsive .page:has(> #app > .overview):not(:has(.complete)) > .back {
+  grid-row: 1;
+  align-self: start;
+  justify-self: start;
+  margin: 0 !important;
+}
+
+body.lesson-4-responsive #app.card:has(> .overview):not(:has(.complete)) {
+  grid-row: 2;
+  align-self: center;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  flex: 0 0 auto;
+  overflow: visible !important;
+}
+
+body.lesson-4-responsive #app > .overview {
+  flex: 0 0 auto !important;
+  justify-content: flex-start !important;
+  margin-top: 12px;
+  overflow: visible !important;
+}
+
+/* The shared Read font shorthand is invalid and leaves a 13.33px, weight-400
+   button default. Use the adjacent Listen control's existing font longhands.
+   Keep its normal line height and all button box/colour/state declarations. */
+body.lesson-4-responsive #app .lesson4-audio-actions > button[data-basahin-button] {
+  font-family: var(--font-family-primary) !important;
+  font-size: 1.05rem !important;
+  font-weight: 900 !important;
+  line-height: normal !important;
+}
+
+body.lesson-4-responsive #app .lesson4-audio-actions [data-basahin-label] {
+  font: inherit !important;
+}
+
+@media (max-width: 760px) {
+  body.lesson-4-responsive .page:has(> #app > .overview):not(:has(.complete)) {
+    grid-template-rows: minmax(52px, max-content) minmax(min-content, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  /* Fixed phone tools end at 66px. Reserve a separate navigation row below
+     them so the full Back label remains readable in both activity states. */
+  body.lesson-4-responsive:not(:has(.complete)) > .page {
+    padding-top: 80px !important;
+  }
+}

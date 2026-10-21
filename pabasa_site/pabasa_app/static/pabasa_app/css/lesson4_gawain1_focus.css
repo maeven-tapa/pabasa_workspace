@@ -1,0 +1,86 @@
+/* Session 2, Lesson 4, Gawain 1: enlarge each focused picture, preserving
+   the existing wheel reveal, artwork, controls, and activity state. */
+body.lesson-4-responsive #app > .focused {
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 370px) !important;
+  column-gap: clamp(24px, 3vw, 64px) !important;
+  align-items: center !important;
+  overflow: visible;
+}
+
+body.lesson-4-responsive #app .focused > .controls {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+body.lesson-4-responsive #app .focused > .focus-picture {
+  width: 100% !important;
+  max-width: none;
+  height: clamp(240px, 52dvh, 680px) !important;
+  min-height: 0 !important;
+  padding: 8px !important;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  justify-self: center;
+}
+
+body.lesson-4-responsive #app .focused > .focus-picture img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  min-width: 0;
+  min-height: 0;
+  object-fit: contain !important;
+  /* Replace the doll's old vertical offset with the same contained sizing
+     used by all six pictures. The reveal animation stays on its parent. */
+  transform: none !important;
+}
+
+@media (max-width: 900px) {
+  html:has(body.lesson-4-responsive #app > .focused),
+  body.lesson-4-responsive:has(#app > .focused) {
+    height: auto !important;
+    overflow-y: auto !important;
+  }
+
+  body.lesson-4-responsive .page:has(#app > .focused) {
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
+  }
+
+  body.lesson-4-responsive #app:has(> .focused) {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body.lesson-4-responsive #app > .focused {
+    flex: 0 0 auto;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto auto !important;
+    grid-template-areas: "wheel" "controls" !important;
+    row-gap: 16px !important;
+    overflow: visible;
+  }
+
+  body.lesson-4-responsive #app .focused > .focus-picture {
+    max-width: 560px;
+    height: clamp(220px, 40dvh, 420px) !important;
+  }
+}
+
+@media (max-width: 420px) {
+  body.lesson-4-responsive #app .lesson4-audio-actions,
+  body.lesson-4-responsive #app .choices {
+    flex-direction: column;
+  }
+
+  body.lesson-4-responsive #app .lesson4-audio-actions > button {
+    box-sizing: border-box;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+  }
+}

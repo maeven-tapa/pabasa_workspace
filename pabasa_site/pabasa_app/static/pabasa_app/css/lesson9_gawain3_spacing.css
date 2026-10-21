@@ -1,0 +1,90 @@
+/* Gawain 3 only. Keep the word card and controls at their current sizes while
+   removing the viewport-dependent card/task heights and progress offsets. */
+html:has(body.lesson9-g3-compact):not(:has(#app > .done)),
+body.lesson9-g3-compact:not(:has(#app > .done)) {
+  height: auto !important;
+  min-height: 100dvh !important;
+  overflow-y: auto !important;
+}
+
+body.lesson9-g3-compact:not(:has(#app > .done)) {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 !important;
+  padding-block: 22px !important;
+}
+
+body.lesson9-g3-compact:has(#lesson9-g3-data):not(:has(#app > .done)) > .shell {
+  /* Retain the previous content width after removing the default 8px body
+     margins. The established large-screen width remains unchanged. */
+  width: var(--activity-large-width, min(980px, calc(100% - 16px))) !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: calc(100dvh - 44px) !important;
+  padding-block: 0 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(64px, 1fr) auto minmax(64px, 1fr);
+  gap: 0 !important;
+  align-content: stretch;
+  justify-items: center;
+  overflow: visible;
+}
+
+body.lesson9-g3-compact:not(:has(#app > .done)) > .shell > .back {
+  grid-area: 1 / 1;
+  align-self: start;
+  justify-self: start;
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  margin: 0;
+}
+
+body.lesson9-g3-compact:has(#lesson9-g3-data) > .shell > #app.card:not(:has(> .done)) {
+  grid-area: 2 / 1;
+  align-self: center;
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+body.lesson9-g3-compact:has(#lesson9-g3-data) #app.card:not(:has(> .done)) .task {
+  height: auto !important;
+  min-height: 0 !important;
+  flex: 0 0 auto;
+}
+
+body.lesson9-g3-compact #app.card:not(:has(> .done)) .item {
+  margin-top: 20px;
+}
+
+body.lesson9-g3-compact #app.card:not(:has(> .done)) > .numbered-progress {
+  position: static;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+body.lesson9-g3-compact #app.card:not(:has(> .done)) .numbered-progress__circle {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 800px) {
+  body.lesson9-g3-compact:not(:has(#app > .done)) {
+    /* Clear the fixed 52px mobile tools at top:14px. */
+    padding-top: calc(52px + 14px + 14px) !important;
+    padding-bottom: 14px !important;
+  }
+
+  body.lesson9-g3-compact:has(#lesson9-g3-data):not(:has(#app > .done)) > .shell {
+    min-height: calc(100dvh - 94px) !important;
+    grid-template-rows: auto minmax(min-content, 1fr);
+    row-gap: 12px !important;
+  }
+}

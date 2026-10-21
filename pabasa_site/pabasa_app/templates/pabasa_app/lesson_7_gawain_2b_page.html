@@ -35,7 +35,7 @@ window.__prescribedNarrationAudio = {
   </style>
 {% include "pabasa_app/includes/typography.html" %}
 </head>
-<body>
+<body class="pabasa-prescribed-responsive lesson7-g2b-centered">
   <main class="page">
     <a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a>
     <section id="app" class="card"></section>
@@ -94,7 +94,8 @@ window.__prescribedNarrationAudio = {
     __runWhenLessonStarted(() => render());
   })();
   </script>
-{% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g2b' help_text='Basahin ang salita at bilugan ang larawang nagsisimula sa Ii.' %}</body>
+{% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g2b' help_text='Basahin ang salita at bilugan ang larawang nagsisimula sa Ii.' %}
+</body>
 </html>
 <style>
   body:has(.done) .back,
@@ -212,3 +213,5 @@ html body:has(.done) .page{
   html body .page>#app.card{padding:14px 16px!important}
 }
 </style>
+<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_session123_responsive.css' %}?v=20261021-1">
+<link rel="stylesheet" href="{% static 'pabasa_app/css/lesson7_gawain2b_centering.css' %}?v=20261020-1">

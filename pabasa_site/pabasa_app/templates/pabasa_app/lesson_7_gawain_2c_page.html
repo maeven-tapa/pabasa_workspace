@@ -25,7 +25,7 @@
   </style>
 {% include "pabasa_app/includes/typography.html" %}
 </head>
-<body>
+<body class="pabasa-prescribed-responsive lesson7-g2c-compact">
   <main class="page"><a class="back" data-leave-label="← Bumalik sa Aking Aralin" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a><section id="app" class="card"></section></main>
   {{ handwriting_activity_data|json_script:"handwriting-data" }}{% include 'pabasa_app/session3_lesson_start_bootstrap.html' %}
   <script>
@@ -180,7 +180,8 @@
     });
   })();
   </script>
-{% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g2c' help_text='Isulat ang letrang Ii sa mga kahon.' %}</body>
+{% include 'pabasa_app/session3_prescribed_controls.html' with prefix='prescribed-s3l7g2c' help_text='Isulat ang letrang Ii sa mga kahon.' %}
+</body>
 <style>
   #app.card:not(:has(.done))>.sheet{width:min(850px,100%);margin:8px auto;box-shadow:0 10px 22px #2d69731f}
   #app.card:not(:has(.done))>.sheet .canvas-wrap{height:clamp(58px,9vh,82px);margin:7px 0;border-radius:12px}
@@ -223,3 +224,6 @@
 <script>window.addEventListener('load',()=>{const app=document.getElementById('app'),button=app?.querySelector('#return');if(app?.querySelector('.done')){app.inert=false;button?.removeAttribute('disabled');button?.style.setProperty('pointer-events','auto','important')}})</script>
 <script>document.addEventListener('DOMContentLoaded',()=>{const app=document.getElementById('app');if(app?.querySelector('.done'))app.inert=false})</script>
 <script src="{% static 'pabasa_app/js/session3_visual_feedback_suppression.js' %}" data-activity-key="lesson7-gawain2c" data-feedback-messages='["Subukan ulit! Isulat nang malinaw ang letrang Ii."]'></script>
+<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_session123_responsive.css' %}?v=20261021-1">
+<link rel="stylesheet" href="{% static 'pabasa_app/css/lesson7_gawain2c_spacing.css' %}?v=20261020-3">
+<script src="{% static 'pabasa_app/js/lesson7_handwriting_guide.js' %}?v=20261020-2"></script>

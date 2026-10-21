@@ -2,7 +2,7 @@
 <html lang="fil"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Alpabetong Pilipino | PABASA</title>
 <link rel="stylesheet" href="{% static 'pabasa_app/css/lesson_1_gawain_1_video.css' %}?v=20261012-2">{% include "pabasa_app/includes/typography.html" %}
 </head>
-<body class="lesson-one-page">
+<body class=" lesson-one-page pabasa-prescribed-responsive">
 {% csrf_token %}
 <main class="page"><a class="back" href="{% url 'assessment' %}">← Bumalik sa Aking Aralin</a>
 <section class="shell" aria-label="Alpabetong Pilipino"><video id="alphabet-video" src="{% static 'pabasa_app/prescribed/session1_lesson1_gawain1.mp4' %}" preload="auto" playsinline disablepictureinpicture disableremoteplayback aria-label="Awiting Alpabeto ng Filipino"></video><output id="lesson-one-recording-indicator" class="lesson-one-recording-indicator" role="status" aria-live="polite" hidden><span class="lesson-one-recording-dot" aria-hidden="true"></span><span data-recording-label>Nagre-record…</span></output></section></main>
@@ -12,3 +12,4 @@
 <script src="{% static 'pabasa_app/js/lesson_1_gawain_1_reader.js' %}?v=20261012-3" defer></script>
 {% include 'pabasa_app/session1_prescribed_controls.html' with prefix='prescribed-s1l1g1' help_text='Pahintulutan ang mikropono. Pagkatapos ng bilang, sabayan ang awit. Awtomatikong maipapasa ang iyong recording kapag natapos ang video.' %}
 </body></html>
+<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_session123_responsive.css' %}?v=20261021-1">

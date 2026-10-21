@@ -1,0 +1,67 @@
+/* Gawain 3 only: retain picture/control sizing and the card's existing padding.
+   Equal navigation tracks center the natural card height without offsets. */
+html:has(body.lesson7-g3-compact):not(:has(#app .done)),
+body.lesson7-g3-compact:not(:has(#app .done)) {
+  height: auto !important;
+  overflow-y: auto !important;
+}
+
+body.lesson7-g3-compact:not(:has(#app .done)) > .page {
+  height: auto !important;
+  min-height: 100dvh !important;
+  padding-block: 22px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr);
+  /* Reserve the existing desktop controls' 64px height symmetrically. */
+  grid-template-rows: minmax(64px, 1fr) auto minmax(64px, 1fr);
+  align-content: stretch !important;
+  gap: 0 !important;
+  justify-items: center;
+  overflow: visible !important;
+}
+
+body.lesson7-g3-compact:not(:has(#app .done)) > .page > .back {
+  grid-area: 1 / 1;
+  align-self: start !important;
+  justify-self: start;
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+}
+
+body.lesson7-g3-compact:has(#activity-data) > .page > #app.card:not(:has(.done)) {
+  grid-area: 2 / 1;
+  flex: 0 0 auto;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin-block: 0 !important;
+  overflow: visible;
+}
+
+body.lesson7-g3-compact #app.card:not(:has(.done)) > .numbered-progress {
+  position: static;
+  flex-wrap: wrap;
+}
+
+body.lesson7-g3-compact #app.card:not(:has(.done)) .numbered-progress__circle {
+  flex: 0 0 auto;
+}
+
+@media (min-width: 801px) {
+  body.lesson7-g3-compact:not(:has(#app .done)) > .page > .back {
+    width: max-content;
+    max-width: 100%;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 800px) {
+  body.lesson7-g3-compact:not(:has(#app .done)) > .page {
+    /* The mobile tools are 52px tall at top:14px; leave 14px clearance. */
+    padding-top: calc(52px + 14px + 14px) !important;
+    padding-bottom: 14px !important;
+    grid-template-rows: auto minmax(min-content, 1fr);
+    row-gap: 12px !important;
+  }
+}
