@@ -1,0 +1,256 @@
+/* About exhibition only. No selectors or inherited tokens reach #about-overview. */
+.pabasa-journal {
+    --pj-navy: #10466e;
+    --pj-ink: #163d56;
+    --pj-muted: #506979;
+    --pj-yellow: #f4ca4b;
+    --pj-line: #cbd9df;
+    position: relative;
+    width: 100vw;
+    margin-inline: calc(50% - 50vw);
+    color: var(--pj-ink);
+    font-family: var(--font-family-primary), Andika, sans-serif;
+    background: #fff;
+    text-align: left;
+}
+.pabasa-journal *, .pabasa-journal *::before, .pabasa-journal *::after { box-sizing: border-box; }
+.pabasa-journal .pj-chapter { position: relative; padding: clamp(3.5rem, 7vw, 7rem) 0; scroll-margin-top: 8rem; }
+.pabasa-journal #project-origin::before { content: none; display: none; }
+.pabasa-journal .pj-shell { width: min(100% - 4rem, 74rem); margin-inline: auto; }
+.pabasa-journal h2, .pabasa-journal h3, .pabasa-journal p, .pabasa-journal figure, .pabasa-journal dl { margin: 0; }
+.pabasa-journal h2, .pabasa-journal h3 { color: inherit; font-family: inherit; letter-spacing: -.045em; }
+.pabasa-journal p, .pabasa-journal dd { line-height: 1.75; }
+.pabasa-journal button, .pabasa-journal summary { font: inherit; cursor: pointer; }
+.pabasa-journal img { display: block; max-width: 100%; }
+.pabasa-journal button { color: inherit; }
+.pabasa-journal :focus-visible { outline: 3px solid #b07800; outline-offset: 6px; }
+.pabasa-journal .pj-heading { margin-bottom: clamp(2.5rem, 5vw, 4.5rem); }
+.pabasa-journal .pj-chapter-line { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; border-top: 1px solid var(--pj-line); padding-top: 1rem; margin-bottom: 1.75rem; }
+.pabasa-journal .pj-kicker { font-size: .75rem; font-weight: 700; letter-spacing: .14em; line-height: 1.6; text-transform: uppercase; }
+.pabasa-journal .pj-folio { font-size: .75rem; white-space: nowrap; letter-spacing: .1em; }
+.pabasa-journal .pj-heading h2 { font-size: clamp(2.7rem, 5.5vw, 4.7rem); line-height: 1.08; font-weight: 700; max-width: 62rem; }
+.pabasa-journal .pj-heading h2 span { position: relative; z-index: 0; display: inline-block; }
+.pabasa-journal .pj-heading h2 span::after { content: ''; position: absolute; inset: auto -.03em .04em; height: .17em; background: var(--pj-yellow); z-index: -1; transform: rotate(-1.5deg); }
+.pabasa-journal .pj-heading-note { max-width: 44rem; margin-top: 1.5rem; color: var(--pj-muted); font-size: 1.05rem; }
+/* 01: a desk, with overlapping materials and a screen print. */
+.pabasa-journal .pj-desk { position: relative; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 2rem; padding: 2.5rem 1.25rem 1rem; background-image: radial-gradient(#cbd9df 1px, transparent 1px); background-size: 22px 22px; }
+.pabasa-journal .pj-paper { position: relative; padding: clamp(1.5rem, 3vw, 2.5rem); box-shadow: 0 12px 24px #163d5612, 0 1px 2px #163d5629; transition: transform .25s ease, box-shadow .25s ease; }
+.pabasa-journal .pj-paper h3, .pabasa-journal .pj-platform h3 { font-size: clamp(1.5rem, 2.5vw, 2rem); line-height: 1.2; margin: 1.5rem 0 1rem; }
+.pabasa-journal .pj-paper p { font-size: 1rem; }
+.pabasa-journal .pj-observation { grid-column: 1 / 6; align-self: start; background: repeating-linear-gradient(transparent 0 31px, #bcd7e43d 31px 32px), #fffdf6; transform: rotate(-3deg); border-top: 5px solid #d8b55e; }
+.pabasa-journal .pj-observation::before { content: ''; position: absolute; top: -1rem; left: 2.5rem; width: 1.05rem; height: 3.2rem; border: 2px solid #597484; border-radius: 1rem; transform: rotate(12deg); }
+.pabasa-journal .pj-planning { grid-column: 7 / 13; margin-top: 3.5rem; background: #eaf4f8; transform: rotate(2deg); border: 1px solid #cbdfe8; }
+.pabasa-journal .pj-paper-top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; }
+.pabasa-journal .pj-paper-top > :last-child { font-size: 1.8rem; color: #447891; }
+.pabasa-journal .pj-note-sequence { display: flex; align-items: center; justify-content: space-between; gap: .4rem; margin-top: 1.5rem; padding-block: 1rem; border-block: 1px dashed #98abb5; font-size: .8rem; }
+.pabasa-journal .pj-note-sequence i { font-style: normal; }
+.pabasa-journal .pj-handnote { margin-top: 1rem; color: #526d7e; font-style: italic; }
+.pabasa-journal .pj-artifact-caption { display: block; margin-top: 1.5rem; font-size: .65rem; color: #516675; letter-spacing: .03em; }
+.pabasa-journal .pj-plan { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-top: 1.5rem; font-size: .75rem; text-align: center; }
+.pabasa-journal .pj-plan span { padding: .7rem .4rem; border: 1px dashed #638da2; border-radius: 50%; }
+.pabasa-journal .pj-plan strong { grid-column: 1 / -1; padding: .6rem; border-bottom: 3px solid #eac647; }
+.pabasa-journal .pj-platform { position: relative; z-index: 1; display: grid; grid-template-columns: 1.15fr 1fr; grid-column: 4 / 13; margin-top: -.7rem; padding: 1rem; background: #fff; border: 1px solid #d4e1e6; box-shadow: 0 16px 35px #163d561a; transform: rotate(-1deg); transition: transform .25s ease; }
+.pabasa-journal .pj-platform-image { position: relative; align-self: center; }
+.pabasa-journal .pj-platform-image img { width: 100%; height: auto; aspect-ratio: 16/10; object-fit: cover; object-position: top; border: 1px solid #e3e9ec; }
+.pabasa-journal .pj-tape { position: absolute; z-index: 1; width: 6rem; height: 1.75rem; top: -.65rem; left: calc(50% - 3rem); background: #f6d65d9c; transform: rotate(-5deg); clip-path: polygon(2% 0,98% 4%,100% 93%,0 100%); }
+.pabasa-journal .pj-image-label { display: block; margin-top: .75rem; font-size: .65rem; color: var(--pj-muted); text-transform: uppercase; letter-spacing: .08em; }
+.pabasa-journal .pj-platform-copy { padding: .5rem 1.5rem; }
+.pabasa-journal .pj-platform-copy h3 { margin-top: .25rem; }
+.pabasa-journal .pj-platform-copy p { font-size: .95rem; }
+.pabasa-journal .pj-desk-note { position: absolute; bottom: 3rem; left: .75rem; font-style: italic; font-size: .85rem; line-height: 1.7; max-width: 14rem; color: #4b6e82; }
+.pabasa-journal .pj-desk-note span { display: block; font-size: 3rem; line-height: 1; text-align: right; }
+.pabasa-journal .pj-paper:hover, .pabasa-journal .pj-paper:focus-visible, .pabasa-journal .pj-platform:hover, .pabasa-journal .pj-platform:focus-visible { transform: rotate(0) translateY(-4px); box-shadow: 0 20px 32px #163d5626; }
+/* 02: asymmetrical design workspace, progressively enhanced to ARIA tabs. */
+.pabasa-journal .pj-lab { color: #fff; background: var(--pj-navy); --pj-line: #ffffff40; }
+.pabasa-journal .pj-lab .pj-heading-note { color: #c7deeb; }
+.pabasa-journal .pj-lab .pj-heading h2 span::after { height: .09em; bottom: -.02em; }
+.pabasa-journal .pj-lab :focus-visible { outline-color: var(--pj-yellow); }
+.pabasa-journal .pj-lab-workspace { display: grid; grid-template-columns: minmax(12rem, .32fr) minmax(0, 1fr); gap: clamp(2rem, 5vw, 5rem); align-items: start; }
+.pabasa-journal .pj-principles { display: grid; gap: .5rem; }
+.pabasa-journal .pj-principles button { display: grid; grid-template-columns: 1.5rem 1fr auto; gap: .65rem; padding: 1.5rem 1rem; text-align: left; border: 1px solid transparent; border-bottom-color: #ffffff45; background: transparent; transition: background .2s ease, color .2s ease; }
+.pabasa-journal .pj-principles button > span { font-size: .75rem; padding-top: .35rem; }
+.pabasa-journal .pj-principles strong { font-size: 1.5rem; font-weight: 400; }
+.pabasa-journal .pj-principles small { grid-column: 2 / -1; color: #c7deeb; font-size: .75rem; }
+.pabasa-journal .pj-principles button[aria-selected="true"] { color: var(--pj-navy); background: var(--pj-yellow); border-color: var(--pj-yellow); }
+.pabasa-journal .pj-principles button[aria-selected="true"] small { color: #234a61; }
+.pabasa-journal .pj-principles button:hover:not([aria-selected="true"]) { background: #ffffff10; }
+.pabasa-journal .pj-lab-index-note { margin: 2rem 1rem 0; font-size: .8rem; color: #c7deeb; }
+.pabasa-journal .pj-panel-heading { margin: 0 0 1.5rem; }
+.pabasa-journal .pj-panel-heading .pj-kicker { color: #bad8e8; font-size: .65rem; }
+.pabasa-journal .pj-panel-heading h3 { font-size: clamp(1.7rem, 3vw, 2.5rem); line-height: 1.25; margin-top: .6rem; max-width: 35rem; }
+.pabasa-journal .pj-lab-panel + .pj-lab-panel { margin-top: 3rem; }
+.pabasa-journal .pj-lab-workspace[data-enhanced] .pj-lab-panel { margin-top: 0; animation: pj-panel-in .28s ease both; }
+.pabasa-journal [hidden] { display: none !important; }
+.pabasa-journal .pj-interface { overflow: hidden; border: 1px solid #ffffff75; border-radius: .4rem; background: #f0f6f9; color: var(--pj-ink); box-shadow: 0 18px 32px #052b4638; }
+.pabasa-journal .pj-interface-bar { display: flex; align-items: center; gap: 1.5rem; padding: .65rem 1rem; font-size: .65rem; border-bottom: 1px solid #d7e3e9; background: #fff; }
+.pabasa-journal .pj-interface-bar > span:first-child { color: #a7b9c3; letter-spacing: .2em; font-size: .5rem; }
+.pabasa-journal .pj-interface img { width: 100%; height: auto; aspect-ratio: 3/2; object-fit: contain; background: #eaf3f9; }
+.pabasa-journal .pj-interface figcaption { display: flex; align-items: center; flex-wrap: wrap; gap: .45rem; font-size: .7rem; line-height: 1.6; padding: .9rem 1rem; background: #fff; }
+.pabasa-journal .pj-annotation-number { display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; border-radius: 50%; border: 1px solid #7a96a6; font-size: .6rem; margin-left: .35rem; }
+.pabasa-journal .pj-annotation-number:first-child { margin-left: 0; }
+.pabasa-journal .pj-decision { display: grid; grid-template-columns: 1fr 1.2fr; gap: 1.75rem; margin-top: 1.75rem; }
+.pabasa-journal .pj-decision dt { color: #f4cf5d; font-size: .65rem; font-weight: 400; letter-spacing: .12em; text-transform: uppercase; margin-bottom: .5rem; }
+.pabasa-journal .pj-decision dd { font-size: .9rem; margin: 0; color: #e0ecf2; }
+.pabasa-journal .pj-capture-note { margin-top: 1.5rem; color: #c7deeb; font-size: .65rem; }
+/* 03: a continuous route with alternating journal artifacts. */
+.pabasa-journal .pj-journey { background: #f4f7f8; }
+.pabasa-journal .pj-route-map { position: relative; }
+.pabasa-journal .pj-route-path { position: absolute; inset: 0; width: 100%; height: 100%; color: #a7bcc8; pointer-events: none; }
+.pabasa-journal .pj-route { position: relative; list-style: none; padding: 0; margin: 0; }
+.pabasa-journal .pj-milestone { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: clamp(3rem, 9vw, 9rem); align-items: center; padding: 2rem 0 3.5rem; }
+.pabasa-journal .pj-milestone:nth-child(even) .pj-stop-copy { grid-column: 2; grid-row: 1; }
+.pabasa-journal .pj-milestone:nth-child(even) figure { grid-column: 1; grid-row: 1; }
+.pabasa-journal .pj-stop-copy { position: relative; padding-left: 3.75rem; }
+.pabasa-journal .pj-stop-number { position: absolute; top: -.2rem; left: 0; display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border: 1px solid #96aebb; border-radius: 50%; background: #f4f7f8; font-size: .85rem; }
+.pabasa-journal .pj-stop-copy h3 { font-size: clamp(1.7rem, 3.1vw, 2.7rem); line-height: 1.15; margin: .75rem 0 1rem; }
+.pabasa-journal .pj-stop-copy > p:last-child { color: var(--pj-muted); font-size: .95rem; }
+.pabasa-journal .pj-route figure { position: relative; z-index: 1; }
+.pabasa-journal .pj-route figcaption { margin-top: .75rem; color: var(--pj-muted); font-size: .65rem; line-height: 1.7; }
+.pabasa-journal .pj-research-material { transform: rotate(3deg); max-width: 24rem; margin-inline: auto; width: 100%; }
+.pabasa-journal .pj-journal-page { padding: 2rem; border: 1px solid #d4dfe5; background: #fffdf6; box-shadow: 7px 8px 0 #e1e9ed, 0 12px 20px #163d5610; }
+.pabasa-journal .pj-journal-page > span { display: block; text-transform: uppercase; font-size: .6rem; letter-spacing: .08em; }
+.pabasa-journal .pj-journal-page strong { display: block; font-size: 2rem; font-weight: 400; line-height: 1.3; margin: 1.5rem 0; }
+.pabasa-journal .pj-document-lines { height: 3.2rem; background: repeating-linear-gradient(transparent 0 15px,#c7d5dc 15px 16px); margin-bottom: 1rem; }
+.pabasa-journal .pj-journal-page p { font-size: .8rem; font-style: italic; }
+.pabasa-journal .pj-wireframe-sheet { padding: 1.5rem; background: linear-gradient(#c9dbe333 1px,transparent 1px),linear-gradient(90deg,#c9dbe333 1px,transparent 1px),#fff; background-size: 18px 18px; border: 1px solid #b8ccd8; transform: rotate(-2deg); box-shadow: 0 10px 25px #163d5610; }
+.pabasa-journal .pj-wireframe-top { display: flex; justify-content: space-between; font-size: .65rem; margin-bottom: 1.5rem; }
+.pabasa-journal .pj-wireframe-layout { display: grid; grid-template-columns: .3fr 1fr; border: 1px solid #617e91; min-height: 10rem; }
+.pabasa-journal .pj-wireframe-layout > div { padding: 1rem; }
+.pabasa-journal .pj-wireframe-layout > div:first-child { border-right: 1px solid #617e91; display: grid; align-content: start; gap: .8rem; }
+.pabasa-journal .pj-wireframe-layout i { height: .5rem; border: 1px solid #8ea5b2; }
+.pabasa-journal .pj-wireframe-layout b { font-size: .8rem; display: block; margin-bottom: 1rem; }
+.pabasa-journal .pj-wireframe-layout span { display: block; border-bottom: 1px solid #b4c5cf; margin: 1rem 0; }
+.pabasa-journal .pj-wireframe-layout em { display: block; border: 1px solid #93aebb; border-radius: .2rem; padding: .4rem; font-size: .6rem; text-align: center; font-style: normal; }
+.pabasa-journal .pj-wireframe-sheet > p { margin-top: 1rem; text-align: center; font-size: .7rem; }
+.pabasa-journal .pj-source { border: 1px solid #9ab3c1; background: #123b55; color: #ecf6fb; box-shadow: 0 10px 25px #163d5610; transform: rotate(1deg); }
+.pabasa-journal .pj-source-top { display: flex; justify-content: space-between; padding: .8rem 1rem; border-bottom: 1px solid #ffffff30; font-size: .7rem; }
+.pabasa-journal .pj-source pre { margin: 0; padding: 2rem 1.5rem; font-size: clamp(.65rem, 1.1vw, .9rem); line-height: 1.9; color: #e6eef2; overflow-x: auto; }
+.pabasa-journal .pj-source code { color: inherit; }
+.pabasa-journal .pj-source code span { color: #f4d15a; }
+.pabasa-journal .pj-source code em { color: #a4d7e9; font-style: normal; }
+.pabasa-journal .pj-source figcaption { padding: 1rem; margin: 0; color: #c4d9e5; border-top: 1px solid #ffffff30; }
+.pabasa-journal .pj-field-photo { padding: .8rem .8rem 0; background: #fff; border: 1px solid #d4dfe5; transform: rotate(-2deg); box-shadow: 0 10px 25px #163d5614; }
+.pabasa-journal .pj-field-photo img { width: 100%; height: auto; aspect-ratio: 3/2; object-fit: cover; }
+.pabasa-journal .pj-field-photo figcaption { margin: 0; padding: .9rem .2rem; }
+.pabasa-journal .pj-project-id { display: grid; grid-template-columns: .3fr 1fr; gap: 2rem; padding: 1.75rem; border-block: 1px solid #afc4cf; margin-top: 2rem; background: #e6eff3; }
+.pabasa-journal .pj-id-mark { display: flex; align-items: center; gap: 1rem; font-size: 3rem; line-height: 1; }
+.pabasa-journal .pj-id-mark span { font-size: .65rem; text-transform: uppercase; letter-spacing: .08em; line-height: 1.8; }
+.pabasa-journal .pj-project-id dl { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 2rem; }
+.pabasa-journal .pj-project-id dt { font-size: .6rem; text-transform: uppercase; letter-spacing: .12em; color: var(--pj-muted); margin-bottom: .25rem; }
+.pabasa-journal .pj-project-id dd { font-size: .8rem; margin: 0; }
+/* 04: full-size portraits, captions on paper, native accessible biographies. */
+.pabasa-journal .pj-team { background: #fff; }
+.pabasa-journal .pj-team-intro { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-top: 2rem; }
+.pabasa-journal .pj-team-intro p { font-size: 1.25rem; }
+.pabasa-journal .pj-team-intro > span { color: var(--pj-muted); font-size: .7rem; }
+.pabasa-journal .pj-yearbook { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 3rem 2rem; }
+.pabasa-journal .pj-person { min-width: 0; }
+.pabasa-journal .pj-portrait { position: relative; display: block; width: 100%; padding: 0; border: 0; background: #edf3f6; overflow: hidden; }
+.pabasa-journal .pj-portrait img { width: 100%; height: auto; aspect-ratio: 4/5; object-fit: cover; object-position: center top; transition: transform .35s ease; }
+.pabasa-journal .pj-portrait-action { position: absolute; inset: auto .75rem .75rem; display: flex; justify-content: space-between; align-items: center; gap: .5rem; padding: .8rem 1rem; background: #fffffff2; color: var(--pj-navy); font-size: .75rem; border: 1px solid #ffffff; }
+.pabasa-journal .pj-portrait-action > span { font-size: 1.2rem; }
+.pabasa-journal .pj-portrait:hover img { transform: scale(1.025); }
+.pabasa-journal .pj-portrait:hover .pj-portrait-action { background: var(--pj-yellow); }
+.pabasa-journal .pj-person-caption { display: flex; gap: .9rem; padding-top: 1.25rem; border-top: 1px solid #b8cbd6; margin-top: .7rem; }
+.pabasa-journal .pj-person-number { padding-top: .2rem; font-size: .7rem; color: #5d7887; }
+.pabasa-journal .pj-person-caption h3 { font-size: clamp(1.15rem, 1.8vw, 1.55rem); line-height: 1.25; letter-spacing: -.025em; }
+.pabasa-journal .pj-person-caption p { font-size: .75rem; color: var(--pj-muted); margin-top: .5rem; line-height: 1.6; }
+.pabasa-journal .pj-yearbook-footer { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--pj-line); font-size: .75rem; color: var(--pj-muted); }
+.pabasa-journal .pj-yearbook-footer > :last-child { text-align: right; }
+.pabasa-journal .pj-yearbook-footer > :last-child > span { color: #9a730b; margin-left: 1rem; }
+.pabasa-journal .pj-bio { position: fixed; inset: 0 0 0 auto; width: min(62rem,calc(100% - 2rem)); max-width: none; max-height: 100dvh; height: 100dvh; margin: 0 0 0 auto; padding: 0; border: 0; border-left: 5px solid var(--pj-yellow); color: var(--pj-ink); background: #f8fbfd; overflow-y: auto; overscroll-behavior: contain; }
+.pabasa-journal .pj-bio:not([open]) { display: none; }
+.pabasa-journal .pj-bio::backdrop { background: #062b45ad; }
+.pabasa-journal .pj-bio[open] { animation: pj-drawer-in .25s ease both; }
+.pabasa-journal .pj-bio-layout { position: relative; display: grid; grid-template-columns: .75fr 1fr; gap: 2rem; align-items: start; padding: 2rem 2.5rem 3rem; }
+.pabasa-journal .pj-bio-toolbar { position: sticky; top: 0; z-index: 2; display: flex; justify-content: flex-end; padding: 1rem 1.25rem; background: #f8fbfdf5; border-bottom: 1px solid #d4e1e6; }
+.pabasa-journal .pj-bio-close { min-height: 44px; padding: .5rem 1rem; background: #fff; border: 1px solid #a4bbc9; display: flex; gap: 1.5rem; align-items: center; }
+.pabasa-journal .pj-bio-close span { font-size: 1.5rem; line-height: 1; }
+.pabasa-journal .pj-bio-portrait { width: 100%; height: auto; aspect-ratio: 4/5; object-fit: cover; object-position: center top; background: #edf3f6; }
+.pabasa-journal .pj-bio-copy h3 { font-size: 2.25rem; line-height: 1.15; margin: .75rem 0; }
+.pabasa-journal .pj-bio-role { font-size: .75rem; color: #526f81; margin-bottom: 1.5rem; }
+.pabasa-journal .pj-bio-copy > p:not(.pj-kicker):not(.pj-bio-role) { font-size: .95rem; }
+.pabasa-journal .pj-bio-message { border-top: 1px solid #bdcfd9; margin-top: 1.5rem; padding-top: 1.5rem; font-size: .9rem; }
+.pabasa-journal .pj-bio-message hr { margin: 1.5rem 0; border: 0; border-top: 1px solid #bdcfd9; }
+.pabasa-journal .pj-bio a { color: #10557d; text-decoration: underline; overflow-wrap: anywhere; }
+.pabasa-journal .pj-bio details { margin-top: 1.5rem; border-top: 1px solid #bdcfd9; padding-top: 1rem; font-size: .85rem; }
+.pabasa-journal .pj-bio summary { min-height: 44px; line-height: 1.6; }
+.pabasa-journal .pj-bio details p { margin-top: .75rem; }
+.pabasa-journal .pj-bio ul { padding-left: 1.25rem; margin: 1rem 0 0; }
+@keyframes pj-panel-in { from { opacity: .3; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pj-drawer-in { from { transform: translateX(3rem); opacity: .3; } to { transform: translateX(0); opacity: 1; } }
+@media (max-width: 1023px) {
+    .pabasa-journal .pj-shell { width: min(100% - 3rem,74rem); }
+    .pabasa-journal .pj-desk { gap: 1.5rem; padding-inline: .5rem; }
+    .pabasa-journal .pj-observation { grid-column: 1 / 7; }
+    .pabasa-journal .pj-planning { grid-column: 7 / 13; margin-top: 4rem; }
+    .pabasa-journal .pj-platform { grid-column: 2 / 13; margin-top: .5rem; }
+    .pabasa-journal .pj-desk-note { display: none; }
+    .pabasa-journal .pj-lab-workspace { grid-template-columns: 11rem minmax(0,1fr); gap: 1.5rem; }
+    .pabasa-journal .pj-principles button { padding: 1.2rem .6rem; gap: .3rem; }
+    .pabasa-journal .pj-principles strong { font-size: 1.25rem; }
+    .pabasa-journal .pj-milestone { gap: 3rem; }
+    .pabasa-journal .pj-yearbook { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .pabasa-journal .pj-project-id { grid-template-columns: 1fr; gap: 1.5rem; }
+}
+@media (max-width: 699px) {
+    .pabasa-journal .pj-shell { width: calc(100% - 2.5rem); }
+    .pabasa-journal .pj-chapter { padding-block: 3rem; scroll-margin-top: 5rem; }
+    .pabasa-journal .pj-chapter-line { margin-bottom: 1.5rem; gap: .75rem; }
+    .pabasa-journal .pj-kicker { font-size: .62rem; letter-spacing: .09em; }
+    .pabasa-journal .pj-folio { font-size: .6rem; }
+    .pabasa-journal .pj-heading h2 { font-size: clamp(2.4rem,9vw,3.75rem); }
+    .pabasa-journal .pj-heading-note { font-size: .95rem; margin-top: 1.25rem; }
+    .pabasa-journal .pj-desk { display: flex; flex-direction: column; gap: 1.75rem; padding: .75rem .25rem; }
+    .pabasa-journal .pj-paper { width: 100%; padding: 1.5rem; }
+    .pabasa-journal .pj-observation { transform: rotate(-1deg); }
+    .pabasa-journal .pj-planning { margin: 0; transform: rotate(1deg); }
+    .pabasa-journal .pj-paper h3 { margin-top: 1rem; }
+    .pabasa-journal .pj-platform { display: block; margin: 0; transform: none; }
+    .pabasa-journal .pj-platform-copy { padding: 1.25rem .4rem .5rem; }
+    .pabasa-journal .pj-platform-copy h3 { margin-bottom: .8rem; }
+    .pabasa-journal .pj-lab-workspace { display: block; }
+    .pabasa-journal .pj-principles { grid-template-columns: repeat(3,minmax(0,1fr)); gap: .4rem; margin-bottom: 2rem; }
+    .pabasa-journal .pj-principles button { display: flex; flex-direction: column; gap: .4rem; padding: .9rem .55rem; border: 1px solid #ffffff45; }
+    .pabasa-journal .pj-principles button > span:first-child { padding: 0; }
+    .pabasa-journal .pj-principles button strong { font-size: clamp(.8rem,3.5vw,1.1rem); }
+    .pabasa-journal .pj-principles button > span:last-of-type, .pabasa-journal .pj-principles small, .pabasa-journal .pj-lab-index-note { display: none; }
+    .pabasa-journal .pj-interface-bar { padding: .65rem; font-size: .6rem; gap: .75rem; }
+    .pabasa-journal .pj-interface figcaption { font-size: .65rem; padding: .75rem; }
+    .pabasa-journal .pj-decision { grid-template-columns: 1fr; gap: 1.25rem; }
+    .pabasa-journal .pj-route { padding-left: 1.5rem; }
+    .pabasa-journal .pj-route-path { display: none; }
+    .pabasa-journal .pj-route::before { content: ''; position: absolute; top: 1rem; bottom: 2rem; left: .35rem; border-left: 2px dashed #a7bcc8; }
+    .pabasa-journal .pj-milestone { display: flex; flex-direction: column; align-items: stretch; gap: 1.75rem; padding: 0 0 3rem; }
+    .pabasa-journal .pj-stop-copy { padding-left: 0; }
+    .pabasa-journal .pj-stop-number { left: -2.35rem; top: -.2rem; width: 1.75rem; height: 1.75rem; font-size: .65rem; border-color: #8da7b7; }
+    .pabasa-journal .pj-stop-copy .pj-kicker { padding-left: .2rem; }
+    .pabasa-journal .pj-stop-copy h3 { font-size: 1.9rem; }
+    .pabasa-journal .pj-route figure { transform: none; }
+    .pabasa-journal .pj-journal-page { padding: 1.5rem; }
+    .pabasa-journal .pj-source pre { padding: 1.5rem .75rem; font-size: .64rem; }
+    .pabasa-journal .pj-project-id { margin-top: 0; padding: 1.25rem; }
+    .pabasa-journal .pj-project-id dl { grid-template-columns: 1fr; }
+    .pabasa-journal .pj-team-intro { display: block; }
+    .pabasa-journal .pj-team-intro p { font-size: 1.05rem; }
+    .pabasa-journal .pj-team-intro > span { display: block; margin-top: .75rem; }
+    .pabasa-journal .pj-yearbook { gap: 2.25rem 1rem; }
+    .pabasa-journal .pj-person-caption { gap: .5rem; padding-top: .75rem; }
+    .pabasa-journal .pj-person-caption h3 { font-size: 1rem; overflow-wrap: anywhere; }
+    .pabasa-journal .pj-person-caption p { font-size: .7rem; }
+    .pabasa-journal .pj-portrait-action { inset: auto .4rem .4rem; padding: .5rem; font-size: .65rem; }
+    .pabasa-journal .pj-yearbook-footer { font-size: .65rem; }
+    .pabasa-journal .pj-bio { width: calc(100% - .5rem); }
+    .pabasa-journal .pj-bio-layout { grid-template-columns: 1fr; gap: 1.5rem; padding: 1.5rem 1.25rem 2rem; }
+    .pabasa-journal .pj-bio-portrait { width: min(100%,17rem); }
+    .pabasa-journal .pj-bio-copy h3 { font-size: 1.9rem; }
+}
+@media (max-width: 429px) {
+    .pabasa-journal .pj-yearbook { grid-template-columns: 1fr; gap: 2.5rem; }
+    .pabasa-journal .pj-portrait-action { inset: auto .75rem .75rem; padding: .8rem 1rem; font-size: .75rem; }
+    .pabasa-journal .pj-person-caption h3 { font-size: 1.4rem; }
+    .pabasa-journal .pj-person-caption p { font-size: .8rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .pabasa-journal *, .pabasa-journal *::before, .pabasa-journal *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

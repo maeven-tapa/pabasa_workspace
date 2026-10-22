@@ -1,0 +1,234 @@
+{% load static %}
+<div class="pabasa-journal">
+    <section class="pj-chapter pj-origin" id="project-origin" aria-labelledby="pj-origin-title">
+        <div class="pj-shell">
+            <header class="pj-heading">
+                <div class="pj-chapter-line"><p class="pj-kicker">Chapter 01 — The Beginning</p><span class="pj-folio" aria-hidden="true">01 / 04</span></div>
+                <h2 id="pj-origin-title">Where It All <span>Began</span></h2>
+                <p class="pj-heading-note">On the research desk: a challenge, a plan, and a platform.</p>
+            </header>
+            <div class="pj-desk">
+                <article class="pj-paper pj-observation" tabindex="0" aria-labelledby="pj-noticed-title">
+                    <div class="pj-paper-top"><span>01 / Observation</span><span aria-hidden="true">✳</span></div>
+                    <h3 id="pj-noticed-title">What We Noticed</h3>
+                    <p>Conducting reading assessments is only one part of the process. Teachers also need to record results, review student responses, and keep track of reading progress.</p>
+                    <div class="pj-note-sequence" aria-hidden="true"><span>Assess</span><i>→</i><span>Record</span><i>→</i><span>Review</span></div>
+                    <p class="pj-handnote">The work continues after the reading.</p>
+                    <span class="pj-artifact-caption">Illustrated research note · project summary</span>
+                </article>
+                <article class="pj-paper pj-planning" tabindex="0" aria-labelledby="pj-change-title">
+                    <div class="pj-paper-top"><span>02 / Direction</span><span class="pj-pencil-mark" aria-hidden="true">↗</span></div>
+                    <h3 id="pj-change-title">What We Wanted<br>to Change</h3>
+                    <p>We wanted to bring reading assessments and learning activities into one organized digital platform, making the materials easier for teachers and students to access.</p>
+                    <div class="pj-plan" aria-hidden="true"><span>Assessment</span><span>Learning activities</span><strong>One organized space</strong></div>
+                    <span class="pj-artifact-caption">Illustrated planning note · project summary</span>
+                </article>
+                <article class="pj-platform" tabindex="0" aria-labelledby="pj-built-title">
+                    <div class="pj-platform-image"><span class="pj-tape" aria-hidden="true"></span><img src="{% static 'pabasa_app/images/screenshot.avif' %}" alt="Existing PABASA public landing page interface" width="1200" height="675" loading="lazy"><span class="pj-image-label">03 / The platform takes shape</span></div>
+                    <div class="pj-platform-copy"><h3 id="pj-built-title">What We Built</h3><p>That idea became PABASA, combining digitized CRLA assessments and ARAL learning activities in a platform designed for Grade 2 learners and their teachers.</p></div>
+                </article>
+                <span class="pj-desk-note" aria-hidden="true">From a classroom need<br>to something we could build. <span>↗</span></span>
+            </div>
+        </div>
+    </section>
+
+    <section class="pj-chapter pj-lab" id="design-principles" aria-labelledby="pj-lab-title">
+        <div class="pj-shell">
+            <header class="pj-heading">
+                <div class="pj-chapter-line"><p class="pj-kicker">Chapter 02 — Design Thinking</p><span class="pj-folio" aria-hidden="true">02 / 04</span></div>
+                <h2 id="pj-lab-title">The Decisions<br>Behind the <span>Design</span></h2>
+                <p class="pj-heading-note">Inside the PABASA design lab. Select a principle to explore the thinking.</p>
+            </header>
+            <div class="pj-lab-workspace" data-pj-lab>
+                <div class="pj-principles" aria-label="Design principles">
+                    <button type="button" id="pj-tab-clarity" data-pj-tab="clarity" aria-controls="pj-panel-clarity"><span>01</span><strong>Clarity</strong><span aria-hidden="true">↗</span><small>A clear next step.</small></button>
+                    <button type="button" id="pj-tab-usefulness" data-pj-tab="usefulness" aria-controls="pj-panel-usefulness"><span>02</span><strong>Usefulness</strong><span aria-hidden="true">↗</span><small>A more organized view.</small></button>
+                    <button type="button" id="pj-tab-confidence" data-pj-tab="confidence" aria-controls="pj-panel-confidence"><span>03</span><strong>Confidence</strong><span aria-hidden="true">↗</span><small>Room to try.</small></button>
+                    <p class="pj-lab-index-note">Three principles.<br>One considered experience.</p>
+                </div>
+                <div class="pj-lab-panels">
+                    <article class="pj-lab-panel" id="pj-panel-clarity" aria-labelledby="pj-tab-clarity" data-pj-panel="clarity">
+                        <div class="pj-panel-heading"><span class="pj-kicker">01 / The learner's next step</span><h3>Make reading tasks easier to follow.</h3></div>
+                        <figure class="pj-interface"><div class="pj-interface-bar"><span aria-hidden="true">● ● ●</span><span>Student view / Phrase Reading</span></div><img src="{% static 'pabasa_app/images/about/phrase-reading-board.webp' %}" alt="PABASA Secret Messages activity with instructions to choose an envelope, numbered messages, and a progress indicator" width="1200" height="800" loading="lazy"><figcaption><span class="pj-annotation-number">A</span> A recognizable choice. <span class="pj-annotation-number">B</span> Progress stays in view.</figcaption></figure>
+                        <dl class="pj-decision"><div><dt>The challenge</dt><dd>Young learners need clear instructions and recognizable steps.</dd></div><div><dt>Our design response</dt><dd>PABASA uses guided narration, readable text, and straightforward activity interactions.</dd></div></dl>
+                    </article>
+                    <article class="pj-lab-panel" id="pj-panel-usefulness" aria-labelledby="pj-tab-usefulness" data-pj-panel="usefulness">
+                        <div class="pj-panel-heading"><span class="pj-kicker">02 / The teacher's overview</span><h3>Make assessment records easier to manage.</h3></div>
+                        <figure class="pj-interface"><div class="pj-interface-bar"><span aria-hidden="true">● ● ●</span><span>Teacher view / Student Monitor</span></div><img src="{% static 'pabasa_app/images/about/student-monitor.webp' %}" alt="Actual PABASA Student Monitor in its empty state, showing columns for student, status, progress, time, and reading level; no learner records" width="840" height="560" loading="lazy"><figcaption><span class="pj-annotation-number">A</span> Assessment information in one view. <span class="pj-annotation-number">B</span> No learner data shown.</figcaption></figure>
+                        <dl class="pj-decision"><div><dt>The challenge</dt><dd>Teachers need organized assessment information they can review without repeatedly consolidating separate records.</dd></div><div><dt>Our design response</dt><dd>PABASA centralizes assessment results, activity records, and monitoring tools.</dd></div></dl>
+                    </article>
+                    <article class="pj-lab-panel" id="pj-panel-confidence" aria-labelledby="pj-tab-confidence" data-pj-panel="confidence">
+                        <div class="pj-panel-heading"><span class="pj-kicker">03 / Encouragement through guidance</span><h3>Make reading practice feel approachable.</h3></div>
+                        <figure class="pj-interface"><div class="pj-interface-bar"><span aria-hidden="true">● ● ●</span><span>Student view / Reading guidance</span></div><img src="{% static 'pabasa_app/images/about/phrase-reading-guidance.webp' %}" alt="PABASA reading activity presenting the sample phrase the happy puppy with Start Reading and Read Aloud controls" width="1200" height="800" loading="lazy"><figcaption><span class="pj-annotation-number">A</span> One phrase at a time. <span class="pj-annotation-number">B</span> Read Aloud offers guidance.</figcaption></figure>
+                        <dl class="pj-decision"><div><dt>The challenge</dt><dd>Reading activities should provide guidance without overwhelming young learners.</dd></div><div><dt>Our design response</dt><dd>PABASA provides guided instructions and supportive feedback while keeping reading tasks meaningful.</dd></div></dl>
+                    </article>
+                    <p class="pj-capture-note">Existing interface captures · public sample text / empty monitor · previews are not playable activities.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="pj-chapter pj-journey" id="project-journey" aria-labelledby="pj-journey-title">
+        <div class="pj-shell">
+            <header class="pj-heading">
+                <div class="pj-chapter-line"><p class="pj-kicker">Chapter 03 — From Research to Reality</p><span class="pj-folio" aria-hidden="true">03 / 04</span></div>
+                <h2 id="pj-journey-title">The Road<br>to <span>Salawag</span></h2>
+                <p class="pj-heading-note">A field journal of the work between an idea and a classroom.</p>
+            </header>
+            <div class="pj-route-map">
+            <svg class="pj-route-path" viewBox="0 0 1184 1600" preserveAspectRatio="none" aria-hidden="true"><path d="M 592 20 C 592 170 480 230 480 400 S 680 650 680 800 S 480 1050 480 1200 S 592 1440 592 1580" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="6 8" vector-effect="non-scaling-stroke"/></svg>
+            <ol class="pj-route">
+                <li class="pj-milestone pj-research-stop"><div class="pj-stop-copy"><span class="pj-stop-number">01</span><p class="pj-kicker">Research</p><h3>Understanding<br>the Challenge</h3><p>The team studied the reading assessment process and identified areas where a digital workflow could help.</p></div><figure class="pj-research-material"><div class="pj-journal-page"><span>Reading assessment / research focus</span><strong>Observe.<br>Document.<br>Understand.</strong><div aria-hidden="true" class="pj-document-lines"></div><p>Where could a digital workflow help?</p></div><figcaption>Research focus, illustrated for this journal.</figcaption></figure></li>
+                <li class="pj-milestone pj-design-stop"><div class="pj-stop-copy"><span class="pj-stop-number">02</span><p class="pj-kicker">Design</p><h3>Planning<br>the Experience</h3><p>The teacher and student interfaces were planned around assessment, reading activities, feedback, and progress monitoring.</p></div><figure class="pj-wireframe"><div class="pj-wireframe-sheet" aria-hidden="true"><div class="pj-wireframe-top">PABASA / experience map <span>✎</span></div><div class="pj-wireframe-layout"><div><i></i><i></i><i></i></div><div><b>Reading activity</b><span></span><span></span><em>Guidance &amp; feedback</em></div></div><p>Teacher view ↔ Learner view</p></div><figcaption>Retrospective schematic · not an original research document.</figcaption></figure></li>
+                <li class="pj-milestone pj-development-stop"><div class="pj-stop-copy"><span class="pj-stop-number">03</span><p class="pj-kicker">Development</p><h3>Building<br>PABASA</h3><p>The planned features were developed into a working web-based reading assessment and learning platform.</p></div><figure class="pj-source"><div class="pj-source-top"><span>Inside the application</span><span aria-hidden="true">&lt;/&gt;</span></div><pre aria-label="Excerpt of the existing About page view"><code><span>def</span> about(request):
+    <span>return</span> render(
+        request,
+        <em>'pabasa_app/about.html'</em>
+    )</code></pre><figcaption>Actual Django view excerpt · connecting the page to the platform.</figcaption></figure></li>
+                <li class="pj-milestone pj-deployment-stop"><div class="pj-stop-copy"><span class="pj-stop-number">04</span><p class="pj-kicker">Deployment</p><h3>Bringing PABASA<br>into the Classroom</h3><p>PABASA was introduced at Salawag Elementary School, where participating Grade 2 learners and teachers helped the team gather classroom experience and feedback.</p></div><figure class="pj-field-photo"><img src="{% static 'pabasa_app/images/overall_image/7.png' %}" alt="Classroom deployment setting with learners using PABASA on laptops at Salawag Elementary School" width="1536" height="1024" loading="lazy"><figcaption>Salawag Elementary School / the classroom context</figcaption></figure></li>
+            </ol>
+            </div>
+            <aside class="pj-project-id" aria-label="Research project identification"><div class="pj-id-mark" aria-hidden="true">P<span>Research<br>identification</span></div><dl><div><dt>Institution</dt><dd>Technological University of the Philippines — Cavite</dd></div><div><dt>Program</dt><dd>Bachelor of Engineering Technology, Major in Computer Engineering Technology</dd></div><div><dt>Project / Focus</dt><dd>PABASA · Grade 2 reading assessment and learning support</dd></div><div><dt>Deployment</dt><dd>Salawag Elementary School</dd></div></dl></aside>
+        </div>
+    </section>
+
+    <section class="pj-chapter pj-team" id="development-team" aria-labelledby="pj-team-title">
+        <div class="pj-shell">
+            <header class="pj-heading">
+                <div class="pj-chapter-line"><p class="pj-kicker">Chapter 04 — The Development Team</p><span class="pj-folio" aria-hidden="true">04 / 04</span></div>
+                <h2 id="pj-team-title">The People<br>Behind <span>PABASA</span></h2>
+                <div class="pj-team-intro"><p>Built by students. Made for readers.</p><span>BET-CPET 2026 / The research yearbook</span></div>
+            </header>
+            <div class="pj-yearbook">
+                <!-- Existing member content is preserved below. -->
+                <article class="pj-person" id="development-team-basco">
+    <button class="pj-portrait" type="button" data-pj-bio="pj-bio-basco" aria-haspopup="dialog" aria-controls="pj-bio-basco" aria-label="Read Leonardo III L. Basco's biography">
+        <img src="{% static 'pabasa_app/images/pabasa_team/basco.png' %}" alt="Leonardo III L. Basco" width="600" height="750" loading="lazy">
+        <span class="pj-portrait-action">Read biography <span aria-hidden="true">↗</span></span>
+    </button>
+    <div class="pj-person-caption"><span class="pj-person-number">01</span><div><h3>Leonardo III L. Basco</h3><p>Educational Interface Developer</p></div></div>
+</article>
+<dialog class="pj-bio" id="pj-bio-basco" aria-labelledby="pj-bio-basco-title">
+    <div class="pj-bio-toolbar"><button class="pj-bio-close" type="button" data-pj-close aria-label="Close Leonardo III L. Basco's biography">Close <span aria-hidden="true">×</span></button></div>
+    <div class="pj-bio-layout">
+        <img class="pj-bio-portrait" src="{% static 'pabasa_app/images/pabasa_team/basco.png' %}" alt="Leonardo III L. Basco" width="600" height="750" loading="lazy">
+        <div class="pj-bio-copy"><p class="pj-kicker">The research yearbook / 01</p><h3 id="pj-bio-basco-title">Leonardo III L. Basco</h3><p class="pj-bio-role">Educational Interface Developer</p>
+        <p>Develops student-friendly reading interfaces, activity controls, and learner progression features.</p><div class="pj-bio-message">
+                <p>I believe learning becomes easier when students can explore activities without feeling confused or overwhelmed. Through PABASA, I hope to create a space where every button, activity, and interaction helps young readers feel comfortable, curious, and excited to learn.</p>
+                <hr>
+                <p><strong>Email:</strong></p>
+                <p><a href="mailto:leonardoiii.basco@gsfe.tupcavite.edu.ph">leonardoiii.basco@gsfe.tupcavite.edu.ph</a></p>
+            </div>
+        <details><summary>Project perspective &amp; contributions</summary><p>We believe every student's data tells a story of growth. Through careful analysis of reading patterns, we help teachers see exactly how students are improving—not just in speed, but in confidence. Your progress matters, and we're here to measure it fairly.</p><ul><li>Data Analysis</li><li>Research</li><li>Analytics</li><li>Statistics</li></ul></details></div>
+    </div>
+</dialog>
+<article class="pj-person" id="development-team-dorongon">
+    <button class="pj-portrait" type="button" data-pj-bio="pj-bio-dorongon" aria-haspopup="dialog" aria-controls="pj-bio-dorongon" aria-label="Read Lady Caroline I. Dorongon's biography">
+        <img src="{% static 'pabasa_app/images/pabasa_team/dorongon.png' %}" alt="Lady Caroline I. Dorongon" width="600" height="750" loading="lazy">
+        <span class="pj-portrait-action">Read biography <span aria-hidden="true">↗</span></span>
+    </button>
+    <div class="pj-person-caption"><span class="pj-person-number">02</span><div><h3>Lady Caroline I. Dorongon</h3><p>Digital Workbook Designer</p></div></div>
+</article>
+<dialog class="pj-bio" id="pj-bio-dorongon" aria-labelledby="pj-bio-dorongon-title">
+    <div class="pj-bio-toolbar"><button class="pj-bio-close" type="button" data-pj-close aria-label="Close Lady Caroline I. Dorongon's biography">Close <span aria-hidden="true">×</span></button></div>
+    <div class="pj-bio-layout">
+        <img class="pj-bio-portrait" src="{% static 'pabasa_app/images/pabasa_team/dorongon.png' %}" alt="Lady Caroline I. Dorongon" width="600" height="750" loading="lazy">
+        <div class="pj-bio-copy"><p class="pj-kicker">The research yearbook / 02</p><h3 id="pj-bio-dorongon-title">Lady Caroline I. Dorongon</h3><p class="pj-bio-role">Digital Workbook Designer</p>
+        <p>Designs interactive digital workbooks, guided reading activities, and audio-supported exercises.</p><div class="pj-bio-message">
+                <p>Learning to read should be something children look forward to, not something they fear. I hope the activities we create make every lesson feel a little more enjoyable, every challenge a little less intimidating, and every small achievement something worth celebrating.</p>
+                <hr>
+                <p><strong>Email:</strong></p>
+                <p><a href="mailto:ladycaroline.dorongon@gsfe.tupcavite.edu.ph">ladycaroline.dorongon@gsfe.tupcavite.edu.ph</a></p>
+            </div>
+        <details><summary>Project perspective &amp; contributions</summary><p>Learning should feel natural and engaging—not stressful. We've designed every interaction in PABASA to keep you motivated and help you see yourself improving. When you enjoy reading, you read more. That's our mission for you.</p><ul><li>UX Research</li><li>Engagement</li><li>Usability</li><li>Feedback</li></ul></details></div>
+    </div>
+</dialog>
+<article class="pj-person" id="development-team-padasay">
+    <button class="pj-portrait" type="button" data-pj-bio="pj-bio-padasay" aria-haspopup="dialog" aria-controls="pj-bio-padasay" aria-label="Read Amiel John R. Padasay's biography">
+        <img src="{% static 'pabasa_app/images/pabasa_team/padasay.png' %}" alt="Amiel John R. Padasay" width="600" height="750" loading="lazy">
+        <span class="pj-portrait-action">Read biography <span aria-hidden="true">↗</span></span>
+    </button>
+    <div class="pj-person-caption"><span class="pj-person-number">03</span><div><h3>Amiel John R. Padasay</h3><p>Multimedia Interaction Developer</p></div></div>
+</article>
+<dialog class="pj-bio" id="pj-bio-padasay" aria-labelledby="pj-bio-padasay-title">
+    <div class="pj-bio-toolbar"><button class="pj-bio-close" type="button" data-pj-close aria-label="Close Amiel John R. Padasay's biography">Close <span aria-hidden="true">×</span></button></div>
+    <div class="pj-bio-layout">
+        <img class="pj-bio-portrait" src="{% static 'pabasa_app/images/pabasa_team/padasay.png' %}" alt="Amiel John R. Padasay" width="600" height="750" loading="lazy">
+        <div class="pj-bio-copy"><p class="pj-kicker">The research yearbook / 03</p><h3 id="pj-bio-padasay-title">Amiel John R. Padasay</h3><p class="pj-bio-role">Multimedia Interaction Developer</p>
+        <p>Develops multimedia reading activities with interactive controls, audio guidance, and speech-supported functionality.</p><div class="pj-bio-message">
+                <p>Every child learns in their own way and at their own pace. I hope the sounds, activities, and interactions in PABASA encourage learners to participate, try again when things get difficult, and discover that learning can be both meaningful and fun.</p>
+                <hr>
+                <p><strong>Email:</strong></p>
+                <p><a href="mailto:amieljohn.padasay@gsfe.tupcavite.edu.ph">amieljohn.padasay@gsfe.tupcavite.edu.ph</a></p>
+            </div>
+        <details><summary>Project perspective &amp; contributions</summary><p>Your voice matters! When you read aloud in PABASA, we're not just listening—we're learning about your fluency, your confidence, and how we can help you become an even stronger reader. We celebrate every attempt and every improvement you make.</p><ul><li>Speech Processing</li><li>Assessment</li><li>Audio Analysis</li><li>Quality Assurance</li></ul></details></div>
+    </div>
+</dialog>
+<article class="pj-person" id="development-team-palacios">
+    <button class="pj-portrait" type="button" data-pj-bio="pj-bio-palacios" aria-haspopup="dialog" aria-controls="pj-bio-palacios" aria-label="Read Dona Flor Saachi V. Palacios's biography">
+        <img src="{% static 'pabasa_app/images/pabasa_team/palacios.png' %}" alt="Dona Flor Saachi V. Palacios" width="600" height="750" loading="lazy">
+        <span class="pj-portrait-action">Read biography <span aria-hidden="true">↗</span></span>
+    </button>
+    <div class="pj-person-caption"><span class="pj-person-number">04</span><div><h3>Dona Flor Saachi V. Palacios</h3><p>Literacy Activity Designer</p></div></div>
+</article>
+<dialog class="pj-bio" id="pj-bio-palacios" aria-labelledby="pj-bio-palacios-title">
+    <div class="pj-bio-toolbar"><button class="pj-bio-close" type="button" data-pj-close aria-label="Close Dona Flor Saachi V. Palacios's biography">Close <span aria-hidden="true">×</span></button></div>
+    <div class="pj-bio-layout">
+        <img class="pj-bio-portrait" src="{% static 'pabasa_app/images/pabasa_team/palacios.png' %}" alt="Dona Flor Saachi V. Palacios" width="600" height="750" loading="lazy">
+        <div class="pj-bio-copy"><p class="pj-kicker">The research yearbook / 04</p><h3 id="pj-bio-palacios-title">Dona Flor Saachi V. Palacios</h3><p class="pj-bio-role">Literacy Activity Designer</p>
+        <p>Creates interactive literacy activities and supports prescribed and supplementary ARAL learning workflows.</p><div class="pj-bio-message">
+                <p>Every activity is an opportunity for a child to discover something new. My hope is that PABASA gives young readers the patience, encouragement, and guidance they need to keep going, even when reading feels difficult. Progress doesn't have to be perfect to be meaningful.</p>
+                <hr>
+                <p><strong>Email:</strong></p>
+                <p><a href="mailto:donaflor.palacios@gsfe.tupcavite.edu.ph">donaflor.palacios@gsfe.tupcavite.edu.ph</a></p>
+            </div>
+        <details><summary>Project perspective &amp; contributions</summary><p>We hope students take away confidence and enjoyment in reading from using our system. By practicing with words that match their level, they can improve their fluency, accuracy, and ability to recognize and pronounce words correctly.</p><ul><li>Content Design</li><li>Literacy</li><li>Curriculum</li><li>Sequencing</li></ul></details></div>
+    </div>
+</dialog>
+<article class="pj-person" id="development-team-santos">
+    <button class="pj-portrait" type="button" data-pj-bio="pj-bio-santos" aria-haspopup="dialog" aria-controls="pj-bio-santos" aria-label="Read Reyna Marie E. Santos's biography">
+        <img src="{% static 'pabasa_app/images/pabasa_team/santos.png' %}" alt="Reyna Marie E. Santos" width="600" height="750" loading="lazy">
+        <span class="pj-portrait-action">Read biography <span aria-hidden="true">↗</span></span>
+    </button>
+    <div class="pj-person-caption"><span class="pj-person-number">05</span><div><h3>Reyna Marie E. Santos</h3><p>Educational Software Developer</p></div></div>
+</article>
+<dialog class="pj-bio" id="pj-bio-santos" aria-labelledby="pj-bio-santos-title">
+    <div class="pj-bio-toolbar"><button class="pj-bio-close" type="button" data-pj-close aria-label="Close Reyna Marie E. Santos's biography">Close <span aria-hidden="true">×</span></button></div>
+    <div class="pj-bio-layout">
+        <img class="pj-bio-portrait" src="{% static 'pabasa_app/images/pabasa_team/santos.png' %}" alt="Reyna Marie E. Santos" width="600" height="750" loading="lazy">
+        <div class="pj-bio-copy"><p class="pj-kicker">The research yearbook / 05</p><h3 id="pj-bio-santos-title">Reyna Marie E. Santos</h3><p class="pj-bio-role">Educational Software Developer</p>
+        <p>Develops interactive reading assessments, student and teacher interfaces, and learning activities, integrating frontend design with backend functionality.</p><div class="pj-bio-message">
+                <p>Behind every feature we build is a child who is still learning, trying, and finding the courage to read. I hope PABASA becomes more than just a platform for assessments and activities. I want it to be a space where young learners feel supported, where their efforts are recognized, and where even the smallest progress reminds them that they are capable of so much more.</p>
+                <hr>
+                <p><strong>Email:</strong></p>
+                <p><a href="mailto:reynamarie.santos@gsfe.tupcavite.edu.ph">reynamarie.santos@gsfe.tupcavite.edu.ph</a></p>
+            </div>
+        <details><summary>Project perspective &amp; contributions</summary><p>You will receive clear, honest feedback that helps you understand what you're doing well and where you can improve. We know that constructive feedback builds confidence. We're here to support you and help you see that every mistake is a stepping stone.</p><ul><li>System Design</li><li>Feedback Loop</li><li>Psychology</li><li>User Support</li></ul></details></div>
+    </div>
+</dialog>
+<article class="pj-person" id="development-team-tapa">
+    <button class="pj-portrait" type="button" data-pj-bio="pj-bio-tapa" aria-haspopup="dialog" aria-controls="pj-bio-tapa" aria-label="Read Maeven L. Tapa's biography">
+        <img src="{% static 'pabasa_app/images/pabasa_team/tapa.png' %}" alt="Maeven L. Tapa" width="600" height="750" loading="lazy">
+        <span class="pj-portrait-action">Read biography <span aria-hidden="true">↗</span></span>
+    </button>
+    <div class="pj-person-caption"><span class="pj-person-number">06</span><div><h3>Maeven L. Tapa</h3><p>Speech Technology Specialist</p></div></div>
+</article>
+<dialog class="pj-bio" id="pj-bio-tapa" aria-labelledby="pj-bio-tapa-title">
+    <div class="pj-bio-toolbar"><button class="pj-bio-close" type="button" data-pj-close aria-label="Close Maeven L. Tapa's biography">Close <span aria-hidden="true">×</span></button></div>
+    <div class="pj-bio-layout">
+        <img class="pj-bio-portrait" src="{% static 'pabasa_app/images/pabasa_team/tapa.png' %}" alt="Maeven L. Tapa" width="600" height="750" loading="lazy">
+        <div class="pj-bio-copy"><p class="pj-kicker">The research yearbook / 06</p><h3 id="pj-bio-tapa-title">Maeven L. Tapa</h3><p class="pj-bio-role">Speech Technology Specialist</p>
+        <p>Integrates speech recognition and develops reading assessment functionality, processing, and reliability features.</p><div class="pj-bio-message">
+                <p>Every child's voice deserves to be heard, especially when they're still learning to find confidence in it. I hope PABASA helps make reading assessments feel less intimidating and gives learners the opportunity to speak, make mistakes, improve, and be proud of how far they've come.</p>
+                <hr>
+                <p><strong>Email:</strong></p>
+                <p><a href="mailto:maeven.tapa@gsfe.tupcavite.edu.ph">maeven.tapa@gsfe.tupcavite.edu.ph</a></p>
+            </div>
+        <details><summary>Project perspective &amp; contributions</summary><p>Assessments don't have to be scary! With PABASA, you'll experience testing as a natural part of learning. We've designed each assessment to be clear, fair, and supportive—showing you exactly what you know and your progress toward becoming a confident reader.</p><ul><li>Assessment Design</li><li>UX/UI</li><li>Testing</li><li>Usability Study</li></ul></details></div>
+    </div>
+</dialog>
+            </div>
+            <p class="pj-yearbook-footer"><span>Six people. A shared purpose.</span><span>PABASA / Behind the pages <span aria-hidden="true">✳</span></span></p>
+        </div>
+    </section>
+</div>
