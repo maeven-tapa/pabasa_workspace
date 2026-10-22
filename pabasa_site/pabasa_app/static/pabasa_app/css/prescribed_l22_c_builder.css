@@ -466,7 +466,7 @@ body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active{display:grid!
 body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active>.wb-bigbox,body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active>.wb-word-panel{display:none!important}
 body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active>.wb-reading-panel{display:flex!important;grid-column:1;grid-row:1;min-height:0;width:100%}
 body.wb-l22-g1-page.wb-l22-g1-building{overflow-x:hidden;overflow-y:auto}
-body.wb-l22-g1-page.wb-l22-g1-building #wb-content.wb-l22-g1-active{display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto auto!important;gap:12px!important;min-height:0;overflow:visible!important}
+body.wb-l22-g1-page.wb-l22-g1-building #wb-content.wb-l22-g1-active{display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto auto!important;gap:12px!important;min-height:0;overflow:visible!important;align-content:start}
 body.wb-l22-g1-page.wb-l22-g1-building #wb-content.wb-l22-g1-active>.wb-bigbox{display:flex!important;grid-column:1;grid-row:1;min-height:0;width:100%}
 body.wb-l22-g1-page.wb-l22-g1-building #wb-content.wb-l22-g1-active>.wb-bigbox .wb-bigbox-grid{height:100%;min-height:0;grid-template-rows:repeat(6,minmax(0,1fr))}
 body.wb-l22-g1-page.wb-l22-g1-building #wb-content.wb-l22-g1-active>.wb-reading-panel{display:none!important}
