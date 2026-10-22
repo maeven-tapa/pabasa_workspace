@@ -1164,7 +1164,7 @@
             <p class="fishing-intro-lead" data-language-text="introLead">Listen for the sound, then catch its letter!</p>
             <ol class="fishing-intro-steps">
                 <li><span class="fishing-intro-step-icon" aria-hidden="true"><i class="bi bi-volume-up-fill"></i></span><span data-language-text="introStep1">Tap the speaker to hear the sound.</span></li>
-                <li><span class="fishing-intro-step-icon" aria-hidden="true">A</span><span data-language-text="introStep2">Look at the letters on the fish.</span></li>
+                <li><span class="fishing-intro-step-icon" id="introLetterExample" aria-hidden="true">a</span><span data-language-text="introStep2">Look at the letters on the fish.</span></li>
                 <li><span class="fishing-intro-step-icon" aria-hidden="true"><i class="bi bi-hand-index-thumb-fill"></i></span><span data-language-text="introStep3">Tap the fish with the matching letter.</span></li>
                 <li><span class="fishing-intro-step-icon" aria-hidden="true">✓</span><span data-language-text="introStep4">A matching fish is caught, then a new sound begins.</span></li>
             </ol>
@@ -1250,6 +1250,7 @@
 {{ letter_sound_matching_material_json|json_script:"letter-sound-material" }}
 {{ letter_sound_matching_completion_json|json_script:"letter-sound-completion" }}
 
+<script src="{% static 'pabasa_app/js/letter_sound_matching_display.js' %}?v=1"></script>
 <script>
 (() => {
     const raw = JSON.parse(document.getElementById('letter-sound-material').textContent || '"{}"');
@@ -1299,6 +1300,7 @@
     }
 
     applyLanguageText();
+    document.getElementById('introLetterExample').textContent = formatLetterSoundMatchingItem('A', language);
 
     console.log('[LetterSoundMatching] Initialized:', {
         language,
@@ -1377,8 +1379,7 @@
     }
 
     function formatDisplayLetter(letter) {
-        if (!letter) return '';
-        return String(letter).trim();
+        return formatLetterSoundMatchingItem(letter, language);
     }
 
     function shuffled(values) {
@@ -1430,7 +1431,7 @@
             fishButton.type = 'button';
             fishButton.className = 'fish-choice';
             fishButton.dataset.letter = item.letter;
-            fishButton.setAttribute('aria-label', `Catch fish with letter ${item.letter}`);
+            fishButton.setAttribute('aria-label', `Catch fish with letter ${formatDisplayLetter(item.letter)}`);
 
             fishButton.style.setProperty('--fish-speed', `${5.5 + (index % 4) * 0.8}s`);
             fishButton.style.animationDelay = `${(index % 7) * 0.28}s`;
@@ -1593,7 +1594,7 @@
             const sizeClass = String(letter).length >= 3 ? 'is-long' : (String(letter).length === 2 ? 'is-syllable' : '');
             return `<div class="result-item">
                 <img class="fish-image fish-image-1" src="${fishSvg}" alt="" />
-                <span class="caught-letter ${sizeClass}">${escapeHtml(letter)}</span>
+                <span class="caught-letter ${sizeClass}">${escapeHtml(formatDisplayLetter(letter))}</span>
             </div>`;
         }).join('');
 

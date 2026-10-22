@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
+<script src="{% static 'pabasa_app/js/letter_sound_matching_display.js' %}?v=1"></script>
 <script src="{% static 'pabasa_app/js/lesson15_reading_review.js' %}?v=4" defer></script>
 <link rel="stylesheet" href="{% static 'pabasa_app/css/student_activity_review.css' %}?v=6">
 <script src="{% static 'pabasa_app/js/student_activity_review.js' %}?v=7" defer></script>
@@ -18350,7 +18351,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         function getTemplateItemPreview(item, title) {
             if (!item) return '';
             if (title === "5W's Story Questions") return `${item.question || ''} — ${(Array.isArray(item.answers) && item.answers.length ? item.answers : [item.answer || '']).join(' / ')}`.trim();
-            if (title === 'Letter & Sound Matching' || title === 'Match the Letter to Its Sound') return `${item.letter || ''} → ${item.sound || ''}`.trim();
+            if (isLetterSoundMatchingTemplate(title)) {
+                const language = activeTemplateActivity?.language || getSelectedTemplateLanguage();
+                return `${formatLetterSoundMatchingItem(item.letter, language)} → ${formatLetterSoundMatchingItem(item.sound, language)}`.trim();
+            }
+            if (title === 'Match the Letter to Its Sound') return `${item.letter || ''} → ${item.sound || ''}`.trim();
             if (title === 'Sound Detective') return `${item.word || ''} — ${item.targetSound || ''} — ${item.position || ''}`.trim();
             if (title === 'Clap & Count Syllables') return `${item.word || ''} — ${item.syllables || ''} syllables`.trim();
             if (title === 'Picture-Word Matching') return `${item.word || ''}`.trim();
@@ -18595,7 +18600,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <div class="letter-sound-items-grid">
                                     ${selectedSet.items.map(item => `
                                         <div class="letter-sound-item-card">
-                                            <div class="letter-sound-item-letter">${escapeHtml(item.letter)}</div>
+                                            <div class="letter-sound-item-letter">${escapeHtml(formatLetterSoundMatchingItem(item.letter, language))}</div>
                                         </div>
                                     `).join('')}
                                 </div>
@@ -19329,7 +19334,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 return {
                     title: activeTemplateActivity.title || 'Letter & Sound Matching',
                     meta: `${language} · Phonics`,
-                    body: items.map((item, index) => `${index + 1}. ${item.letter} — ${item.sound}`).filter(Boolean),
+                    body: items.map((item, index) => `${index + 1}. ${formatLetterSoundMatchingItem(item.letter, language)} — ${formatLetterSoundMatchingItem(item.sound, language)}`).filter(Boolean),
                     emptyMessage: 'Select a reading set.'
                 };
             }
@@ -20011,7 +20016,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                         ${previewItems.map((item, index) => {
                                             const fishIndex = (index % 6) + 1;
                                             const fishSvg = fishSvgTemplate.replace('fish_1.svg', `fish_${fishIndex}.svg`);
-                                            const letter = escapeHtml(item.letter || '?');
+                                            const letter = escapeHtml(formatLetterSoundMatchingItem(item.letter || '?', language));
                                             const sizeClass = String(item.letter || '').length >= 3 ? 'is-long' : (String(item.letter || '').length === 2 ? 'is-syllable' : '');
                                             return `
                                                 <button type="button" class="fish-choice" aria-label="Catch fish with letter ${letter}" style="left:${(index * 18) + 12}%; top:${28 + (index % 2) * 22}%">
