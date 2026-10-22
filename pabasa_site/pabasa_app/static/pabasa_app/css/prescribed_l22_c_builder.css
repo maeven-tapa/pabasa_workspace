@@ -465,11 +465,12 @@ body.wb-l22-g1-page.wb-l22-g1-instruction #wb-content.wb-l22-g1-active>.wb-bigbo
 body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active{display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important;gap:0!important;min-height:0}
 body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active>.wb-bigbox,body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active>.wb-word-panel{display:none!important}
 body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active>.wb-reading-panel{display:flex!important;grid-column:1;grid-row:1;min-height:0;width:100%}
-body.wb-l22-g1-page.wb-l22-g1-building #wb-content.wb-l22-g1-active{display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr) minmax(0,1fr)!important;gap:12px!important;min-height:0}
+body.wb-l22-g1-page.wb-l22-g1-building{overflow-x:hidden;overflow-y:auto}
+body.wb-l22-g1-page.wb-l22-g1-building #wb-content.wb-l22-g1-active{display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto auto!important;gap:12px!important;min-height:0;overflow:visible!important}
 body.wb-l22-g1-page.wb-l22-g1-building #wb-content.wb-l22-g1-active>.wb-bigbox{display:flex!important;grid-column:1;grid-row:1;min-height:0;width:100%}
 body.wb-l22-g1-page.wb-l22-g1-building #wb-content.wb-l22-g1-active>.wb-bigbox .wb-bigbox-grid{height:100%;min-height:0;grid-template-rows:repeat(6,minmax(0,1fr))}
 body.wb-l22-g1-page.wb-l22-g1-building #wb-content.wb-l22-g1-active>.wb-reading-panel{display:none!important}
-body.wb-l22-g1-page.wb-l22-g1-building #wb-content.wb-l22-g1-active>.wb-word-panel:not(.is-locked){display:flex!important;grid-column:1;grid-row:2;min-height:0;width:100%}
+body.wb-l22-g1-page.wb-l22-g1-building #wb-content.wb-l22-g1-active>.wb-word-panel:not(.is-locked){display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-auto-rows:auto;grid-column:1;grid-row:2;min-height:auto!important;width:100%;overflow:visible!important;align-items:stretch;column-gap:12px;row-gap:10px}
 body.wb-l22-g1-page.wb-l22-g1-building #wb-content.wb-l22-g1-active>.wb-bigbox .wb-bigbox-tile.is-active::before{content:none!important}
 body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active>.wb-reading-panel{justify-content:space-evenly;gap:clamp(10px,2.2vh,24px);padding:clamp(18px,3vw,42px) clamp(18px,5vw,72px)!important}
 body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active>.wb-reading-panel h2{margin:0!important}
@@ -493,3 +494,35 @@ body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active>.wb-reading-p
 .wb-l22-g1-page .wb-word-panel .wb-tools #wb-retry{flex-basis:100%;display:none}
 .wb-l22-g1-page .wb-word-panel .wb-tools #wb-retry:not([hidden]){display:block}
 @media(max-width:520px){.wb-l22-g1-page .wb-word-panel .wb-tools{gap:8px}.wb-l22-g1-page .wb-word-panel .wb-tools button{flex-basis:calc(50% - 4px);padding-inline:10px;font-size:.9rem}}
+
+/* Gawain 1: keep accepted words legible and make each selected tile unavailable
+   by tile identity until the current draft is cleared. */
+.wb-l22-g1-page .wb-builder-words{margin-top:10px;padding:10px 12px;background:#e8f5ea;border:2px solid #b9dfc5;border-radius:14px;color:#286349;font-size:1rem;line-height:1.2;white-space:normal;overflow:visible}
+.wb-l22-g1-page .wb-builder-words strong{display:block;margin-bottom:8px;color:#256347;font-size:1.05rem;letter-spacing:.03em}
+.wb-l22-g1-page .wb-builder-words ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin:0;padding:0;list-style:none}
+.wb-l22-g1-page .wb-builder-words li{display:flex;align-items:center;justify-content:center;min-height:38px;padding:6px 10px;background:#f4fff5;border:1px solid #9ccaa8;border-radius:10px;color:#286349;font-size:1rem;font-weight:900;text-align:center}
+.wb-l22-g1-page .wb-l22-builder .wb-bigbox-tile.is-picked:disabled{cursor:not-allowed;color:#5f7180;background:#dce6eb;border-color:#9eafb9;box-shadow:inset 0 0 0 2px #b8c7cf}
+.wb-l22-g1-page .wb-l22-builder .wb-bigbox-tile.is-picked:disabled:hover{background:#dce6eb;border-color:#9eafb9;transform:none}
+@media(max-width:520px){.wb-l22-g1-page .wb-builder-words{padding:8px 9px;font-size:.9rem}.wb-l22-g1-page .wb-builder-words strong{font-size:.95rem}.wb-l22-g1-page .wb-builder-words ul{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.wb-l22-g1-page .wb-builder-words li{min-height:34px;padding:5px 6px;font-size:.85rem}}
+
+/* Gawain 1 word-building row: keep the current selection and formed word
+   side by side on readable screens, then stack them when space is tight. */
+.wb-l22-g1-page.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch;column-gap:12px;row-gap:8px;min-width:0}
+.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>h2,
+.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-building-attempts,
+.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-builder-words,
+.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-tools,
+.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-builder-feedback{grid-column:1/-1;min-width:0;max-width:100%}
+.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-selected-parts,
+.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-formed-word{grid-row:3;min-width:0;max-width:100%;min-height:74px;margin:0;overflow-wrap:anywhere;word-break:normal}
+.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-selected-parts{grid-column:1;align-content:center;overflow:visible}
+.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-formed-word{grid-column:2;display:grid;place-items:center;padding:8px 12px}
+.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-formed-word{font-size:clamp(1.15rem,2.2vw,1.55rem);line-height:1.15;text-align:center}
+.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-selected-parts:before{content:'Napiling Pantig';display:block;flex:0 0 100%;max-width:100%;margin:0 0 6px;color:#55727e;font-size:.8rem;font-weight:900;line-height:1.1;text-align:left}
+.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-formed-word:before{content:'Nabuo na Salita';display:block;max-width:100%;color:#55727e;font-size:.8rem;font-weight:900;line-height:1.1}
+.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-builder-words{font-size:1.08rem}
+.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-builder-words{min-width:0;max-width:100%;margin:0;padding:12px 14px;overflow:visible}
+.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-builder-words ul{grid-template-columns:repeat(2,minmax(0,1fr));min-width:0;max-width:100%;gap:9px}
+.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-builder-words li{min-width:0;max-width:100%;min-height:44px;padding:8px 11px;font-size:1.08rem;overflow-wrap:anywhere;word-break:normal}
+@media(max-width:700px){.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked){grid-template-columns:minmax(0,1fr);row-gap:8px}.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-selected-parts,.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-formed-word{grid-column:1;grid-row:auto}.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-builder-words li{font-size:1rem}}
+@media(max-width:480px){.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-builder-words ul{grid-template-columns:minmax(0,1fr)}}

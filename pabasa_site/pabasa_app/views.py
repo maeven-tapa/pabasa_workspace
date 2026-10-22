@@ -107,6 +107,7 @@ from .reading_stt import (
     is_retryable_stt_error,
     is_invalid_recording_error,
     l22_c_pronunciation_match,
+    session8_transcript_uses_latin_script,
     word_numbers_in_transcript,
 )
 from .elevenlabs_tts import CRLA_TTS_MODEL_ID, CRLA_TTS_VOICE_ID
@@ -20743,6 +20744,7 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
             if item_index >= len(workbook['items']) and activity_key not in {'aral-l22-g1-c-syllable-builder', 'aral-l22-g4-f-syllable-builder', 'aral-l23-g6-q-syllable-builder'}:
                 raise ValueError('No reading item remains.')
             request.POST = request.POST.copy()
+            request.POST['prescribed_activity_key'] = activity_key
             if activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
                 if not state.get('read_aloud_started'):
                     raise ValueError('Simulan muna ang pagbasa.')
@@ -20782,7 +20784,12 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
                 'transcript', 'raw_transcript', 'language_code', 'stt_provider', 'stt_model',
                 'stt_fallback_reason', 'stt_words', 'stt_word_confidence_type',
             ) if key in result}
-            if activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
+            if result.get('transcript_script_rejected'):
+                # The shared evaluator already preserved the raw transcript
+                # and withheld scoring.  Do not run a target matcher that
+                # could discard a disallowed script and match its remainder.
+                result['complete'] = False
+            elif activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
                 event = dict(event)
                 raw_transcript = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
                 event['transcript'] = raw_transcript
@@ -20894,7 +20901,11 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
                     workbook['items'][item_index]['text'],
                     result.get('raw_transcript') or result.get('transcript') or '',
                 )
-            if activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_attempt':
+            if result.get('transcript_script_rejected'):
+                # Use each activity's existing unclear-recognition branch;
+                # this is not a wrong-reading attempt and cannot advance.
+                verified = None
+            elif activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_attempt':
                 verified = bool(str(result.get('transcript') or result.get('raw_transcript') or '').strip())
             elif activity_key == 'aral-l22-g1-c-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
                 transcript = str(result.get('transcript') or result.get('raw_transcript') or '').strip()
@@ -25662,6 +25673,15 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
             transcript,
             language_code,
         )
+        prescribed_activity_key = request.POST.get('prescribed_activity_key') or ''
+        session8_script_rejected = not session8_transcript_uses_latin_script(
+            prescribed_activity_key, transcript,
+        )
+        provider_transcript = transcript
+        if session8_script_rejected:
+            # Preserve the provider output for diagnostics, but ensure no
+            # later ASCII-oriented matching can evaluate a stripped fragment.
+            transcript = ''
         l22_c_pronunciation = request.POST.get('l22_c_pronunciation') == '1'
         # English prescribed activities contain very short words, for which
         # speech-to-text commonly returns these phonetic spellings. Canonicalize
@@ -25977,8 +25997,15 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
             allow_non_filipino=is_clap_phase2 and mode == "word",
             target_syllables=activity_syllables if is_clap_phase2 and mode == "word" else None,
         )
-        analysis['raw_transcript'] = transcript
-        analysis['transcript'] = transcript if lesson3_literal_reading else word_numbers_in_transcript(transcript, language_code)
+        analysis['raw_transcript'] = provider_transcript if session8_script_rejected else transcript
+        analysis['transcript'] = (
+            provider_transcript if session8_script_rejected
+            else transcript if lesson3_literal_reading
+            else word_numbers_in_transcript(transcript, language_code)
+        )
+        if session8_script_rejected:
+            analysis['complete'] = False
+            analysis['transcript_script_rejected'] = True
         salitang_magkatugma_exact = request.POST.get('salitang_magkatugma_exact') == '1'
         if salitang_magkatugma_exact and not lesson3_literal_reading:
             expected_words = ReadingMatcher.normalize_spoken_words(target_text)
@@ -26032,6 +26059,10 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
         # This enables precise miscue detection: distinguishes between STT segmentation artifacts 
         # (e.g., "pa gong" for "Pagong") and genuine student miscues (e.g., "bagong" for "Pagong")
         if mode == "paragraph":
+            hunt_aliases_enabled = (
+                request.POST.get('game') == 'hunt'
+                and request.POST.get('crla_story_reading') != '1'
+            )
             word_ranges = analysis.get('word_syllable_ranges', [])
             story_start_word_index = len(word_ranges)
             for word_index, word_range in enumerate(word_ranges):
@@ -26044,7 +26075,18 @@ def _reading_transcribe_response(request, *, stream_transcript=None):
                 language_code,
                 start_word_index=story_start_word_index,
                 crla_story_reading=request.POST.get('crla_story_reading') == '1',
+                hunt_pronunciation_aliases=(
+                    mode == 'paragraph'
+                    and hunt_aliases_enabled
+                ),
             )
+            if (
+                hunt_aliases_enabled
+                and alignment_result.get('total_words')
+                and alignment_result.get('correct_words') == alignment_result.get('total_words')
+                and not alignment_result.get('miscues')
+            ):
+                analysis['complete'] = True
             analysis['word_results'] = alignment_result.get('word_results', [])
             analysis['word_alignment'] = {
                 'expected_words': alignment_result.get('expected_words', []),

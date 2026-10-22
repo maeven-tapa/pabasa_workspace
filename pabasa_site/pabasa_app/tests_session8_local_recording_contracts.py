@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.test import RequestFactory, SimpleTestCase
 
@@ -13,6 +14,7 @@ from . import views
 from .prescribed_workbook import (
     apply_event,
     get_activity,
+    initial_state,
     initial_l24_g3_repeat_state,
 )
 
@@ -207,6 +209,139 @@ class Session8ClipSubmissionBehaviorTests(SimpleTestCase):
                     self.assertNotIn('prescribed_stream_token', request.POST)
                     self.assertEqual(result['progress']['current_index'], 1 if is_correct else 0)
                     self.assertEqual(result['state']['revision'], 1)
+
+    def test_l22_g1_accented_ce_provider_results_advance_once_without_an_incorrect_attempt(self):
+        activity_key = 'aral-l22-g1-c-syllable-builder'
+        activity_key = 'aral-l22-g1-c-syllable-builder'
+        activity = get_activity(activity_key)
+        for transcript in ('sé', 'Sé', 'SÉ', 'sé.'):
+            with self.subTest(transcript=transcript):
+                state = initial_state()
+                apply_event(activity, state, {'action': 'reading_started'})
+                apply_event(activity, state, {
+                    'action': 'reading_syllable_attempt', 'transcript': 'cac',
+                }, True)
+                request = RequestFactory().post('/progress/', data={
+                    'action': 'reading_syllable_attempt', 'revision': str(state['revision']),
+                    'audio': SimpleUploadedFile('session8.webm', b'mocked-webm-audio', 'audio/webm'),
+                    '_preview_state': json.dumps(state),
+                })
+                request._admin_prescribed_preview = True
+                real_reading_api = views.reading_transcribe_api
+                while hasattr(real_reading_api, '__wrapped__'):
+                    real_reading_api = real_reading_api.__wrapped__
+                with (
+                    patch.object(views, '_check_auth', return_value=True),
+                    patch.object(views, '_enforce_student_access_for_request', return_value=None),
+                    patch.object(
+                        views, 'transcribe_audio_bytes_with_model',
+                        return_value=(transcript, 'mocked-chirp-3', ''),
+                    ),
+                    patch.object(views, 'reading_transcribe_api', side_effect=real_reading_api),
+                ):
+                    response = views._prescribed_workbook_activity_progress(
+                        request, activity_key, activity, student=None
+                    )
+                result = json.loads(response.content)
+                self.assertEqual(response.status_code, 200, result)
+                self.assertEqual(result['state']['index'], 2)
+                self.assertEqual(result['state']['last_feedback'], 'Tama!')
+                self.assertEqual(result['state']['reading_attempts'], 0)
+
+    def test_session8_script_rejection_is_consistent_for_uploaded_and_streamed_results(self):
+        activity_cases = (
+            ('aral-l22-g1-c-syllable-builder', 'Cebu', {
+                'l22_c_pronunciation': '1', 'l22_c_syllable': 'ce', 'l22_c_sound': 'soft',
+            }),
+            # These custom word-search pages do not offer a microphone, but
+            # their progress route still invokes the shared evaluator for a
+            # submitted reading action.  Keep that dormant server path guarded.
+            ('aral-l22-g3-c-word-search', 'Cecilia', {}),
+            ('aral-l22-g5-f-word-search', 'Felix', {}),
+        )
+        for activity_key, target_text, extra_fields in activity_cases:
+            base_fields = {
+                'target_text': target_text, 'language': 'English', 'mode': 'reading',
+                'prescribed_activity_key': activity_key, **extra_fields,
+            }
+            for transcript in ('से', 'seसे'):
+                for source in ('uploaded', 'streamed'):
+                    with self.subTest(activity_key=activity_key, source=source, transcript=transcript):
+                        request = RequestFactory().post('/api/reading/transcribe/', {
+                            **base_fields,
+                            **({'audio': SimpleUploadedFile('session8.webm', b'audio', 'audio/webm')}
+                               if source == 'uploaded' else {}),
+                        })
+                        request._dont_enforce_csrf_checks = True
+                        with (
+                            patch.object(views, '_check_auth', return_value=True),
+                            patch.object(views, '_enforce_student_access_for_request', return_value=None),
+                            patch.object(views, 'transcribe_audio_bytes_with_model', return_value=(transcript, 'mocked-chirp-3', '')),
+                        ):
+                            response = (
+                                views._reading_transcribe_response(request, stream_transcript=transcript)
+                                if source == 'streamed' else views.reading_transcribe_api(request)
+                            )
+                        result = json.loads(response.content)
+                        self.assertEqual(response.status_code, 200, result)
+                        self.assertFalse(result['complete'])
+                        self.assertTrue(result['transcript_script_rejected'])
+                        self.assertEqual(result['raw_transcript'], transcript)
+
+        activity_key = 'aral-l22-g1-c-syllable-builder'
+        activity = get_activity(activity_key)
+        state = initial_state()
+        apply_event(activity, state, {'action': 'reading_started'})
+        apply_event(activity, state, {
+            'action': 'reading_syllable_attempt', 'transcript': 'cac',
+        }, True)
+        request = RequestFactory().post('/progress/', data={
+            'action': 'reading_syllable_attempt', 'revision': str(state['revision']),
+            'audio': SimpleUploadedFile('session8.webm', b'mocked-webm-audio', 'audio/webm'),
+            '_preview_state': json.dumps(state),
+        })
+        request._admin_prescribed_preview = True
+        real_reading_api = views.reading_transcribe_api
+        while hasattr(real_reading_api, '__wrapped__'):
+            real_reading_api = real_reading_api.__wrapped__
+        with (
+            patch.object(views, '_check_auth', return_value=True),
+            patch.object(views, '_enforce_student_access_for_request', return_value=None),
+            patch.object(views, 'transcribe_audio_bytes_with_model', return_value=('से', 'mocked-chirp-3', '')),
+            patch.object(views, 'reading_transcribe_api', side_effect=real_reading_api),
+        ):
+            response = views._prescribed_workbook_activity_progress(
+                request, activity_key, activity, student=None
+            )
+        progress = json.loads(response.content)['state']
+        self.assertEqual(progress['index'], 1)
+        self.assertEqual(progress['reading_attempts'], 0)
+        self.assertEqual(progress['last_feedback'], 'Hindi ko malinaw na narinig. Subukan muli.')
+
+    def test_l22_search_reading_posts_bind_the_activity_key_before_evaluation(self):
+        for activity_key in ('aral-l22-g3-c-word-search', 'aral-l22-g5-f-word-search'):
+            with self.subTest(activity_key=activity_key):
+                activity = get_activity(activity_key)
+                request = RequestFactory().post('/progress/', data={
+                    'action': 'reading', 'revision': '0', '_preview_state': '{}',
+                    'audio': SimpleUploadedFile('session8.webm', b'mocked-webm-audio', 'audio/webm'),
+                })
+                request._admin_prescribed_preview = True
+
+                def rejected_speech(reading_request):
+                    self.assertEqual(reading_request.POST['prescribed_activity_key'], activity_key)
+                    return JsonResponse({
+                        'success': True, 'transcript': 'से', 'raw_transcript': 'से',
+                        'complete': False, 'transcript_script_rejected': True,
+                    })
+
+                with patch.object(views, 'reading_transcribe_api', side_effect=rejected_speech):
+                    response = views._prescribed_workbook_activity_progress(
+                        request, activity_key, activity, student=None
+                    )
+                # The legacy action remains invalid for a word search, but
+                # only after the request has reached guarded evaluation.
+                self.assertEqual(response.status_code, 400, response.content)
 
 
 class Session8MicrophoneTemplateTests(SimpleTestCase):

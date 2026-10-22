@@ -705,6 +705,7 @@
         formData.append("target_text", targetText);
         formData.append("current_syllable_index", "0");
         formData.append("mode", mode);
+        formData.append("game", selectedGameMode || mode);
         formData.append('material_id', String(getActiveMaterialMeta()?.raw_id || getActiveMaterialMeta()?.id || materialId || ''));
         window.MaterialSpeechCapture?.attach(formData, blob);
         const materialMeta = getActiveMaterialMeta?.() || {};
@@ -811,6 +812,12 @@
         speechRequestActive = !huntDiscardCurrentAudio;
         if (speechRequestActive) speechFeedback("Checking your reading…");
         updateReadingToggleButton();
+        // Hunt's batch fallback must receive the complete clip. Keep this
+        // flush scoped to Hunt so Free and Color recording behavior is unchanged.
+        if (isHuntMode && typeof speechRecorder.requestData === "function") {
+            try { speechRecorder.requestData(); }
+            catch (error) { console.warn("PABASA [Practice]: Could not flush Hunt speech data", error); }
+        }
         speechRecorder.stop();
     }
 

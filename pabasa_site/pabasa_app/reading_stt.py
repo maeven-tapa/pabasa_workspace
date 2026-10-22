@@ -248,6 +248,9 @@ L22_G1_BU_STT_ALIASES = {'bu', 'boo'}
 # Gawain 1 reading gate. They must not affect another activity or pantig.
 L22_G1_SCOPED_SYLLABLE_ALIASES = {
     'bu': L22_G1_BU_STT_ALIASES,
+    # Observed STT spellings of the isolated soft-C /se/ pantig. These stay
+    # within Gawain 1 and retain the separately paired Cebu/Celeste contexts.
+    'ce': {'ce', 'se', 'seh'},
     # Observed Chirp 3 (en-PH) whole-token transcription of isolated /com/.
     # This remains limited to the exact G1 activity and displayed pantig.
     'com': {'com', 'kom', 'comb'},
@@ -258,6 +261,31 @@ L22_G1_SCOPED_SYLLABLE_ALIASES = {
     'te': {'te', 't'},
     'les': {'les', 'less'},
 }
+
+# These are the registered Session 8 routes that can reach shared speech
+# evaluation.  This includes the two Lesson 22 word searches: their current
+# custom UI has no microphone control, but the progress endpoint still accepts
+# a reading action and invokes the evaluator before its state handler rejects
+# that action.
+SESSION_8_SPEECH_ACTIVITY_KEYS = frozenset({
+    'aral-l22-g1-c-syllable-builder',
+    'aral-l22-g2-c-word-reading',
+    'aral-l22-g3-c-word-search',
+    'aral-l22-g4-f-syllable-builder',
+    'aral-l22-g5-f-word-search',
+    'aral-l22-g6-f-word-reading',
+    'aral-l23-g1-n-syllable-builder',
+    'aral-l23-g2-n-word-reading',
+    'aral-l23-g3-j-word-reading',
+    'aral-l23-g6-q-syllable-builder',
+    'aral-l23-g7-q-word-reading',
+    'aral-l24-g1-v-syllable-builder',
+    'aral-l24-g2-v-word-reading',
+    'aral-l24-g3-x-repeat',
+    'aral-l24-g3-x-word-reading',
+    'aral-l24-g4-x-pictures',
+    'aral-l24-g7-z-word-reading',
+})
 
 # The English context is deliberately used as an STT hint for the C sound.
 # Google can therefore return the complete hinted word for the first pantig;
@@ -273,6 +301,45 @@ L22_C_CONTEXT_ALIASES = {
 }
 
 
+def session8_transcript_uses_latin_script(activity_key, transcript):
+    """Accept only Latin-script text for the registered Session 8 STT routes.
+
+    Decompose first so Filipino ``ñ`` and accented Latin forms such as ``sé``
+    retain their base Latin letter plus attached combining marks.  Any other
+    writing-system letter is rejected before an ASCII-oriented evaluator can
+    discard it and accidentally accept the remaining Latin fragment.
+    """
+    if activity_key not in SESSION_8_SPEECH_ACTIVITY_KEYS:
+        return True
+
+    attached_to_latin = False
+    for char in unicodedata.normalize('NFD', str(transcript or '')):
+        category = unicodedata.category(char)
+        if category.startswith('L'):
+            if 'LATIN' not in unicodedata.name(char, ''):
+                return False
+            attached_to_latin = True
+        elif category.startswith('M'):
+            if not attached_to_latin:
+                return False
+        elif char.isspace() or category.startswith('P') or (char.isascii() and char.isdigit()):
+            attached_to_latin = False
+        else:
+            # Symbols and control characters are not transcript text for this
+            # Latin-script evaluation policy.
+            return False
+    return True
+
+
+def _l22_g1_ce_equivalent_spoken_words(transcript):
+    """Normalize accents only for the approved G1 ``ce`` recognition alias."""
+    folded = ''.join(
+        char for char in unicodedata.normalize('NFD', str(transcript or '')).casefold()
+        if not unicodedata.category(char).startswith('M')
+    )
+    return ReadingMatcher.normalize_spoken_words(folded)
+
+
 def l22_c_pronunciation_match(expected_syllable, target_word, transcript, c_sound, activity_key=''):
     """Match one indexed Lesson 22 Cc pantig with strict STT aliases.
 
@@ -280,12 +347,29 @@ def l22_c_pronunciation_match(expected_syllable, target_word, transcript, c_soun
     one-token results are accepted, plus an explicitly paired context-word
     result when English STT has expanded the first Cc pantig to its hint.
     This intentionally avoids the shared homophone/CV heuristics so another
-    Big Box item or an unrelated word cannot advance the current item.
+    Big Box item or an unrelated word cannot advance the current item. Natural
+    speech may contain other words; only an accepted whole token can advance.
     """
     expected = ReadingMatcher.normalize_word(expected_syllable)
     target = ReadingMatcher.normalize_word(target_word)
-    heard_words = ReadingMatcher.normalize_spoken_words(transcript)
-    if not expected or len(heard_words) != 1:
+    if (activity_key == 'aral-l22-g1-c-syllable-builder'
+            and not session8_transcript_uses_latin_script(activity_key, transcript)):
+        return False
+    heard_words = (
+        _l22_g1_ce_equivalent_spoken_words(transcript)
+        if activity_key == 'aral-l22-g1-c-syllable-builder' and expected == 'ce'
+        else ReadingMatcher.normalize_spoken_words(transcript)
+    )
+    if not expected or not heard_words:
+        return False
+    # Natural conversational speech is approved only for Gawain 1; all other
+    # callers retain the established isolated-token contract.
+    if activity_key != 'aral-l22-g1-c-syllable-builder' and len(heard_words) != 1:
+        return False
+    # The approved soft-C spellings are isolated whole-token recognition
+    # exceptions, not natural-speech substitutions.
+    if (activity_key == 'aral-l22-g1-c-syllable-builder'
+            and expected == 'ce' and len(heard_words) != 1):
         return False
 
     accepted = set(L22_C_SYLLABLE_ALIASES.get(expected, {expected}))
@@ -298,7 +382,7 @@ def l22_c_pronunciation_match(expected_syllable, target_word, transcript, c_soun
         elif sound == 'soft':
             accepted.add('s' + expected[1:])
     accepted.update(L22_C_CONTEXT_ALIASES.get((expected, target), ()))
-    return heard_words[0] in accepted
+    return any(token in accepted for token in heard_words)
 
 
 def phrase_hints_for(language="", mode=""):
@@ -972,6 +1056,22 @@ def _story_words_are_equivalent(expected_word, recognized_word):
     return expected == recognized
 
 
+# Explicit, Hunt-only STT spelling variants observed for the Filipino proper
+# name "Ana". Ordinary paragraph and CRLA matching remain unchanged unless
+# the caller opts into this map.
+HUNT_WORD_ALIASES = {
+    "ana": frozenset({"anne", "anna"}),
+}
+
+
+def _hunt_story_words_are_equivalent(expected_word, recognized_word):
+    if _story_words_are_equivalent(expected_word, recognized_word):
+        return True
+    expected = _normalize_story_word_text(expected_word)
+    recognized = _normalize_story_word_text(recognized_word)
+    return recognized in HUNT_WORD_ALIASES.get(expected, ())
+
+
 CRLA_WORD_ALIASES = {
     "aling": frozenset({"aleng"}),
     "agiw": frozenset({"agyo"}),
@@ -1091,7 +1191,7 @@ def story_word_states_from_results(expected_text, recognized_text=None, total_wo
     return resolved
 
 
-def align_story_transcript(expected_text, recognized_text, language_code="en-US", start_word_index=None, crla_story_reading=False):
+def align_story_transcript(expected_text, recognized_text, language_code="en-US", start_word_index=None, crla_story_reading=False, hunt_pronunciation_aliases=False):
     """Align a story transcript against the expected text at the word level.
 
     This is intentionally conservative: it tolerates punctuation/case/spacing
@@ -1104,6 +1204,11 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
     cursor_relative = start_word_index is not None
     absolute_word_offset = min(max(0, int(start_word_index or 0)), len(all_expected_words))
     expected_words = all_expected_words[absolute_word_offset:] if cursor_relative else all_expected_words
+    words_equivalent = (
+        _crla_story_words_are_equivalent if crla_story_reading
+        else _hunt_story_words_are_equivalent if hunt_pronunciation_aliases
+        else _story_words_are_equivalent
+    )
     if not expected_words and not recognized_words:
         return {
             "expected_text": str(expected_text or ""),
@@ -1129,7 +1234,6 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
         for j in range(1, cols):
             expected_word = expected_words[i - 1]
             recognized_word = recognized_words[j - 1]
-            words_equivalent = (_crla_story_words_are_equivalent if crla_story_reading else _story_words_are_equivalent)
             substitution_cost = 0 if words_equivalent(expected_word, recognized_word) else 1
             candidates = [
                 dp[i - 1][j] + 1,
@@ -1200,7 +1304,6 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
         if i > 0 and j > 0:
             expected_word = expected_words[i - 1]
             recognized_word = recognized_words[j - 1]
-            words_equivalent = (_crla_story_words_are_equivalent if crla_story_reading else _story_words_are_equivalent)
             substitution_cost = 0 if words_equivalent(expected_word, recognized_word) else 1
             if dp[i][j] == dp[i - 1][j - 1] + substitution_cost:
                 if words_equivalent(expected_word, recognized_word):
@@ -1243,11 +1346,11 @@ def align_story_transcript(expected_text, recognized_text, language_code="en-US"
             if i > 0:
                 expected_word = expected_words[i - 1]
                 has_future_match = any(
-                    (_crla_story_words_are_equivalent if crla_story_reading else _story_words_are_equivalent)(expected_word, later_word)
+                    words_equivalent(expected_word, later_word)
                     for later_word in recognized_words[: j - 1]
                 )
                 if (
-                    not (_crla_story_words_are_equivalent if crla_story_reading else _story_words_are_equivalent)(expected_word, recognized_word)
+                    not words_equivalent(expected_word, recognized_word)
                     and has_future_match
                 ):
                     insertion_count += 1
