@@ -32,7 +32,6 @@
             <a class="signature-avatar admin-profile-avatar" href="{% url 'admin_settings' %}" aria-label="Account settings">{{ first_name|default:"A"|slice:":1"|upper }}{{ last_name|default:"D"|slice:":1"|upper }}</a>
             <div class="signature-name admin-profile-name">{{ first_name|default:"PABASA" }} {{ last_name|default:"Admin" }}</div>
             <div class="signature-section admin-profile-role">Admin</div>
-            <a class="signature-profile-link" href="{% url 'admin_settings' %}"><i class="bi bi-person-circle" aria-hidden="true"></i><span>Account settings</span></a>
         </div>
     </div>
     <div class="signature-toggle-row admin-sidebar-collapse-row d-none d-lg-flex">

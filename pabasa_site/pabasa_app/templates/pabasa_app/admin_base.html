@@ -3500,6 +3500,13 @@
     </style>
     <link rel="stylesheet" href="{% static 'pabasa_app/dashboard_branding.css' %}?v=20261011-sidebar-slide">
     <link rel="stylesheet" href="{% static 'pabasa_app/signature_sidebar.css' %}?v=20261015-close-button">
+    <style>
+        /* The admin card has no action row; size it to the remaining profile content. */
+        html body :is(#adminSidebarCanvas, .admin-sidebar) .signature-sidebar .signature-profile.admin-profile-card {
+            grid-template-rows: auto !important;
+            min-height: 0 !important;
+        }
+    </style>
 {% include "pabasa_app/includes/typography.html" %}
 </head>
 <body class="admin-preloading">
