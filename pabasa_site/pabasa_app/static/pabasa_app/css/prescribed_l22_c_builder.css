@@ -507,7 +507,7 @@ body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active>.wb-reading-p
 
 /* Gawain 1 word-building row: keep the current selection and formed word
    side by side on readable screens, then stack them when space is tight. */
-.wb-l22-g1-page.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch;column-gap:12px;row-gap:8px;min-width:0}
+.wb-l22-g1-page.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch;align-content:start;column-gap:12px;row-gap:8px;min-width:0}
 .wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>h2,
 .wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-building-attempts,
 .wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-builder-words,
