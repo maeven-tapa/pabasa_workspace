@@ -545,3 +545,10 @@ body.wb-l22-g1-page.wb-l22-g1-building #wb-content.wb-l22-g1-active>.wb-bigbox .
   height:auto!important;
   min-height:0!important;
 }
+
+/* Building mode uses the full learner card for the Big Box and word builder;
+   the reading header/progress remain available in the earlier reading state. */
+body.wb-l22-g1-page.wb-l22-g1-building .wb-shell>.wb-lesson-header,
+body.wb-l22-g1-page.wb-l22-g1-building #wb-progress-row{
+  display:none!important;
+}
