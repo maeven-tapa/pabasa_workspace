@@ -1,0 +1,24 @@
+{% load static %}
+{# Overview introduction. The other four page sections are composed separately. #}
+<section class="pabasa-overview story-section" id="platform-overview" aria-labelledby="story-title">
+    <div class="story-opening">
+        <div class="story-shell">
+            <div class="story-masthead"><span>The PABASA Storybook</span><span>A place for growing readers</span></div>
+            <header class="story-opening__heading">
+                <p class="story-eyebrow">About the platform</p>
+                <h1 id="story-title"><span>What is</span> <strong>PABASA<span class="story-question">?</span></strong></h1>
+                <p class="story-opening__lead">Bringing reading assessment<br class="story-desktop-break"> and learning together.</p>
+            </header>
+            <div class="story-opening__copy">
+                <p>PABASA, or the <strong>Program for Automated Basic Reading and Speech Assessment</strong>, brings reading assessments and learning activities together in one digital platform.</p>
+                <p>Built for Grade 2 learners and their teachers, it supports classroom reading work while keeping teachers involved in each child's learning.</p>
+            </div>
+            <figure class="story-welcome">
+                <div class="story-welcome__page story-welcome__page--left" aria-hidden="true"><span>Every reading journey<br>starts with a page.</span></div>
+                <img class="story-welcome__pip" src="{% static 'pabasa_app/images/hero1.webp' %}" width="1024" height="768" alt="Pip and three young learners exploring an open reading book together" fetchpriority="high" decoding="async">
+                <div class="story-welcome__page story-welcome__page--right" aria-hidden="true"><span>Let’s bring the<br>pages together.</span></div>
+                <figcaption>Meet Pip, your companion through the PABASA story.</figcaption>
+            </figure>
+        </div>
+    </div>
+</section>

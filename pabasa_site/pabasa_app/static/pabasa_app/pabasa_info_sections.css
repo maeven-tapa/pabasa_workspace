@@ -1,0 +1,283 @@
+/* Four chapters of the public introduction. Overview styles stay in pabasa_info.css. */
+.pabasa-sections { --chapter-ink: #103c64; --chapter-muted: #426176; --chapter-blue: #0877ba; --chapter-gold: #f4cc4d; font-size: clamp(1rem, 1.05vw, 1.2rem); }
+.pabasa-sections .pabasa-section-shell { width: min(90%, 1680px); margin-inline: auto; position: relative; }
+.pabasa-sections .pabasa-chapter { position: relative; scroll-margin-top: var(--story-nav-height); }
+.pabasa-sections :where(h3,h4,ul,ol,dl,dd) { margin: 0; }
+.pabasa-sections :where(h2,h3,h4) { text-wrap: balance; }
+.pabasa-sections h2 { font-size: clamp(2.4rem, 4.4vw, 5.8rem); line-height: 1.12; letter-spacing: -.045em; }
+.pabasa-sections h3 { font-size: clamp(1.65rem, 2.5vw, 3rem); line-height: 1.22; font-weight: 800; letter-spacing: -.035em; }
+.pabasa-sections p { line-height: 1.7; }
+.pabasa-sections img { display: block; max-width: 100%; height: auto; }
+.pabasa-sections .pabasa-kicker { font-size: .75rem; text-transform: uppercase; letter-spacing: .12em; font-weight: 800; color: #27607b; margin-bottom: 14px; }
+.pabasa-purpose { padding: clamp(54px, 5vw, 88px) 0 60px; background: #fffaf0; }
+.pabasa-purpose__intro { display: grid; grid-template-columns: .8fr 1.2fr; gap: 8%; align-items: center; margin-bottom: 32px; }
+.pabasa-purpose__intro > p { max-width: 720px; color: var(--chapter-muted); }
+.pabasa-classroom { max-width: 1380px; margin-inline: auto; }
+.pabasa-equation-board { position: relative; width: 90%; margin: 0 auto; padding: clamp(30px, 4vw, 64px); border: 12px solid #dab584; border-bottom-width: 18px; border-radius: 10px; background: #17496a; box-shadow: 0 8px 0 #eed9b4; color: #fff; }
+.pabasa-equation-board__title { display: flex; justify-content: space-between; gap: 24px; align-items: baseline; padding-bottom: 26px; border-bottom: 1px solid #ffffff38; }
+.pabasa-equation-board__title h3 { color: #fff; font-size: clamp(1.7rem, 2.8vw, 3rem); }
+.pabasa-equation-board__title > p { font-size: .83rem; white-space: nowrap; color: #e3edf3; }
+.pabasa-equation { display: grid; grid-template-columns: 1fr 64px 1fr; gap: 4%; align-items: center; padding-top: 32px; }
+.pabasa-equation__term { min-width: 0; }
+.pabasa-equation__term h4 { color: #fff3ba; font-size: clamp(1.7rem, 2.6vw, 2.9rem); line-height: 1.2; font-weight: 800; margin: 12px 0 20px; }
+.pabasa-equation__term > p { color: #edf5f8; max-width: 370px; font-size: .95em; }
+.pabasa-equation__tab { display: inline-block; font-size: .68rem; letter-spacing: .09em; text-transform: uppercase; color: #d0e9f6; }
+.pabasa-equation__plus { color: #ffdf69; font-size: 5rem; font-weight: 400; text-align: center; }
+.pabasa-equation__paper { display: grid; gap: 9px; max-width: 220px; padding: 16px 22px; margin: 24px 0 0 8px; background: #fffdf5; color: #254f6b; transform: rotate(-5deg); border-radius: 3px; box-shadow: 5px 5px 0 #98bfd5; }
+.pabasa-equation__paper > span:first-child { font-size: .85rem; font-weight: 800; }
+.pabasa-equation__paper > span:nth-child(2) { font-size: .65rem; }
+.pabasa-equation__paper i { display: block; background: #cbdfe7; height: 2px; margin-top: 2px; }
+.pabasa-equation__workbook { display: grid; gap: 9px; max-width: 280px; padding: 19px 22px; margin: 24px 0 0; background: #fff3c7; color: #254f6b; transform: rotate(3deg); border-left: 9px solid #f4cc4d; border-radius: 2px 12px 12px 2px; }
+.pabasa-equation__workbook > span { font-size: .65rem; }
+.pabasa-equation__workbook strong { color: #0877ba; font-size: 1.8rem; }
+.pabasa-board-ledge { position: absolute; height: 10px; bottom: -24px; left: -4%; right: -4%; border-radius: 4px; background: #bd8c51; box-shadow: 0 5px 0 #dbc097; }
+.pabasa-equation-result { display: grid; grid-template-columns: 1fr 2fr; align-items: center; gap: 10px; margin-top: 40px; }
+.pabasa-classroom__pip { width: 100%; max-width: 420px; justify-self: center; }
+.pabasa-result-book { position: relative; padding: 30px 40px 42px; text-align: center; background: #fffdf7; border-bottom: 9px solid #e9d8ac; border-radius: 40% 7% 5% 8% / 7% 3% 3% 5%; box-shadow: 0 11px 0 -4px #f5e9cf; }
+.pabasa-result-book::before { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 20px; background: linear-gradient(90deg, transparent, #d9cda750, transparent); pointer-events: none; }
+.pabasa-result-book h3 { position: relative; font-size: clamp(2.2rem, 3.6vw, 4rem); color: #0877ba; }
+.pabasa-result-book h3 > span { color: #bd8c22; margin-right: .25em; }
+.pabasa-result-book__idea { position: relative; max-width: 40ch; margin: 18px auto 0 !important; font-size: max(1rem, .95em); color: #426176; text-wrap: balance; }
+
+/* The two workspaces share the platform, with different compositions. */
+.pabasa-tools { background: #fff7e3; }
+.pabasa-tools__intro { padding-top: 60px; padding-bottom: 10px; }
+.pabasa-tools__intro > p:last-child { max-width: 620px; margin-top: 22px; color: var(--chapter-muted); }
+.pabasa-workspace { position: relative; scroll-margin-top: calc(var(--story-nav-height) + 20px); }
+.pabasa-workspace__spread { display: grid; grid-template-columns: 1.15fr 1fr; gap: 7%; align-items: center; padding-block: 32px 48px; }
+.pabasa-workspace__copy { min-width: 0; max-width: 620px; }
+.pabasa-workspace__copy > h3 { margin-bottom: 24px; }
+.pabasa-workspace__copy > p:not(.pabasa-kicker) { color: var(--chapter-muted); }
+.pabasa-workspace--teacher .pabasa-workspace__copy { grid-column: 2; grid-row: 1; }
+.pabasa-workspace--teacher .pabasa-workspace-scene { grid-column: 1; grid-row: 1; }
+.pabasa-feature-list { list-style: none; padding: 0; margin: 26px 0 0 !important; display: grid; gap: 13px; font-size: max(1rem, .9em); }
+.pabasa-feature-list li { position: relative; padding-left: 29px; line-height: 1.6; }
+.pabasa-feature-list li::before { content: "✓"; position: absolute; top: .13em; left: 0; width: 19px; height: 19px; border-radius: 50%; background: #d6e9f3; color: #135a7f; font-size: .8rem; line-height: 19px; text-align: center; font-weight: 800; }
+.pabasa-teacher-note { margin-top: 26px; border-top: 1px solid #dccfae; font-size: .8em; }
+.pabasa-teacher-note summary { padding-block: 16px 8px; cursor: pointer; font-weight: 700; }
+.pabasa-teacher-note p { padding: 8px 0 16px; color: var(--chapter-muted); }
+.pabasa-workspace-scene { position: relative; min-width: 0; isolation: isolate; padding-top: 20px; }
+.pabasa-workspace-scene::before { content: ""; position: absolute; z-index: -1; inset: 25% 0 10%; border-radius: 44% 48% 26% 32%; background: #ffedb4; }
+.pabasa-workspace-scene__screen { position: relative; width: 68%; margin-left: auto; transform: rotate(3deg); }
+.pabasa-workspace-scene__person { position: relative; z-index: 1; width: 80%; margin: -29% 0 -8% -5%; transition: transform .3s ease; }
+.pabasa-workspace-scene figcaption { position: relative; z-index: 2; border-bottom: 1px solid #dccfae; padding: 12px 0; color: #244f66; font-size: .8rem; font-weight: 700; display: flex; justify-content: space-between; gap: 16px; }
+.pabasa-workspace-scene figcaption span { font-size: .7rem; font-weight: 400; color: #536d72; }
+.pabasa-workspace-bridge { position: relative; z-index: 3; width: fit-content; max-width: 90%; margin: -1px auto -25px; padding: 15px 26px; background: #103c64; border-radius: 4px 22px 4px 22px; color: #fff; font-size: .85rem; text-align: center; box-shadow: 0 5px 0 #e4c05a; }
+.pabasa-workspace-bridge span { color: #ffdf69; font-weight: 800; }
+.pabasa-workspace--student { padding-top: 45px; background: #eaf7fd; border-radius: 12% 0 0 0 / 65px 0 0 0; }
+.pabasa-workspace--student .pabasa-workspace__spread { grid-template-columns: 1fr 1.15fr; }
+.pabasa-workspace-scene--student::before { background: #cceaf8; inset: 18% 0 5%; border-radius: 50% 28% 15% 30%; }
+.pabasa-workspace-scene--student .pabasa-workspace-scene__screen { width: 76%; margin: 0 auto 0 0; transform: rotate(-3deg); }
+.pabasa-workspace-scene--student .pabasa-workspace-scene__person { width: 80%; margin: -15% -4% -7% auto; }
+.pabasa-workspace-scene__pip { position: absolute; width: 29%; bottom: 10%; left: -2%; z-index: 2; }
+.pabasa-workspace-scene--student figcaption { border-color: #a4cedf; }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) { .pabasa-workspace-scene:hover .pabasa-workspace-scene__person { transform: translateY(-4px); } }
+
+/* Public interface illustrations: based on existing templates, never learner data. */
+.pabasa-preview { border: 6px solid #254c6a; border-radius: 15px; background: #fff; overflow: hidden; box-shadow: 5px 7px 0 #163f6512; color: #103c64; font-size: .85rem; }
+.pabasa-preview__bar { display: flex; gap: 14px; align-items: center; justify-content: space-between; padding: 11px 15px; background: #e8f4fc; border-bottom: 1px solid #cde0eb; font-size: .7rem; }
+.pabasa-preview__bar span { font-size: .63rem; color: #46667b; }
+.pabasa-preview__body { padding: 22px; }
+.pabasa-preview__title { display: block; font-size: 1.1rem; margin-bottom: 15px; line-height: 1.3; }
+.pabasa-preview__statuses { display: flex; gap: 8px; flex-wrap: wrap; font-size: .58rem; color: #365a6d; margin-bottom: 18px; }
+.pabasa-preview__statuses > span { padding: 4px 8px; background: #e8f7ec; border-radius: 20px; }
+.pabasa-preview__statuses > span:nth-child(2) { background: #fff1cc; }.pabasa-preview__statuses > span:nth-child(3) { background: #e2f2fc; }
+.pabasa-preview__table > div { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 12px; padding: 10px 0; align-items: center; border-bottom: 1px solid #e1edf2; font-size: .67rem; }
+.pabasa-preview__table > div:first-child { font-size: .58rem; font-weight: 700; }
+.pabasa-preview__table i { height: 7px; width: 80%; background: #d8e8ee; border-radius: 5px; }
+.pabasa-preview__body > small { display: block; font-size: .57rem; line-height: 1.6; color: #4f6878; }
+.pabasa-preview--monitor .pabasa-preview__body > small { margin-top: 12px; }
+.pabasa-preview--activity { border-color: #438bb2; }
+.pabasa-preview--activity .pabasa-preview__title { margin-block: 10px; }
+.pabasa-preview--activity .pabasa-preview__body > p { font-size: .75rem; line-height: 1.5; }
+.pabasa-preview__writing { display: grid; grid-template-columns: .55fr 1fr; align-items: center; gap: 10%; height: 95px; padding: 0 15%; margin-top: 16px; font-size: 3.8rem; line-height: 1; background: repeating-linear-gradient(to bottom, transparent 0 30px, #c6dce7 31px 32px); }
+.pabasa-preview__writing > span:last-child { height: 65%; border: 1px dashed #8caabb; }
+.pabasa-preview__controls { display: flex; justify-content: space-between; gap: 8px; margin-top: 19px; font-size: .6rem; color: #355d77; }
+.pabasa-preview--results dl { font-size: .7rem; display: grid; gap: 16px; padding: 10px 0 18px; }
+.pabasa-preview--results dl > div { display: flex; justify-content: space-between; gap: 10px; }
+.pabasa-progress-record { display: grid; grid-template-columns: 1fr auto; gap: 15px 10px; font-size: .7rem; margin: 15px 0 20px; }
+
+/* A school community, arranged as connected character scenes around Pip. */
+.pabasa-community { background: #f4f9ed; padding: 60px 0 65px; border-radius: 0 0 9% 0 / 0 0 55px 0; }
+.pabasa-community__intro { display: grid; grid-template-columns: 1.1fr 1fr; gap: 12%; align-items: center; }
+.pabasa-community__intro > div > p:last-child { color: var(--chapter-muted); max-width: 650px; margin-top: 24px; }
+.pabasa-community__intro > img { width: 100%; max-width: 390px; max-height: 370px; object-fit: contain; justify-self: center; }
+.pabasa-community-village { position: relative; display: grid; grid-template-columns: 1fr .72fr 1fr; gap: 28px 32px; align-items: center; margin-top: 32px; }
+.pabasa-sections svg.pabasa-community-village__connections { position: absolute; width: 100%; height: 100%; z-index: 0; top: 0; left: 0; stroke: #d2dca9; stroke-width: 2; stroke-dasharray: 6 12; }
+.pabasa-neighbor { position: relative; min-width: 0; display: grid; grid-template-columns: .8fr 1fr; gap: 6px; align-items: center; }
+.pabasa-neighbor > img { width: 100%; }
+.pabasa-neighbor > div { position: relative; padding: 22px 18px; background: #fffdf3; border-radius: 4% 8% 6% 3% / 8% 3% 8% 6%; box-shadow: 0 5px 0 -2px #e2dec7; }
+.pabasa-neighbor > div::before { content: ""; position: absolute; top: -7px; left: 25px; width: 36px; height: 14px; background: #e6cf6cb3; transform: rotate(-7deg); }
+.pabasa-neighbor h3 { font-size: clamp(1.1rem, 1.35vw, 1.5rem); letter-spacing: -.02em; }
+.pabasa-neighbor p { margin-top: 10px; font-size: 1rem; color: var(--chapter-muted); }
+.pabasa-neighbor--students { grid-column: 1; grid-row: 1; }
+.pabasa-neighbor--teachers { grid-column: 3; grid-row: 1; }
+.pabasa-neighbor--parents { grid-column: 1; grid-row: 2; transform: translateX(18px); }
+.pabasa-neighbor--parents > div { background: #fff4e9; }
+.pabasa-neighbor--parents > div::before { background: #edc3b1c4; }
+.pabasa-neighbor--admins { grid-column: 3; grid-row: 2; transform: translateX(-18px); }
+.pabasa-neighbor--admins > div { background: #edf8fa; }
+.pabasa-neighbor--admins > img { max-height: 240px; object-fit: contain; }
+.pabasa-community-heart { grid-column: 2; grid-row: 1 / 3; position: relative; text-align: center; }
+.pabasa-community-heart > img { width: min(70%, 180px); margin: 0 auto -25px; position: relative; z-index: 1; }
+.pabasa-community-heart p { position: relative; font-size: clamp(1.4rem, 2.1vw, 2.5rem); padding: 25px 12px 30px; color: #103c64; background: #ffe38a; border-radius: 50% 50% 3% 3% / 16% 16% 8% 8%; transform: rotate(-4deg); font-weight: 700; line-height: 1.25; }
+.pabasa-community-heart p strong { font-weight: 800; }
+
+/* The reading journey follows one continuous curve, with real anchor stops. */
+.pabasa-process { padding: 60px 0 45px; background: #edf8fe; }
+.pabasa-process__intro { display: grid; grid-template-columns: 1fr 1fr; gap: 12%; align-items: center; }
+.pabasa-process__intro > div > p:not(.pabasa-kicker) { color: var(--chapter-muted); max-width: 630px; }
+.pabasa-journey-nav { display: flex; gap: 8px 18px; flex-wrap: wrap; margin-top: 25px; }
+.pabasa-journey-nav a { color: #185879; font-size: .8rem; text-underline-offset: 6px; padding-block: 8px; text-decoration-color: #a1c9df; text-decoration-thickness: 2px; }
+.pabasa-journey-nav a[aria-current="step"] { color: #103c64; text-decoration-color: #d5a41e; font-weight: 800; }
+.pabasa-journey { position: relative; margin-top: 42px; }
+.pabasa-sections svg.pabasa-journey__path { position: absolute; width: 100%; height: 580px; top: 0; left: 0; stroke: #f6d674; stroke-width: 36px; stroke-linecap: round; opacity: .8; }
+.pabasa-journey__path path + path { stroke: #fff5d8; stroke-width: 3px; }
+.pabasa-sections svg.pabasa-journey__path--vertical { display: none; }
+.pabasa-journey-stops { padding: 0; list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 4%; position: relative; }
+.pabasa-journey-stops > li { position: relative; min-width: 0; scroll-margin-top: calc(var(--story-nav-height) + 25px); }
+.pabasa-journey-stops > li:nth-child(2) { padding-top: 160px; }
+.pabasa-journey-stops > li:nth-child(3) { padding-top: 40px; }
+.pabasa-journey-stops > li:nth-child(4) { padding-top: 195px; }
+.pabasa-milestone { position: relative; display: grid; place-items: center; width: 54px; height: 54px; margin: 0 0 -15px -10px; border-radius: 50%; background: #ffdf69; color: #103c64; border: 5px solid #fffdf6; z-index: 3; font-weight: 800; font-size: 1.1rem; transition: background .25s ease, transform .25s ease; }
+.pabasa-journey-stops > li:nth-child(odd) .pabasa-milestone { background: #b4e4fb; }
+.pabasa-journey-stops > li.is-current .pabasa-milestone { background: #103c64; color: white; transform: rotate(-6deg); }
+.pabasa-journey-scene { height: 270px; position: relative; display: flex; flex-direction: column; justify-content: center; }
+.pabasa-journey-scene .pabasa-preview { position: relative; border-width: 4px; width: 100%; }
+.pabasa-journey-scene .pabasa-preview__body { padding: 18px 14px; }
+.pabasa-journey-scene .pabasa-preview__title { font-size: .85rem; }
+.pabasa-journey-scene .pabasa-preview__bar { font-size: .6rem; padding: 9px 12px; }
+.pabasa-journey-scene .pabasa-preview__bar > span { font-size: .5rem; }
+.pabasa-journey-scene .pabasa-preview__statuses { gap: 4px; font-size: .5rem; margin-bottom: 10px; }
+.pabasa-journey-scene .pabasa-preview__statuses > span { padding: 3px 5px; }
+.pabasa-journey-scene .pabasa-preview__table > div { padding-block: 7px; }
+.pabasa-journey-scene--assess .pabasa-preview { transform: rotate(-4deg); }
+.pabasa-mic-label { position: relative; display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: .6rem; color: #244f66; }
+.pabasa-journey-scene--understand .pabasa-preview { width: 85%; margin-left: auto; transform: rotate(5deg); }
+.pabasa-journey-scene--understand > img { position: absolute; width: 60%; left: -10%; bottom: -2%; }
+.pabasa-journey-scene--practice .pabasa-preview { transform: rotate(-2deg); }
+.pabasa-journey-scene--practice .pabasa-preview__writing { height: 70px; font-size: 3rem; margin-top: 8px; }
+.pabasa-journey-scene--practice .pabasa-preview__body > p { font-size: .65rem; }
+.pabasa-journey-scene--practice .pabasa-preview__controls { margin-top: 12px; font-size: .55rem; }
+.pabasa-journey-scene--monitor .pabasa-preview { transform: rotate(4deg); }
+.pabasa-journey-stops h3 { font-size: clamp(1.2rem, 1.65vw, 1.8rem); line-height: 1.3; margin: 26px 0 16px; text-wrap: pretty; }
+.pabasa-journey-stops p { color: var(--chapter-muted); font-size: max(1rem, .85em); }
+.pabasa-journey-next { display: flex; gap: 25px; align-items: center; margin-top: 30px; padding: 25px 0 0; border-top: 1px solid #bddbe7; }
+.pabasa-journey-next img { width: 100px; }
+.pabasa-journey-next p { font-size: .9em; max-width: 580px; color: var(--chapter-muted); }
+.pabasa-journey-next p strong { display: block; color: #103c64; }
+.pabasa-journey-next a { color: #174f72; font-size: .8rem; text-underline-offset: 6px; margin-left: auto; }
+@media (min-width: 1920px) {
+    .pabasa-sections .pabasa-section-shell { width: min(88%, 2100px); }
+    .pabasa-classroom { max-width: 1680px; }
+    .pabasa-workspace__copy { max-width: 760px; }
+    .pabasa-workspace-scene { max-width: 900px; }
+    .pabasa-community__intro > img { max-width: 470px; max-height: 420px; }
+    .pabasa-community-village { gap: 45px; }
+    .pabasa-neighbor > div { padding: 30px; }
+    .pabasa-neighbor p { font-size: 1.1rem; }
+    .pabasa-journey-scene { height: 320px; }
+    .pabasa-journey-scene .pabasa-preview__body { padding: 25px; }
+    .pabasa-journey-scene .pabasa-preview__title { font-size: 1.1rem; }
+    .pabasa-preview__body > small { font-size: .65rem; }
+}
+@media (max-width: 1100px) {
+    .pabasa-equation-board { width: 100%; }
+    .pabasa-equation { grid-template-columns: 1fr 40px 1fr; }
+    .pabasa-workspace__spread { gap: 4%; }
+    .pabasa-workspace__copy > h3 { font-size: 2rem; }
+    .pabasa-workspace-scene__screen { width: 90%; }
+    .pabasa-workspace-scene--student .pabasa-workspace-scene__screen { width: 95%; }
+    .pabasa-workspace-scene figcaption { display: block; }.pabasa-workspace-scene figcaption > span { display: block; margin-top: 4px; }
+    .pabasa-community-village { grid-template-columns: 1fr 1fr; gap: 30px; }
+    .pabasa-community-heart { grid-column: 1 / -1; grid-row: 2; display: flex; align-items: center; justify-content: center; gap: 20px; }
+    .pabasa-community-heart > img { width: 100px; margin: 0; }.pabasa-community-heart p { padding: 22px 45px; font-size: 1.8rem; }.pabasa-community-heart p > br { display: none; }
+    .pabasa-neighbor--teachers { grid-column: 2; }.pabasa-neighbor--parents { grid-row: 3; transform: none; }.pabasa-neighbor--admins { grid-row: 3; grid-column: 2; transform: none; }
+    .pabasa-community-village__connections { display: none; }
+    .pabasa-journey-stops { gap: 25px; }.pabasa-journey-scene { height: 250px; }
+    .pabasa-journey-scene .pabasa-preview__body { padding: 16px 10px; }
+    .pabasa-journey-scene .pabasa-preview__bar > span { display: none; }
+    .pabasa-journey-scene .pabasa-preview__table > div { gap: 5px; font-size: .6rem; }.pabasa-journey-scene .pabasa-preview__table > div:first-child { font-size: .5rem; }
+    .pabasa-journey-scene .pabasa-preview__body > small { font-size: .5rem; }
+    .pabasa-journey-scene .pabasa-preview__controls { font-size: .5rem; }
+}
+@media (max-width: 900px) {
+    .pabasa-purpose__intro { gap: 5%; grid-template-columns: .7fr 1.3fr; }
+    .pabasa-equation-board { padding: 28px; }.pabasa-equation { gap: 3%; }
+    .pabasa-equation-result { grid-template-columns: .7fr 2fr; }.pabasa-result-book { padding: 26px 25px 36px; }
+    .pabasa-workspace__spread,.pabasa-workspace--student .pabasa-workspace__spread { grid-template-columns: 1fr; gap: 30px; max-width: 690px; }
+    .pabasa-workspace--teacher .pabasa-workspace__copy,.pabasa-workspace--teacher .pabasa-workspace-scene { grid-column: auto; grid-row: auto; }
+    .pabasa-workspace__copy { max-width: none; }.pabasa-workspace__copy > h3 { font-size: clamp(2rem, 4vw, 2.6rem); }
+    .pabasa-feature-list { grid-template-columns: 1fr 1fr; gap: 15px 24px; }
+    .pabasa-workspace-scene { width: min(100%, 600px); margin: 0 auto; }
+    .pabasa-workspace-scene__screen { width: 70%; }.pabasa-workspace-scene--student .pabasa-workspace-scene__screen { width: 76%; }
+    .pabasa-workspace-scene figcaption { display: flex; }
+    .pabasa-community__intro { gap: 5%; grid-template-columns: 1.25fr .8fr; }.pabasa-community__intro > img { max-height: 320px; }
+    .pabasa-neighbor { grid-template-columns: .7fr 1fr; }.pabasa-neighbor > div { padding: 20px 16px; }.pabasa-neighbor p { font-size: 1rem; }
+    .pabasa-process__intro { gap: 5%; }.pabasa-process__intro h2 { font-size: 2.8rem; }
+    .pabasa-journey-stops { grid-template-columns: 1fr; gap: 55px; margin-left: 65px; }
+    .pabasa-journey-stops > li { display: grid; grid-template-columns: .9fr 1fr; align-items: center; gap: 0 32px; }
+    .pabasa-journey-stops > li:nth-child(n) { padding: 0; }
+    .pabasa-journey-stops .pabasa-milestone { position: absolute; left: -65px; top: 30%; margin: 0; }
+    .pabasa-journey-stops h3 { grid-column: 2; align-self: end; margin: 0 0 15px; font-size: 1.5rem; }
+    .pabasa-journey-stops p { grid-column: 2; align-self: start; }
+    .pabasa-journey-scene { grid-column: 1; grid-row: 1 / 3; height: 280px; }
+    .pabasa-sections svg.pabasa-journey__path--wide { display: none; }
+    .pabasa-sections svg.pabasa-journey__path--vertical { display: block; top: 0; left: -5px; width: 60px; height: 100%; stroke-width: 15px; }
+    .pabasa-journey-scene .pabasa-preview__bar > span { display: inline; }
+}
+@media (max-width: 600px) {
+    .pabasa-sections .pabasa-section-shell { width: calc(100% - 36px); }
+    .pabasa-sections .pabasa-kicker { font-size: .65rem; letter-spacing: .1em; }
+    .pabasa-sections h2 { font-size: clamp(2.3rem, 9vw, 3rem); }
+    .pabasa-sections p { line-height: 1.7; }
+    .pabasa-purpose { padding: 48px 0; }
+    .pabasa-purpose__intro { display: block; margin-bottom: 30px; }.pabasa-purpose__intro > p { margin-top: 24px; }
+    .pabasa-equation-board { border-width: 7px; padding: 24px 18px; }
+    .pabasa-equation-board__title { display: block; padding-bottom: 20px; }.pabasa-equation-board__title h3 { font-size: 1.7rem; }.pabasa-equation-board__title p { font-size: .75rem; margin-top: 8px; }
+    .pabasa-equation { grid-template-columns: 1fr; gap: 15px; padding-top: 24px; }.pabasa-equation__term h4 { font-size: 1.8rem; margin-bottom: 15px; }
+    .pabasa-equation__term h4 > br { display: none; }.pabasa-equation__term > p { font-size: 1rem; }
+    .pabasa-equation__plus { font-size: 3rem; line-height: 1.1; margin-top: 5px; }
+    .pabasa-equation__paper,.pabasa-equation__workbook { max-width: 215px; margin: 20px auto 0; }
+    .pabasa-equation-result { display: flex; flex-direction: column-reverse; gap: 25px; margin-top: 35px; }.pabasa-classroom__pip { max-width: 230px; }
+    .pabasa-result-book { width: 100%; padding: 26px 20px 34px; }.pabasa-result-book h3 { font-size: 2.5rem; }
+    .pabasa-tools__intro { padding: 48px 0 10px; }.pabasa-workspace__spread { padding: 25px 0 40px; }
+    .pabasa-workspace__copy > h3 { font-size: clamp(1.85rem, 7vw, 2.4rem); }.pabasa-feature-list { grid-template-columns: 1fr; font-size: 1rem; gap: 13px; }
+    .pabasa-teacher-note { font-size: .9rem; }.pabasa-workspace-scene { padding-top: 0; }
+    .pabasa-workspace-scene__screen,.pabasa-workspace-scene--student .pabasa-workspace-scene__screen { width: 93%; }
+    .pabasa-workspace-scene__person { margin-top: -9%; width: 93%; margin-left: -5%; }
+    .pabasa-workspace-scene--student .pabasa-workspace-scene__person { width: 85%; margin-top: -5%; margin-right: -4%; }
+    .pabasa-workspace-scene__pip { width: 30%; left: 0; bottom: 9%; }
+    .pabasa-workspace-scene figcaption { display: block; font-size: .8rem; }.pabasa-workspace-scene figcaption > span { font-size: .7rem; }
+    .pabasa-workspace-bridge { font-size: .75rem; padding: 15px 20px; }.pabasa-workspace-bridge > span { display: block; margin-bottom: 4px; }
+    .pabasa-workspace--student { padding-top: 50px; border-top-left-radius: 45px; }
+    .pabasa-preview__body { padding: 18px 16px; }.pabasa-preview__bar { padding: 10px 12px; gap: 5px; }.pabasa-preview__title { font-size: 1rem; }
+    .pabasa-preview__bar > span { font-size: .57rem; }.pabasa-preview__body > small { font-size: .6rem; }
+    .pabasa-community { padding: 48px 0; border-radius: 0; }.pabasa-community__intro { display: flex; flex-direction: column; gap: 25px; }.pabasa-community__intro > img { max-width: 275px; max-height: none; }
+    .pabasa-community-village { display: flex; flex-direction: column; gap: 30px; margin-top: 15px; }
+    .pabasa-neighbor { width: 100%; grid-template-columns: .9fr 1fr; gap: 0; }.pabasa-neighbor > div { padding: 22px 15px; }.pabasa-neighbor h3 { font-size: 1.2rem; }.pabasa-neighbor p { font-size: 1rem; }
+    .pabasa-neighbor--teachers { direction: rtl; }.pabasa-neighbor--teachers > div { direction: ltr; }
+    .pabasa-neighbor--admins { direction: rtl; }.pabasa-neighbor--admins > div { direction: ltr; }
+    .pabasa-community-heart { order: -1; gap: 12px; width: 100%; }.pabasa-community-heart > img { width: 75px; }.pabasa-community-heart p { padding: 20px 14px; font-size: 1.35rem; flex: 1; }
+    .pabasa-process { padding: 48px 0 35px; }.pabasa-process__intro { display: block; }.pabasa-process__intro h2 { font-size: 2.6rem; }.pabasa-process__intro > div + div { margin-top: 24px; }
+    .pabasa-journey-nav { gap: 7px 16px; margin-top: 18px; }.pabasa-journey-nav a { font-size: .8rem; }
+    .pabasa-journey { margin-top: 35px; }.pabasa-journey-stops { margin-left: 42px; gap: 40px; }
+    .pabasa-journey-stops > li { display: block; }.pabasa-journey-scene { height: 290px; }
+    .pabasa-journey-stops .pabasa-milestone { width: 42px; height: 42px; border-width: 3px; font-size: .95rem; left: -49px; top: 65px; }
+    .pabasa-sections svg.pabasa-journey__path--vertical { width: 30px; left: -3px; stroke-width: 20px; }
+    .pabasa-journey-stops h3 { font-size: 1.4rem; margin: 16px 0 14px; }.pabasa-journey-stops p { font-size: 1rem; }
+    .pabasa-journey-scene .pabasa-preview__title { font-size: .95rem; }.pabasa-journey-scene .pabasa-preview__body { padding: 20px 14px; }.pabasa-journey-scene .pabasa-preview__body > small { font-size: .6rem; }
+    .pabasa-journey-scene .pabasa-preview__table > div:first-child { font-size: .6rem; }.pabasa-journey-scene .pabasa-preview__statuses { font-size: .6rem; }
+    .pabasa-journey-scene--practice .pabasa-preview__body > p { font-size: .8rem; }.pabasa-journey-scene--practice .pabasa-preview__controls { font-size: .65rem; }
+    .pabasa-journey-next { display: grid; grid-template-columns: 65px 1fr; gap: 16px; margin-top: 40px; }.pabasa-journey-next img { width: 65px; }.pabasa-journey-next p { font-size: .9rem; }.pabasa-journey-next a { grid-column: 2; margin: 0; font-size: .8rem; }
+}
+@media (max-width: 374px) {
+    .pabasa-sections .pabasa-section-shell { width: calc(100% - 28px); }
+    .pabasa-neighbor { grid-template-columns: .65fr 1fr; }.pabasa-neighbor > div { padding-inline: 14px; }.pabasa-neighbor h3 { font-size: 1.1rem; }
+    .pabasa-journey-stops { margin-left: 35px; }.pabasa-journey-stops .pabasa-milestone { left: -39px; width: 36px; height: 36px; }
+    .pabasa-journey-scene .pabasa-preview__body { padding-inline: 10px; }.pabasa-journey-scene .pabasa-preview__bar > span { display: none; }
+    .pabasa-journey-scene .pabasa-preview__body > small { font-size: .55rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .pabasa-sections *, .pabasa-sections *::before, .pabasa-sections *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

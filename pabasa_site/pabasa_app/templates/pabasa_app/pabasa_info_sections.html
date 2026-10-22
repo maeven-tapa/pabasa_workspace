@@ -1,0 +1,93 @@
+{% load static %}
+<div class="pabasa-sections">
+    <section class="pabasa-chapter pabasa-purpose" id="platform-purpose" aria-labelledby="purpose-title">
+        <div class="pabasa-section-shell">
+            <header class="pabasa-purpose__intro">
+                <div><p class="pabasa-kicker">Our focus</p><h2 id="purpose-title">Purpose</h2></div>
+                <p>Two essential parts of reading support, brought together in one platform.</p>
+            </header>
+            <div class="pabasa-classroom">
+                <div class="pabasa-equation-board">
+                    <div class="pabasa-equation-board__title"><h3>The PABASA Equation</h3><p>by TUP-Cavite</p></div>
+                    <div class="pabasa-equation">
+                        <div class="pabasa-equation__term"><span class="pabasa-equation__tab">The starting point</span><h4>Digitized <br>CRLA</h4><p>A digital home for CRLA reading assessment.</p><div class="pabasa-equation__paper" aria-hidden="true"><span>CRLA</span><span>Reading assessment</span><i></i><i></i><i></i></div></div>
+                        <span class="pabasa-equation__plus" aria-label="plus">+</span>
+                        <div class="pabasa-equation__term"><span class="pabasa-equation__tab">The space to practice</span><h4>Digitized <br>ARAL Workbook</h4><p>The ARAL workbook, adapted for guided digital practice.</p><div class="pabasa-equation__workbook" aria-hidden="true"><span>ARAL</span><strong>Aa&nbsp; Bb&nbsp; Ii</strong><span>Makinig. Magbasa. Magsanay.</span></div></div>
+                    </div>
+                    <span class="pabasa-board-ledge" aria-hidden="true"></span>
+                </div>
+                <div class="pabasa-equation-result">
+                    <img class="pabasa-classroom__pip" src="{% static 'pabasa_app/images/hero3.webp' %}" width="1024" height="973" alt="Pip holding a pointer beside a classroom board and reading materials" loading="lazy" decoding="async">
+                    <div class="pabasa-result-book">
+                        <h3><span aria-label="equals">=</span> PABASA</h3>
+                        <p class="pabasa-result-book__idea">Reading assessment and guided practice, connected by the teacher's understanding of each learner.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="pabasa-chapter pabasa-tools" id="platform-tools" aria-labelledby="can-do-title">
+        <header class="pabasa-section-shell pabasa-tools__intro"><p class="pabasa-kicker">Built for learning</p><h2 id="can-do-title">What You Can Do</h2><p>A closer look at the tools teachers and students use.</p></header>
+        <article class="pabasa-workspace pabasa-workspace--teacher" id="teacher-chapter" aria-labelledby="teacher-title">
+            <div class="pabasa-section-shell pabasa-workspace__spread">
+                <div class="pabasa-workspace__copy">
+                    <p class="pabasa-kicker">For teachers</p><h3 id="teacher-title">Assessment and activity tools</h3>
+                    <ul class="pabasa-feature-list"><li>Conduct live CRLA assessments.</li><li>Automatically record and organize results from completed assessments.</li><li>Assign and review ARAL activities.</li><li>Monitor individual student progress.</li></ul>
+                    <details class="pabasa-teacher-note"><summary>A place for teacher judgment</summary><p>Use automatic checks on supported activities, then review responses that call for interpretation.</p></details>
+                </div>
+                <figure class="pabasa-workspace-scene pabasa-workspace-scene--teacher">
+                    <div class="pabasa-workspace-scene__screen">{% include 'pabasa_app/pabasa_info_monitor_preview.html' %}</div>
+                    <img class="pabasa-workspace-scene__person" src="{% static 'pabasa_app/images/storybook/teacher-reading.webp' %}" width="1024" height="1024" alt="A teacher using a laptop at her desk with books and classroom supplies" loading="lazy" decoding="async">
+                    <figcaption>The teacher's workspace <span>Assess · Organize · Review</span></figcaption>
+                </figure>
+            </div>
+        </article>
+        <div class="pabasa-workspace-bridge"><span>Teacher tools.</span> Student activities.</div>
+        <article class="pabasa-workspace pabasa-workspace--student" id="student-chapter" aria-labelledby="student-title">
+            <div class="pabasa-section-shell pabasa-workspace__spread">
+                <div class="pabasa-workspace__copy">
+                    <p class="pabasa-kicker">For students</p><h3 id="student-title">ARAL activities and<br>Practice Mode</h3>
+                    <ul class="pabasa-feature-list"><li>Follow guided ARAL workbook activities.</li><li>Listen to narration and receive feedback in supported activities.</li><li>Complete teacher-assigned reading activities.</li><li>Use Practice Mode for additional reading exercises.</li></ul>
+                </div>
+                <figure class="pabasa-workspace-scene pabasa-workspace-scene--student">
+                    <div class="pabasa-workspace-scene__screen">{% include 'pabasa_app/pabasa_info_activity_preview.html' %}</div>
+                    <img class="pabasa-workspace-scene__person" src="{% static 'pabasa_app/images/storybook/learner-tablet.webp' %}" width="1024" height="853" alt="A Grade 2 learner using a tablet beside an open reading book" loading="lazy" decoding="async">
+                    <img class="pabasa-workspace-scene__pip" src="{% static 'pabasa_app/images/student-studio-bird.webp' %}" width="969" height="1024" alt="Pip reading alongside the learner" loading="lazy" decoding="async">
+                    <figcaption>The student's learning space <span>Listen · Practice · Learn</span></figcaption>
+                </figure>
+            </div>
+        </article>
+    </section>
+
+    <section class="pabasa-chapter pabasa-community" id="platform-audience" aria-labelledby="audience-title">
+        <div class="pabasa-section-shell">
+            <header class="pabasa-community__intro"><div><p class="pabasa-kicker">For our school community</p><h2 id="audience-title">Who Is<br>PABASA For?</h2><p>Grade 2 learners, the teachers who guide them, and the community that supports their reading.</p></div><img src="{% static 'pabasa_app/images/hero4.webp' %}" width="955" height="1024" alt="Pip welcoming children to an illustrated school" loading="lazy" decoding="async"></header>
+            <div class="pabasa-community-village">
+                <svg class="pabasa-community-village__connections" viewBox="0 0 1200 600" preserveAspectRatio="none" aria-hidden="true"><path d="M260 140 Q600 -20 940 140 M260 460 Q600 620 940 460 M260 140 Q150 300 260 460 M940 140 Q1050 300 940 460"/></svg>
+                <article class="pabasa-neighbor pabasa-neighbor--students"><img src="{% static 'pabasa_app/images/storybook/learner-tablet.webp' %}" width="1024" height="853" alt="" loading="lazy" decoding="async"><div><h3>Students</h3><p>At the heart of PABASA are Grade 2 learners developing their reading skills.</p></div></article>
+                <article class="pabasa-neighbor pabasa-neighbor--teachers"><img src="{% static 'pabasa_app/images/storybook/teacher-reading.webp' %}" width="1024" height="1024" alt="" loading="lazy" decoding="async"><div><h3>Teachers</h3><p>The people who guide each learner, review their work, and provide support along the way.</p></div></article>
+                <div class="pabasa-community-heart"><img src="{% static 'pabasa_app/images/footer-mascot.webp' %}" width="683" height="1024" alt="" loading="lazy" decoding="async"><p>Every reader <br>has a team <br><strong>behind them.</strong></p></div>
+                <article class="pabasa-neighbor pabasa-neighbor--parents"><img src="{% static 'pabasa_app/images/storybook/family-reading.webp' %}" width="1024" height="936" alt="A mother and child sharing an open book" loading="lazy" decoding="async"><div><h3>Parents and Guardians</h3><p>Their encouragement and involvement help continue the learning beyond the classroom.</p></div></article>
+                <article class="pabasa-neighbor pabasa-neighbor--admins"><img src="{% static 'pabasa_app/images/storybook/school-administrator.webp' %}" width="683" height="1024" alt="A school administrator reviewing information on a tablet" loading="lazy" decoding="async"><div><h3>School Administrators</h3><p>Help oversee the school's reading initiatives and support their implementation.</p></div></article>
+            </div>
+        </div>
+    </section>
+
+    <section class="pabasa-chapter pabasa-process" id="platform-process" aria-labelledby="works-title">
+        <div class="pabasa-section-shell">
+            <header class="pabasa-process__intro"><div><p class="pabasa-kicker">A simple learning loop</p><h2 id="works-title">How PABASA<br>Works</h2></div><div><p>A reading assessment gives teachers a starting point. The results help them choose practice and plan further support.</p><nav class="pabasa-journey-nav" aria-label="Explore the reading journey"><a href="#journey-assess">Assess</a><a href="#journey-understand">Understand</a><a href="#journey-practice">Practice</a><a href="#journey-monitor">Monitor</a></nav></div></header>
+            <div class="pabasa-journey">
+                <svg class="pabasa-journey__path pabasa-journey__path--wide" viewBox="0 0 1400 620" preserveAspectRatio="none" aria-hidden="true"><path d="M70 140 C230 -15 250 500 470 380 S650 -40 820 180 S1070 610 1320 420"/><path d="M70 140 C230 -15 250 500 470 380 S650 -40 820 180 S1070 610 1320 420"/></svg>
+                <svg class="pabasa-journey__path pabasa-journey__path--vertical" viewBox="0 0 80 1600" preserveAspectRatio="none" aria-hidden="true"><path d="M40 15 C0 160 80 230 40 400 S0 620 40 800 S80 1020 40 1200 S0 1440 40 1580"/></svg>
+                <ol class="pabasa-journey-stops">
+                    <li id="journey-assess"><span class="pabasa-milestone">01</span><div class="pabasa-journey-scene pabasa-journey-scene--assess">{% include 'pabasa_app/pabasa_info_monitor_preview.html' %}<span class="pabasa-mic-label"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v4m-4 0h8"/></svg>Teacher-guided CRLA</span></div><h3>Start with a Reading Assessment</h3><p>Students complete a teacher-guided CRLA assessment to identify their current reading level.</p></li>
+                    <li id="journey-understand"><span class="pabasa-milestone">02</span><div class="pabasa-journey-scene pabasa-journey-scene--understand"><div class="pabasa-preview pabasa-preview--results" role="img" aria-label="Illustration of reading assessment results with unfilled Reading Level and Overall Score fields. No performance results are shown."><div class="pabasa-preview__bar"><strong>PABASA</strong></div><div class="pabasa-preview__body" aria-hidden="true"><strong class="pabasa-preview__title">Reading Assessment Results</strong><dl><div><dt>Reading Level</dt><dd>—</dd></div><div><dt>Overall Score</dt><dd>—</dd></div></dl><small>Illustration · No student results</small></div></div><img src="{% static 'pabasa_app/images/storybook/teacher-reading.webp' %}" width="1024" height="1024" alt="" loading="lazy" decoding="async"></div><h3>Understand What They Need</h3><p>Teachers review the results to identify skills students have developed and areas needing more support.</p></li>
+                    <li id="journey-practice"><span class="pabasa-milestone">03</span><div class="pabasa-journey-scene pabasa-journey-scene--practice">{% include 'pabasa_app/pabasa_info_activity_preview.html' %}</div><h3>Practice Through ARAL</h3><p>Students complete assigned ARAL activities with guided instructions and interactive exercises.</p></li>
+                    <li id="journey-monitor"><span class="pabasa-milestone">04</span><div class="pabasa-journey-scene pabasa-journey-scene--monitor"><div class="pabasa-preview" role="img" aria-label="Illustration of the Reading Progress area with assessment and activity records left blank. No student results are shown."><div class="pabasa-preview__bar"><strong>PABASA</strong></div><div class="pabasa-preview__body" aria-hidden="true"><strong class="pabasa-preview__title">Reading Progress</strong><div class="pabasa-progress-record"><span>Assessments</span><b>—</b><span>Activities</span><b>—</b><span>Reading Level</span><b>—</b></div><small>Illustration · No student results</small></div></div></div><h3>Check Their Progress</h3><p>Teachers review assessment results and completed activities to plan each learner's next steps.</p></li>
+                </ol>
+            </div>
+            <div class="pabasa-journey-next"><img src="{% static 'pabasa_app/images/student-studio-bird.webp' %}" width="969" height="1024" alt="" loading="lazy" decoding="async"><p><strong>And the next step?</strong> Continued support, guided by what each reader needs.</p><a href="#platform-overview">Back to the first page <span aria-hidden="true">↑</span></a></div>
+        </div>
+    </section>
+</div>
