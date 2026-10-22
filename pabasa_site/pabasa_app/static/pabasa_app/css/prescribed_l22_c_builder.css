@@ -527,6 +527,8 @@ body.wb-l22-g1-page.wb-l22-g1-reading #wb-content.wb-l22-g1-active>.wb-reading-p
 @media(max-width:700px){.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked){grid-template-columns:minmax(0,1fr);row-gap:8px}.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-selected-parts,.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-formed-word{grid-column:1;grid-row:auto}.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-builder-words li{font-size:1rem}}
 @media(max-width:480px){.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-builder-words ul{grid-template-columns:minmax(0,1fr)}}
 
+@media(min-width:1024px){.wb-l22-g1-page #wb-content.wb-l22-g1-active:has(.wb-word-panel:not(.is-locked))>.wb-word-panel:not(.is-locked)>.wb-builder-words ul{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
 /* Local-only sizing repair: keep the six-row Big Box intrinsic to its text
    instead of compressing it through the viewport-constrained flex/grid chain. */
 body.wb-l22-g1-page.wb-l22-g1-building #wb-content.wb-l22-g1-active{
