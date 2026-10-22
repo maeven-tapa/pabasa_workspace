@@ -80,6 +80,7 @@
   }
 
   .section-students-toolbar {
+    flex: 0 0 auto;
     row-gap: 0.75rem !important;
   }
 
@@ -91,15 +92,17 @@
   .section-management-page .section-teacher-email { overflow-wrap:normal; word-break:normal; }
   .section-management-page .section-students-card { display:flex; flex:1 1 0; flex-direction:column; min-height:0; }
   .section-management-page .section-students-card .card-body { display:flex; flex:1 1 0; flex-direction:column; min-height:0; }
-  .section-management-page .section-students-scroll { flex:1 1 0; min-height:0; overflow:auto; }
+  .section-management-page .section-students-scroll { flex:1 1 auto; min-height:0; max-height:60dvh; overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; }
   .section-management-page .section-students-scroll thead th { background:#fff; position:sticky; top:0; z-index:1; }
 
   @media (min-width: 992px) {
     html:has(.section-management-page), body:has(.section-management-page) { height:100%; min-height:0; overflow:hidden; }
-    body:has(.section-management-page) .admin-app-shell { height:100dvh; min-height:0; overflow:hidden; }
-    .admin-main:has(.section-management-page) { display:flex; flex-direction:column; height:100%; min-height:0; overflow:hidden; }
+    body:has(.section-management-page) .admin-app-shell { height:var(--admin-normalized-viewport-height); min-height:0; overflow:hidden; }
+    .admin-app-shell .admin-main:has(.section-management-page) { box-sizing:border-box; display:flex; flex-direction:column; height:var(--admin-normalized-viewport-height); min-height:0; overflow:hidden; }
     .admin-main:has(.section-management-page) > .admin-content { display:flex; flex:1 1 0; flex-direction:column; height:0; min-height:0; max-width:none; overflow:hidden; width:100%; }
     .section-management-page { display:flex; flex:1 1 0; flex-direction:column; min-height:0; width:100%; }
+    .section-management-page > .section-back-link { flex-shrink:0; }
+    .section-management-page .section-students-scroll { flex:1 1 0; max-height:none; }
   }
 
   .section-students-heading {
@@ -207,7 +210,7 @@
               </select></div>
             </div>
           </div>
-          <div class="table-responsive section-students-scroll">
+          <div class="table-responsive section-students-scroll" role="region" aria-label="Class list students" tabindex="0">
             <table class="table" id="sectionStudentsTable">
               <thead><tr><th>Student ID</th><th>LRN</th><th>Name</th><th>Status</th><th>Actions</th></tr></thead>
               <tbody>
