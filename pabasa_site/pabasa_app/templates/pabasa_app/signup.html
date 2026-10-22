@@ -1,7 +1,7 @@
-{% extends "pabasa_app/base.html" %}
+{% extends "pabasa_app/auth_base.html" %}
 {% load static %}
 
-{% block extra_head %}
+{% block auth_extra_head %}
 <style>
     /* Keep this compact account-choice screen within the browser viewport. */
     html,
@@ -26,10 +26,6 @@
     body.auth-layout > main.flex-grow-1 > .container {
         max-height: 100%;
         overflow: hidden;
-    }
-    body.auth-layout {
-        background: url("{% static 'pabasa_app/images/log-in_sign-up.png' %}") center / cover no-repeat !important;
-        background-attachment: scroll !important;
     }
 
     .account-card {

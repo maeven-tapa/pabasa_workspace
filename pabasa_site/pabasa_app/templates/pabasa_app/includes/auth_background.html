@@ -1,0 +1,14 @@
+{% load static %}
+<style>
+    /* The approved Login photograph and presentation, shared by every auth state.
+       Important is needed only to supersede base.html's public-page background. */
+    body.auth-layout {
+        --auth-background-image: url("{% static 'pabasa_app/images/log-in_sign-up.png' %}");
+        background: var(--auth-background-image) center / cover no-repeat !important;
+        background-attachment: scroll !important;
+    }
+
+    .auth-layout .login-loading-screen {
+        background: var(--auth-background-image) center / cover no-repeat;
+    }
+</style>
