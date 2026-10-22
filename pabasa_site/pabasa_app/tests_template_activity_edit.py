@@ -111,3 +111,37 @@ class TemplateActivityEditRegressionTests(TestCase):
         self.assertNotIn("Save &amp; Assign", source)
         self.assertNotIn("assignOnly", source)
 
+    def test_reading_practice_can_be_created_and_edited_with_explicit_language_and_week(self):
+        payload = {
+            "title": "Explicit Reading Practice", "reading_type": "word",
+            "content": "unang salita\nikalawang salita", "language": "Filipino",
+            "status": "published", "usage_type": "assessment",
+            "source_type": "personal", "activity_type": "reading_practice",
+            "assessment_kind": "regular", "section_id": self.section.id,
+            "assigned_week": "Week 1", "assigned_weeks": ["Week 1"],
+        }
+        created = self.client.post(
+            reverse("add_reading_material"), data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(created.status_code, 200, created.content)
+        material = Material.objects.get(title=payload["title"])
+        self.assertEqual(material.language, "Filipino")
+        self.assertEqual(material.assigned_week, 1)
+        self.assertEqual(material.content_json["activity_type"], "reading_practice")
+        original_count = Material.objects.count()
+
+        updated = self.client.post(
+            reverse("teacher_update_material"),
+            data=json.dumps({**payload, "material_id": material.id,
+                             "language": "English", "content": "first word\nsecond word",
+                             "assigned_week": "Week 2", "assigned_weeks": ["Week 2"]}),
+            content_type="application/json",
+        )
+        self.assertEqual(updated.status_code, 200, updated.content)
+        material.refresh_from_db()
+        self.assertEqual(Material.objects.count(), original_count)
+        self.assertEqual(material.language, "English")
+        self.assertEqual(material.assigned_week, 2)
+        self.assertIn("first word", material.content_text)
+

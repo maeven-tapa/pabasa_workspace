@@ -17637,7 +17637,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         function syncAralReadingSet() {
             if (!activeTemplateActivity || !isAralReadingSetTemplate(activeTemplateActivity.templateTitle)) return;
             const sets = getAralReadingSets(activeTemplateActivity.templateTitle, activeTemplateActivity.language);
-            const selected = sets.find(set => set.id === activeTemplateActivity.aralReadingSetId) || sets[0];
+            const selected = findTemplateConfigurationSelection(sets, activeTemplateActivity.aralReadingSetId);
             activeTemplateActivity.aralReadingSetId = selected?.id || '';
             activeTemplateActivity.aralReadingSet = selected || null;
             activeTemplateActivity.items = activeTemplateActivity.templateTitle === 'Word Meaning Match' ? (selected?.data?.[0] || []).map(([word, sentence, choices, answer_index]) => ({word, sentence, choices, answer_index})) : [];
@@ -17663,6 +17663,38 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return title === 'Decode the Word';
         }
 
+        // A rendered option is selected only when its ID is present in form state.
+        // Saved activities restore those IDs before rendering; new activities do not.
+        function findTemplateConfigurationSelection(options, value, key = 'id') {
+            if (value === '' || value === null || value === undefined) return null;
+            return options.find(option => String(option[key]) === String(value)) || null;
+        }
+
+        function hasTemplateConfigurationChoice() {
+            const activity = activeTemplateActivity;
+            if (!activity) return false;
+            const choices = {
+                'Letter & Sound Matching': activity.letterSoundMatching?.readingSetId,
+                'Sound Detective': activity.soundDetective?.selectedWordIds?.length,
+                'Match the Letter to Its Sound': activity.letterSoundCorrespondence?.readingSetId,
+                'Clap & Count Syllables': activity.clapCount?.selectedWordIds?.length,
+                'Syllable Blending': activity.selectedActivityId,
+                'Blend the Syllables': activity.selectedActivityId,
+                'Picture-Word Matching': getPictureWordMatchingMode() === 'custom'
+                    ? getPictureWordCustomSelection().length : activity.pictureWordMatching?.setKey,
+                'Decode the Word': activity.wordDecoding?.readingSetId,
+                'Word Meaning Match': activity.aralReadingSetId,
+                'Phrase Reading Practice': activity.phraseReading?.setKey,
+                'Sentence Reading Practice': activity.sentenceReading?.setKey,
+                'Fluency Reading': activity.aralReadingSetId,
+                'Story Reading': activity.storyReading?.storyKey,
+                "5W's Story Questions": activity.fiveW?.storyId,
+                'Retell the Story': activity.content?.source_story_reading_material_id,
+                'Story Response': activity.storyResponse?.storyId && activity.storyResponse?.prompt
+            };
+            return Boolean(choices[activity.templateTitle]);
+        }
+
         function getLetterSoundMatchingReadingSets(language) {
             const allSets = Object.values(LETTER_SOUND_MATCHING_READING_SETS);
             return allSets.filter(set => set.language === language);
@@ -17684,10 +17716,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function getLetterSoundCorrespondenceReadingSet(language, setId = '') {
             const sets = getLetterSoundCorrespondenceReadingSets(language);
-            const selectedSet = getLetterSoundCorrespondenceReadingSetById(setId);
-            return selectedSet && selectedSet.language === (language === 'English' ? 'English' : 'Filipino')
-                ? selectedSet
-                : sets[0] || null;
+            return findTemplateConfigurationSelection(sets, setId);
         }
 
         function syncLetterSoundCorrespondenceSet() {
@@ -17696,9 +17725,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 getSelectedTemplateLanguage(),
                 activeTemplateActivity.letterSoundCorrespondence?.readingSetId
             );
-            if (!set) return null;
-            activeTemplateActivity.letterSoundCorrespondence = { readingSetId: set.id, language: set.language };
-            activeTemplateActivity.items = set.items.map(item => ({...item}));
+            activeTemplateActivity.letterSoundCorrespondence = { readingSetId: set?.id || '', language: getSelectedTemplateLanguage() };
+            activeTemplateActivity.items = (set?.items || []).map(item => ({...item}));
             return set;
         }
 
@@ -17713,10 +17741,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function getWordDecodingReadingSet(language, setId = '') {
             const sets = getWordDecodingReadingSets(language);
-            const selectedSet = getWordDecodingReadingSetById(setId);
-            return selectedSet && selectedSet.language === (language === 'English' ? 'English' : 'Filipino')
-                ? selectedSet
-                : sets[0] || null;
+            return findTemplateConfigurationSelection(sets, setId);
         }
 
         function syncWordDecodingSet() {
@@ -17724,9 +17749,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const set = getWordDecodingReadingSet(
                 getSelectedTemplateLanguage(), activeTemplateActivity.wordDecoding?.readingSetId
             );
-            if (!set) return null;
-            activeTemplateActivity.wordDecoding = { readingSetId: set.id, language: set.language };
-            activeTemplateActivity.items = set.items.map(item => ({...item}));
+            activeTemplateActivity.wordDecoding = { readingSetId: set?.id || '', language: getSelectedTemplateLanguage() };
+            activeTemplateActivity.items = (set?.items || []).map(item => ({...item}));
             return set;
         }
 
@@ -17809,7 +17833,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const normalizedSetKey = PICTURE_WORD_PRESCRIBED_SETS.find(set => (
                 String(set.key || '') === rawSetKey
                 || String(set.key || '').replace(/^Set\s+/i, '') === rawSetKey.replace(/^Set\s+/i, '')
-            ))?.key || PICTURE_WORD_PRESCRIBED_SETS[0]?.key || '';
+            ))?.key || '';
             return {
                 setKey: normalizedSetKey,
                 language: language === 'English' ? 'English' : 'Filipino'
@@ -17852,7 +17876,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 }));
             }
             const selection = normalizePictureWordMatchingSelection(
-                activeTemplateActivity.pictureWordMatching?.setKey || 'A',
+                activeTemplateActivity.pictureWordMatching?.setKey || '',
                 language
             );
             const set = PICTURE_WORD_PRESCRIBED_SETS.find(entry => entry.key === selection.setKey);
@@ -18105,6 +18129,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     allowRetry: contentJson.allow_retry !== false,
                     previewIndex: 0
                 } : null,
+                fiveW: templateTitle === "5W's Story Questions" ? {
+                    storyId: String(contentJson.sourceMaterialId || contentJson.storyId || '')
+                } : null,
+                storyResponse: isStoryResponseTemplate(templateTitle) ? {
+                    stories: [],
+                    storyId: String(contentJson.source_story_reading_material_id || ''),
+                    prompt: String(contentJson.response_prompt || ''),
+                    promptSource: contentJson.prompt_source || 'suggested',
+                    readAloud: contentJson.read_aloud_enabled !== false,
+                    voiceRecording: contentJson.voice_recording_enabled !== false
+                } : null,
                 activityFormat: isSyllableBlendingTemplate(templateTitle) ? (contentJson.activity_format || 'syllable_combination') : null,
                 selectedActivityId: isSyllableBlendingTemplate(templateTitle) ? (contentJson.activity_id || null) : null,
                 mode: 'edit'
@@ -18151,7 +18186,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!activeTemplateActivity || !isSentenceReadingTemplate(activeTemplateActivity.templateTitle)) return;
             const language = activeTemplateActivity.sentenceReading?.language || 'Tagalog';
             const sets = getSentenceReadingSets(language);
-            const selectedSet = sets.find(set => set.key === activeTemplateActivity.sentenceReading?.setKey) || sets[0] || null;
+            const selectedSet = findTemplateConfigurationSelection(sets, activeTemplateActivity.sentenceReading?.setKey, 'key');
             const fullIndices = selectedSet ? selectedSet.items.map((_, index) => index) : [];
             const normalized = Array.from(new Set((selectedIndices || []).map(index => Number(index)).filter(index => Number.isInteger(index) && selectedSet && index >= 0 && index < selectedSet.items.length))).sort((a, b) => a - b);
             const lockedSelection = selectedSet ? (normalized.length === selectedSet.items.length ? normalized : fullIndices) : [];
@@ -18253,6 +18288,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 activeTemplateActivity.fiveW = { storyId: event.target.value };
                 activeTemplateActivity.items = [];
                 syncFiveWSelection();
+                renderTemplateDynamicFields("5W's Story Questions");
                 renderTemplatePreview();
                 updateFirst15CreateStepLock();
             });
@@ -18293,7 +18329,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const language = getPhraseReadingLanguage();
             const sets = getPhraseReadingSets(language);
             const current = activeTemplateActivity.phraseReading || {};
-            const selectedSet = sets.find(set => set.key === current.setKey) || sets[0] || null;
+            const selectedSet = findTemplateConfigurationSelection(sets, current.setKey, 'key');
             const fullIndices = selectedSet ? selectedSet.items.map((_, index) => index) : [];
             const currentSelection = Array.isArray(current.selectedIndices)
                 ? current.selectedIndices.filter(index => Number.isInteger(index) && selectedSet && index >= 0 && index < selectedSet.items.length)
@@ -18320,7 +18356,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!activeTemplateActivity || !isPhraseReadingTemplate(activeTemplateActivity.templateTitle)) return;
             const language = activeTemplateActivity.phraseReading?.language || getPhraseReadingLanguage();
             const sets = getPhraseReadingSets(language);
-            const selectedSet = sets.find(set => set.key === activeTemplateActivity.phraseReading?.setKey) || sets[0] || null;
+            const selectedSet = findTemplateConfigurationSelection(sets, activeTemplateActivity.phraseReading?.setKey, 'key');
             const fullIndices = selectedSet ? selectedSet.items.map((_, index) => index) : [];
             const normalized = Array.from(new Set((selectedIndices || []).map(index => Number(index)).filter(index => Number.isInteger(index) && selectedSet && index >= 0 && index < selectedSet.items.length))).sort((a, b) => a - b);
             const lockedSelection = selectedSet ? (normalized.length === selectedSet.items.length ? normalized : fullIndices) : [];
@@ -18479,7 +18515,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             syncPhraseReadingItems();
             const language = activeTemplateActivity.phraseReading?.language || getPhraseReadingLanguage();
             const sets = getPhraseReadingSets(language);
-            const selectedSet = sets.find(set => set.key === activeTemplateActivity.phraseReading?.setKey) || sets[0] || null;
+            const selectedSet = findTemplateConfigurationSelection(sets, activeTemplateActivity.phraseReading?.setKey, 'key');
             const selectedIndices = new Set((selectedSet ? selectedSet.items.map((_, index) => index) : []).filter(index => activeTemplateActivity.phraseReading?.selectedIndices?.includes(index) || true));
             const allSelected = Boolean(selectedSet && selectedSet.items.length && selectedIndices.size === selectedSet.items.length);
             templateDynamicFields.innerHTML = `
@@ -18565,30 +18601,28 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const language = getSelectedTemplateLanguage();
             const availableSets = getLetterSoundMatchingReadingSets(language);
             
-            // Get current selection or default to first available set
+            // Keep a genuinely empty selection until a teacher chooses a set.
             let selectedSetId = activeTemplateActivity.letterSoundMatching?.readingSetId;
             const currentSelectedSet = selectedSetId ? getLetterSoundMatchingReadingSetById(selectedSetId) : null;
             
-            // If current selection is not valid for this language, switch to first available set
+            // A language change invalidates a set from the previous language.
             if (!currentSelectedSet || currentSelectedSet.language !== language) {
-                selectedSetId = availableSets.length > 0 ? availableSets[0].id : null;
-                if (selectedSetId) {
-                    activeTemplateActivity.letterSoundMatching = {
-                        readingSetId: selectedSetId,
-                        language: language
-                    };
-                    const newSet = getLetterSoundMatchingReadingSetById(selectedSetId);
-                    activeTemplateActivity.items = newSet ? newSet.items : [];
-                }
+                selectedSetId = '';
+                activeTemplateActivity.letterSoundMatching = { readingSetId: '', language };
+                activeTemplateActivity.items = [];
             }
             
             const selectedSet = selectedSetId ? getLetterSoundMatchingReadingSetById(selectedSetId) : null;
+            if (activeTemplateActivity.mode !== 'edit') {
+                activeTemplateActivity.items = selectedSet ? selectedSet.items : [];
+            }
             
             templateDynamicFields.innerHTML = `
                 <div class="row g-3">
                     <div class="col-12">
                         <label class="form-label fw-bold" for="letterSoundReadingSet">Reading Set <span class="text-danger">*</span></label>
                         <select id="letterSoundReadingSet" class="form-select">
+                            <option value="" ${!selectedSetId ? 'selected' : ''}>Select a reading set...</option>
                             ${availableSets.map(set => `<option value="${escapeAttr(set.id)}" ${set.id === selectedSetId ? 'selected' : ''}>${escapeHtml(set.label)}</option>`).join('')}
                         </select>
                         <div class="form-text">Select a predefined ${language} phonics set. All items and audio are provided by the system.</div>
@@ -18607,7 +18641,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <div class="letter-sound-items-count"><small class="text-muted">${selectedSet.items.length} items in this set</small></div>
                             </div>
                         </div>
-                    ` : ''}
+                    ` : '<div class="col-12"><div class="template-preview-empty">Select a reading set to preview its items.</div></div>'}
                 </div>
             `;
             
@@ -18628,30 +18662,30 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         function renderLetterSoundCorrespondenceSelector() {
             if (!templateDynamicFields || !activeTemplateActivity) return;
             const set = syncLetterSoundCorrespondenceSet();
-            if (!set) return;
-            const availableSets = getLetterSoundCorrespondenceReadingSets(set.language);
+            const language = getSelectedTemplateLanguage();
+            const availableSets = getLetterSoundCorrespondenceReadingSets(language);
             templateDynamicFields.innerHTML = `
                 <div class="row g-3">
                     <div class="col-12">
                         <label class="form-label" for="letterSoundCorrespondenceReadingSet">Reading Set</label>
                         <select class="form-select mb-2" id="letterSoundCorrespondenceReadingSet">
-                            ${availableSets.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === set.id ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
+                            <option value="" ${!set ? 'selected' : ''}>Select a reading set...</option>
+                            ${availableSets.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === set?.id ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
                         </select>
                         <div class="form-text mb-2">Choose a ready-to-play vowel or consonant set. Letters, audio, and answer choices are supplied by the system.</div>
-                        <div class="letter-sound-items-preview">
+                        ${set ? `<div class="letter-sound-items-preview">
                             <h6 class="letter-sound-preview-title">${escapeHtml(set.label)}</h6>
                             <div class="letter-sound-items-grid">
                                 ${set.items.map(item => `<div class="letter-sound-item-card"><div class="letter-sound-item-letter">${escapeHtml(item.letter)}</div></div>`).join('')}
                             </div>
                             <div class="letter-sound-items-count"><small class="text-muted">5 prescribed items</small></div>
-                        </div>
+                        </div>` : '<div class="template-preview-empty">Select a reading set to preview its items.</div>'}
                     </div>
                 </div>`;
             document.getElementById('letterSoundCorrespondenceReadingSet')?.addEventListener('change', event => {
-                const selectedSet = getLetterSoundCorrespondenceReadingSet(set.language, event.target.value);
-                if (!selectedSet) return;
-                activeTemplateActivity.letterSoundCorrespondence = { readingSetId: selectedSet.id, language: selectedSet.language };
-                activeTemplateActivity.items = selectedSet.items.map(item => ({...item}));
+                const selectedSet = getLetterSoundCorrespondenceReadingSet(language, event.target.value);
+                activeTemplateActivity.letterSoundCorrespondence = { readingSetId: selectedSet?.id || '', language };
+                activeTemplateActivity.items = (selectedSet?.items || []).map(item => ({...item}));
                 renderLetterSoundCorrespondenceSelector();
                 renderTemplatePreview();
             });
@@ -18660,30 +18694,30 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         function renderWordDecodingSelector() {
             if (!templateDynamicFields || !activeTemplateActivity) return;
             const set = syncWordDecodingSet();
-            if (!set) return;
-            const availableSets = getWordDecodingReadingSets(set.language);
+            const language = getSelectedTemplateLanguage();
+            const availableSets = getWordDecodingReadingSets(language);
             templateDynamicFields.innerHTML = `
                 <div class="row g-3">
                     <div class="col-12">
                         <label class="form-label fw-bold" for="wordDecodingReadingSet">Reading Set</label>
                         <select class="form-select mb-2" id="wordDecodingReadingSet">
-                            ${availableSets.map(option => `<option value="${escapeAttr(option.id)}" ${option.id === set.id ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
+                            <option value="" ${!set ? 'selected' : ''}>Select a reading set...</option>
+                            ${availableSets.map(option => `<option value="${escapeAttr(option.id)}" ${option.id === set?.id ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
                         </select>
-                        <div class="form-text mb-3">Only ${escapeHtml(set.language)} word sets are available. The word, read-aloud prompt, and letter sequence are ready to use.</div>
-                        <div class="letter-sound-items-preview">
+                        <div class="form-text mb-3">Only ${escapeHtml(language)} word sets are available. The word, read-aloud prompt, and letter sequence are ready to use.</div>
+                        ${set ? `<div class="letter-sound-items-preview">
                             <h6 class="letter-sound-preview-title">${escapeHtml(set.label)}</h6>
                             <div class="letter-sound-items-grid">
                                 ${set.items.map(item => `<div class="letter-sound-item-card"><div class="letter-sound-item-letter">${escapeHtml(item.word)}</div></div>`).join('')}
                             </div>
                             <div class="letter-sound-items-count"><small class="text-muted">${set.items.length} prescribed words</small></div>
-                        </div>
+                        </div>` : '<div class="template-preview-empty">Select a reading set to preview its items.</div>'}
                     </div>
                 </div>`;
             document.getElementById('wordDecodingReadingSet')?.addEventListener('change', event => {
-                const selectedSet = getWordDecodingReadingSet(set.language, event.target.value);
-                if (!selectedSet) return;
-                activeTemplateActivity.wordDecoding = { readingSetId: selectedSet.id, language: selectedSet.language };
-                activeTemplateActivity.items = selectedSet.items.map(item => ({...item}));
+                const selectedSet = getWordDecodingReadingSet(language, event.target.value);
+                activeTemplateActivity.wordDecoding = { readingSetId: selectedSet?.id || '', language };
+                activeTemplateActivity.items = (selectedSet?.items || []).map(item => ({...item}));
                 renderWordDecodingSelector();
                 renderTemplatePreview();
             });
@@ -19153,7 +19187,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const title = String(templateActivityTitle?.value || templateActivityTitleSelect?.value || '').trim();
             const language = getSelectedTemplateLanguage();
             const first15 = activeTemplateActivity
-                && !window.__templateEditStateRestored
                 && TEMPLATE_META.slice(0, 15).some(([, cardTitle]) => cardTitle === activeTemplateActivity.templateTitle);
             const configuration = document.getElementById('templateConfigurationSection');
             const schedule = templateWeeksGrid?.closest('.template-builder-section');
@@ -19191,7 +19224,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 if (config === 'Phrase Reading Practice') return Boolean(activity.items?.length);
                 if (config === "5W's Story Questions") {
                     const questions = Array.isArray(activity.items) ? activity.items : [];
-                    const allFiveQuestionsComplete = questions.length >= 5 && questions.slice(0, 5).every(item => {
+                    // Older saved activities may contain fewer questions; their
+                    // existing save validation still governs edit-mode readiness.
+                    const requiredCount = activity.mode === 'edit' ? 1 : 5;
+                    const allFiveQuestionsComplete = questions.length >= requiredCount && questions.slice(0, 5).every(item => {
                         const question = String(item?.question || '').trim();
                         const answers = Array.isArray(item?.answers)
                             ? item.answers.filter(answer => String(answer || '').trim())
@@ -19203,13 +19239,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 if (config === 'Story Response') return Boolean(activity.storyResponse?.storyId && activity.storyResponse?.prompt);
                 return Array.from(templateDynamicFields?.querySelectorAll('select') || []).every(select => select.value);
             })();
-            const setComplete = config === "5W's Story Questions" || config === 'Retell the Story'
-                ? rawSetComplete
-                : rawSetComplete && activity.__teacherSelectedConfiguration;
+            // Use the same content validation as Save, independently of DOM events.
+            // Supply a week only for this configuration check; actual week selection
+            // is still required below and by Save.
+            const setComplete = rawSetComplete && !validateTemplateActivityForm({
+                ...getTemplateFormValues(), weeks: ['Week 1']
+            });
             const configurationChoiceComplete = (() => {
-                if (isSoundDetectiveTemplate(config)) return Boolean(activity.soundDetective?.soundSet) && activity.__teacherSelectedConfiguration;
-                if (isClapCountTemplate(config)) return Boolean(activity.clapCount?.wordSet) && activity.__teacherSelectedConfiguration;
-                if (isSyllableBlendingTemplate(config)) return Boolean(activity.activityFormat) && activity.__teacherSelectedConfiguration;
+                if (isSoundDetectiveTemplate(config)) return Boolean(activity.soundDetective?.soundSet);
+                if (isClapCountTemplate(config)) return Boolean(activity.clapCount?.wordSet);
+                if (isSyllableBlendingTemplate(config)) return Boolean(activity.activityFormat);
                 // Picture-Word Matching uses mode radios plus set buttons rather
                 // than one first <select>; keep both prescribed/custom set paths
                 // available while Schedule remains gated by the chosen set/items.
@@ -19232,8 +19271,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 : config === 'Retell the Story'
                 ? !retellStorySelected
                 : !title || !language;
-            const scheduleLocked = !setComplete;
-            const accessLocked = !scheduleComplete;
+            const scheduleLocked = informationLocked || !setComplete;
+            const accessLocked = scheduleLocked || !scheduleComplete;
             const languageLocked = config === "5W's Story Questions"
                 ? !fiveWStorySelected
                 : !title;
@@ -19253,9 +19292,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 );
             configurationControls.forEach(control => {
                 if (!configurationChoiceComplete && firstConfigurationChoice && control !== firstConfigurationChoice) {
+                    if (!('configurationDisabled' in control.dataset)) control.dataset.configurationDisabled = String(control.disabled);
                     control.disabled = true;
-                } else if (configurationChoiceComplete) {
-                    control.disabled = false;
+                } else if ('configurationDisabled' in control.dataset) {
+                    control.disabled = control.dataset.configurationDisabled === 'true';
+                    delete control.dataset.configurationDisabled;
                 }
             });
             if (config === 'Phrase Reading Practice') {
@@ -19292,18 +19333,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 templateDynamicFields.dataset.progressionObserver = 'true';
                 new MutationObserver(() => updateFirst15CreateStepLock()).observe(templateDynamicFields, {childList: true, subtree: true});
                 templateDynamicFields.addEventListener('input', updateFirst15CreateStepLock);
-                templateDynamicFields.addEventListener('change', event => {
-                    if (event.target.closest('select, input[type="radio"], input[type="checkbox"], [data-picture-word-set-select], [data-phrase-set-select]')) {
-                        activeTemplateActivity.__teacherSelectedConfiguration = true;
-                    }
-                    updateFirst15CreateStepLock();
-                });
-                templateDynamicFields.addEventListener('click', event => {
-                    if (event.target.closest('[data-picture-word-set-select], [data-picture-word-custom-toggle], [data-phrase-set-select], [data-sentence-set-select], [data-story-select]')) {
-                        activeTemplateActivity.__teacherSelectedConfiguration = true;
-                        window.setTimeout(updateFirst15CreateStepLock, 0);
-                    }
-                });
+                templateDynamicFields.addEventListener('change', updateFirst15CreateStepLock);
                 templateWeeksGrid?.addEventListener('change', updateFirst15CreateStepLock);
             }
         }
@@ -19328,7 +19358,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
 
             if (isLetterSoundMatchingTemplate(templateTitle)) {
-                const readingSetId = activeTemplateActivity.letterSoundMatching?.readingSetId || 'filipino_set_1';
+                const readingSetId = activeTemplateActivity.letterSoundMatching?.readingSetId || '';
                 const readingSet = getLetterSoundMatchingReadingSetById(readingSetId);
                 const items = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : (readingSet ? readingSet.items : []);
                 return {
@@ -19347,8 +19377,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 return {
                     title: activeTemplateActivity.title || 'Match the Letter to Its Sound',
                     meta: `${language} · Letter-Sound Correspondence`,
-                    body: readingSet.items.map((item, index) => `${index + 1}. ${item.letter} — ${item.sound}`),
-                    emptyMessage: 'The prescribed vowel set is ready.'
+                    body: (readingSet?.items || []).map((item, index) => `${index + 1}. ${item.letter} — ${item.sound}`),
+                    emptyMessage: 'Select a reading set to preview its items.'
                 };
             }
 
@@ -19456,6 +19486,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const words = catalog.words.filter(word=>word.set===config.wordSet);
             config.selectedWordIds = config.selectedWordIds.filter(id=>words.some(word=>word.id===id));
             const selectedCount=config.selectedWordIds.length;
+            if (selectedCount) config.numberOfWords = Math.min(Math.max(1, Number(config.numberOfWords) || 10), selectedCount);
             templateDynamicFields.innerHTML=`<div class="row g-3"><div class="col-12"><label class="form-label fw-bold" for="clapWordSet">Word Set <span class="text-danger">*</span></label><select class="form-select" id="clapWordSet"><option value="">Choose a word set</option>${catalog.sets.map(set=>`<option value="${escapeAttr(set.id)}" ${set.id===config.wordSet?'selected':''}>${escapeHtml(set.name)}</option>`).join('')}</select></div>${config.wordSet?`<div class="col-12"><div class="d-flex justify-content-between align-items-center mb-2"><strong>Select Words</strong><span id="clapSelectedCount">${selectedCount} selected</span></div><label class="mb-3"><input type="checkbox" id="clapSelectAll" ${words.length&&selectedCount===words.length?'checked':''}> Select All</label><div class="row g-3">${words.map(word=>`<div class="col-6 col-lg-4"><label class="card h-100 p-3 text-center justify-content-center ${config.selectedWordIds.includes(word.id)?'border-primary':''}" style="cursor:pointer;min-height:120px"><strong>${escapeHtml(word.word)}</strong><span class="small text-muted mt-1">${word.syllable_count} syllable${word.syllable_count===1?'':'s'}</span><input class="mt-2 clap-word-check" type="checkbox" value="${escapeAttr(word.id)}" ${config.selectedWordIds.includes(word.id)?'checked':''}></label></div>`).join('')}</div></div><div class="col-md-4"><label class="form-label fw-bold" for="clapNumber">Number of words</label><select id="clapNumber" class="form-select">${Array.from({length:Math.max(1,selectedCount)},(_,i)=>i+1).map(n=>`<option value="${n}" ${Math.min(config.numberOfWords,Math.max(1,selectedCount))===n?'selected':''}>${n}</option>`).join('')}</select></div><div class="col-md-4 d-flex align-items-end"><label class="form-check"><input class="form-check-input" id="clapRandomize" type="checkbox" ${config.randomizeOrder?'checked':''}><span class="form-check-label">Randomize word order</span></label></div><div class="col-md-4 d-flex align-items-end"><label class="form-check"><input class="form-check-input" id="clapRetry" type="checkbox" ${config.allowRetry?'checked':''}><span class="form-check-label">Allow retry</span></label></div>`:''}</div>`;
             document.getElementById('clapWordSet').onchange=e=>{config.wordSet=e.target.value;config.selectedWordIds=[];config.previewIndex=0;renderClapCountSelector();renderTemplatePreview()};
             document.getElementById('clapSelectAll')?.addEventListener('change',e=>{config.selectedWordIds=e.target.checked?words.map(w=>w.id):[];config.previewIndex=0;renderClapCountSelector();renderTemplatePreview()});
@@ -19467,6 +19498,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function renderTemplateDynamicFields(title, values = {}) {
             if (!templateDynamicFields) return;
+            templateDynamicFields.storyResponseBindings?.abort();
             document.getElementById('fiveWStory')?.closest('.template-field')?.remove();
             const def = getTemplateDefinition(title);
             const retell = title === 'Retell the Story';
@@ -19532,7 +19564,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 syncAralReadingSet();
                 const sets = getAralReadingSets(title, activeTemplateActivity.language);
                 const selectedId = activeTemplateActivity.aralReadingSetId;
-                templateDynamicFields.innerHTML = `<div class="row g-3"><div class="col-12"><label class="form-label fw-bold" for="aralReadingSet">Reading Set <span class="text-danger">*</span></label><select class="form-select" id="aralReadingSet">${sets.map(set => `<option value="${escapeAttr(set.id)}" ${set.id === selectedId ? 'selected' : ''}>${escapeHtml(set.language)} — ${escapeHtml(set.title)}</option>`).join('')}</select><div class="form-text">Only ${escapeHtml(activeTemplateActivity.language)} Grade 2 reading sets are shown. The activity content and instructions are ready to use.</div></div><div class="col-12"><div class="alert alert-info mb-0"><strong>Ready-to-use template:</strong> teachers can change the Activity Title, language, reading set, and week only.</div></div></div>`;
+                templateDynamicFields.innerHTML = `<div class="row g-3"><div class="col-12"><label class="form-label fw-bold" for="aralReadingSet">Reading Set <span class="text-danger">*</span></label><select class="form-select" id="aralReadingSet"><option value="" ${!selectedId ? 'selected' : ''}>Select a reading set...</option>${sets.map(set => `<option value="${escapeAttr(set.id)}" ${set.id === selectedId ? 'selected' : ''}>${escapeHtml(set.language)} — ${escapeHtml(set.title)}</option>`).join('')}</select><div class="form-text">Only ${escapeHtml(activeTemplateActivity.language)} Grade 2 reading sets are shown. The activity content and instructions are ready to use.</div></div><div class="col-12"><div class="alert alert-info mb-0"><strong>Ready-to-use template:</strong> teachers can change the Activity Title, language, reading set, and week only.</div></div></div>`;
                 templateDynamicFields.querySelector('#aralReadingSet').addEventListener('change', event => {
                     activeTemplateActivity.aralReadingSetId = event.target.value;
                     syncAralReadingSet(); renderTemplatePreview();
@@ -19698,6 +19730,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function renderTemplatePreview() {
             if (!templatePreviewPanel || !activeTemplateActivity) return;
+            updateFirst15CreateStepLock();
+            if (!hasTemplateConfigurationChoice()) {
+                templatePreviewPanel.innerHTML = '<div class="template-preview-empty"><span>Select activity content above to preview its items.</span></div>';
+                return;
+            }
             const templateTitle = activeTemplateActivity.templateTitle;
             if (isSoundDetectiveTemplate(templateTitle)) { renderSoundDetectivePreview(); return; }
             const language = activeTemplateActivity.language || 'Filipino';
@@ -20142,7 +20179,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const content = templatePreviewPanel.querySelector('.activity-preview-content');
                 const storyKey = String(activeTemplateActivity.storyReading?.storyKey || '').trim();
                 const storyLanguage = activeTemplateActivity.storyReading?.language === 'Filipino' ? 'Filipino' : 'English';
-                const selectedStory = getStoryReadingStories(storyLanguage).find(story => story.key === storyKey) || getStoryReadingStories(storyLanguage)[0] || null;
+                const selectedStory = findTemplateConfigurationSelection(getStoryReadingStories(storyLanguage), storyKey, 'key');
                 const storyText = selectedStory ? selectedStory.sentences.join(' ') : String(summary.body?.[0] || '').trim();
                 const storyNumber = (storyKey.match(/(?:story|set)[-_](\d+)/i) || [])[1] || '1';
                 const storyTitle = selectedStory?.title || summary.title || 'Story Reading';
@@ -20241,29 +20278,35 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         async function renderRetellStorySelector() {
             if (!activeTemplateActivity) return;
+            const activity = activeTemplateActivity;
             const select = document.getElementById('templateActivityTitleSelect');
             if (!select) return;
+            const request = Symbol('retellStories');
+            select.retellRequest = request;
             select.disabled = true;
             select.innerHTML = '<option value="">Loading published stories…</option>';
             try {
                 const response = await fetch('{% url "get_published_stories_api" %}', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
                 const data = await response.json();
                 const stories = data.success && Array.isArray(data.stories) ? data.stories : [];
-                if (!activeTemplateActivity || activeTemplateActivity.templateTitle !== 'Retell the Story') return;
+                if (activeTemplateActivity !== activity || select.retellRequest !== request) return;
                 activeTemplateActivity.retellStories = stories;
                 const currentId = activeTemplateActivity.content?.source_story_reading_material_id || '';
                 select.innerHTML = `<option value="">Choose a published Story Reading story</option>${stories.map(story => `<option value="${escapeAttr(story.id)}" ${String(story.id) === String(currentId) ? 'selected' : ''}>${escapeHtml(story.title)}${story.language ? ` — ${escapeHtml(story.language)}` : ''}</option>`).join('')}`;
                 select.disabled = !stories.length;
                 if (!stories.length) select.innerHTML = '<option value="">No published Story Reading activities available</option>';
                 const sync = () => {
+                    if (activeTemplateActivity !== activity) return;
                     const story = stories.find(item => String(item.id) === String(select.value));
                     activeTemplateActivity.content = story ? { activity_type: 'retell_story', source_story_reading_material_id: Number(story.id), storyTitle: story.title, storyText: story.story_text || '' } : { activity_type: 'retell_story' };
                     if (templateActivityTitle) templateActivityTitle.value = story?.title || '';
                     renderTemplatePreview();
+                    updateFirst15CreateStepLock();
                 };
-                select.addEventListener('change', sync);
+                select.onchange = sync;
                 sync();
             } catch (error) {
+                if (activeTemplateActivity !== activity || select.retellRequest !== request) return;
                 select.innerHTML = '<option value="">Unable to load published stories</option>';
                 select.disabled = true;
             }
@@ -20271,30 +20314,33 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         async function renderStoryResponseEditor() {
             if (!templateDynamicFields || !activeTemplateActivity) return;
-            const response = activeTemplateActivity.storyResponse || {};
+            const activity = activeTemplateActivity;
+            const response = activity.storyResponse || {};
+            const bindings = new AbortController();
+            templateDynamicFields.storyResponseBindings = bindings;
             const promptSets = {
                 English: ['What was your favorite part of the story?', 'How did the story make you feel?', 'If you were the character, what would you do?', 'Does the story remind you of something in your life?', 'What would you change about the story?', 'What do you think might happen next?'],
                 Filipino: ['Ano ang paborito mong bahagi ng kuwento?', 'Ano ang naramdaman mo habang binabasa o pinakikinggan ang kuwento?', 'Kung ikaw ang tauhan, ano ang gagawin mo?', 'May ipinapaalala ba sa iyo ang kuwento tungkol sa iyong sariling karanasan?', 'Ano ang gusto mong baguhin sa kuwento?', 'Sa tingin mo, ano ang maaaring mangyari pagkatapos?']
             };
             const activityLanguage = getSelectedTemplateLanguage();
-            const prompts = promptSets[activityLanguage];
+            const prompts = promptSets[activityLanguage] || [];
             if (response.promptSource !== 'custom' && response.prompt && !prompts.includes(response.prompt)) {
                 response.prompt = '';
                 response.promptSource = 'suggested';
             }
             templateDynamicFields.innerHTML = `<div class="row g-3"><div class="col-12"><label class="form-label fw-bold" for="storyResponseStory">Published Story Reading <span class="text-danger">*</span></label><select id="storyResponseStory" class="form-select" disabled><option>Loading published stories…</option></select><div class="form-text">Stories are loaded from your published Story Reading activities.</div><div id="storyResponseStoryNotice" class="alert alert-warning small mt-2 mb-0 d-none"></div></div><div class="col-12" id="storyResponseStoryPreview"></div><div class="col-12"><label class="form-label fw-bold">Response Prompt <span class="text-danger">*</span></label><div class="row g-2 mb-2">${prompts.map(prompt => `<div class="col-12 col-lg-6"><button type="button" class="btn w-100 text-start border story-response-prompt ${response.prompt === prompt && response.promptSource !== 'custom' ? 'border-primary bg-primary-subtle' : ''}" data-story-response-prompt="${escapeAttr(prompt)}">${escapeHtml(prompt)}</button></div>`).join('')}</div><label class="form-label small fw-bold mt-2" for="storyResponseCustomPrompt">Create Your Own Prompt</label><textarea id="storyResponseCustomPrompt" class="form-control" rows="3" placeholder="Write a personal, reflective, or imaginative prompt…">${escapeHtml(response.promptSource === 'custom' ? (response.prompt || '') : '')}</textarea><div class="form-text">A custom prompt is saved with this activity.</div></div><div class="col-md-6"><div class="form-check border rounded-3 p-3 h-100"><input class="form-check-input" type="checkbox" id="storyResponseReadAloud" ${response.readAloud !== false ? 'checked' : ''}><label class="form-check-label fw-semibold" for="storyResponseReadAloud">Read Aloud</label><div class="form-text">Let students hear the response prompt using text-to-speech.</div></div></div><div class="col-md-6"><div class="form-check border rounded-3 p-3 h-100"><input class="form-check-input" type="checkbox" id="storyResponseVoiceRecording" ${response.voiceRecording !== false ? 'checked' : ''}><label class="form-check-label fw-semibold" for="storyResponseVoiceRecording">Voice Recording</label><div class="form-text">Let students record a spoken response.</div></div></div></div>`;
             const storySelect = document.getElementById('storyResponseStory'); const storyNotice = document.getElementById('storyResponseStoryNotice'); const preview = document.getElementById('storyResponseStoryPreview');
-            const updateResponse = () => { const selected = response.stories?.find(story => String(story.id) === String(storySelect.value)); const customPrompt = document.getElementById('storyResponseCustomPrompt').value.trim(); const selectedPrompt = templateDynamicFields.querySelector('.story-response-prompt.border-primary')?.dataset.storyResponsePrompt || ''; activeTemplateActivity.storyResponse = { stories: response.stories || [], storyId: storySelect.value, prompt: customPrompt || selectedPrompt, promptSource: customPrompt ? 'custom' : 'suggested', readAloud: document.getElementById('storyResponseReadAloud').checked, voiceRecording: document.getElementById('storyResponseVoiceRecording').checked }; preview.innerHTML = selected ? `<div class="border rounded-3 bg-light p-3"><div class="fw-semibold">${escapeHtml(selected.title)}</div><div class="small text-muted mb-2">${escapeHtml(selected.language || '')}</div><div class="small">${escapeHtml(selected.text_preview || '')}</div></div>` : ''; renderTemplatePreview(); };
-            templateDynamicFields.addEventListener('click', event => { const promptButton = event.target.closest('[data-story-response-prompt]'); if (!promptButton) return; templateDynamicFields.querySelectorAll('[data-story-response-prompt]').forEach(button => button.classList.remove('border-primary', 'bg-primary-subtle')); promptButton.classList.add('border-primary', 'bg-primary-subtle'); document.getElementById('storyResponseCustomPrompt').value = ''; updateResponse(); });
-            ['change', 'input'].forEach(eventName => templateDynamicFields.addEventListener(eventName, event => { if (event.target.matches('#storyResponseStory, #storyResponseCustomPrompt, #storyResponseReadAloud, #storyResponseVoiceRecording')) updateResponse(); }));
-            try { const apiResponse = await fetch('{% url "get_published_stories_api" %}', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }); const data = await apiResponse.json(); const stories = data.success && Array.isArray(data.stories) ? data.stories : []; if (!activeTemplateActivity || activeTemplateActivity.templateTitle !== 'Story Response') return; response.stories = stories; storySelect.disabled = !stories.length; if (!stories.length) { storySelect.innerHTML = '<option value="">No published Story Reading activities available</option>'; storyNotice.textContent = 'Publish a Story Reading activity first, then it will appear here automatically.'; storyNotice.classList.remove('d-none'); return; } const selectedId = stories.some(story => String(story.id) === String(response.storyId)) ? response.storyId : stories[0].id; storySelect.innerHTML = `<option value="">Choose a published story</option>${stories.map(story => `<option value="${escapeAttr(story.id)}" ${String(story.id) === String(selectedId) ? 'selected' : ''}>${escapeHtml(story.title)}${story.language ? ` — ${escapeHtml(story.language)}` : ''}</option>`).join('')}`; updateResponse(); } catch (error) { storySelect.innerHTML = '<option value="">Unable to load stories</option>'; storyNotice.textContent = 'Published stories could not be loaded. Please try again.'; storyNotice.classList.remove('d-none'); }
+            const updateResponse = () => { if (activeTemplateActivity !== activity || bindings.signal.aborted) return; const selected = response.stories?.find(story => String(story.id) === String(storySelect.value)); const customPrompt = document.getElementById('storyResponseCustomPrompt').value.trim(); const selectedPrompt = templateDynamicFields.querySelector('.story-response-prompt.border-primary')?.dataset.storyResponsePrompt || ''; activeTemplateActivity.storyResponse = { stories: response.stories || [], storyId: storySelect.value, prompt: customPrompt || selectedPrompt, promptSource: customPrompt ? 'custom' : 'suggested', readAloud: document.getElementById('storyResponseReadAloud').checked, voiceRecording: document.getElementById('storyResponseVoiceRecording').checked }; preview.innerHTML = selected ? `<div class="border rounded-3 bg-light p-3"><div class="fw-semibold">${escapeHtml(selected.title)}</div><div class="small text-muted mb-2">${escapeHtml(selected.language || '')}</div><div class="small">${escapeHtml(selected.text_preview || '')}</div></div>` : ''; renderTemplatePreview(); };
+            templateDynamicFields.addEventListener('click', event => { const promptButton = event.target.closest('[data-story-response-prompt]'); if (!promptButton) return; templateDynamicFields.querySelectorAll('[data-story-response-prompt]').forEach(button => button.classList.remove('border-primary', 'bg-primary-subtle')); promptButton.classList.add('border-primary', 'bg-primary-subtle'); document.getElementById('storyResponseCustomPrompt').value = ''; updateResponse(); }, { signal: bindings.signal });
+            ['change', 'input'].forEach(eventName => templateDynamicFields.addEventListener(eventName, event => { if (event.target.matches('#storyResponseStory, #storyResponseCustomPrompt, #storyResponseReadAloud, #storyResponseVoiceRecording')) updateResponse(); }, { signal: bindings.signal }));
+            try { const apiResponse = await fetch('{% url "get_published_stories_api" %}', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } }); const data = await apiResponse.json(); const stories = data.success && Array.isArray(data.stories) ? data.stories : []; if (activeTemplateActivity !== activity || bindings.signal.aborted) return; response.stories = stories; storySelect.disabled = !stories.length; if (!stories.length) { storySelect.innerHTML = '<option value="">No published Story Reading activities available</option>'; storyNotice.textContent = 'Publish a Story Reading activity first, then it will appear here automatically.'; storyNotice.classList.remove('d-none'); return; } const selectedId = stories.some(story => String(story.id) === String(response.storyId)) ? response.storyId : ''; storySelect.innerHTML = `<option value="">Choose a published story</option>${stories.map(story => `<option value="${escapeAttr(story.id)}" ${String(story.id) === String(selectedId) ? 'selected' : ''}>${escapeHtml(story.title)}${story.language ? ` — ${escapeHtml(story.language)}` : ''}</option>`).join('')}`; updateResponse(); } catch (error) { if (activeTemplateActivity !== activity || bindings.signal.aborted) return; storySelect.innerHTML = '<option value="">Unable to load stories</option>'; storyNotice.textContent = 'Published stories could not be loaded. Please try again.'; storyNotice.classList.remove('d-none'); }
         }
 
         function renderStoryReadingSelector(title) {
             if (!templateDynamicFields || !activeTemplateActivity) return;
             const language = activeTemplateActivity.storyReading?.language || 'English';
             const stories = getStoryReadingStories(language);
-            const selectedStory = stories.find(story => story.key === activeTemplateActivity.storyReading?.storyKey) || stories[0] || null;
+            const selectedStory = findTemplateConfigurationSelection(stories, activeTemplateActivity.storyReading?.storyKey, 'key');
             const passageText = (selectedStory?.sentences || []).join(' ').replace(/\s+/g, ' ').trim();
             templateDynamicFields.innerHTML = `
                 <div class="row g-3">
@@ -20361,7 +20407,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             syncSentenceReadingItems();
             const language = activeTemplateActivity.sentenceReading?.language || 'Tagalog';
             const sets = getSentenceReadingSets(language);
-            const selectedSet = sets.find(set => set.key === activeTemplateActivity.sentenceReading?.setKey) || sets[0] || null;
+            const selectedSet = findTemplateConfigurationSelection(sets, activeTemplateActivity.sentenceReading?.setKey, 'key');
             const selectedIndices = new Set((selectedSet ? selectedSet.items.map((_, index) => index) : []).filter(index => activeTemplateActivity.sentenceReading?.selectedIndices?.includes(index) || true));
             const allSelected = Boolean(selectedSet && selectedSet.items.length && selectedIndices.size === selectedSet.items.length);
             templateDynamicFields.innerHTML = `
@@ -20471,38 +20517,28 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 activeTemplateActivity.title = 'Sound Detective';
             }
             if (isLetterSoundMatchingTemplate(templateTitle)) {
-                const defaultSetId = 'filipino_set_1';
-                const defaultSet = getLetterSoundMatchingReadingSetById(defaultSetId);
-                activeTemplateActivity.letterSoundMatching = {
-                    readingSetId: defaultSetId,
-                    language: 'Filipino'
-                };
-                activeTemplateActivity.items = defaultSet ? defaultSet.items : [];
+                activeTemplateActivity.letterSoundMatching = { readingSetId: '', language: '' };
                 activeTemplateActivity.title = 'Letter & Sound Matching';
                 if (templateActivityTitle) templateActivityTitle.value = activeTemplateActivity.title;
             }
             if (isLetterSoundCorrespondenceTemplate(templateTitle)) {
-                const defaultSet = getLetterSoundCorrespondenceReadingSet('Filipino');
-                activeTemplateActivity.letterSoundCorrespondence = { readingSetId: defaultSet.id, language: 'Filipino' };
-                activeTemplateActivity.items = defaultSet.items.map(item => ({...item}));
+                activeTemplateActivity.letterSoundCorrespondence = { readingSetId: '', language: '' };
                 activeTemplateActivity.title = 'Match the Letter to Its Sound';
                 if (templateActivityTitle) templateActivityTitle.value = activeTemplateActivity.title;
             }
             if (isWordDecodingTemplate(templateTitle)) {
-                const defaultSet = getWordDecodingReadingSet('Filipino');
-                activeTemplateActivity.wordDecoding = { readingSetId: defaultSet.id, language: 'Filipino' };
-                activeTemplateActivity.items = defaultSet.items.map(item => ({...item}));
+                activeTemplateActivity.wordDecoding = { readingSetId: '', language: '' };
                 activeTemplateActivity.title = 'Decode the Word';
                 if (templateActivityTitle) templateActivityTitle.value = activeTemplateActivity.title;
             }
             if (isPictureWordMatchingTemplate(templateTitle)) {
-                activeTemplateActivity.pictureWordMatching = Object.assign({}, normalizePictureWordMatchingSelection('A', templateLanguage), { mode: 'prescribed' });
+                activeTemplateActivity.pictureWordMatching = Object.assign({}, normalizePictureWordMatchingSelection('', templateLanguage), { mode: 'prescribed' });
                 activeTemplateActivity.pictureWordMatchingCustom = { items: [], searchQuery: '' };
             }
             if (isStoryReadingTemplate(templateTitle)) {
                 activeTemplateActivity.storyReading = {
                     language: templateLanguage,
-                    storyKey: 'story-1-ben-and-the-little-pet'
+                    storyKey: ''
                 };
             }
             if (isStoryResponseTemplate(templateTitle)) {
@@ -20512,7 +20548,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (isSentenceReadingTemplate(templateTitle)) {
                 activeTemplateActivity.sentenceReading = {
                     language: normalizeSentenceReadingLanguage(templateLanguage),
-                    setKey: templateLanguage === 'Filipino' ? 'tagalog-sentence-1' : 'english-sentence-1',
+                    setKey: '',
                     selectedIndices: []
                 };
             }
@@ -20523,7 +20559,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
             if (isFirst15SupplementaryTemplate) {
                 activeTemplateActivity.language = '';
-                activeTemplateActivity.__teacherSelectedConfiguration = false;
+                activeTemplateActivity.items = [];
                 activeTemplateActivity.activityFormat = '';
                 activeTemplateActivity.selectedActivityId = null;
                 activeTemplateActivity.letterSoundMatching = { readingSetId: '', language: '' };
@@ -20695,6 +20731,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 cancelMaterialSetupBtn.disabled = false;
                 cancelMaterialSetupBtn.removeAttribute('aria-disabled');
             }
+            [materialLanguageSelect, document.getElementById('assignedWeek')].forEach(select => {
+                if (select) syncCourseMaterialDropdown(select);
+            });
             personalMaterialInitialSnapshot = getPersonalMaterialDraftSnapshot();
             updateReadingPracticeProgression();
         }
@@ -20702,11 +20741,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         function updateReadingPracticeProgression() {
             if (!personalWorkspaceActive || window.__templateEditStateRestored) return;
             const titleComplete = Boolean(materialTitleInput?.value.trim());
-            const itemsComplete = currentItemsList.length > 0;
-            const languageComplete = Boolean(materialLanguageSelect?.value);
+            const itemsComplete = titleComplete && currentItemsList.length > 0;
+            const languageComplete = itemsComplete && Boolean(materialLanguageSelect?.value);
             const statusComplete = languageComplete && Boolean(publicationStatusSelect?.value);
             const weekSelect = document.getElementById('assignedWeek');
-            const weekComplete = Boolean(weekSelect?.value);
+            const weekComplete = statusComplete && Boolean(weekSelect?.value);
             const contentSection = personalMaterialSections?.[0];
             const settingsSection = personalMaterialSections?.[1];
             const itemControls = Array.from(contentSection?.querySelectorAll('input, textarea, button') || [])
@@ -20830,11 +20869,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 Object.assign(content,{language,activity_type:'sound_detective',sound_set:config.soundSet||'',sound_set_label:selectedSet?.label||'',target_sound:selectedSet?.sound||'',selected_word_ids:config.selectedWordIds||[],number_of_questions:selectedItems.length,randomize_questions:false,randomize_answer_choices:false,allow_retry:true,items:selectedItems});
             } else if (isSyllableBlendingTemplate(activeTemplateActivity?.templateTitle)) {
                 content.language = language;
-                content.activity_format = activeTemplateActivity.activityFormat || 'syllable_combination';
+                content.activity_format = activeTemplateActivity.activityFormat || '';
                 content.activity_type = 'syllable_blending';
                 content.activity_id = activeTemplateActivity.selectedActivityId || '';
             } else if (isLetterSoundMatchingTemplate(activeTemplateActivity?.templateTitle)) {
-                const readingSetId = activeTemplateActivity.letterSoundMatching?.readingSetId || 'filipino_set_1';
+                const readingSetId = activeTemplateActivity.letterSoundMatching?.readingSetId || '';
                 const readingSet = getLetterSoundMatchingReadingSetById(readingSetId);
                 content.language = language;
                 content.activity_type = 'letter_sound_matching';
@@ -20845,16 +20884,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     language,
                     activeTemplateActivity.letterSoundCorrespondence?.readingSetId
                 );
-                content.language = readingSet.language;
+                content.language = language;
                 content.activity_type = 'letter_sound_correspondence';
-                content.reading_set_id = readingSet.id;
-                content.items = readingSet.items.map(item => ({...item}));
+                content.reading_set_id = readingSet?.id || '';
+                content.items = (readingSet?.items || []).map(item => ({...item}));
             } else if (isWordDecodingTemplate(activeTemplateActivity?.templateTitle)) {
                 const readingSet = getWordDecodingReadingSet(language, activeTemplateActivity.wordDecoding?.readingSetId);
-                content.language = readingSet.language;
+                content.language = language;
                 content.activity_type = 'word_decoding';
-                content.reading_set_id = readingSet.id;
-                content.items = readingSet.items.map(item => ({...item}));
+                content.reading_set_id = readingSet?.id || '';
+                content.items = (readingSet?.items || []).map(item => ({...item}));
             } else if (isPictureWordMatchingTemplate(activeTemplateActivity?.templateTitle)) {
                 const mode = activeTemplateActivity?.pictureWordMatching?.mode === 'custom' ? 'custom' : 'prescribed';
                 content.language = language || 'English';
@@ -21728,7 +21767,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const contextualLanguage = hasOpenCourse
                 ? getCurrentOpenCourseLanguageValue()
                 : getCurrentClassLanguageValue();
-            materialLanguageSelect.value = savedLanguage || materialLanguageSelect.value || contextualLanguage || '';
+            const newReadingPractice = personalWorkspaceActive && !window.__templateEditStateRestored;
+            materialLanguageSelect.value = savedLanguage || materialLanguageSelect.value || (newReadingPractice ? '' : contextualLanguage) || '';
             syncCourseMaterialDropdown(materialLanguageSelect);
         }
 
