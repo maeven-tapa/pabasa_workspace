@@ -79,6 +79,7 @@ from .audio_fluency import AudioAnalysisError, extract_audio_features
 from .system_clock import invalidate_override_cache, now as system_now, real_now, today as system_today
 from .models import PracticeDebugSettings, OtpDebugSettings
 from .account_defaults import DEFAULT_NEW_STUDENT_PASSWORD, default_student_password_hash
+from .principal_security import issue_temporary_password, temporary_password, temporary_password_expired, validate_principal_password
 from .section_configuration import ensure_salawag_grade_two_sections
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
 from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
@@ -1929,6 +1930,12 @@ def _log_activity(event_type, title, message='', actor=None, metadata=None):
 def _create_notification(recipient, title, message, notification_type='info', action_url='', created_by=None, email_subject=None, email_body=None, send_email=True, force_in_app=False):
     if not recipient:
         return None
+    notification_school = None
+    if recipient.role == 'principal':
+        notification_school = recipient.school_record_id
+        actor_school = getattr(created_by, 'school_record_id', None)
+        if not notification_school or (actor_school and actor_school != notification_school):
+            return None
 
     settings_dict = _notification_settings_for_user(recipient)
     notification = None
@@ -1936,6 +1943,7 @@ def _create_notification(recipient, title, message, notification_type='info', ac
         notification = Notification.objects.create(
             recipient=recipient,
             created_by=created_by,
+            school_id=notification_school,
             title=title,
             message=message,
             notification_type=notification_type,
@@ -1978,8 +1986,15 @@ def _notify_admins(title, message, notification_type='info', action_url='', crea
         _create_notification(admin_user, title, message, notification_type, action_url, created_by, send_email=False)
 
 
-def _principal_users():
-    return User.objects.filter(role='principal', is_archived=False)
+def _principal_users(school_id=None):
+    return User.objects.filter(role='principal', is_archived=False, school_record_id=school_id).exclude(school_record__isnull=True)
+
+
+def _notifications_for_user(user):
+    qs = Notification.objects.filter(recipient=user)
+    if user.role == 'principal':
+        return qs.filter(school_id=user.school_record_id).exclude(school__isnull=True)
+    return qs
 
 
 def _notification_recently_sent(recipient, title, message, window_minutes=1440):
@@ -1994,9 +2009,15 @@ def _notification_recently_sent(recipient, title, message, window_minutes=1440):
     ).exists()
 
 
-def _notify_principals(title, message, notification_type='info', action_url='', created_by=None, send_email=False, force_in_app=True):
+def _notify_principals(title, message, notification_type='info', action_url='', created_by=None, send_email=False, force_in_app=False, school_id=None, category='progress_updates'):
     sent_count = 0
-    for principal_user in _principal_users():
+    school_id = school_id or getattr(created_by, 'school_record_id', None)
+    if action_url.startswith('/dashboard/admin/'):
+        action_url = reverse('principal_school_workspace')
+    for principal_user in _principal_users(school_id):
+        preferences = _notification_settings_for_user(principal_user)
+        if not preferences.get(category, True):
+            continue
         if _notification_recently_sent(principal_user, title, message, window_minutes=1440):
             continue
         created = _create_notification(
@@ -2015,117 +2036,30 @@ def _notify_principals(title, message, notification_type='info', action_url='', 
 
 
 def _notify_principal_performance_events(student_user, assessment=None, material=None, class_name=None, score_payload=None):
-    if not student_user:
+    """School-local alerts derived from persisted official weekly evidence."""
+    from .principal_reporting import weekly_official_accuracy
+    if not student_user or not student_user.school_record_id:
         return []
-
-    section = None
-    if assessment and assessment.section:
-        section = assessment.section
-    elif material and material.section:
-        section = material.section
-    elif material and hasattr(material, 'assigned_sections'):
-        section = material.assigned_sections.filter(is_active=True).first()
-
-    if not section:
+    enrollment = Enrollment.objects.filter(student=student_user, school_id=student_user.school_record_id,
+        status='active', is_active=True, section__is_active=True).select_related('section').order_by('-joined_at', '-pk').first()
+    if not enrollment or not enrollment.section_id:
         return []
-
+    section = enrollment.section
     now = system_now()
     week_start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
-    week_end = week_start + timedelta(days=7)
-
-    def _section_weekly_average(section_obj):
-        scores = [
-            float(score)
-            for score in Assessment.objects.filter(
-                section=section_obj,
-                is_active=True,
-                attempt_status='completed',
-                completed_at__gte=week_start,
-                completed_at__lt=week_end,
-                total_score__isnull=False,
-            ).values_list('total_score', flat=True)
-            if score is not None
-        ]
-        if not scores:
-            return None
-        return round(sum(scores) / len(scores), 1)
-
-    current_week_avg = _section_weekly_average(section)
-    score_value = None
-    if score_payload:
-        score_value = score_payload.get('total_score')
-        if score_value is None:
-            score_value = score_payload.get('score')
-    if score_value is None and assessment:
-        score_value = getattr(assessment, 'total_score', None)
-
-    other_sections = []
-    for other_section in Section.objects.filter(is_active=True).exclude(id=section.id):
-        average = _section_weekly_average(other_section)
-        if average is not None:
-            other_sections.append(average)
-    highest_weekly_avg = max(other_sections) if other_sections else None
-    if current_week_avg is not None and (highest_weekly_avg is None or current_week_avg > highest_weekly_avg):
-        _notify_principals(
-            'Top-performing class of the week',
-            f"{section.class_name} achieved the highest reading score this week at {current_week_avg:.1f}%.",
-            'success',
-            reverse('dashboard_principal'),
-            student_user,
-            send_email=False,
-        )
-
-    previous_week_start = week_start - timedelta(days=7)
-    previous_week_end = week_start
-
-    def _school_weekly_average(start_dt, end_dt):
-        scores = [
-            float(score)
-            for score in Assessment.objects.filter(
-                is_active=True,
-                attempt_status='completed',
-                completed_at__gte=start_dt,
-                completed_at__lt=end_dt,
-                total_score__isnull=False,
-            ).values_list('total_score', flat=True)
-            if score is not None
-        ]
-        if not scores:
-            return None
-        return round(sum(scores) / len(scores), 1)
-
-    current_school_average = _school_weekly_average(week_start, week_end)
-    previous_school_average = _school_weekly_average(previous_week_start, previous_week_end)
-    if current_school_average is not None and previous_school_average is not None and current_school_average > previous_school_average + 0.5:
-        _notify_principals(
-            'School reading performance improved',
-            f'The school reading performance improved from {previous_school_average:.1f}% to {current_school_average:.1f}% this week.',
-            'success',
-            reverse('dashboard_principal'),
-            student_user,
-            send_email=False,
-        )
-
-    if current_week_avg is not None and current_week_avg < 70:
-        _notify_principals(
-            'Reading intervention needed',
-            f"{section.class_name} needs reading intervention support after averaging {current_week_avg:.1f}% this week.",
-            'warning',
-            reverse('dashboard_principal'),
-            student_user,
-            send_email=False,
-        )
-
-    if score_value is not None and score_value >= 90:
-        _notify_principals(
-            'Outstanding reading outcomes',
-            f"{section.class_name} achieved outstanding reading outcomes with a score of {score_value:.1f}%.",
-            'success',
-            reverse('dashboard_principal'),
-            student_user,
-            send_email=False,
-        )
-
+    current = weekly_official_accuracy(section.school_id, enrollment.school_calendar_id, week_start, week_start + timedelta(days=7))
+    previous = weekly_official_accuracy(section.school_id, enrollment.school_calendar_id, week_start - timedelta(days=7), week_start)
+    average = current['sections'].get(section.pk)
+    def notify(title, message, variant='success'):
+        _notify_principals(title, message, variant, reverse('principal_performance'), student_user,
+                          send_email=False, category='performance_alerts')
+    values = [value for value in current['sections'].values() if value is not None]
+    if average is not None and average > 0 and len(values) > 1 and average == max(values):
+        notify('Top-performing class of the week', f'{section.class_name} has the highest recorded official reading accuracy this week at {average:.1f}%.')
+    if current['school'] is not None and previous['school'] is not None and current['school'] > previous['school'] + 0.5:
+        notify('School reading performance improved', f"Recorded official reading accuracy improved from {previous['school']:.1f}% to {current['school']:.1f}% this week.")
+    if average is not None and average < 70:
+        notify('Reading follow-up recommended', f'{section.class_name} recorded official reading accuracy of {average:.1f}% this week. Review learner profiles and intervention needs.', 'warning')
     return []
 
 
@@ -5155,6 +5089,13 @@ def reset_password(request):
             'email': email
         })
 
+    if user.role == 'principal':
+        try:
+            validate_principal_password(password, user)
+        except ValidationError as exc:
+            return render(request, 'pabasa_app/forgot_password_reset.html', {'email': email, 'error': ' '.join(exc.messages)})
+        user.must_change_password = False
+        user.principal_password_expires_at = None
     user.password_hash = make_password(password)
     user.save()
     send_password_reset_confirmation_email(request, user)
@@ -5476,7 +5417,7 @@ def _complete_teacher_signup(request, pending, *, otp_disabled=False):
             'success',
             reverse('admin_teacher_detail', args=[user.id]),
             user,
-            send_email=False,
+            send_email=False, category="teacher_updates",
         )
         _clear_pending_teacher_signup(request)
 
@@ -5745,6 +5686,8 @@ def login_user(request):
 
         if not password_valid:
             return JsonResponse({'success': False, 'error': 'Invalid custom ID or password'}, status=401)
+        if temporary_password_expired(user):
+            return JsonResponse({'success': False, 'error': 'Temporary password expired. Request a password reset.'}, status=403)
 
         if getattr(user, 'is_archived', False) or getattr(user, 'account_status', '') == 'archived':
             return JsonResponse({'success': False, 'error': 'This account has been archived. Please contact an administrator.'}, status=403)
@@ -5768,6 +5711,8 @@ def login_user(request):
         request.session['last_name'] = user.last_name
         request.session['email'] = user.email
         request.session['login_at'] = system_now().isoformat()
+        if user.role == 'principal':
+            request.session['principal_password_version'] = hashlib.sha256(user.password_hash.encode()).hexdigest()
         if user.role == 'student' and teacher_access_mode:
             request.session['teacher_access_mode'] = True
         else:
@@ -5827,13 +5772,15 @@ def principal_change_temporary_password(request):
             context['error_message'] = 'Choose a new private password instead of the temporary password.'
         else:
             try:
-                validate_password(new_password, user=user)
+                validate_principal_password(new_password, user)
             except ValidationError as exc:
                 context['password_errors'] = exc.messages
             else:
                 user.set_password(new_password)
                 user.must_change_password = False
-                user.save(update_fields=['password_hash', 'must_change_password', 'updated_at'])
+                user.principal_password_expires_at = None
+                user.save(update_fields=['password_hash', 'must_change_password', 'principal_password_expires_at', 'updated_at'])
+                request.session['principal_password_version'] = hashlib.sha256(user.password_hash.encode()).hexdigest()
                 request.session.cycle_key()
                 request.session['login_at'] = system_now().isoformat()
                 request.session.modified = True
@@ -6482,6 +6429,12 @@ def _notification_settings_for_user(user):
     saved_settings = _get_profile_dict(user, 'notification_settings')
     if not isinstance(saved_settings, dict):
         saved_settings = {}
+    if user.role == 'principal':
+        # Principal school alerts are an always-on monitoring capability.
+        # Legacy private toggles must not strand a user after removing that UI.
+        return {**_notification_settings_defaults(user), 'push_enabled': True,
+                'progress_updates': True, 'performance_alerts': True, 'teacher_updates': True,
+                'email_notifications': False, 'weekly_digest_enabled': False}
     return {
         **_notification_settings_defaults(user),
         **saved_settings,
@@ -6915,14 +6868,7 @@ def _generate_principal_custom_id(school_name):
 
 
 def _principal_temporary_password(last_name):
-    surname = unicodedata.normalize('NFKD', str(last_name or '').strip())
-    normalized_surname = ''.join(
-        character for character in surname.upper()
-        if character.isascii() and character.isalnum()
-    )
-    if not normalized_surname:
-        raise ValueError('Principal surname must contain at least one letter or number.')
-    return f'{normalized_surname}123'
+    return temporary_password()
 
 
 def _send_principal_credentials_email(request, user, school_name, temporary_password, *, is_reset=False):
@@ -6940,6 +6886,7 @@ def _send_principal_credentials_email(request, user, school_name, temporary_pass
         f"School Name: {school_name}\n"
         f"PABASA ID / Username: {user.custom_id}\n"
         f"Temporary Password: {temporary_password}\n\n"
+        "This temporary password expires 24 hours after it is issued. If it expires, request a password reset.\n\n"
         "Log in using the existing PABASA login page:\n"
         f"{auth_url}\n\n" 
         "After logging in, you will be required to create a new private password before continuing.\n\n"
@@ -7026,7 +6973,6 @@ def _create_principal_account(request, school, first_name, middle_initial, last_
         raise ValueError('An account with this email address already exists.')
 
     custom_id = _generate_principal_custom_id(school.name)
-    temporary_password = _principal_temporary_password(last_name)
     user = User(
         custom_id=custom_id,
         role='principal',
@@ -7044,7 +6990,7 @@ def _create_principal_account(request, school, first_name, middle_initial, last_
         school_record=school,
         must_change_password=True,
     )
-    user.set_password(temporary_password)
+    temporary_password = issue_temporary_password(user)
     user.save()
     _set_profile_dict(user, 'principal_profile_info', {
         'position': 'Principal',
@@ -7474,10 +7420,8 @@ def admin_principal_reset_password(request, user_id):
             id=user.id,
             role='principal',
         )
-        temporary_password = _principal_temporary_password(locked_user.last_name)
-        locked_user.set_password(temporary_password)
-        locked_user.must_change_password = True
-        locked_user.save(update_fields=['password_hash', 'must_change_password', 'updated_at'])
+        temporary_password = issue_temporary_password(locked_user)
+        locked_user.save(update_fields=['password_hash', 'must_change_password', 'principal_password_expires_at', 'updated_at'])
 
     school_name = locked_user.school_record.name if locked_user.school_record_id else (locked_user.school or '')
     email_sent = _try_send_principal_credentials_email(
@@ -7781,10 +7725,8 @@ def admin_school_principal_reset_password(request, school_id, user_id):
         return redirect('admin_school_detail', school_id=school.id)
     with transaction.atomic():
         user = User.objects.select_for_update().get(id=user.id, role='principal', school_record=school)
-        temporary_password = _principal_temporary_password(user.last_name)
-        user.set_password(temporary_password)
-        user.must_change_password = True
-        user.save(update_fields=['password_hash', 'must_change_password', 'updated_at'])
+        temporary_password = issue_temporary_password(user)
+        user.save(update_fields=['password_hash', 'must_change_password', 'principal_password_expires_at', 'updated_at'])
     if _try_send_principal_credentials_email(request, user, school.name, temporary_password, is_reset=True):
         messages.success(request, "Principal password reset successfully. The temporary credentials were sent to the Principal's email.")
     else:
@@ -8634,6 +8576,7 @@ def _calendar_event_payload(event):
         'end_date': event.end_date.isoformat() if event.end_date else '',
         'description': event.description or '',
         'school_calendar_id': event.school_calendar_id,
+        'is_published': event.is_published,
     }
 
 
@@ -8654,18 +8597,21 @@ def _calendar_event_type_label(event_type):
     return dict(CalendarEvent.EVENT_TYPE_CHOICES).get(event_type, 'ARAL Schedule' if event_type == 'aral_schedule' else 'Other Activity')
 
 
-def _calendar_aral_events(school_calendar):
+def _calendar_aral_events(school_calendar, *, published_only=False):
     """Derive ARAL periods from the Admin-configured assessment and term blocks."""
     if not school_calendar:
         return []
 
+    schedule_events = [event for event in _calendar_events_for_school_calendar(school_calendar)
+        if not event.school_id and event.scope in (CalendarEvent.SCOPE_GLOBAL, '', None)
+        and (not published_only or event.is_published)]
     derived_events = []
     assessment_types = {
         1: 'pre_assessment',
         2: 'midline_assessment',
         3: 'post_assessment',
     }
-    for term, blocks in _calendar_term_blocks(school_calendar).items():
+    for term, blocks in _calendar_term_blocks(school_calendar, events=schedule_events).items():
         opening = blocks.get('opening')
         closing = blocks.get('closing')
         assessment_type = assessment_types.get(term)
@@ -8677,6 +8623,8 @@ def _calendar_aral_events(school_calendar):
             None,
         )
         if not opening or not closing or not assessment:
+            continue
+        if published_only and not all(event.is_published for event in (opening, closing, assessment)):
             continue
 
         aral_start = assessment.end_date + timedelta(days=1)
@@ -8735,7 +8683,7 @@ def _calendar_aral_events(school_calendar):
     return derived_events
 
 
-def _calendar_events_for_audience(school_calendar, user=None):
+def _calendar_events_for_audience(school_calendar, user=None, *, published_only=False):
     """Return one Admin-owned schedule, filtering ARAL only for eligible students."""
     if not school_calendar:
         return []
@@ -8743,15 +8691,18 @@ def _calendar_events_for_audience(school_calendar, user=None):
     audience_school = getattr(user, 'school_record', None) if user else None
     if audience_school:
         event_filter |= Q(scope=CalendarEvent.SCOPE_SCHOOL, school=audience_school)
+    event_queryset = CalendarEvent.objects.filter(school_calendar=school_calendar).filter(event_filter)
+    if published_only:
+        event_queryset = event_queryset.filter(is_published=True)
     events = [
         _calendar_event_payload(event) | {
             'title': _calendar_fixed_title(event.event_type, event.title),
             'event_type_label': _calendar_event_type_label(event.event_type),
             **({'scope': event.scope} if user and user.role in {'teacher', 'student'} else {}),
         }
-        for event in CalendarEvent.objects.filter(school_calendar=school_calendar).filter(event_filter).order_by('start_date', 'end_date', 'created_at')
+        for event in event_queryset.order_by('start_date', 'end_date', 'created_at')
     ]
-    aral_events = _calendar_aral_events(school_calendar)
+    aral_events = _calendar_aral_events(school_calendar, published_only=published_only)
     if not (user and user.role == 'student' and not _aral_eligible_classification(
         _reader_assessment_state(user).get('reader_classification') or getattr(user, 'reading_level', '')
     )):
@@ -8847,20 +8798,20 @@ def _seed_philippine_holidays(school_calendar):
             event_type='holiday',
             title=title,
             start_date=holiday_date,
-            defaults={'term': 1, 'end_date': holiday_date, 'description': 'Automatically added Philippine national holiday.'},
+            defaults={'term': 1, 'end_date': holiday_date, 'description': 'Automatically added Philippine national holiday.', 'is_published': True},
         )
         if was_created:
             created.append(event)
     return created
 
 
-def _calendar_term_blocks(school_calendar):
+def _calendar_term_blocks(school_calendar, *, events=None):
     perf_started_at = time.perf_counter()
     query_start = len(connection.queries) if settings.DEBUG else None
     blocks = {}
     if not school_calendar:
         return blocks
-    all_events = _calendar_events_for_school_calendar(school_calendar)
+    all_events = _calendar_events_for_school_calendar(school_calendar) if events is None else events
     term_loop_started_at = time.perf_counter()
     for term in (1, 2, 3, 4):
         opening_candidates = [event for event in all_events if event.term == term and event.event_type == 'school_opening']
@@ -9515,7 +9466,10 @@ def _selected_school_calendar(request=None):
             or active_calendar
         )
     if not selected_calendar:
-        selected_calendar = calendars[0] if calendars else None
+        selected_calendar = max((item for item in calendars if item.is_active),
+                                key=lambda item: (item.school_year, item.pk), default=None)
+        if not selected_calendar and calendars:
+            selected_calendar = max(calendars, key=lambda item: (item.school_year, item.pk))
     if not selected_calendar:
         # A calendar is created only when an administrator explicitly creates
         # a School Year. This keeps a cleared calendar database empty.
@@ -9855,7 +9809,7 @@ def admin_school_calendar(request):
                     title='Class Suspension',
                     start_date=suspension_date,
                     end_date=suspension_date,
-                    defaults={'term': term, 'description': 'School suspension.'},
+                    defaults={'term': term, 'description': 'School suspension.', 'is_published': True},
                 )
                 saved_events.append(_calendar_event_payload(event))
             if wants_json():
@@ -9995,6 +9949,11 @@ def admin_school_calendar(request):
             event.start_date = start_date_value
             event.end_date = end_date_value
             event.description = description
+            if request.POST.get('publication_control') == '1':
+                event.is_published = request.POST.get('is_published') == 'on'
+            elif not event.pk:
+                # Legacy clients save an immediately visible calendar event.
+                event.is_published = True
             event.save()
             if wants_json():
                 return JsonResponse({'success': True, 'event': _calendar_event_payload(event)})
@@ -10075,6 +10034,7 @@ def admin_school_calendar(request):
                 opening.title = 'Opening Block'
                 opening.start_date = opening_date
                 opening.end_date = _opening_block_end(opening_date)
+                opening.is_published = True
                 opening.save()
                 closing = CalendarEvent.objects.filter(
                     school_calendar=selected_calendar, term=term, event_type='school_closing'
@@ -10084,6 +10044,7 @@ def admin_school_calendar(request):
                 closing.title = 'Closing Block'
                 closing.start_date = closing_date
                 closing.end_date = _add_weekdays(closing_date, 9)
+                closing.is_published = True
                 closing.save()
                 saved_events.extend([_calendar_event_payload(opening), _calendar_event_payload(closing)])
                 assessment_type, assessment_title = assessment_types[term]
@@ -10100,6 +10061,7 @@ def admin_school_calendar(request):
                 assessment.title = assessment_title
                 assessment.start_date = assessment_start
                 assessment.end_date = assessment_end
+                assessment.is_published = True
                 assessment.save()
                 saved_events.append(_calendar_event_payload(assessment))
 
@@ -15097,6 +15059,8 @@ def _lesson7_gawain2c_row_is_recognizable(strokes, row_index):
 @xframe_options_sameorigin
 @ensure_csrf_cookie
 def prescribed_activity_page(request, activity_key):
+    if request.session.get('user_role') == 'principal':
+        raise PermissionDenied('Principal accounts monitor ARAL progress in Learning & Intervention.')
     activity = prescribed_activity(activity_key)
     lifecycle = None
     if not activity:
@@ -34469,7 +34433,7 @@ def create_course(request):
             'info',
             reverse('dashboard_principal'),
             teacher_user,
-            send_email=False,
+            send_email=False, category="teacher_updates",
         )
         if section_ids:
             authorized_sections = Section.objects.filter(
@@ -37355,7 +37319,7 @@ def _queue_material_creation_followups(material, section, teacher_user, status, 
                     'info',
                     reverse('dashboard_principal'),
                     teacher_user,
-                    send_email=False,
+                    send_email=False, category="teacher_updates",
                 )
             _notify_admins(
                 'Teacher created a new material',
@@ -38392,7 +38356,7 @@ def get_notifications(request):
 def get_unread_notification_count(request):
     """API: Get unread count for badge."""
     user = User.objects.get(id=request.session.get('user_id'))
-    count = Notification.objects.filter(recipient=user, is_read=False).count()
+    count = _notifications_for_user(user).filter(is_read=False).count()
     return JsonResponse({'success': True, 'unread_count': count})
 
 @require_http_methods(["GET"])
@@ -38413,7 +38377,7 @@ def mark_notification_read(request):
         data = json.loads(request.body)
         notif_id = data.get('notification_id')
         user = User.objects.get(id=request.session.get('user_id'))
-        notifications = Notification.objects.filter(recipient=user)
+        notifications = _notifications_for_user(user)
         if data.get('mark_all'):
             updated_count = notifications.filter(is_read=False).update(is_read=True)
         elif notif_id:
@@ -38431,7 +38395,7 @@ def clear_notifications(request):
     """API: Clear all notifications for the current user."""
     try:
         user = User.objects.get(id=request.session.get('user_id'))
-        deleted_count, _ = Notification.objects.filter(recipient=user).delete()
+        deleted_count, _ = _notifications_for_user(user).delete()
         return JsonResponse({'success': True, 'deleted_count': deleted_count})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
@@ -38897,19 +38861,20 @@ def _principal_context(request, page_title):
         profile_info = _get_profile_dict(user, 'principal_profile_info') or {}
         if not isinstance(profile_info, dict):
             profile_info = {}
-        position = profile_info.get('position', 'Head Teacher/Principal II')
+        position = profile_info.get('position', 'Principal')
     else:
-        first_name = request.session.get('first_name', 'Jobelyn')
-        last_name = request.session.get('last_name', 'Valdez')
+        first_name = request.session.get('first_name', 'Principal')
+        last_name = request.session.get('last_name', '')
         middle_initial = ''
-        position = 'Head Teacher/Principal II'
+        position = 'Principal'
     return {
-        'principal_id': request.session.get('custom_id', 'PRN-SES'),
+        'principal_id': user.custom_id if user else '',
         'first_name': first_name,
         'last_name': last_name,
         'middle_initial': middle_initial,
         'position': position,
         'page_title': page_title,
+        'compact_page_heading': page_title in {'Overview', 'School', 'Learning & Intervention', 'Calendar', 'Reports', 'Account Settings'},
     }
 
 
@@ -38957,468 +38922,27 @@ def _parse_attempt_timestamp(value):
         return None
 
 
-def _principal_analytics(user):
-    is_principal = bool(user and user.role == 'principal')
-    principal_school = user.school_record if is_principal and user.school_record_id else None
-
-    students_qs = User.objects.filter(role='student', is_archived=False)
-    teachers_qs = User.objects.filter(role='teacher', is_archived=False)
-    sections = Section.objects.filter(is_active=True).select_related('teacher')
-    assessments = Assessment.objects.filter(
-        is_active=True,
-        source_assessment__isnull=True,
-    ).select_related('section', 'teacher')
-
-    if is_principal:
-        if principal_school is None:
-            # A Principal without relational School ownership must never fall
-            # back to the legacy school label or to global querysets.
-            students_qs = students_qs.none()
-            teachers_qs = teachers_qs.none()
-            sections = sections.none()
-            assessments = assessments.none()
-        else:
-            students_qs = students_qs.filter(school_record=principal_school)
-            teachers_qs = teachers_qs.filter(school_record=principal_school)
-            sections = sections.filter(school=principal_school)
-            assessments = assessments.filter(
-                Q(section__school=principal_school)
-                | Q(section__isnull=True, teacher__school_record=principal_school)
-            ).distinct()
-
-    school_info = _get_profile_dict(user, 'principal_school_info') if user else {}
-    if is_principal:
-        school_name = principal_school.name if principal_school else 'School not assigned'
-        school_logo = principal_school.logo if principal_school else ''
-    else:
-        school_name = (
-            (school_info.get('name') if isinstance(school_info, dict) else None)
-            or getattr(user, 'school', None)
-            or 'Salawag Elementary School'
-        )
-        school_logo = school_info.get('logo') if isinstance(school_info, dict) else ''
-
-    scoped_student_ids = set(students_qs.values_list('id', flat=True))
-
-    student_grade_map = {}
-    grade_students = {}
-    for student in students_qs:
-        grade_label = _normalize_grade(student.grade_level)
-        student_grade_map[student.id] = grade_label
-        grade_students.setdefault(grade_label, 0)
-        grade_students[grade_label] += 1
-
-    grade_keys = sorted(grade_students.keys(), key=_grade_sort_key)
-    grade_data = {
-        grade: {
-            'grade': grade,
-            'total_students': grade_students.get(grade, 0),
-            'completed_student_ids': set(),
-            'in_progress_student_ids': set(),
-            'reading_sum': 0.0,
-            'reading_count': 0,
-            'speech_sum': 0.0,
-            'speech_count': 0,
-            'total_sum': 0.0,
-            'total_count': 0,
-            'current_month_scores': [],
-            'previous_month_scores': [],
-        }
-        for grade in grade_keys
-    }
-
-    now = system_now()
-    current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    previous_month_end = current_month_start - timedelta(seconds=1)
-    previous_month_start = previous_month_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-
-    assessment_rows = []
-    assessment_attempt_rows = []
-    status_counts = {'completed': 0, 'in_progress': 0, 'pending': 0}
-    type_stats = {}
-    latest_activity = []
-
-    def _clean_numeric_scores(values):
-        cleaned = []
-        for value in values or []:
-            numeric = _as_float(value, default=None)
-            if numeric is None:
-                continue
-            # Skip NaN values while keeping valid numeric scores.
-            if numeric != numeric:
-                continue
-            cleaned.append(numeric)
-        return cleaned
-
-    for assessment in assessments:
-        attempts = assessment.get_attempts()
-        participants = set()
-        completed_students = set()
-        completed_scores = []
-        last_completed_at = None
-
-        for attempt in attempts:
-            sid = attempt.get('student_id')
-            if sid:
-                try:
-                    sid_int = int(sid)
-                except (TypeError, ValueError):
-                    continue
-                if is_principal and sid_int not in scoped_student_ids:
-                    continue
-                participants.add(sid_int)
-
-            status = str(attempt.get('status') or '').lower()
-            if status == 'completed' and sid:
-                try:
-                    sid_int = int(sid)
-                except (TypeError, ValueError):
-                    continue
-                completed_students.add(sid_int)
-                score_val = _as_float(attempt.get('total_score'), default=None)
-                if score_val is not None:
-                    completed_scores.append(score_val)
-
-                grade_label = student_grade_map.get(sid_int)
-                if grade_label and grade_label in grade_data:
-                    g = grade_data[grade_label]
-                    g['completed_student_ids'].add(sid_int)
-                    g['in_progress_student_ids'].discard(sid_int)
-
-                    accuracy = _as_float(attempt.get('accuracy'), default=None)
-                    pronunciation = _as_float(attempt.get('pronunciation_score'), default=None)
-                    total_score = _as_float(attempt.get('total_score'), default=None)
-                    if accuracy is not None:
-                        g['reading_sum'] += accuracy
-                        g['reading_count'] += 1
-                    if pronunciation is not None:
-                        g['speech_sum'] += pronunciation
-                        g['speech_count'] += 1
-                    if total_score is not None:
-                        g['total_sum'] += total_score
-                        g['total_count'] += 1
-
-                    completed_at = _parse_attempt_timestamp(attempt.get('completed_at') or attempt.get('updated_at') or attempt.get('started_at'))
-                    if completed_at:
-                        if completed_at >= current_month_start and total_score is not None:
-                            g['current_month_scores'].append(total_score)
-                        elif previous_month_start <= completed_at <= previous_month_end and total_score is not None:
-                            g['previous_month_scores'].append(total_score)
-                        if not last_completed_at or completed_at > last_completed_at:
-                            last_completed_at = completed_at
-            elif sid:
-                try:
-                    sid_int = int(sid)
-                except (TypeError, ValueError):
-                    continue
-                grade_label = student_grade_map.get(sid_int)
-                if grade_label and grade_label in grade_data and sid_int not in grade_data[grade_label]['completed_student_ids']:
-                    grade_data[grade_label]['in_progress_student_ids'].add(sid_int)
-
-        if assessment.section and is_principal:
-            expected_students = assessment.section.enrollments.filter(
-                is_active=True,
-                student_id__in=scoped_student_ids,
-            ).count()
-        else:
-            expected_students = assessment.section.get_student_count() if assessment.section else len(participants)
-        completion_rate = _pct(len(completed_students), expected_students if expected_students else len(participants))
-
-        status_raw = str(assessment.status or '').lower()
-        if status_raw == 'draft' or (status_raw == 'scheduled' and assessment.scheduled_at and assessment.scheduled_at > now):
-            status_key = 'pending'
-        elif completion_rate >= 100 and expected_students:
-            status_key = 'completed'
-        elif participants or completed_students:
-            status_key = 'in_progress'
-        else:
-            status_key = 'pending'
-        status_counts[status_key] += 1
-
-        status_label_map = {
-            'completed': ('Completed', 'success'),
-            'in_progress': ('In Progress', 'warning'),
-            'pending': ('Pending', 'info'),
-        }
-        status_label, badge = status_label_map[status_key]
-
-        avg_score = round(sum(completed_scores) / len(completed_scores), 1) if completed_scores else 0
-        type_key = assessment.assessment_type or 'other'
-        type_bucket = type_stats.setdefault(type_key, {'total': 0, 'completed': 0, 'score_sum': 0.0, 'score_count': 0})
-        type_bucket['total'] += 1
-        if status_key == 'completed':
-            type_bucket['completed'] += 1
-        if completed_scores:
-            type_bucket['score_sum'] += sum(completed_scores)
-            type_bucket['score_count'] += len(completed_scores)
-
-        teacher_is_in_scope = not is_principal or (
-            assessment.teacher_id and assessment.teacher.school_record_id == getattr(principal_school, 'id', None)
-        )
-        assessment_rows.append({
-            'id': assessment.id,
-            'title': assessment.title,
-            'assessment_type': assessment.get_assessment_type_display(),
-            'grade_label': _normalize_grade(getattr(assessment.section, 'class_name', '') or getattr(assessment.section, 'header', '')),
-            'status': status_label,
-            'status_badge': badge,
-            'participants': len(participants),
-            'expected_students': expected_students,
-            'completed_students': len(completed_students),
-            'completion_rate': completion_rate,
-            'avg_score': avg_score,
-            'code': assessment.code,
-            'teacher_name': (
-                f"{assessment.teacher.first_name} {assessment.teacher.last_name}".strip()
-                if teacher_is_in_scope else 'Unassigned'
-            ),
-            'updated_at': assessment.updated_at,
-        })
-
-        attempts_for_students = assessment.get_attempts()
-        if attempts_for_students:
-            student_ids = set()
-            for attempt in attempts_for_students:
-                if not attempt or not attempt.get('student_id'):
-                    continue
-                try:
-                    sid_int = int(attempt.get('student_id'))
-                except (TypeError, ValueError):
-                    continue
-                if not is_principal or sid_int in scoped_student_ids:
-                    student_ids.add(sid_int)
-            students_map = {
-                student.id: student
-                for student in (
-                    students_qs.filter(id__in=student_ids)
-                    if is_principal else User.objects.filter(id__in=student_ids)
-                )
-            }
-            attempt_counts = {}
-            for idx, attempt in enumerate(attempts_for_students, start=1):
-                if not isinstance(attempt, dict):
-                    continue
-                sid = attempt.get('student_id')
-                try:
-                    sid_int = int(sid)
-                except (TypeError, ValueError):
-                    sid_int = None
-                if is_principal and sid_int not in scoped_student_ids:
-                    continue
-                attempt_counts[sid_int] = attempt_counts.get(sid_int, 0) + 1
-                student = students_map.get(sid_int)
-                student_name = ''
-                if student:
-                    student_name = f"{student.first_name} {student.last_name}".strip() or student.custom_id or student.email or f"Student {student.id}"
-                else:
-                    student_name = f"Student {sid_int or sid}"
-
-                attempt_key = f"{assessment.id}-{sid_int or 'unknown'}-{attempt_counts[sid_int]}"
-                completed_at = attempt.get('completed_at') or attempt.get('started_at') or attempt.get('updated_at')
-                assessment_attempt_rows.append({
-                    'attempt_key': attempt_key,
-                    'assessment_id': assessment.id,
-                    'assessment_code': assessment.code,
-                    'assessment_title': assessment.title,
-                    'assessment_type': assessment.get_assessment_type_display(),
-                    'student_id': sid_int,
-                    'student_name': student_name,
-                    'attempt_number': attempt_counts[sid_int],
-                    'status': str(attempt.get('status') or '').title(),
-                    'total_score': _as_float(attempt.get('total_score'), default=None),
-                    'accuracy': _as_float(attempt.get('accuracy'), default=None),
-                    'pronunciation_score': _as_float(attempt.get('pronunciation_score'), default=None),
-                    'wpm': _as_float(attempt.get('wpm'), default=None),
-                    'completed_at': completed_at,
-                    'updated_at': _parse_attempt_timestamp(completed_at) if completed_at else assessment.updated_at,
-                })
-
-        if last_completed_at:
-            latest_activity.append({
-                'title': 'Assessment Completed',
-                'message': f"{assessment.title} recorded completion updates.",
-                'created_at': last_completed_at,
-                'variant': 'success',
-            })
-
-    assessment_rows.sort(key=lambda row: row['updated_at'], reverse=True)
-
-    grade_rows = []
-    for grade in sorted(grade_data.keys(), key=_grade_sort_key):
-        data = grade_data[grade]
-        total_students = data['total_students']
-        completed_count = len(data['completed_student_ids'])
-        in_progress_count = len(data['in_progress_student_ids'])
-        not_started = max(total_students - completed_count - in_progress_count, 0)
-        reading_avg = round(data['reading_sum'] / data['reading_count'], 1) if data['reading_count'] else 0
-        speech_avg = round(data['speech_sum'] / data['speech_count'], 1) if data['speech_count'] else 0
-        average = round((reading_avg + speech_avg) / 2, 1) if (reading_avg or speech_avg) else 0
-        completion_pct = _pct(completed_count, total_students)
-
-        current_month_scores = _clean_numeric_scores(data.get('current_month_scores'))
-        previous_month_scores = _clean_numeric_scores(data.get('previous_month_scores'))
-        current_avg = (sum(current_month_scores) / len(current_month_scores)) if current_month_scores else None
-        previous_avg = (sum(previous_month_scores) / len(previous_month_scores)) if previous_month_scores else None
-        improvement = round(current_avg - previous_avg, 1) if current_avg is not None and previous_avg is not None else 0
-
-        grade_rows.append({
-            'grade': grade,
-            'total_students': total_students,
-            'completed': completed_count,
-            'in_progress': in_progress_count,
-            'not_started': not_started,
-            'completion_pct': completion_pct,
-            'reading_score': reading_avg,
-            'speech_score': speech_avg,
-            'average_score': average,
-            'improvement': improvement,
-        })
-
-    grade_rows.sort(key=lambda row: _grade_sort_key(row['grade']))
-    top_grades = sorted(grade_rows, key=lambda row: row['average_score'], reverse=True)[:3]
-    intervention_grades = [row for row in grade_rows if row['average_score'] and row['average_score'] < 75]
-
-    total_assessments = len(assessment_rows)
-    total_students = students_qs.count()
-    total_teachers = teachers_qs.count()
-    completed_assessments = status_counts['completed']
-    completion_rate = _pct(completed_assessments, total_assessments)
-
-    all_scores = _clean_numeric_scores([row.get('avg_score') for row in assessment_rows])
-    all_scores = [score for score in all_scores if score > 0]
-    average_score = round(sum(all_scores) / len(all_scores), 1) if all_scores else 0
-
-    notifications_feed = []
-    if user:
-        for notif in Notification.objects.filter(recipient=user).order_by('-created_at')[:8]:
-            notifications_feed.append({
-                'title': notif.title,
-                'message': notif.message,
-                'created_at': notif.created_at,
-                'variant': notif.notification_type,
-                'is_read': notif.is_read,
-            })
-
-    recent_activity = sorted((notifications_feed + latest_activity), key=lambda item: item['created_at'], reverse=True)[:8]
-
-    report_rows = [
-        {
-            'report_name': f"Assessment Summary - {row['title']}",
-            'report_type': 'Assessment',
-            'generated_date': row['updated_at'],
-            'generated_by': row['teacher_name'],
-            'completion_rate': row['completion_rate'],
-            'avg_score': row['avg_score'],
-        }
-        for row in assessment_rows[:10]
-    ]
-
-    type_cards = []
-    for type_key, bucket in type_stats.items():
-        avg = round(bucket['score_sum'] / bucket['score_count'], 1) if bucket['score_count'] else 0
-        type_cards.append({
-            'label': type_key.title(),
-            'total': bucket['total'],
-            'completed': bucket['completed'],
-            'avg_score': avg,
-        })
-    type_cards.sort(key=lambda item: item['label'])
-
-    return {
-        'school_name': school_name,
-        'school_logo': school_logo,
-        'total_students': total_students,
-        'total_teachers': total_teachers,
-        'total_sections': sections.count(),
-        'total_assessments': total_assessments,
-        'completed_assessments': completed_assessments,
-        'in_progress_assessments': status_counts['in_progress'],
-        'pending_assessments': status_counts['pending'],
-        'completion_rate': completion_rate,
-        'average_score': average_score,
-        'grade_rows': grade_rows,
-        'top_grades': top_grades,
-        'intervention_grades': intervention_grades,
-        'assessment_rows': assessment_rows,
-        'assessment_attempt_rows': assessment_attempt_rows,
-        'assessment_type_cards': type_cards,
-        'recent_activity': recent_activity,
-        'report_rows': report_rows,
-    }
+def _principal_analytics(user, params=None):
+    from .principal_reporting import build_principal_snapshot
+    return build_principal_snapshot(user, params)
 
 
-def _principal_report_preview_rows(analytics, report_type='school', grade_filter=''):
-    normalized_report_type = (report_type or 'school').strip().lower()
-
-    if normalized_report_type == 'grade':
-        rows = analytics.get('grade_rows', [])
-        if grade_filter:
-            rows = [row for row in rows if row.get('grade') == grade_filter]
-        headers = ['Grade', 'Students', 'Completed', 'In Progress', 'Not Started', 'Completion %', 'Average Score']
-        values = [
-            [
-                row.get('grade'),
-                row.get('total_students'),
-                row.get('completed'),
-                row.get('in_progress'),
-                row.get('not_started'),
-                f"{row.get('completion_pct', 0)}%",
-                f"{row.get('average_score', 0)}%",
-            ]
-            for row in rows
-        ]
-        return headers, values
-
-    if normalized_report_type == 'assessment':
-        rows = analytics.get('assessment_rows', [])
-        headers = ['Assessment', 'Type', 'Status', 'Participants', 'Completion %', 'Average Score']
-        values = [
-            [
-                row.get('title'),
-                row.get('assessment_type'),
-                row.get('status'),
-                row.get('participants'),
-                f"{row.get('completion_rate', 0)}%",
-                f"{row.get('avg_score', 0)}%",
-            ]
-            for row in rows
-        ]
-        return headers, values
-
-    grade_rows = analytics.get('grade_rows', []) or []
-    top_grade = ''
-    struggling_grade = ''
-    if grade_rows:
-        sorted_grades = sorted(grade_rows, key=lambda row: row.get('average_score', 0), reverse=True)
-        top_grade = next((row.get('grade') for row in sorted_grades if row.get('grade')), '')
-        struggling_grade = next((row.get('grade') for row in grade_rows if row.get('average_score') and row.get('average_score') < 75), '')
-
-    headers = ['Metric', 'Value']
-    values = [
-        ['School Name', analytics.get('school_name')],
-        ['Total Students', analytics.get('total_students')],
-        ['Total Teachers', analytics.get('total_teachers')],
-        ['Active Sections', analytics.get('total_sections')],
-        ['Total Assessments', analytics.get('total_assessments')],
-        ['Completed Assessments', analytics.get('completed_assessments')],
-        ['In Progress Assessments', analytics.get('in_progress_assessments')],
-        ['Pending Assessments', analytics.get('pending_assessments')],
-        ['Overall Completion Rate', f"{analytics.get('completion_rate', 0)}%"],
-        ['Average Reading Score', f"{analytics.get('average_score', 0)}%"],
-        ['Top Performing Grade', top_grade or 'N/A'],
-        ['Struggling Grade', struggling_grade or 'N/A'],
-    ]
-    return headers, values
+def _principal_report_preview_rows(analytics, report_type='school', grade_filter='Grade 2'):
+    from .principal_exports import report_rows
+    return report_rows(analytics, report_type, grade_filter)
 
 
 def _principal_report_csv_response(report_type, headers, rows):
-    filename = f"principal_{report_type}_report_{system_now().strftime('%Y%m%d_%H%M%S')}.csv"
+    filename = f"principal_{report_type}_report_{timezone.localtime(system_now()).strftime('%Y%m%d_%H%M%S')}.csv"
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     writer = csv.writer(response)
     writer.writerow(headers)
     for row in rows:
-        writer.writerow(row)
+        writer.writerow([
+            "'" + value if isinstance(value, str) and value.lstrip().startswith(('=', '+', '-', '@', '\t', '\r', '\n')) else value
+            for value in row
+        ])
     return response
 
 
@@ -39432,367 +38956,12 @@ def _principal_report_logo_path(analytics):
 
 
 def _principal_report_pdf_response(request, analytics, report_type, grade_filter, headers, rows):
+    from .principal_exports import pdf_response
     try:
-        from reportlab.lib import colors
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-        from reportlab.lib.units import inch
-        from reportlab.pdfgen import canvas
-        from reportlab.platypus import HRFlowable, Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-    except ImportError as exc:
-        logger.exception("ReportLab is not installed")
-        return HttpResponse(f"PDF export is unavailable: {exc}", status=500)
-
-    def _estimate_column_widths(headers, rows, available_width):
-        if not headers:
-            return []
-        sample_rows = [list(headers)] + [list(row) for row in rows]
-        column_texts = []
-        for idx in range(len(headers)):
-            values = [str(item[idx]) if len(item) > idx else '' for item in sample_rows]
-            max_len = max(len(value) for value in values) if values else 0
-            column_texts.append(max_len)
-
-        min_width = 0.9 * inch
-        max_width = 2.2 * inch
-        widths = []
-        for length in column_texts:
-            estimated = max(min_width, min(max_width, length * 4.5))
-            widths.append(estimated)
-
-        total_width = sum(widths)
-        if total_width > available_width:
-            scale = available_width / total_width
-            widths = [max(min_width, width * scale) for width in widths]
-            total_width = sum(widths)
-            if total_width > available_width:
-                widths[-1] = max(min_width, widths[-1] - (total_width - available_width))
-
-        return widths
-
-    def _format_percentage(value):
-        try:
-            return f"{float(value):.1f}%"
-        except (TypeError, ValueError):
-            return str(value or '0%')
-
-    def _format_count(value):
-        try:
-            return f"{int(float(value))}"
-        except (TypeError, ValueError):
-            return str(value or '0')
-
-    def _status_style(status):
-        normalized = str(status or '').strip().lower()
-        if normalized in {'completed', 'done', 'finished'}:
-            return '#2e7d32', '#e8f5e9', 'Completed'
-        if normalized in {'in progress', 'in-progress', 'ongoing'}:
-            return '#f9a825', '#fff8e1', 'In Progress'
-        return '#c62828', '#ffebee', 'Pending'
-
-    def _build_card(title, value, subtitle, accent, icon):
-        card = Table(
-            [[
-                Paragraph(f"<font color='{accent}' size='13'><b>{icon}</b></font>", card_icon_style),
-            ], [
-                Paragraph(f"<font size='16' color='{accent}'><b>{value}</b></font>", card_value_style),
-            ], [
-                Paragraph(f"<b>{title}</b>", card_title_style),
-            ], [
-                Paragraph(subtitle, card_subtitle_style),
-            ]],
-            colWidths=[card_width],
-            repeatRows=0,
-        )
-        card.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#fcfcfc')),
-            ('LINEABOVE', (0, 0), (-1, 0), 0.8, colors.HexColor(accent)),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 10),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#ececec')),
-        ]))
-        return card
-
-    buffer = BytesIO()
-    left_margin = 0.8 * inch
-    right_margin = 0.8 * inch
-    top_margin = 0.8 * inch
-    bottom_margin = 0.8 * inch
-    page_size = A4
-    available_width = page_size[0] - left_margin - right_margin
-    card_width = (available_width - 0.2 * inch) / 2.0
-
-    preview_headers = [str(header) for header in headers]
-    preview_rows = [[str(value) for value in row] for row in rows]
-    column_widths = _estimate_column_widths(preview_headers, preview_rows, available_width)
-
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        'ReportTitle',
-        parent=styles['Heading1'],
-        fontSize=20,
-        leading=24,
-        textColor=colors.HexColor('#8B3E2F'),
-        spaceAfter=4,
-        fontName='Helvetica-Bold',
-    )
-    subtitle_style = ParagraphStyle(
-        'ReportSubtitle',
-        parent=styles['BodyText'],
-        fontSize=10,
-        leading=13,
-        textColor=colors.HexColor('#4b5563'),
-        spaceAfter=4,
-    )
-    section_style = ParagraphStyle(
-        'SectionTitle',
-        parent=styles['Heading2'],
-        fontSize=13,
-        leading=15,
-        textColor=colors.HexColor('#8B3E2F'),
-        spaceAfter=6,
-        fontName='Helvetica-Bold',
-    )
-    table_font_size = 8.6 if len(preview_headers) >= 5 else 9.0
-    body_style = ParagraphStyle(
-        'ReportBody',
-        parent=styles['BodyText'],
-        fontSize=table_font_size,
-        leading=table_font_size + 1.2,
-        textColor=colors.HexColor('#111827'),
-        allowWidows=1,
-        allowOrphans=1,
-    )
-    card_title_style = ParagraphStyle(
-        'CardTitle',
-        parent=styles['BodyText'],
-        fontSize=9.5,
-        leading=11,
-        textColor=colors.HexColor('#374151'),
-        spaceAfter=1,
-        fontName='Helvetica-Bold',
-    )
-    card_value_style = ParagraphStyle(
-        'CardValue',
-        parent=styles['BodyText'],
-        fontSize=15,
-        leading=16,
-        textColor=colors.HexColor('#111827'),
-        spaceAfter=2,
-        fontName='Helvetica-Bold',
-    )
-    card_icon_style = ParagraphStyle(
-        'CardIcon',
-        parent=styles['BodyText'],
-        fontSize=12,
-        leading=13,
-        textColor=colors.HexColor('#8B3E2F'),
-        spaceAfter=2,
-    )
-    card_subtitle_style = ParagraphStyle(
-        'CardSubtitle',
-        parent=styles['BodyText'],
-        fontSize=8.4,
-        leading=10,
-        textColor=colors.HexColor('#6b7280'),
-        spaceAfter=2,
-    )
-    meta_style = ParagraphStyle(
-        'Meta',
-        parent=styles['BodyText'],
-        fontSize=8.6,
-        leading=10,
-        textColor=colors.HexColor('#6b7280'),
-        spaceAfter=2,
-    )
-
-    report_label = {
-        'school': 'School Performance',
-        'grade': 'Grade-Level',
-        'assessment': 'Assessment',
-    }.get(report_type, 'School Performance')
-
-    local_now = timezone.localtime(system_now(), timezone.get_default_timezone())
-    generated_at = local_now.strftime('%B %d, %Y %I:%M %p')
-    report_title = 'PABASA Principal Report'
-    school_name = analytics.get('school_name') or 'Salawag Elementary School'
-
-    elements = []
-    logo_path = _principal_report_logo_path(analytics)
-    header_table = Table(
-        [[
-            Image(str(logo_path), width=0.7 * inch, height=0.7 * inch) if logo_path.exists() else Paragraph('<b>PABASA</b>', styles['Heading3']),
-            Paragraph(f"<b>{report_title}</b>", title_style),
-        ], [
-            '',
-            Paragraph(school_name, subtitle_style),
-        ], [
-            '',
-            Paragraph(f"Report Type: {report_label}", subtitle_style),
-        ], [
-            '',
-            Paragraph(f"Date Generated: {generated_at}", subtitle_style),
-        ]],
-        colWidths=[0.95 * inch, available_width - 0.95 * inch],
-        repeatRows=0,
-    )
-    header_table.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 0),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-        ('TOPPADDING', (0, 0), (-1, -1), 0),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-    ]))
-    elements.extend([header_table, Spacer(1, 0.12 * inch), HRFlowable(width=available_width, thickness=0.5, color=colors.HexColor('#8B3E2F')), Spacer(1, 0.16 * inch)])
-
-    if grade_filter:
-        elements.append(Paragraph(f'Grade Level: {grade_filter}', subtitle_style))
-        elements.append(Spacer(1, 0.06 * inch))
-
-    elements.append(Paragraph('Summary Overview', section_style))
-    elements.append(Spacer(1, 0.06 * inch))
-
-    if report_type == 'grade':
-        grade_rows = analytics.get('grade_rows', []) or []
-        filtered_grade_rows = [row for row in grade_rows if row.get('grade') == grade_filter] if grade_filter else grade_rows
-        selected_grade_label = grade_filter or 'All Grades'
-        total_students = sum(int(row.get('total_students', 0) or 0) for row in filtered_grade_rows)
-        completed = sum(int(row.get('completed', 0) or 0) for row in filtered_grade_rows)
-        in_progress = sum(int(row.get('in_progress', 0) or 0) for row in filtered_grade_rows)
-        not_started = sum(int(row.get('not_started', 0) or 0) for row in filtered_grade_rows)
-        completion_rate = _pct(completed, total_students) if total_students else 0
-        avg_score = round(sum(float(row.get('average_score', 0) or 0) for row in filtered_grade_rows) / len(filtered_grade_rows), 1) if filtered_grade_rows else 0
-        summary_cards = [
-            _build_card('Focused Grade', selected_grade_label, 'Selected performance scope', '#8B3E2F', '◉'),
-            _build_card('Students', _format_count(total_students), 'Students in scope', '#4CAF50', '◌'),
-            _build_card('Completed', _format_count(completed), 'Finished work', '#4A90E2', '◍'),
-            _build_card('In Progress', _format_count(in_progress), 'Still active', '#FFC107', '↺'),
-            _build_card('Not Started', _format_count(not_started), 'Pending participation', '#E53935', '•'),
-            _build_card('Completion Rate', _format_percentage(completion_rate), 'Grade-level progress', '#8B3E2F', '%'),
-            _build_card('Average Score', _format_percentage(avg_score), 'Reading mastery', '#4CAF50', '★'),
-        ]
-    elif report_type == 'assessment':
-        assessment_rows = analytics.get('assessment_rows', []) or []
-        completed_count = sum(1 for row in assessment_rows if str(row.get('status') or '').lower() == 'completed')
-        in_progress_count = sum(1 for row in assessment_rows if str(row.get('status') or '').lower() == 'in progress')
-        pending_count = sum(1 for row in assessment_rows if str(row.get('status') or '').lower() == 'pending')
-        avg_score = round(sum(float(row.get('avg_score', 0) or 0) for row in assessment_rows) / len(assessment_rows), 1) if assessment_rows else 0
-        summary_cards = [
-            _build_card('Assessments', _format_count(len(assessment_rows)), 'Available assessment tasks', '#8B3E2F', '◉'),
-            _build_card('Completed', _format_count(completed_count), 'Tasks finished', '#4CAF50', '◌'),
-            _build_card('In Progress', _format_count(in_progress_count), 'Currently active', '#4A90E2', '◍'),
-            _build_card('Pending', _format_count(pending_count), 'Awaiting action', '#E53935', '•'),
-            _build_card('Completion Rate', _format_percentage(analytics.get('completion_rate', 0)), 'School-wide completion', '#8B3E2F', '%'),
-            _build_card('Average Score', _format_percentage(avg_score), 'Assessment mastery', '#4CAF50', '★'),
-        ]
-    else:
-        summary_cards = [
-            _build_card('Total Students', _format_count(analytics.get('total_students', 0)), 'Enrollment overview', '#8B3E2F', '◉'),
-            _build_card('Total Teachers', _format_count(analytics.get('total_teachers', 0)), 'Active school staff', '#4CAF50', '◌'),
-            _build_card('Total Assessments', _format_count(analytics.get('total_assessments', 0)), 'Assigned reading tasks', '#4A90E2', '◍'),
-            _build_card('Completed', _format_count(analytics.get('completed_assessments', 0)), 'Finished assessments', '#2e7d32', '✓'),
-            _build_card('In Progress', _format_count(analytics.get('in_progress_assessments', 0)), 'Currently active', '#FFC107', '↺'),
-            _build_card('Pending', _format_count(analytics.get('pending_assessments', 0)), 'Awaiting action', '#E53935', '•'),
-            _build_card('Completion Rate', _format_percentage(analytics.get('completion_rate', 0)), 'Overall progress', '#8B3E2F', '%'),
-            _build_card('Average Score', _format_percentage(analytics.get('average_score', 0)), 'Reading mastery', '#4CAF50', '★'),
-        ]
-    summary_rows = [summary_cards[i:i + 2] for i in range(0, len(summary_cards), 2)]
-    summary_grid = Table(summary_rows, colWidths=[card_width, card_width], repeatRows=0)
-    summary_grid.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 0),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-        ('TOPPADDING', (0, 0), (-1, -1), 0),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ('SPACING', (0, 0), (-1, -1), 4),
-    ]))
-    elements.extend([summary_grid, Spacer(1, 0.12 * inch)])
-
-    if report_type == 'grade':
-        progress_label = 'Grade-Level Snapshot'
-        progress_detail = f"Selected Focus: {grade_filter or 'All Grades'}   Completion Rate: {_format_percentage(analytics.get('completion_rate', 0))}"
-    elif report_type == 'assessment':
-        progress_label = 'Assessment Snapshot'
-        progress_detail = f"Completed: {_format_count(analytics.get('completed_assessments', 0))}   In Progress: {_format_count(analytics.get('in_progress_assessments', 0))}   Pending: {_format_count(analytics.get('pending_assessments', 0))}"
-    else:
-        progress_label = 'School Snapshot'
-        progress_detail = f"Overall Completion: {_format_percentage(analytics.get('completion_rate', 0))}   Average Score: {_format_percentage(analytics.get('average_score', 0))}"
-
-    progress_summary = Table([
-        [Paragraph(progress_label, card_title_style)],
-        [Paragraph(progress_detail, meta_style)],
-    ], colWidths=[available_width], repeatRows=0)
-    progress_summary.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f8f8')),
-        ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor('#e5e7eb')),
-        ('LEFTPADDING', (0, 0), (-1, -1), 8),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-    ]))
-    elements.extend([progress_summary, Spacer(1, 0.12 * inch)])
-
-    elements.append(Paragraph('Detailed Report', section_style))
-    elements.append(Spacer(1, 0.06 * inch))
-
-    table_rows = [[Paragraph(str(value), body_style) for value in headers]]
-    for row in rows:
-        styled_row = []
-        for idx, value in enumerate(row):
-            cell_text = str(value)
-            if headers and str(headers[idx]).strip().lower() == 'status':
-                status_color, _, status_label = _status_style(value)
-                cell_text = f"<font color='{status_color}'><b>{status_label}</b></font>"
-            styled_row.append(Paragraph(cell_text, body_style))
-        table_rows.append(styled_row)
-
-    data_table = Table(table_rows, repeatRows=1, splitByRow=0, colWidths=column_widths)
-    data_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#8B3E2F')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (1, 1), (-1, -1), 'CENTER'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#d1d5db')),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#fcfcfc'), colors.HexColor('#f8f8f8')]),
-        ('FONTSIZE', (0, 0), (-1, -1), table_font_size),
-        ('LEFTPADDING', (0, 0), (-1, -1), 5),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
-        ('TOPPADDING', (0, 0), (-1, -1), 5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-        ('WORDWRAP', (0, 0), (-1, -1), 'CJK'),
-    ]))
-    elements.append(data_table)
-
-    def _draw_footer(canvas_obj, doc_obj):
-        canvas_obj.saveState()
-        canvas_obj.setFont('Helvetica', 8)
-        canvas_obj.setFillColor(colors.HexColor('#6b7280'))
-        canvas_obj.drawString(left_margin, 0.38 * inch, 'PABASA Automated Reading Assessment System')
-        canvas_obj.drawCentredString(page_size[0] / 2.0, 0.38 * inch, f'Page {canvas_obj.getPageNumber()}')
-        canvas_obj.drawRightString(page_size[0] - right_margin, 0.38 * inch, f'Confidential School Report • Generated {generated_at}')
-        canvas_obj.restoreState()
-
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=page_size,
-        leftMargin=left_margin,
-        rightMargin=right_margin,
-        topMargin=top_margin,
-        bottomMargin=bottom_margin,
-    )
-    doc.build(elements, onFirstPage=_draw_footer, onLaterPages=_draw_footer)
-    buffer.seek(0)
-
-    filename = f"principal_{report_type}_report_{local_now.strftime('%Y%m%d_%H%M%S')}.pdf"
-    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    return response
+        return pdf_response(analytics, report_type, headers, rows, _principal_report_logo_path(analytics))
+    except Exception:
+        logger.exception('Principal PDF export failed for report_type=%s', report_type)
+        return HttpResponse('Unable to generate this PDF report. Please retry or contact an Administrator.', status=503, content_type='text/plain')
 
 
 def principal_required(view_func):
@@ -39804,10 +38973,18 @@ def principal_required(view_func):
         user = User.objects.filter(id=request.session.get('user_id'), is_archived=False).first()
         if not user or user.role not in ['admin', 'principal']:
             return redirect('auth')
+        if user.role == 'principal' and user.must_change_password:
+            if temporary_password_expired(user):
+                request.session.flush()
+                return redirect('auth')
+            return redirect('principal_change_temporary_password')
         # Use the persisted role for authorization. This prevents a crafted or
         # stale session role from opening Principal pages as another account.
         request.session['user_role'] = user.role
-        return view_func(request, *args, **kwargs)
+        try:
+            return view_func(request, *args, **kwargs)
+        except ValidationError as exc:
+            return HttpResponseBadRequest(' '.join(exc.messages))
     return wrapper
 
 
@@ -39823,22 +39000,25 @@ def principal_school_workspace(request):
     user = _principal_school_user(request)
     if not user:
         return HttpResponseForbidden('Principal access required.')
-    school = user.school_record
-    grouped = {grade: [] for grade in SCHOOL_GRADE_LEVELS}
-    ordered_sections = []
-    if school:
-        sections = Section.objects.filter(school_id=school.id).select_related('teacher').annotate(
-            active_student_count=Count('enrollments', filter=Q(enrollments__is_active=True), distinct=True)
-        ).order_by('grade_level', 'section', 'class_name')
-        ordered_sections = list(sections)
-        for section in ordered_sections:
-            grouped.setdefault(section.grade_level or 'Unspecified', []).append(section)
-    split_index = (len(ordered_sections) + 1) // 2
-    section_columns = [ordered_sections[:split_index], ordered_sections[split_index:]]
-    context = _principal_context(request, 'School Workspace')
-    context.update({'school': school, 'sections_by_grade': grouped, 'section_columns': section_columns, 'has_sections': any(grouped.values())})
+    analytics = _principal_analytics(user, request.GET)
+    from .principal_reporting import PrincipalScope
+    scope = analytics['scope']
+    directory = analytics['section_rows']
+    query = request.GET.get('q', '').strip()[:100]
+    teacher = request.GET.get('teacher', '')
+    if teacher not in ('', 'assigned', 'unassigned'):
+        return HttpResponseBadRequest('Select a valid Teacher assignment filter.')
+    if query:
+        directory = [r for r in directory if query.casefold() in f"{r['name']} {r['teacher']}".casefold()]
+    if teacher:
+        directory = [r for r in directory if (r['teacher'] == 'Unassigned') == (teacher == 'unassigned')]
+    context = _principal_context(request, 'School')
+    context.update({**analytics, 'school': user.school_record, 'directory_page': Paginator(directory, 25).get_page(request.GET.get('page')),
+        'directory_query': query, 'teacher_filter': teacher, 'directory_count': len(directory)})
+    from urllib.parse import urlencode
+    context['filter_query'] += '&' + urlencode({'q': query, 'teacher': teacher})
+    context['awaiting_page'] = Paginator(scope.awaiting_enrollments(), 25).get_page(request.GET.get('awaiting_page')) if analytics['awaiting_assignment_students'] else None
     return render(request, 'pabasa_app/principal_school_workspace.html', context)
-
 
 @principal_required
 @require_http_methods(["GET"])
@@ -39846,21 +39026,33 @@ def principal_section_detail(request, section_id):
     user = _principal_school_user(request)
     if not user:
         return HttpResponseForbidden('Principal access required.')
-    section = get_object_or_404(
-        Section.objects.select_related('school', 'teacher').prefetch_related(
-            Prefetch('enrollments', queryset=Enrollment.objects.filter(is_active=True).select_related('student').order_by('student__last_name', 'student__first_name'), to_attr='active_enrollments')
-        ), pk=section_id, school_id=user.school_record_id
-    )
+    section = get_object_or_404(Section.objects.select_related('school', 'teacher'), pk=section_id, school_id=user.school_record_id)
+    section_params = request.GET.copy()
+    section_params.update({'calendar_id': section.school_calendar_id or '', 'section_id': section.pk})
+    analytics = _principal_analytics(user, section_params)
+    from .principal_experience import learning_context
+    learning_context(analytics)
+    enrollments = Enrollment.objects.filter(section=section, school=section.school, school_calendar=section.school_calendar,
+        status__in=['active', 'completed'], student__role='student', student__is_archived=False).filter(
+        Q(student__school_record_id=user.school_record_id) | Q(status='completed')).select_related('student').order_by('student__last_name', 'student__first_name')
     context = _principal_context(request, 'Section Details')
-    context.update({'school': user.school_record, 'section': section, 'enrollments': section.active_enrollments})
+    assigned_teacher = section.teacher if section.teacher_id and section.teacher.role == 'teacher' and section.teacher.school_record_id == user.school_record_id else None
+    context.update({**analytics, 'school': user.school_record, 'section': section, 'enrollments': enrollments,
+        'assigned_teacher': assigned_teacher,
+        'section_summary': analytics['section_rows'][0] if analytics['section_rows'] else {},
+        'enrollment_page': Paginator(enrollments, 25).get_page(request.GET.get('page'))})
     return render(request, 'pabasa_app/principal_section_detail.html', context)
 
 @principal_required
 def dashboard_principal(request):
     """Principal Dashboard - Main overview with greeting, statistics, and recent activities"""
-    context = _principal_context(request, 'Dashboard')
+    context = _principal_context(request, 'Overview')
     user = User.objects.filter(id=request.session.get('user_id')).first()
-    analytics = _principal_analytics(user)
+    analytics = _principal_analytics(user, request.GET)
+    from .principal_experience import learning_context
+    from .principal_calendar import upcoming_calendar_events
+    learning_context(analytics)
+    analytics['upcoming_events'] = upcoming_calendar_events(analytics['scope'], user)
 
     # Build the display name dynamically from the user's personal information
     name_parts = [context.get('first_name', '')]
@@ -39879,53 +39071,56 @@ def dashboard_principal(request):
 
 @principal_required
 def principal_performance(request):
-    """Principal Performance Page - Grade performance, completion rates, and trends"""
-    context = _principal_context(request, 'Performance')
-    user = User.objects.filter(id=request.session.get('user_id')).first()
-    analytics = _principal_analytics(user)
-    grade_rows = analytics.get('grade_rows', [])
-    current_month_performance = round(sum([row['average_score'] for row in grade_rows if row['average_score']]) / max(len([row for row in grade_rows if row['average_score']]), 1), 1) if grade_rows else 0
-    context.update({
-        **analytics,
-        'current_month_performance': current_month_performance,
-        'ytd_progress': analytics.get('completion_rate', 0),
-    })
-    return render(request, 'pabasa_app/principal_performance.html', context)
+    return _principal_legacy_learning_redirect(request, 'outcomes')
 
 @principal_required
 def principal_assessments(request):
-    """Principal Assessments Page - Assessment overview and results"""
-    context = _principal_context(request, 'Assessments')
-    user = User.objects.filter(id=request.session.get('user_id')).first()
-    analytics = _principal_analytics(user)
-    context.update({
-        **analytics,
-        'in_progress': analytics.get('in_progress_assessments', 0),
-        'completed': analytics.get('completed_assessments', 0),
-        'pending': analytics.get('pending_assessments', 0),
-    })
-    return render(request, 'pabasa_app/principal_assessments.html', context)
+    return _principal_legacy_learning_redirect(request, 'crla')
+
+
+def _principal_legacy_learning_redirect(request, tab):
+    query = request.GET.copy()
+    query['view'] = tab
+    return redirect(reverse('principal_learning') + '?' + query.urlencode())
+
+
+@principal_required
+@require_http_methods(['GET'])
+def principal_learning(request):
+    from .principal_experience import learning_context
+    tab = request.GET.get('view', 'crla')
+    if tab not in {'crla', 'aral', 'outcomes'}:
+        return HttpResponseBadRequest('Select a valid monitoring view.')
+    user = User.objects.get(pk=request.session['user_id'])
+    analytics = learning_context(_principal_analytics(user, request.GET))
+    context = {**_principal_context(request, 'Learning & Intervention'), **analytics, 'learning_view': tab,
+        'attempt_page': Paginator([r for r in analytics['assessment_attempt_rows'] if r['is_official']], 20).get_page(request.GET.get('page')),
+        'follow_up_page': Paginator(analytics['follow_up_rows'], 10).get_page(request.GET.get('page'))}
+    context['filter_query'] += '&view=' + tab
+    return render(request, 'pabasa_app/principal_learning.html', context)
+
 
 @principal_required
 def principal_reports(request):
     """Principal Reports Page - Generate and view reports"""
     context = _principal_context(request, 'Reports')
     user = User.objects.filter(id=request.session.get('user_id')).first()
-    analytics = _principal_analytics(user)
+    analytics = _principal_analytics(user, request.GET)
 
-    report_type_labels = {
-        'school': 'School Performance',
-        'grade': 'Grade-Level',
-        'assessment': 'Assessment',
-    }
+    from .principal_exports import REPORT_TYPES
+    report_type_labels = REPORT_TYPES
 
     selected_report_type = (request.GET.get('report_type') or 'school').strip().lower()
-    selected_grade = NEW_USER_GRADE_LEVEL
+    if selected_report_type not in report_type_labels:
+        return HttpResponseBadRequest('Select a valid report type.')
+    selected_grade = request.GET.get('grade_level', NEW_USER_GRADE_LEVEL)
     export_type = (request.GET.get('export') or '').strip().lower()
+    if export_type and export_type not in {'csv', 'excel', 'pdf'}:
+        return HttpResponseBadRequest('Select a valid export format.')
     headers, rows = _principal_report_preview_rows(analytics, selected_report_type, selected_grade)
-    preview_rows = rows[:-2] if selected_report_type == 'school' else rows
+    preview_rows = rows
     selected_report_label = f"{report_type_labels.get(selected_report_type, 'School Performance')} Report"
-    selected_report_summary = 'School-wide participation, completion rate, and performance trends across the campus.'
+    selected_report_summary = 'Enrollment, official CRLA coverage and recorded intervention delivery in the selected scope.'
 
     if selected_report_type == 'grade':
         if selected_grade:
@@ -39934,7 +39129,13 @@ def principal_reports(request):
         else:
             selected_report_summary = 'Grade-level comparison across all available grade levels.'
     elif selected_report_type == 'assessment':
-        selected_report_summary = 'Assessment-specific results, completion status, and student performance by task.'
+        selected_report_summary = 'Official CRLA and other assessment tasks are labeled separately. ARAL activity records are reported under intervention monitoring.'
+    elif selected_report_type == 'classifications':
+        selected_report_summary = 'Latest persisted official reading profile per enrolled learner; missing results shown separately.'
+    elif selected_report_type == 'sections':
+        selected_report_summary = 'Section and Teacher implementation, official coverage and intervention follow-up.'
+    elif selected_report_type == 'intervention':
+        selected_report_summary = 'Learners with missing official results, pending review or no recorded intervention progress.'
 
     if export_type == 'csv' or export_type == 'excel':
         return _principal_report_csv_response(selected_report_type, headers, rows)
@@ -39942,20 +39143,18 @@ def principal_reports(request):
     if export_type == 'pdf':
         return _principal_report_pdf_response(request, analytics, selected_report_type, selected_grade, headers, rows)
 
+    page = Paginator(preview_rows, 50).get_page(request.GET.get('page'))
     context.update({
         **analytics,
-        'report_types': [
-            {'value': 'school', 'label': 'School Performance'},
-            {'value': 'grade', 'label': 'Grade-Level'},
-            {'value': 'assessment', 'label': 'Assessment'},
-        ],
+        'report_page': page,
+        'report_types': [{'value': value, 'label': label} for value, label in report_type_labels.items()],
         'selected_report_type': selected_report_type,
         'selected_grade': selected_grade,
         'selected_report_label': selected_report_label,
         'report_preview_summary': selected_report_summary,
         'report_preview_count': len(preview_rows),
         'report_preview_headers': headers,
-        'report_preview_rows': preview_rows,
+        'report_preview_rows': list(page),
     })
     return render(request, 'pabasa_app/principal_reports.html', context)
 
@@ -39963,200 +39162,19 @@ def principal_reports(request):
 @require_http_methods(["GET", "POST"])
 @principal_required
 def principal_settings(request):
-    """Principal Settings Page - School information and account settings"""
-    user = User.objects.filter(id=request.session.get('user_id')).first()
-    if not user:
-        request.session.flush()
-        return redirect('auth')
+    from .principal_settings import settings_context
+    user = User.objects.select_related('school_record').get(pk=request.session['user_id'])
+    result = settings_context(request, user, _principal_context(request, 'Account Settings'))
+    if isinstance(result, HttpResponse):
+        return result
+    return render(request, 'pabasa_app/principal_settings.html', result)
 
-    context = _principal_context(request, 'Settings')
-    notification_settings = _notification_settings_for_user(user)
-
-    default_school_info = {
-        'name': getattr(user, 'school', '') or '',
-        'code': '',
-        'municipality': '',
-        'province': '',
-        'district': '',
-        'region': '',
-        'address': '',
-        'contact': getattr(user, 'contact_no', '') or '',
-        'email': getattr(user, 'email', '') or '',
-    }
-    default_academic_settings = {
-        'academic_year': '2024-2025',
-        'term': '2',
-        'school_year_start': '2024-06-03',
-        'school_year_end': '2025-04-30',
-    }
-
-    school_info = _get_profile_dict(user, 'principal_school_info') or {}
-    academic_settings = _get_profile_dict(user, 'principal_academic_settings') or {}
-    principal_profile_info = _get_profile_dict(user, 'principal_profile_info') or {}
-    if not isinstance(school_info, dict):
-        school_info = {}
-    if not isinstance(academic_settings, dict):
-        academic_settings = {}
-    if not isinstance(principal_profile_info, dict):
-        principal_profile_info = {}
-
-    if request.method == 'POST':
-        action = request.POST.get('settings_action', '').strip()
-
-        if action == 'save_school_info':
-            school_info = {
-                'name': request.POST.get('school_name', '').strip(),
-                'code': request.POST.get('school_code', '').strip(),
-                'municipality': request.POST.get('municipality', '').strip(),
-                'province': request.POST.get('province', '').strip(),
-                'district': request.POST.get('district', '').strip(),
-                'region': request.POST.get('region', '').strip(),
-                'address': request.POST.get('address', '').strip(),
-                'contact': request.POST.get('contact', '').strip(),
-                'email': request.POST.get('email', '').strip(),
-                'logo': school_info.get('logo', ''),
-            }
-            _set_profile_dict(user, 'principal_school_info', school_info)
-            context['settings_success'] = 'School information updated.'
-
-        elif action == 'save_academic_year':
-            academic_settings = {
-                'academic_year': request.POST.get('academic_year', '').strip() or default_academic_settings['academic_year'],
-                'term': request.POST.get('term', '').strip() or default_academic_settings['term'],
-                'school_year_start': request.POST.get('school_year_start', '').strip() or default_academic_settings['school_year_start'],
-                'school_year_end': request.POST.get('school_year_end', '').strip() or default_academic_settings['school_year_end'],
-            }
-            _set_profile_dict(user, 'principal_academic_settings', academic_settings)
-            context['settings_success'] = 'Academic year settings updated.'
-
-        elif action == 'change_password':
-            current_password = request.POST.get('current_password', '')
-            new_password = request.POST.get('new_password', '')
-            confirm_password = request.POST.get('confirm_password', '')
-
-            if not current_password or not new_password or not confirm_password:
-                context['settings_error'] = 'All password fields are required.'
-            elif not check_password(current_password, user.password_hash):
-                context['settings_error'] = 'Current password is incorrect.'
-            elif new_password != confirm_password:
-                context['settings_error'] = 'New passwords do not match.'
-            elif len(new_password) < 8:
-                context['settings_error'] = 'Password must be at least 8 characters.'
-            else:
-                user.password_hash = make_password(new_password)
-                user.save(update_fields=['password_hash', 'updated_at'])
-                context['settings_success'] = 'Password changed successfully.'
-
-        elif action == 'save_personal_info':
-            first_name = request.POST.get('first_name', '').strip()
-            last_name = request.POST.get('last_name', '').strip()
-            middle_initial = request.POST.get('middle_initial', '').strip()
-            email = request.POST.get('email', '').strip()
-            contact_number = request.POST.get('contact_number', '').strip()
-            position = request.POST.get('position', '').strip()
-
-            if not first_name or not last_name:
-                context['settings_error'] = 'First name and last name are required.'
-            else:
-                user.first_name = first_name
-                user.last_name = last_name
-                user.middle_initial = middle_initial if middle_initial else ''
-                user.email = email
-                user.contact_no = contact_number
-                request.session['first_name'] = user.first_name
-                request.session['last_name'] = user.last_name
-                request.session['middle_initial'] = user.middle_initial
-                user.save(update_fields=['first_name', 'last_name', 'middle_initial', 'email', 'contact_no', 'updated_at'])
-                profile_info = _get_profile_dict(user, 'principal_profile_info') or {}
-                if not isinstance(profile_info, dict):
-                    profile_info = {}
-                profile_info['position'] = position or 'Head Teacher/Principal II'
-                _set_profile_dict(user, 'principal_profile_info', profile_info)
-                context['settings_success'] = 'Personal information updated.'
-
-        elif action == 'save_notifications':
-            notification_settings = _posted_notification_settings(request)
-            _set_profile_dict(user, 'notification_settings', notification_settings)
-            context['settings_success'] = 'Notification preferences updated.'
-
-        else:
-            context['settings_error'] = 'Unknown settings action.'
-
-    last_login_dt = user.updated_at if isinstance(user.updated_at, datetime) else datetime.fromisoformat(str(user.updated_at)) if user.updated_at else None
-    account_created_dt = user.created_at if isinstance(user.created_at, datetime) else datetime.fromisoformat(str(user.created_at)) if user.created_at else None
-    user_agent = request.META.get('HTTP_USER_AGENT', '')
-    browser_device = _parse_user_agent(user_agent)
-    context.update({
-        'school_info': {**default_school_info, **school_info},
-        'academic_settings': {**default_academic_settings, **academic_settings},
-        'principal_profile_info': {
-            'position': principal_profile_info.get('position', 'Head Teacher/Principal II'),
-        },
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'middle_initial': user.middle_initial,
-        'email': user.email,
-        'contact_number': user.contact_no or '',
-        'notification_settings': notification_settings,
-        'last_login': last_login_dt.strftime('%B %d, %Y') if last_login_dt else 'N/A',
-        'account_created': account_created_dt.strftime('%B %d, %Y') if account_created_dt else 'N/A',
-        'browser_device': browser_device,
-    })
-    return render(request, 'pabasa_app/principal_settings.html', context)
 @principal_required
 @require_http_methods(["GET", "POST", "PUT", "PATCH", "DELETE"])
 def principal_calendar(request):
-    """School-local calendar management; global events are always read-only."""
-    principal = _principal_school_user(request)
-    school = principal.school_record if principal else None
-    if request.method == "GET":
-        qs = CalendarEvent.objects.filter(Q(scope=CalendarEvent.SCOPE_GLOBAL) | Q(scope__in=["", None], school__isnull=True) | Q(scope=CalendarEvent.SCOPE_SCHOOL, school=school)).order_by("start_date", "end_date")
-        events = [_calendar_event_payload(e) | {"scope": e.scope or CalendarEvent.SCOPE_GLOBAL, "school_id": e.school_id} for e in qs]
-        if request.GET.get("format") == "json" or request.headers.get("Accept", "").startswith("application/json"):
-            return JsonResponse({"events": events})
-        active_calendar, _, _ = _selected_school_calendar(request)
-        widget = _calendar_month_view(active_calendar)
-        context = _principal_context(request, "Calendar")
-        context.update({"events": events, "events_json": json.dumps(events), "school": school, "active_school_calendar": active_calendar, "student_calendar_school_year": _calendar_school_year_label(active_calendar), "student_calendar_current_term": f"Term {active_calendar.current_term}" if active_calendar else "Not set", "calendar_weekday_labels": ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], "student_calendar_events_json": json.dumps(events), **widget})
-        return render(request, "pabasa_app/principal_calendar.html", context)
-    if request.method == "POST":
-        try:
-            if not school:
-                return JsonResponse({"success": False, "error": "School not assigned. Local events cannot be created."}, status=403)
-            if getattr(school, "status", "active") == "archived" or not getattr(school, "is_active", True):
-                return JsonResponse({"success": False, "error": "Archived schools cannot create new local events."}, status=403)
-            data = request.POST
-            title = str(data.get("title", "")).strip()
-            start_date = str(data.get("start_date", "")).strip()
-            if not title:
-                return JsonResponse({"success": False, "error": "Event Title is required."}, status=400)
-            if not start_date:
-                return JsonResponse({"success": False, "error": "Start Date is required."}, status=400)
-            # Reuse the canonical Admin/Student calendar resolver (which uses
-            # school-year bounds and falls back to the configured calendar),
-            # rather than assuming is_active is authoritative.
-            calendar, _, _ = _selected_school_calendar(request)
-            if not calendar:
-                return JsonResponse({"success": False, "error": "No active school calendar is configured."}, status=409)
-            event = CalendarEvent(school_calendar=calendar, scope=CalendarEvent.SCOPE_SCHOOL, school=school, title=title, event_type="other", term=calendar.current_term or 1, start_date=start_date, end_date=str(data.get("end_date") or start_date), description=data.get("description", ""), is_published=True)
-            event.full_clean()
-            event.save()
-            return JsonResponse({"success": True, "event": _calendar_event_payload(event) | {"scope": event.scope, "school_id": event.school_id}}, status=201)
-        except ValidationError as exc:
-            logger.warning("Principal calendar event validation failed: %s", exc.message_dict if hasattr(exc, 'message_dict') else exc.messages)
-            return JsonResponse({"success": False, "error": "The event details are invalid. Please check the dates and try again."}, status=400)
-        except Exception as exc:
-            logger.exception("Principal calendar event creation failed type=%s", type(exc).__name__)
-            return JsonResponse({"success": False, "error": "Unable to save the school event right now."}, status=500)
-    event_id = request.POST.get("event_id") or request.GET.get("event_id")
-    event = CalendarEvent.objects.filter(pk=event_id, scope=CalendarEvent.SCOPE_SCHOOL, school=school).first()
-    if not event:
-        return JsonResponse({"success": False, "error": "Event not found or not owned by your school."}, status=404)
-    if request.method == "DELETE":
-        event.delete(); return JsonResponse({"success": True})
-    for field in ("title", "event_type", "start_date", "end_date", "description"):
-        if field in request.POST: setattr(event, field, request.POST[field])
-    event.save(); return JsonResponse({"success": True})
+    from .principal_calendar import calendar_response
+    user = User.objects.select_related('school_record').get(pk=request.session['user_id'])
+    return calendar_response(request, user, _principal_context(request, 'Calendar'))
 
 
 # ============================================================================

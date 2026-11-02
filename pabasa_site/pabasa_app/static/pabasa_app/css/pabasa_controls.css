@@ -1,0 +1,66 @@
+/* Existing PABASA Admin button and input tokens, reused by Principal. */
+        .btn {
+            border-radius: 999px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 0;
+            line-height: 1.2;
+            padding: 0.68rem 1rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--admin-primary);
+            border-color: var(--admin-primary);
+            color: var(--admin-text);
+        }
+
+        .btn-primary:hover,
+        .btn-primary:focus,
+        .btn-primary:active {
+            background-color: var(--admin-primary-deep);
+            border-color: var(--admin-primary-deep);
+            color: #fff;
+            box-shadow: 0 10px 22px rgba(46, 168, 229, 0.24);
+        }
+
+        .btn-secondary {
+            background-color: var(--admin-primary-soft);
+            border-color: transparent;
+            color: var(--admin-primary-deep);
+        }
+
+        .btn-secondary:hover,
+        .btn-secondary:focus,
+        .btn-secondary:active {
+            background-color: #d9f0fb;
+            color: var(--admin-primary-deep);
+        }
+
+        .btn-outline-primary {
+            color: var(--admin-primary-deep);
+            border-color: var(--admin-primary);
+            background-color: #fff;
+        }
+
+        .btn-outline-primary:hover,
+        .btn-outline-primary:focus,
+        .btn-outline-primary:active {
+            background-color: var(--admin-primary-soft);
+            border-color: var(--admin-primary);
+            color: var(--admin-primary-deep);
+        }
+
+        .btn-outline-secondary {
+            color: var(--admin-primary-deep);
+            border-color: rgba(16, 70, 110, 0.2);
+            background-color: #fff;
+        }
+
+        .btn-outline-secondary:hover,
+        .btn-outline-secondary:focus,
+        .btn-outline-secondary:active {
+            background-color: var(--admin-primary-soft);
+            border-color: var(--admin-primary);
+            color: var(--admin-primary-deep);
+        }

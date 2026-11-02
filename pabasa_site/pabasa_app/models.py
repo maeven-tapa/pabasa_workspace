@@ -75,6 +75,7 @@ class User(models.Model):
     contact_no = models.CharField(max_length=20, blank=True, null=True)
     password_hash = models.CharField(max_length=255)
     must_change_password = models.BooleanField(default=False)
+    principal_password_expires_at = models.DateTimeField(null=True, blank=True)
     profile_picture = models.CharField(max_length=255, blank=True, null=True)
     tags = models.JSONField(default=list, blank=True)
     preference = models.JSONField(default=dict, blank=True)
@@ -2095,6 +2096,7 @@ class Notification(models.Model):
     ]
 
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")
+    school = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications")
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, related_name="sent_notifications", null=True, blank=True)
     title = models.CharField(max_length=150)
     message = models.TextField()

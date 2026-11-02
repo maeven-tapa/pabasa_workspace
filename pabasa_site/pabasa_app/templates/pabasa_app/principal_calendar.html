@@ -1,89 +1,21 @@
-{% extends "pabasa_app/principal_base.html" %}
-{% block extra_head %}<style>.pc-page-title{color:#1b1a17;font-family:var(--font-family-primary);font-size:1.5rem;font-weight:800;line-height:1.2}.pc-section-title{color:var(--principal-primary-deep);font-family:var(--font-family-primary);font-weight:900;letter-spacing:.02em;line-height:1.2}.pc-supporting-text{color:var(--principal-muted);font-family:var(--font-family-primary);line-height:1.5}.pc-card{background:#fff;border:1px solid #d7e5ef;border-radius:22px;padding:1rem;overflow:hidden}.pc-toolbar{display:grid;grid-template-columns:1fr auto;align-items:center;gap:1rem}.pc-nav{display:flex;gap:.4rem}.pc-nav button{border:1px solid #cfe0ec;background:#fff;border-radius:999px;padding:.4rem .7rem;font-family:var(--font-family-primary);font-size:.85rem;font-weight:800;line-height:1.2;color:#10466e}.pc-month{font-family:var(--font-family-primary);font-size:1.15rem;font-weight:900;line-height:1.2;color:#10466e}.pc-grid{border:1px solid #d7e5ef;border-radius:12px;overflow:hidden;margin-top:1rem}.pc-weekday,.pc-days,.pc-lanes{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}.pc-weekday{background:#eaf4fb}.pc-weekday div{text-align:center;font-family:var(--font-family-primary);font-size:.74rem;font-weight:900;line-height:1.2;color:#10466e;padding:.65rem;border-right:1px solid #d7e5ef}.pc-week{position:relative;border-top:1px solid #d7e5ef}.pc-day{height:2.4rem;padding:.5rem;border-right:1px solid #d7e5ef}.pc-day:last-child{border-right:0}.pc-num{font-family:var(--font-family-primary);font-size:.85rem;font-weight:900;line-height:1.2;color:#10466e}.pc-lanes{position:relative;padding:.25rem 0 .45rem;min-height:2.2rem}.pc-bar{height:1.35rem;margin:0 2px;border-radius:999px;padding:.2rem .45rem;color:#fff;font-family:var(--font-family-primary);font-size:.7rem;font-weight:800;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;z-index:2}.pc-bar.local{background:#35b96b}.pc-bar.global{background:var(--bar-color,#3b82f6)}@media(max-width:700px){.pc-toolbar{grid-template-columns:1fr}.pc-month{justify-self:start}.pc-day{height:2.1rem;padding:.35rem}.pc-bar{font-size:.6rem}}
-</style><style>.pc-bar.school{background:#d97706}</style>{% endblock %}
-{% block content %}<main class="container-fluid"><section class="pc-card"><h2 class="pc-section-title h5">▦ School Calendar</h2><div class="pc-supporting-text mb-3">School Year: <strong>{{ student_calendar_school_year }}</strong> · <strong>{{ student_calendar_current_term }}</strong></div><div class="pc-toolbar"><div class="pc-nav"><button id="principalPrev">Previous</button><button id="principalToday">Today</button><button id="principalNext">Next</button></div><div class="pc-month" id="principalMonthLabel"></div></div><div id="principalMonthGrid" class="pc-grid"></div></section></main>
-{% endblock %}
-{% block modals %}{% if school %}<div class="modal fade" id="principalEventModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Add School Event</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><form id="principalEventForm" method="post">{% csrf_token %}<div class="modal-body"><div class="mb-3"><label class="form-label" for="principalEventTitle">Title</label><input class="form-control" id="principalEventTitle" name="title" required></div><div class="row g-3"><div class="col-6"><label class="form-label" for="principalEventStart">Start Date</label><input class="form-control" id="principalEventStart" name="start_date" type="date" required></div><div class="col-6"><label class="form-label" for="principalEventEnd">End Date</label><input class="form-control" id="principalEventEnd" name="end_date" type="date"></div></div><div class="mt-3"><label class="form-label" for="principalEventDescription">Description</label><textarea class="form-control" id="principalEventDescription" name="description" rows="3"></textarea></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Save</button></div></form></div></div></div>{% endif %}{% endblock %}
-{% block page_scripts %}<script>
-(function () {
-  function init() {
-    const grid = document.getElementById('principalMonthGrid');
-    const label = document.getElementById('principalMonthLabel');
-    if (!grid || !label) return;
-    let events = {{ student_calendar_events_json|default:'[]'|safe }};
-    let cursor = new Date();
-    cursor.setDate(1);
-    const colors = {school_opening:'#22c55e', pre_assessment:'#3b82f6', midline_assessment:'#14b8a6', post_assessment:'#a855f7', school_closing:'#ef4444', holiday:'#f59e0b', examination:'#f97316', other:'#6b7280'};
-    function parseDateOnly(value) {
-      if (!value) return null;
-      const parts = String(value).slice(0, 10).split('-').map(Number);
-      if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
-      return new Date(parts[0], parts[1] - 1, parts[2]);
-    }
-    function dateKey(date) {
-      return date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate();
-    }
-    function draw() {
-      const y = cursor.getFullYear(), m = cursor.getMonth();
-      const first = new Date(y, m, 1).getDay();
-      const days = new Date(y, m + 1, 0).getDate();
-      const weeks = Math.ceil((first + days) / 7);
-      label.textContent = cursor.toLocaleDateString(undefined, {month:'long', year:'numeric'});
-      let html = '<div class="pc-weekday">' + ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => '<div>'+d+'</div>').join('') + '</div>';
-      for (let w = 0; w < weeks; w += 1) {
-        const ws = new Date(y, m, 1 - first + w * 7);
-        const we = new Date(y, m, 7 - first + w * 7);
-        const segments = events.map(e => {
-          const start = parseDateOnly(e.start_date || e.start);
-          const end = parseDateOnly(e.end_date || e.end || e.start);
-          if (!start || !end) return null;
-          const a = dateKey(start) > dateKey(ws) ? start : ws;
-          const b = dateKey(end) < dateKey(we) ? end : we;
-          if (dateKey(a) > dateKey(b)) return null;
-          const column = a.getDay() + 1;
-          const span = Math.round((b-a) / 86400000) + 1;
-          return {event:e, column, span, endColumn:column + span - 1};
-        }).filter(Boolean).sort((left, right) => left.column - right.column || left.endColumn - right.endColumn);
-        const lanes = [];
-        segments.forEach(segment => {
-          let laneIndex = lanes.findIndex(lane => lane.every(existing => segment.endColumn < existing.column || existing.endColumn < segment.column));
-          if (laneIndex < 0) {
-            laneIndex = lanes.length;
-            lanes.push([]);
-          }
-          lanes[laneIndex].push(segment);
-          segment.lane = laneIndex + 1;
-        });
-        html += '<div class="pc-week"><div class="pc-days">';
-        for (let c = 0; c < 7; c += 1) {
-          const cell = new Date(y, m, 1 - first + w * 7 + c);
-          const n = cell.getDate();
-          const muted = cell.getMonth() !== m;
-          html += '<div class="pc-day">' + '<div class="pc-num" style="opacity:' + (muted ? '.45' : '1') + '">' + n + '</div>' + '</div>';
-        }
-        html += '</div><div class="pc-lanes" style="grid-template-rows:repeat(' + Math.max(lanes.length, 1) + ',1.35rem)">';
-        segments.forEach(s => { html += '<div class="pc-bar ' + (s.event.scope || 'global') + '" style="grid-column:' + s.column + '/span ' + s.span + ';grid-row:' + s.lane + ';--bar-color:' + (colors[s.event.event_type] || '#6b7280') + '">' + s.event.title + '</div>'; });
-        html += '</div></div>';
-      }
-      grid.innerHTML = html;
-    }
-    document.getElementById('principalPrev').onclick = () => { cursor.setMonth(cursor.getMonth() - 1); draw(); };
-    document.getElementById('principalNext').onclick = () => { cursor.setMonth(cursor.getMonth() + 1); draw(); };
-    document.getElementById('principalToday').onclick = () => { cursor = new Date(); cursor.setDate(1); draw(); };
-    const eventForm = document.getElementById('principalEventForm');
-    if (eventForm) eventForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const response = await fetch(window.location.href, {method:'POST', body:new FormData(eventForm), headers:{'Accept':'application/json'}});
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || 'Unable to save event.');
-      if (data.event) events = events.concat(data.event);
-      const modal = document.getElementById('principalEventModal');
-      if (modal && window.bootstrap) bootstrap.Modal.getOrCreateInstance(modal).hide();
-      eventForm.reset();
-      draw();
-    });
-    draw();
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, {once:true}); else init();
-}());
-</script>{% endblock %}
+{% extends 'pabasa_app/principal_base.html' %}{% load static %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'pabasa_app/css/calendar_views.css' %}"><link rel="stylesheet" href="{% static 'pabasa_app/css/principal_calendar.css' %}">{% endblock %}
+{% block content %}<div class="calendar-page">
+<section class="principal-panel"><form method="get" class="principal-directory-tools" aria-label="Calendar filters"><input type="hidden" name="view" id="principalCalendarView" value="{{ calendar_view }}"><div><label class="form-label" for="principalCalendarYear">School year</label><select class="form-select" name="calendar_id" id="principalCalendarYear">{% for year in school_calendars %}<option value="{{ year.pk }}" {% if year.pk == scope_calendar.pk %}selected{% endif %}>{{ year.school_year }}</option>{% endfor %}</select></div><div><label class="form-label" for="principalCalendarTerm">Term</label><select class="form-select" id="principalCalendarTerm" name="term"><option value="">All terms</option>{% for value, label in calendar_term_options %}<option value="{{ value }}" {% if scope_term == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><button class="btn btn-primary" type="submit">Apply</button></form><p class="principal-note">Read-only · Admin-published academic dates, holidays, ARAL schedules and school events.</p></section>
+<section class="principal-panel" aria-labelledby="principalCalendarLegendTitle"><h2 class="h6" id="principalCalendarLegendTitle">Legend</h2><div class="calendar-legend" id="principalCalendarLegend" aria-label="School calendar legend"></div></section>
+<section class="principal-panel principal-calendar-wrap">
+{% include 'pabasa_app/partials/_calendar_view_toolbar.html' with calendar_controls_prefix='principal' calendar_controls_suffix='' calendar_title_id='principalMonthLabel' %}
+<p class="principal-calendar-status principal-note" id="principalCalendarStatus" role="status">Published shared schedule · select an event for details</p>
+<div id="principalMonthGrid" data-start="{{ calendar_start }}" data-initial-date="{{ calendar_initial_date }}"></div>
+<div id="principalYearView" class="calendar-year-grid d-none" aria-live="polite"></div>
+</section></div>{% endblock %}
+{% block modals %}<div class="modal fade" id="principalEventModal" tabindex="-1" aria-hidden="true" aria-labelledby="principalEventModalTitle"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title h5" id="principalEventModalTitle">Event details</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body" id="principalEventDetails"></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button></div></div></div></div>{% endblock %}
+{% block page_scripts %}{{ events|json_script:"principal-calendar-events" }}{{ calendar_config|json_script:"principal-calendar-config" }}
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.15/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.15/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@6.1.15/index.global.min.js"></script>
+<script src="{% static 'pabasa_app/js/calendar_palette.js' %}"></script>
+<script src="{% static 'pabasa_app/js/calendar_views.js' %}"></script>
+<script src="{% static 'pabasa_app/js/calendar_legend.js' %}"></script>
+<script src="{% static 'pabasa_app/js/principal_calendar.js' %}"></script>{% endblock %}

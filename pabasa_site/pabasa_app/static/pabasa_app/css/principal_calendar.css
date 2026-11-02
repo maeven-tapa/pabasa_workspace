@@ -1,0 +1,17 @@
+/* Principal read-only shell around the shared Admin calendar views. */
+.calendar-page { display:grid; gap:1rem; min-width:0; container-type:inline-size; }
+.principal-calendar-wrap { min-width:0; }
+.principal-calendar-status { margin:0 0 .75rem; }
+.principal-body .calendar-toolbar { grid-template-columns:auto minmax(0,1fr) auto; }
+.principal-body .calendar-month-title { margin:0; }
+.principal-body .calendar-toolbar .btn { min-height:36px; }
+.principal-body .fc { font-size:.85rem; --fc-border-color:rgba(16,70,110,.12); --fc-today-bg-color:#EAF7FD; }
+.principal-body .fc a { text-decoration:none; }
+.principal-body .fc-event { cursor:pointer; border-radius:5px; padding:2px 4px; }
+.principal-body .fc-daygrid-event .fc-event-title { white-space:normal; overflow-wrap:anywhere; }
+.principal-calendar-description { margin:.5rem 0 0; white-space:pre-wrap; overflow-wrap:anywhere; }
+.principal-calendar-detail + .principal-calendar-detail { border-top:1px solid #d6e2eb; margin-top:1rem; padding-top:1rem; }
+.principal-body .calendar-year-day { min-height:1.55rem; } /* shared mini-calendar controls retain their original dimensions */
+.principal-body .calendar-year-grid { min-height:0; }
+@media(max-width:1199px) { .principal-body .calendar-toolbar { grid-template-columns:1fr; } .principal-body .calendar-toolbar-group { justify-content:center; } }
+@media(max-width:600px) { .principal-body .fc-col-header-cell-cushion { font-size:.65rem; padding:.5rem .1rem; } .principal-body .fc-daygrid-event { font-size:.65rem; } .principal-body .calendar-toolbar .btn { flex:1; padding:.4rem .5rem; } }

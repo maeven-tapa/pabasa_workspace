@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.shortcuts import redirect
 from django.urls import reverse
+import hashlib
 
 from .models import User
 
@@ -27,6 +28,25 @@ class PrincipalPasswordChangeMiddleware:
 
     def __call__(self, request):
         if request.session.get("user_role") == "principal":
+            user = User.objects.filter(id=request.session.get('user_id'), role='principal', is_archived=False).first()
+            if not user or user.account_status == 'archived':
+                request.session.flush()
+                return redirect('auth')
+            version = hashlib.sha256(user.password_hash.encode()).hexdigest()
+            previous = request.session.get('principal_password_version')
+            if not previous and user.must_change_password:
+                # A session predating credential versioning must not consume
+                # a newly issued temporary password without authenticating it.
+                request.session.flush()
+                return redirect('auth')
+            if previous and previous != version:
+                request.session.flush()
+                return redirect('auth')
+            request.session['principal_password_version'] = version
+            from .principal_security import temporary_password_expired
+            if temporary_password_expired(user) and request.path != reverse('logout'):
+                request.session.flush()
+                return redirect('auth')
             change_path = reverse("principal_change_temporary_password")
             allowed_paths = {change_path, reverse("logout")}
             if request.path not in allowed_paths and not request.path.startswith(("/static/", "/media/")):

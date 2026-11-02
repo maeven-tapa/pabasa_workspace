@@ -1,0 +1,5 @@
+{% if page.has_other_pages %}<nav class="d-flex flex-wrap gap-3 align-items-center my-3" aria-label="Results pages">
+  {% if page.has_previous %}<a class="btn btn-outline-primary btn-sm" href="?{{ filter_query }}&page={{ page.previous_page_number }}">Previous page</a>{% endif %}
+  <span class="small">Page {{ page.number }} of {{ page.paginator.num_pages }} · {{ page.paginator.count }} records</span>
+  {% if page.has_next %}<a class="btn btn-outline-primary btn-sm" href="?{{ filter_query }}&page={{ page.next_page_number }}">Next page</a>{% endif %}
+</nav>{% endif %}

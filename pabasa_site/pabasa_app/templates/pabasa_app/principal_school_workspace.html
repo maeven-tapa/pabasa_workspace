@@ -1,59 +1,8 @@
-{% extends 'pabasa_app/principal_base.html' %}
-{% block extra_head %}
-<style>
-  .principal-view-btn {
-    background: var(--principal-primary-deep);
-    border-color: var(--principal-primary-deep);
-    box-shadow: 0 6px 14px rgba(16, 70, 110, 0.2);
-    color: #fff;
-  }
-
-  .principal-view-btn:hover,
-  .principal-view-btn:focus {
-    background: var(--principal-accent);
-    border-color: var(--principal-accent-deep);
-    box-shadow: 0 8px 16px rgba(245, 184, 0, 0.24);
-    color: var(--principal-primary-deep);
-  }
-
-  .school-page-title {
-    color: #1b1a17;
-    font-family: var(--font-family-primary);
-    font-size: 1.5rem;
-    font-weight: 800;
-    line-height: 1.2;
-  }
-
-  .school-section-title {
-    color: var(--principal-primary-deep);
-    font-family: var(--font-family-primary);
-    font-weight: 900;
-    letter-spacing: 0.02em;
-  }
-
-  .school-card-title {
-    font-family: var(--font-family-primary);
-    font-weight: 800;
-    line-height: 1.2;
-  }
-
-  .school-meta {
-    color: var(--principal-muted);
-    font-family: var(--font-family-primary);
-    line-height: 1.5;
-  }
-</style>
-{% endblock %}
-{% block content %}
-<div class="container-fluid px-0">
-  {% if not school %}
-  <div class="principal-panel p-4"><h2 class="h4">School not assigned</h2><p class="text-muted mb-0">Your Principal account is not currently linked to a School.</p></div>
-  {% else %}
-  <div class="principal-panel p-4 mb-4"><div class="d-flex flex-wrap justify-content-between gap-3"><div><p class="text-uppercase small fw-bold text-primary mb-1">Your School</p><h2 class="school-page-title mb-2">{{ school.name }}</h2><p class="school-meta mb-0">{{ school.address|default:'Address not provided' }}</p></div><div class="text-md-end"><span class="badge text-bg-light border">School code: {{ school.code|default:school.id }}</span><p class="school-meta small mt-2 mb-0">Read-only workspace</p></div></div></div>
-  <div class="d-flex align-items-center justify-content-between mb-3"><h2 class="school-section-title h4 mb-0">Grade 2 Sections</h2><span class="school-meta small">School hierarchy</span></div>
-  <div class="row g-4">
-  {% if not has_sections %}<div class="col-12"><div class="principal-panel p-4 text-muted">No sections configured for this School.</div></div>{% endif %}
-  {% for sections in section_columns %}<div class="col-12 col-lg-6"><section class="principal-panel h-100"><div class="p-3 border-bottom"><h3 class="school-card-title h5 mb-0">Sections</h3></div><div class="list-group list-group-flush">{% for section in sections %}<div class="list-group-item p-3"><div class="d-flex justify-content-between align-items-start gap-2"><strong class="school-card-title">{{ section.section|default:section.class_name }}</strong><span class="badge {% if section.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %}">{% if section.is_active %}Active{% else %}Inactive{% endif %}</span></div><div class="school-meta small mt-2">Teacher: {% if section.teacher %}{{ section.teacher.first_name }} {{ section.teacher.last_name }}{% else %}Not assigned{% endif %}</div><div class="school-meta small mb-2">Students: {{ section.active_student_count }}</div><a class="btn btn-sm principal-view-btn" href="{% url 'principal_section_detail' section.id %}">View</a></div>{% endfor %}</div></section></div>{% endfor %}
-  </div>{% endif %}
-</div>
-{% endblock %}
+{% extends 'pabasa_app/principal_base.html' %}{% block content %}
+{% include 'pabasa_app/includes/principal_scope.html' %}
+{% if school %}<section class="principal-panel mb-4"><div class="principal-panel-head"><div><p class="eyebrow">School directory · {{ school.code }}</p><h2>{{ school.name }}</h2><p>{{ school.address|default:'Address not provided' }}</p></div><span class="badge status-neutral">Read-only oversight</span></div><dl class="principal-school-meta"><div><dt>School code</dt><dd>{{ school.code|default:'Not configured' }}</dd></div><div><dt>Contact</dt><dd>{{ school.contact_information|default:'Not configured' }}</dd></div><div><dt>Academic year</dt><dd>{{ scope_calendar.school_year|default:'Not configured' }}</dd></div><div><dt>Configured term</dt><dd>{% if scope_calendar %}Term {{ scope_calendar.current_term }}{% else %}Not configured{% endif %}</dd></div><div><dt>School year starts</dt><dd>{{ scope_start|date:'M d, Y'|default:'Not configured' }}</dd></div><div><dt>School year ends</dt><dd>{{ scope_end|date:'M d, Y'|default:'Not configured' }}</dd></div></dl><div class="principal-mini-stats" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><strong>{{ total_students }}</strong><span>Enrolled learners</span></div><div><strong>{{ total_sections }}</strong><span>Sections</span></div><div><strong>{{ total_teachers }}</strong><span>Assigned Teachers</span></div></div><p class="principal-note">{{ awaiting_assignment_students }} learners awaiting section assignment. Account and enrollment management remains with the Administrator.</p></section>
+{% if awaiting_page %}<details class="principal-panel mb-4" id="awaiting-assignment"><summary>{{ awaiting_assignment_students }} learners awaiting a section assignment</summary><p class="principal-note">These school-year enrollments are separate from section coverage. The Administrator manages assignment.</p><div class="table-responsive mt-3"><table class="table"><thead><tr><th>Learner</th><th>Student ID / LRN</th><th>Status</th></tr></thead><tbody>{% for enrollment in awaiting_page %}<tr><td>{{ enrollment.student.first_name }} {{ enrollment.student.last_name }}</td><td>{{ enrollment.student.lrn|default:enrollment.student.custom_id }}</td><td>Awaiting assignment</td></tr>{% endfor %}</tbody></table></div>{% if awaiting_page.has_other_pages %}<nav class="d-flex gap-3 mt-3" aria-label="Awaiting assignment pages">{% if awaiting_page.has_previous %}<a href="?{{ filter_query }}&amp;awaiting_page={{ awaiting_page.previous_page_number }}#awaiting-assignment">Previous</a>{% endif %}<span>Page {{ awaiting_page.number }} of {{ awaiting_page.paginator.num_pages }}</span>{% if awaiting_page.has_next %}<a href="?{{ filter_query }}&amp;awaiting_page={{ awaiting_page.next_page_number }}#awaiting-assignment">Next</a>{% endif %}</nav>{% endif %}</details>{% endif %}
+<section class="principal-panel"><div class="principal-panel-head"><div><h2>Grade 2 sections</h2><p>{{ directory_count }} section{{ directory_count|pluralize }} in the current directory search</p></div></div>
+<form method="get" class="principal-directory-tools" aria-label="Search sections"><input type="hidden" name="calendar_id" value="{{ scope_calendar.id }}"><input type="hidden" name="term" value="{{ scope_term }}"><input type="hidden" name="phase" value="{{ scope_phase }}"><input type="hidden" name="section_id" value="{{ scope_section_id }}"><div><label class="form-label" for="sectionSearch">Section or Teacher</label><input class="form-control" type="search" name="q" id="sectionSearch" value="{{ directory_query }}" placeholder="Search by name" maxlength="100"></div><div><label class="form-label" for="teacherFilter">Teacher assignment</label><select class="form-select" name="teacher" id="teacherFilter"><option value="">All sections</option><option value="assigned" {% if teacher_filter == 'assigned' %}selected{% endif %}>Assigned</option><option value="unassigned" {% if teacher_filter == 'unassigned' %}selected{% endif %}>Unassigned</option></select></div><button class="btn btn-primary" type="submit">Search</button></form>
+<div class="table-responsive"><table class="table"><thead><tr><th>Section</th><th>Active Teacher</th><th>Enrolled</th><th>CRLA coverage</th><th>ARAL eligible</th><th>Follow-up</th><th>Status</th><th>Details</th></tr></thead><tbody>{% for row in directory_page %}<tr><td><strong>{{ row.name }}</strong></td><td>{{ row.teacher }}</td><td>{{ row.total_students }}</td><td>{{ row.completion_pct }}%</td><td>{{ row.eligible }}</td><td>{{ row.follow_up }}</td><td><span class="badge {% if row.is_active %}status-completed{% else %}status-neutral{% endif %}">{% if row.is_active %}Active{% else %}Archived{% endif %}</span></td><td><a class="btn btn-sm btn-outline-primary" href="{% url 'principal_section_detail' row.id %}?term={{ scope_term }}&amp;phase={{ scope_phase }}">View details</a></td></tr>{% empty %}<tr><td colspan="8" class="principal-empty"><i class="bi bi-building" aria-hidden="true"></i>No sections match this scope or search.</td></tr>{% endfor %}</tbody></table></div>{% include 'pabasa_app/includes/principal_pagination.html' with page=directory_page %}</section>
+{% else %}<section class="principal-panel principal-empty"><h2>School not assigned</h2><p>Your Principal account is not linked to a school. Contact the Administrator.</p></section>{% endif %}{% endblock %}

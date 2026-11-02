@@ -37,6 +37,8 @@ def official_crla_result_queryset():
         assessment_id=OuterRef('source_assessment_id'), assessment_kind='crla',
     )
     return Assessment.objects.alias(_source_is_crla=Exists(source_material)).filter(
+        is_active=True,
+        needs_manual_review=False,
         attempt_status="completed",
         completed_at__isnull=False,
         student__isnull=False,
