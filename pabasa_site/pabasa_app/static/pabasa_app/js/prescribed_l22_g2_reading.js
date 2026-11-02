@@ -2,7 +2,7 @@
 const data=JSON.parse(document.getElementById('workbook-payload').textContent||'{}'),a=data.activity,app=document.getElementById('l22g2-app');
 const INSTRUCTION_TEXT='Basahin ang mga salitang nagtataglay ng hiram na letrang C na may tunog na /k/ at /s/.';
 const COMPLETION_RETURN_LABEL='Bumalik sa Aking Aralin';
-const words=(a.items||[]).map(item=>item.text), instructionText=a.instruction||INSTRUCTION_TEXT, canonicalInstruction=instructionText, isL22G2=a.activity_key==='aral-l22-g2-c-word-reading', isL22G6=a.activity_key==='aral-l22-g6-f-word-reading', backLabel=isL22G2?'Balik sa Aking Aralin':'Aking Aralin', localAudio=(isL22G2||isL22G6)?(data.local_audio||{}):{};
+const words=(a.items||[]).map(item=>item.text), instructionText=a.instruction||INSTRUCTION_TEXT, canonicalInstruction=instructionText, isL22G2=a.activity_key==='aral-l22-g2-c-word-reading', isL22G6=a.activity_key==='aral-l22-g6-f-word-reading', suppressInstructionReplay=isL22G2||isL22G6, backLabel=isL22G2?'Balik sa Aking Aralin':'Aking Aralin', localAudio=(isL22G2||isL22G6)?(data.local_audio||{}):{};
 const startLesson=window.PabasaLessonStart||(({modalId,startId,laterId,backUrl,onStart}={})=>{const modal=document.getElementById(modalId),start=document.getElementById(startId),later=document.getElementById(laterId);if(!modal||!start||!later)return null;let closed=false;document.body.classList.add('lesson-start-open');const close=callback=>{if(closed)return;closed=true;start.disabled=true;later.disabled=true;try{callback?.()}finally{modal.remove();document.body.classList.remove('lesson-start-open')}};start.addEventListener('click',()=>close(onStart));later.addEventListener('click',()=>{if(closed)return;closed=true;start.disabled=true;later.disabled=true;document.body.classList.remove('lesson-start-open');window.location.href=backUrl||document.getElementById('wb-back')?.href||'/dashboard/assessment/'});return{close}});
 const G6_MAPPED_TEXT=new Set(['Basahin ang mga salita sa ibaba na nagtataglay ng hiram na letrang Ff.','Faith','Felipe','Felix','Ferrer','Filipiniana','Filipino','Fina','freezer','fries','Handa ka na?','Hindi ko malinaw na narinig. Subukan muli.','Hindi pa kailangan ang pag-ulit.','Magaling!','Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.','Pakinggan ang tamang pagbigkas, pagkatapos ay subukan mong basahin.','Subukan muli.','Tama!']);
 function restoreControls(){const read=document.getElementById('read');if(read)read.disabled=busy||speechBusy;const instruction=document.getElementById('instruction');if(instruction)instruction.disabled=busy||speechBusy}
@@ -27,18 +27,13 @@ async function record(){if(busy||speechBusy)return;busy=true;const mine=++reques
 async function listen(){if(busy||speechBusy)return;busy=true;try{await speak(words[current()]);await request({action:'read_aloud'});const message='Pakinggan ang tamang pagbigkas, pagkatapos ay subukan mong basahin.';render(message);if(isL22G6)await playFeedback(message)}catch(e){const message=e.message||'Hindi available ang audio.';render(message,'bad');if(isL22G6)await playFeedback(message)}finally{busy=false;restoreControls()}}
 async function retry(){if(busy)return;busy=true;try{await request({action:'retry_reading'});render('Handa ka na?');await playFeedback('Handa ka na?')}catch(e){const message=e.message||'Hindi pa kailangan ang pag-ulit.';render(message,'bad');if(isL22G6)await playFeedback(message)}finally{busy=false;restoreControls()}}
 window.addEventListener('pagehide',()=>{stream?.getTracks().forEach(t=>t.stop());cancelSpeech()});render();
+if(suppressInstructionReplay){
+  const removeStartupReplay=()=>document.getElementById('instruction')?.remove();
+  removeStartupReplay();
+  new MutationObserver(removeStartupReplay).observe(app,{childList:true,subtree:true});
+}
 if(!data.preview&&(isL22G2||isL22G6)&&!state.completed){
   const suffix=isL22G6?'g6':'g2';
   startLesson({modalId:`wb-l22-${suffix}-start`,startId:`wb-l22-${suffix}-start-button`,laterId:`wb-l22-${suffix}-later-button`,backUrl:data.back_url,onStart:()=>{render();if(!instructionAttempted){instructionAttempted=true;playInstruction();}}});
 }else if(!data.preview&&!isL22G2&&!isL22G6&&a.activity_key!=='aral-l24-g2-v-word-reading'&&!instructionAttempted){instructionAttempted=true;setTimeout(()=>playInstruction(),0)}
-if(isL22G2){
-  const ensureInstruction=()=>{
-    if(state.completed||current()>=words.length||!app?.querySelector('.header h1')||app.querySelector('#instruction'))return;
-    const h1=app.querySelector('.header h1');
-    h1.insertAdjacentHTML('afterend',`<p class="instruction">${esc(canonicalInstruction)}</p><button class="instruction-audio ${speechBusy?'is-playing':''}" id="instruction" type="button" ${speechBusy||busy?'disabled':''}>🔊 ${speechBusy?'Nilo-load…':'Pakinggan Muli'}</button>`);
-    app.querySelector('#instruction').onclick=playInstruction;
-  };
-  ensureInstruction();
-  new MutationObserver(ensureInstruction).observe(app,{childList:true,subtree:true});
-}
 })();

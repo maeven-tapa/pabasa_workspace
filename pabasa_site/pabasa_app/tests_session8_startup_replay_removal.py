@@ -65,3 +65,14 @@ class Session8StartupReplayRemovalTests(SimpleTestCase):
         self.assertIn('if(!startupNarrationStarted){startupNarrationStarted=true;playStartup();}', source)
         self.assertIn("const session8Activity = SESSION8_REPLAY_REMOVAL_KEYS.has(a.activity_key);", source)
         self.assertIn("session8Activity?'':'<button", source)
+
+    def test_lesson22_gawain2_and_gawain6_activity_script_cannot_restore_replay(self):
+        source = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_l22_g2_reading.js').read_text(encoding='utf-8')
+        self.assertIn('suppressInstructionReplay=isL22G2||isL22G6', source)
+        self.assertNotIn('ensureInstruction', source)
+        self.assertIn('const removeStartupReplay=()=>document.getElementById(\'instruction\')?.remove();', source)
+
+    def test_lesson22_gawain6_uses_the_same_scoped_replay_guard(self):
+        source = (Path(__file__).parent / 'static/pabasa_app/js/prescribed_l22_g2_reading.js').read_text(encoding='utf-8')
+        self.assertIn("isL22G6=a.activity_key==='aral-l22-g6-f-word-reading'", source)
+        self.assertIn('if(suppressInstructionReplay){', source)
