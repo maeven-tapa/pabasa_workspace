@@ -3,6 +3,12 @@
   'use strict';
   const data = JSON.parse(document.getElementById('workbook-payload').textContent);
   const a = data.activity, preview = data.preview;
+  const SESSION8_REPLAY_REMOVAL_KEYS = new Set([
+    'aral-l22-g1-c-syllable-builder','aral-l22-g2-c-word-reading','aral-l22-g3-c-word-search','aral-l22-g4-f-syllable-builder','aral-l22-g5-f-word-search','aral-l22-g6-f-word-reading',
+    'aral-l23-g1-n-syllable-builder','aral-l23-g2-n-word-reading','aral-l23-g3-j-word-reading','aral-l23-g4-j-syllabication','aral-l23-g5-j-word-search','aral-l23-g6-q-syllable-builder','aral-l23-g7-q-word-reading',
+    'aral-l24-g1-v-syllable-builder','aral-l24-g2-v-word-reading','aral-l24-g3-x-word-reading','aral-l24-g3-x-repeat','aral-l24-g4-x-syllable-builder','aral-l24-g4-x-pictures','aral-l24-g5-z-syllabication','aral-l24-g6-z-word-search','aral-l24-g7-z-word-reading'
+  ]);
+  const session8Activity = SESSION8_REPLAY_REMOVAL_KEYS.has(a.activity_key);
   const qBuilder = a.activity_key === 'aral-l23-g6-q-syllable-builder';
   const l22G1 = a.activity_key === 'aral-l22-g1-c-syllable-builder';
   const l24Builder = a.activity_key === 'aral-l24-g1-v-syllable-builder';
@@ -174,6 +180,7 @@
   let l22G1InstructionToken = 0, l22G1TransitionToken = 0;
   const content = document.getElementById('wb-content'), action = document.getElementById('wb-action'), actionHost = action?.parentElement;
   const status = document.getElementById('wb-status');
+  if(session8Activity)document.getElementById('wb-instruction-replay')?.remove();
   if (jReading) {
     const shell = document.querySelector('.wb-shell'), back = document.getElementById('wb-back');
     if (shell && back && shell.parentNode) {
@@ -565,7 +572,7 @@
     lock();
   }
   function instructionBanner(){
-    return `<div class="wb-instruction-banner"><span>${esc(instructionText)}</span><button type="button" id="wb-instruction-replay" aria-label="Pakinggan muli ang panuto">Pakinggan Muli</button></div>`;
+    return `<div class="wb-instruction-banner"><span>${esc(instructionText)}</span>${session8Activity?'':'<button type="button" id="wb-instruction-replay" aria-label="Pakinggan muli ang panuto">Pakinggan Muli</button>'}</div>`;
   }
   function speakInstruction(){
     if(preview||instructionSpoken||((lesson23Activity||lesson24Activity)&&!activityStarted))return;
@@ -596,7 +603,7 @@
     const readingHeading=content.querySelector('.wb-j-reading h2');
     if(readingHeading){if(qReading||l23G3||l24G3WordReading)readingHeading.remove();else readingHeading.textContent=a.title;}
     const replay=document.getElementById('wb-instruction-replay');
-    replay.onclick=()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>{const text=e.message||'Hindi available ang panuto.';setJFeedback(text,true);if((l23G3&&G3_MAPPED_TEXT.has(text))||(qReading&&G7_MAPPED_TEXT.has(text))||(l24G3WordReading&&L24_G3_WORD_MAPPED_TEXT.has(text)))playPrescribedAudio(text,true).catch(()=>{});});};
+    if(replay)replay.onclick=()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>{const text=e.message||'Hindi available ang panuto.';setJFeedback(text,true);if((l23G3&&G3_MAPPED_TEXT.has(text))||(qReading&&G7_MAPPED_TEXT.has(text))||(l24G3WordReading&&L24_G3_WORD_MAPPED_TEXT.has(text)))playPrescribedAudio(text,true).catch(()=>{});});};
     if(!preview)speakInstruction();
     if(preview)return;
     if(current<a.items.length){
@@ -709,7 +716,7 @@
     const current=Number(state.index||0), item=a.items[current];
     content.innerHTML=`${instructionBanner()}<section class="wb-focus wb-j-syllables"><h2>Pantigin ang sumusunod na salita.</h2><div class="wb-syllable-rows">${a.items.map((it,i)=>`<div class="wb-syllable-row ${i<current?'is-done':''} ${i===current?'is-current':''}"><span>${i+1}. ${esc(it.text)}</span><span>–</span><span>${i===current?'<input id="wb-j-answer" type="text" inputmode="text" autocomplete="off" aria-label="Sagot para sa '+esc(it.text)+'" value="'+esc(state.draft?.text||'')+'">':i<current?'✓':'—'}</span></div>`).join('')}</div><p class="wb-j-feedback" id="wb-j-feedback" role="status" aria-live="polite">${esc(state.last_feedback||'')}</p></section>`;
     const replay=document.getElementById('wb-instruction-replay');
-    replay.onclick=()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>setJFeedback(e.message||'Hindi available ang panuto.',true));};
+    if(replay)replay.onclick=()=>{if(!busy&&!activeStream)playPrescribedAudio(instructionText).catch(e=>setJFeedback(e.message||'Hindi available ang panuto.',true));};
     if(!preview)speakInstruction();
     if(preview||!item)return;
     const input=document.getElementById('wb-j-answer');
