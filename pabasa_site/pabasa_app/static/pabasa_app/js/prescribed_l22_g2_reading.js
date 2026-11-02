@@ -31,4 +31,14 @@ if(!data.preview&&(isL22G2||isL22G6)&&!state.completed){
   const suffix=isL22G6?'g6':'g2';
   startLesson({modalId:`wb-l22-${suffix}-start`,startId:`wb-l22-${suffix}-start-button`,laterId:`wb-l22-${suffix}-later-button`,backUrl:data.back_url,onStart:()=>{render();if(!instructionAttempted){instructionAttempted=true;playInstruction();}}});
 }else if(!data.preview&&!isL22G2&&!isL22G6&&a.activity_key!=='aral-l24-g2-v-word-reading'&&!instructionAttempted){instructionAttempted=true;setTimeout(()=>playInstruction(),0)}
+if(isL22G2){
+  const ensureInstruction=()=>{
+    if(state.completed||current()>=words.length||!app?.querySelector('.header h1')||app.querySelector('#instruction'))return;
+    const h1=app.querySelector('.header h1');
+    h1.insertAdjacentHTML('afterend',`<p class="instruction">${esc(canonicalInstruction)}</p><button class="instruction-audio ${speechBusy?'is-playing':''}" id="instruction" type="button" ${speechBusy||busy?'disabled':''}>🔊 ${speechBusy?'Nilo-load…':'Pakinggan Muli'}</button>`);
+    app.querySelector('#instruction').onclick=playInstruction;
+  };
+  ensureInstruction();
+  new MutationObserver(ensureInstruction).observe(app,{childList:true,subtree:true});
+}
 })();
