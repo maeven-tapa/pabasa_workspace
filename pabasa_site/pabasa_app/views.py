@@ -3896,28 +3896,11 @@ def _build_certificate_pdf(student_name='', issued_on=None, school_name='PABASA'
 
 
 def _build_structured_reading_progress_pdf(report, message='', course=None, teacher=None, recipient_email=''):
-    """Render a collector payload without re-querying reporting data."""
+    """Present the existing collector payload without re-querying or rescoring."""
     try:
-        from reportlab.lib import colors
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-        from reportlab.lib.units import inch
-        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+        from .reading_report_pdf import build_reading_progress_pdf
     except ImportError as exc:
-        raise RuntimeError(f"PDF export is unavailable: {exc}")
-
-    buffer = BytesIO()
-    page_size = A4
-    margin = 0.65 * inch
-    width = page_size[0] - (2 * margin)
-    styles = getSampleStyleSheet()
-    title = ParagraphStyle('StructuredReportTitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=18, leading=22, textColor=colors.HexColor('#8B3E2F'), spaceAfter=10)
-    heading = ParagraphStyle('StructuredReportHeading', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11.5, leading=14, textColor=colors.HexColor('#8B3E2F'), spaceBefore=10, spaceAfter=5)
-    body = ParagraphStyle('StructuredReportBody', parent=styles['BodyText'], fontName='Helvetica', fontSize=9, leading=12, textColor=colors.HexColor('#111827'))
-
-    def text(value, fallback='Not yet available'):
-        value = fallback if value in (None, '') else value
-        return escape(str(value)).replace('\n', '<br/>')
+        raise RuntimeError(f"PDF export is unavailable: {exc}") from exc
 
     def date_value(value):
         if not value:
@@ -3928,88 +3911,7 @@ def _build_structured_reading_progress_pdf(report, message='', course=None, teac
         except Exception:
             return str(value)
 
-    def metrics(rows):
-        table = Table([[Paragraph(text(label), body), Paragraph(text(value), body)] for label, value in rows], colWidths=[2.05 * inch, width - 2.05 * inch])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#fcfcfc')), ('GRID', (0, 0), (-1, -1), .25, colors.HexColor('#e5e7eb')),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('LEFTPADDING', (0, 0), (-1, -1), 6), ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-            ('TOPPADDING', (0, 0), (-1, -1), 5), ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-        ]))
-        return table
-
-    elements = [Paragraph('STUDENT READING PROGRESS REPORT', title)]
-    elements.append(Paragraph('STUDENT INFORMATION', heading))
-    elements.append(metrics([
-        ('Student', report.get('student_name')), ('Student ID', report.get('student_id')), ('Grade / Section', ' / '.join(filter(None, [str(report.get('grade_level') or ''), str(report.get('section') or '')]))),
-        ('Teacher', report.get('teacher_name') or (f'{teacher.first_name} {teacher.last_name}'.strip() if teacher else '')),
-        ('Reporting Period', report.get('school_year') or report.get('course_name')),
-    ]))
-
-    crla = report.get('crla') or {}
-    elements.append(Paragraph('CRLA INITIAL ASSESSMENT', heading))
-    if crla.get('available'):
-        crla_rows = [('Assessment Period', crla.get('assessment_period') or crla.get('assessment_phase')), ('Reading Profile / Classification', crla.get('reading_profile')), ('Assessment Date', date_value(crla.get('completed_at'))), ('Score', crla.get('total_score')), ('Accuracy', f"{crla.get('accuracy')}%" if crla.get('accuracy') is not None else ''), ('Words Per Minute', crla.get('wpm')), ('Task / Part 2', ', '.join(f'{key.replace("_", " ").title()}: {value}' for key, value in (crla.get('part2_results') or {}).items()) or '')]
-        elements.append(metrics(crla_rows))
-        if crla.get('finalized_without_submission'):
-            elements.append(Spacer(1, 4))
-            elements.append(Paragraph('No student submission was recorded. The class was finalized with a zero-score result.', body))
-    else:
-        elements.append(Paragraph(text(crla.get('message')), body))
-
-    activities = report.get('aral_activities') or []
-    elements.append(Paragraph('ARAL INTERVENTION', heading))
-    if activities:
-        rows = [[Paragraph('<b>Activity</b>', body), Paragraph('<b>Week</b>', body), Paragraph('<b>Completion Date</b>', body), Paragraph('<b>Recorded Performance</b>', body)]]
-        for activity in activities:
-            facts = []
-            if activity.get('score') is not None: facts.append(f"Score: {activity['score']}")
-            if activity.get('accuracy') is not None: facts.append(f"Accuracy: {activity['accuracy']}%")
-            if activity.get('wpm') is not None: facts.append(f"WPM: {activity['wpm']}")
-            if activity.get('correct_items') is not None and activity.get('total_items') is not None: facts.append(f"Items: {activity['correct_items']}/{activity['total_items']}")
-            if activity.get('automated_speech_analysis'): facts.append('Automated speech-analysis data')
-            rows.append([Paragraph(text(activity.get('activity_name')), body), Paragraph(text(', '.join(str(v) for v in activity.get('assigned_weeks', []))), body), Paragraph(text(date_value(activity.get('completed_at'))), body), Paragraph(text('; '.join(facts)), body)])
-        table = Table(rows, colWidths=[1.45 * inch, .55 * inch, 1.2 * inch, width - 3.2 * inch], repeatRows=1)
-        table.setStyle(TableStyle([('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')), ('GRID', (0, 0), (-1, -1), .25, colors.HexColor('#e5e7eb')), ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('LEFTPADDING', (0, 0), (-1, -1), 4), ('RIGHTPADDING', (0, 0), (-1, -1), 4), ('TOPPADDING', (0, 0), (-1, -1), 4), ('BOTTOMPADDING', (0, 0), (-1, -1), 4)]))
-        elements.append(table)
-    else:
-        elements.append(Paragraph('No completed ARAL activities are available for this reporting period.', body))
-
-    elements.append(Paragraph('READING SKILLS PRACTICED', heading))
-    competency_rows = []
-    for competency in report.get('competencies') or []:
-        names = ', '.join(item.get('activity_name', '') for item in competency.get('activities', [])) or 'No completed activities recorded'
-        competency_rows.append((competency.get('name'), names))
-    elements.append(metrics(competency_rows))
-
-    elements.append(Paragraph('READING PROGRESS', heading))
-    recent = report.get('recent_progress') or []
-    if recent:
-        for item in recent:
-            progress_facts = []
-            if item.get('accuracy') is not None:
-                progress_facts.append(f"accuracy {item['accuracy']}%")
-            if item.get('wpm') is not None:
-                progress_facts.append(f"{item['wpm']} WPM")
-            if item.get('miscues') is not None:
-                progress_facts.append(f"miscues {item['miscues']}")
-            if item.get('automated_speech_analysis'):
-                progress_facts.append('automated speech-analysis information')
-            progress_line = f"{item.get('activity_name')} - completed {date_value(item.get('completed_at'))}"
-            if progress_facts:
-                progress_line += '; ' + '; '.join(progress_facts)
-            elements.append(Paragraph(text(progress_line), body))
-    else:
-        elements.append(Paragraph('No recent persisted reading results are available.', body))
-
-    elements.append(Paragraph("TEACHER'S NOTE", heading))
-    elements.append(Paragraph(text(message, 'No teacher note was added.'), body))
-    elements.append(Paragraph('NEXT STEPS', heading))
-    for recommendation in report.get('recommendations') or []:
-        elements.append(Paragraph('• ' + text(recommendation), body))
-
-    doc = SimpleDocTemplate(buffer, pagesize=page_size, leftMargin=margin, rightMargin=margin, topMargin=margin, bottomMargin=margin)
-    doc.build(elements)
-    return buffer.getvalue()
+    return build_reading_progress_pdf(report, message=message, teacher=teacher, date_formatter=date_value)
 
 
 def _build_reading_report_pdf(report, message='', course=None, teacher=None, recipient_email=''):
