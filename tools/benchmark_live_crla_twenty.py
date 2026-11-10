@@ -100,6 +100,13 @@ def run():
             'Origin':'https://' + HOST, 'Referer':'https://' + HOST + '/',
             'X-CSRFToken':csrf, 'Content-Type':'application/json'}
         try:
+            # Finalization is acknowledged synchronously and can outlive a
+            # normal poll. Do not delete fixture sessions while the server is
+            # still committing an End Session request.
+            deadline = 60 if operation == 'end' else 25
+            client['connection'].timeout = deadline
+            if client['connection'].sock:
+                client['connection'].sock.settimeout(deadline)
             client['connection'].request('POST' if payload is not None else 'GET', route,
                 body=json.dumps(payload) if payload is not None else None, headers=headers)
             response=client['connection'].getresponse()
@@ -175,6 +182,8 @@ def run():
                 students.extend(login(s,live_id) for s in members)
         report['enrolled_students']=Enrollment.objects.filter(student_id__in=users, status='active',is_active=True).count()
         assert len(students)==report['enrolled_students']==CLIENT_COUNT
+        print('PABASA_CAPACITY_FIXTURE '+json.dumps({'test_id':run_id,'school_id':school_id,
+            'user_ids':users,'section_ids':sections,'live_ids':live_ids}),flush=True)
         with connection.cursor() as cursor:
             cursor.execute('SHOW max_connections')
             report['database_max_connections']=int(cursor.fetchone()[0])
@@ -222,6 +231,9 @@ def run():
         # Exact ids belong exclusively to this run, never a broad prefix deletion.
         report['temporary_notifications_deleted']=Notification.objects.filter(created_by_id__in=users).delete()[0]
         report['temporary_activity_logs_deleted']=ActivityLog.objects.filter(actor_id__in=users).delete()[0]
+        # Remove synthetic attempts explicitly before their enrollment rows.
+        # This also avoids SET_NULL collector races with delayed finalization.
+        Assessment.objects.filter(student_id__in=users).delete()
         User.objects.filter(pk__in=users).delete()
         Section.objects.filter(pk__in=sections).delete()
         if school_id is not None:
