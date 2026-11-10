@@ -14992,7 +14992,7 @@ def prescribed_activity_page(request, activity_key):
                                           normalize_l22_g4_state, initial_l23_g1_state, normalize_l23_g1_state, initial_l24_g1_state, normalize_l24_g1_state, initial_l24_g2_state, normalize_l24_g2_state, initial_l23_g6_state, normalize_l23_g6_state,
                                           initial_l23_g2_state, normalize_l23_g2_state, initial_l24_g3_state, normalize_l24_g3_state,
                                            initial_l24_g3_repeat_state, normalize_l24_g3_repeat_state,
-                                           initial_l24_g4_builder_state, normalize_l24_g4_builder_state,
+                                           initial_l24_g4_builder_state, normalize_l24_g4_builder_state, l24_g4_builder_pronunciation_match,
                                            initial_l24_g5_syllabication_state, normalize_l24_g5_syllabication_state,
                                           initial_l24_g6_state, normalize_l24_g6_state, initial_l24_g7_state,
                                           normalize_l24_g7_state, initial_s9_a1_state, normalize_s9_a1_state,
@@ -15409,6 +15409,7 @@ def prescribed_activity_page(request, activity_key):
             })
         if activity_key == 'aral-l24-g4-x-syllable-builder':
             audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_24/BAHAGI_2/GAWAIN_4/'
+            l22_g1_audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_22/GAWAIN_1/'
             audio_files = {
                 'instruction': 'Basahin ang mga pantig sa loob ng Big Box at subuking bumuo ng mga salita mula rito._TTS.mp3',
                 'syllables': {
@@ -15436,6 +15437,19 @@ def prescribed_activity_page(request, activity_key):
                 'completion': {text: static(audio_root + filename) for text, filename in audio_files['completion'].items()},
                 'mapped_states': mapped_states,
             }
+            local_audio['feedback'].update({
+                'Handa ka na?': static(l22_g1_audio_root + 'Handa ka na_TTS.mp3'),
+                'Subukan muli.': static(l22_g1_audio_root + 'Subukan muli._TTS.mp3'),
+                'Hindi ko malinaw na narinig. Subukan muli.': static(l22_g1_audio_root + 'Hindi ko malinaw na narinig. Subukan muli._TTS.mp3'),
+                'Hindi available ang mikropono sa browser na ito.': static(l22_g1_audio_root + 'Hindi available ang mikropono sa browser na ito._TTS.mp3'),
+                'Hindi magamit ang mikropono. Subukan muli.': static(l22_g1_audio_root + 'Hindi magamit ang mikropono. Subukan muli._TTS.mp3'),
+                'Hindi nakuha ang iyong boses. Subukan muli.': static(l22_g1_audio_root + 'Hindi nakuha ang iyong boses. Subukan muli._TTS.mp3'),
+                'Walang nakuha sa recording. Subukan muli.': static(l22_g1_audio_root + 'Walang nakuha sa recording. Subukan muli._TTS.mp3'),
+                'Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.': static(l22_g1_audio_root + 'Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa._TTS.mp3'),
+                'Pakinggan muna ang tamang pagbigkas.': static(l22_g1_audio_root + 'Pakinggan muna ang tamang pagbigkas._TTS.mp3'),
+                'Magaling! Nabasa mo nang tama ang lahat ng pantig.': static(l22_g1_audio_root + 'Magaling! Nabasa mo nang tama ang lahat ng pantig._TTS.mp3'),
+            })
+            local_audio['mapped_states'] += list(local_audio['feedback'])
             return render(request, 'pabasa_app/prescribed_workbook_page.html', {
                 'workbook_payload': {
                     'activity': get_activity(activity_key), 'state': state, 'preview': preview,
@@ -20501,7 +20515,7 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
         initial_l23_g3_state, normalize_l23_g3_state, l23_g3_pronunciation_match, initial_l23_g7_state, normalize_l23_g7_state, l23_g7_pronunciation_match,
         initial_l23_g4_state, normalize_l23_g4_state, normalize_l23_g5_state,
         initial_l24_g3_repeat_state, normalize_l24_g3_repeat_state,
-        initial_l24_g4_builder_state, normalize_l24_g4_builder_state,
+        initial_l24_g4_builder_state, normalize_l24_g4_builder_state, l24_g4_builder_pronunciation_match,
         initial_l24_g5_syllabication_state, normalize_l24_g5_syllabication_state,
         initial_l24_g6_state, normalize_l24_g6_state, initial_l24_g7_state, normalize_l24_g7_state,
         initial_s9_a1_state, normalize_s9_a1_state, initial_s9_a2_state, normalize_s9_a2_state,
@@ -20603,11 +20617,11 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
         verified = None
         speech_details = {}
         if event.get('action') in {'reading', 'reading_attempt', 'reading_syllable_attempt'}:
-            item_index = int(state.get('reading_index', 0)) if activity_key == 'aral-l22-g4-f-syllable-builder' else int(state.get('index', 0))
+            item_index = int(state.get('reading_index', 0)) if activity_key in {'aral-l22-g4-f-syllable-builder', 'aral-l24-g4-x-syllable-builder'} else int(state.get('index', 0))
             if activity_key in {'aral-l23-g3-j-word-reading', 'aral-l23-g7-q-word-reading', 'aral-l24-g7-z-word-reading'}:
                 event = dict(event)
                 event['item_index'] = item_index
-            if item_index >= len(workbook['items']) and activity_key not in {'aral-l22-g1-c-syllable-builder', 'aral-l22-g4-f-syllable-builder', 'aral-l23-g6-q-syllable-builder'}:
+            if item_index >= len(workbook['items']) and activity_key not in {'aral-l22-g1-c-syllable-builder', 'aral-l22-g4-f-syllable-builder', 'aral-l23-g6-q-syllable-builder', 'aral-l24-g4-x-syllable-builder'}:
                 raise ValueError('No reading item remains.')
             request.POST = request.POST.copy()
             request.POST['prescribed_activity_key'] = activity_key
@@ -20639,17 +20653,30 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
                 event['item_index'] = item_index
                 item = workbook['items'][min(int(state.get('index', 0)), len(workbook['items']) - 1)]
                 request.POST.update(target_text=item['text'], language='Filipino', mode='reading', current_syllable_index='0', syllable_context='')
+            elif activity_key == 'aral-l24-g4-x-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
+                if state.get('reading_configuration_required'):
+                    event = dict(event, transcript='')
+                else:
+                    event = dict(event)
+                    event['item_index'] = item_index
+                    item = workbook['items'][min(item_index, len(workbook['items']) - 1)]
+                    request.POST.update(target_text=item['text'], language='Filipino', mode='reading', current_syllable_index='0', syllable_context='')
             else:
                 item = workbook['items'][item_index]
                 request.POST.update(target_text=item['text'], language=workbook.get('language', 'Filipino'), mode='reading', current_syllable_index='0', syllable_context='')
-            response = reading_transcribe_api(request)
-            result = json.loads(response.content)
-            if response.status_code != 200 or not result.get('success'):
-                return response
-            speech_details = {key: result[key] for key in (
-                'transcript', 'raw_transcript', 'language_code', 'stt_provider', 'stt_model',
-                'stt_fallback_reason', 'stt_words', 'stt_word_confidence_type',
-            ) if key in result}
+            if activity_key == 'aral-l24-g4-x-syllable-builder' and state.get('reading_configuration_required'):
+                verified = False
+                event = dict(event, transcript='')
+                result = {'transcript': '', 'raw_transcript': '', 'complete': False}
+            else:
+                response = reading_transcribe_api(request)
+                result = json.loads(response.content)
+                if response.status_code != 200 or not result.get('success'):
+                    return response
+                speech_details = {key: result[key] for key in (
+                    'transcript', 'raw_transcript', 'language_code', 'stt_provider', 'stt_model',
+                    'stt_fallback_reason', 'stt_words', 'stt_word_confidence_type',
+                ) if key in result}
             if result.get('transcript_script_rejected'):
                 # The shared evaluator already preserved the raw transcript
                 # and withheld scoring.  Do not run a target matcher that
@@ -20701,6 +20728,10 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
                     workbook['items'][item_index]['text'],
                     result.get('raw_transcript') or result.get('transcript') or '',
                 )
+            elif activity_key == 'aral-l24-g4-x-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
+                event = dict(event)
+                event['transcript'] = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
+                result['complete'] = l24_g4_builder_pronunciation_match(workbook['items'][item_index]['id'], event['transcript'])
             elif activity_key == 'aral-l23-g3-j-word-reading' and event.get('action') == 'reading_attempt':
                 event = dict(event)
                 event['transcript'] = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
@@ -20777,6 +20808,9 @@ def _prescribed_workbook_activity_progress(request, activity_key, activity, stud
                 transcript = str(result.get('transcript') or result.get('raw_transcript') or '').strip()
                 verified = None if not transcript else bool(result.get('complete'))
             elif activity_key == 'aral-l23-g6-q-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
+                transcript = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
+                verified = None if not transcript else bool(result.get('complete'))
+            elif activity_key == 'aral-l24-g4-x-syllable-builder' and event.get('action') == 'reading_syllable_attempt':
                 transcript = str(result.get('raw_transcript') or result.get('transcript') or '').strip()
                 verified = None if not transcript else bool(result.get('complete'))
             elif activity_key == 'aral-l22-g2-c-word-reading' and event.get('action') == 'reading_attempt':
