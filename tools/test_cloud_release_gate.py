@@ -30,7 +30,9 @@ class GateTests(unittest.TestCase):
         self.assertEqual(container['env'], source['spec']['template']['spec']['containers'][0]['env'])
         self.assertEqual(container['image'], 'image@sha256:digest')
         self.assertNotIn('ports', container)
-        self.assertEqual(task['metadata']['annotations'], {'run.googleapis.com/cloudsql-instances': 'project:region:database'})
+        self.assertNotIn('metadata', task, 'Cloud Run TaskTemplate only contains spec')
+        self.assertEqual(result['spec']['template']['metadata']['annotations'],
+                         {'run.googleapis.com/cloudsql-instances': 'project:region:database'})
         self.assertEqual(source, original)
         command = container['args'][1]
         self.assertLess(command.index('check_migration_readiness --require-recorded'), command.index('migrate --check'))

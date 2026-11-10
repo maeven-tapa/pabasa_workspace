@@ -8,12 +8,16 @@ import argparse
 import copy
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 
 
 def cli(arguments, *, json_result=False):
-    result = subprocess.run(['gcloud', *arguments], capture_output=True, text=True)
+    executable = shutil.which('gcloud') or shutil.which('gcloud.cmd')
+    if not executable:
+        raise RuntimeError('Google Cloud CLI is required.')
+    result = subprocess.run([executable, *arguments], capture_output=True, text=True)
     if result.returncode:
         raise RuntimeError('Cloud command failed: ' + ' '.join(arguments[:3]) +
                            '; inspect the corresponding Cloud Run job/build logs.')
@@ -49,8 +53,8 @@ def job_spec(service, image, name, project, *, clients=None):
         task['volumes'] = copy.deepcopy(runtime['volumes'])
     return {'apiVersion': 'run.googleapis.com/v1', 'kind': 'Job',
             'metadata': {'name': name, 'namespace': project},
-            'spec': {'template': {'spec': {'taskCount': 1, 'parallelism': 1,
-                'template': {'metadata': {'annotations': annotations}, 'spec': task}}}}}
+            'spec': {'template': {'metadata': {'annotations': annotations},
+                'spec': {'taskCount': 1, 'parallelism': 1, 'template': {'spec': task}}}}}
 
 
 def main():
