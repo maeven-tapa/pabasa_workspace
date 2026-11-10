@@ -77,8 +77,14 @@ class Lesson24Gawain4WorkbookTests(SimpleTestCase):
         root = Path(__file__).parent
         js = (root / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
         views = (root / 'views.py').read_text(encoding='utf-8')
+        template = (root / 'templates/pabasa_app/prescribed_workbook_page.html').read_text(encoding='utf-8')
         self.assertIn('function startL24G4Reading()', js)
-        self.assertIn("if(l24G4Builder&&!preview&&!state.reading_configuration_required&&!state.read_aloud_completed)", js)
+        self.assertIn("if(l24G4Builder&&!preview&&!l24G4BuilderFallback&&!state.read_aloud_completed)", js)
+        self.assertIn('let l24G4BuilderFallback = false;', js)
+        self.assertIn("add('Bumuo ng Salita',()=>{l24G4BuilderFallback=true;renderBuilder();},false)", js)
+        self.assertIn("if(state.reading_configuration_required){\n      state.last_feedback='Hindi pa handa ang pagsuri ng pagbigkas para sa gawaing ito.'", js)
+        self.assertIn('if(l24G4Builder)content.replaceChildren(box)', js)
+        self.assertIn("workbook_payload.activity.activity_key == 'aral-l24-g4-x-syllable-builder' %}<script src=\"{% static 'pabasa_app/js/prescribed_workbook.js' %}?v=20261111-l24-g4-reading-first-1\"", template)
         self.assertIn("l22_g1_audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_22/GAWAIN_1/'", views)
         self.assertIn("'Handa ka na?': static(l22_g1_audio_root + 'Handa ka na_TTS.mp3')", views)
 
