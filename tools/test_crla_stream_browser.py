@@ -84,17 +84,11 @@ class GoogleStream:
                     continue
                 frames.append(bytes(request.audio))
                 count += 1
-                if count == 5:
-                    # A finite synthetic clip can end before all Chrome contexts
-                    # finish starting. Keep this fake provider response pending
-                    # until every capture connects; do not depend on another
-                    # audio frame arriving after the concurrency barrier.
-                    deadline = time.monotonic() + 45
-                    while len(clients) < int(os.environ.get('CRLA_TEST_CLIENTS', '1')):
-                        if time.monotonic() >= deadline:
-                            raise AssertionError('Concurrent browser captures did not all connect')
-                        await asyncio.sleep(.05)
-                is_final = count >= 5 and not final_sent
+                # Keep consuming PCM while other microphones connect. Blocking
+                # the fake provider here fills the real bounded server queue,
+                # creating an artificial timeout at larger browser counts.
+                is_final = (count >= 5 and not final_sent
+                            and len(clients) >= int(os.environ.get('CRLA_TEST_CLIENTS', '1')))
                 if count == 2 or is_final:
                     final_sent = final_sent or is_final
                     yield cloud_speech.StreamingRecognizeResponse(results=[{
@@ -264,7 +258,7 @@ const {chromium}=require('playwright');
   const liveGoogle=process.env.CRLA_TEST_LIVE==='1';
   const prescribed=process.env.CRLA_TEST_PRESCRIBED==='1';
   const english=process.env.CRLA_TEST_ENGLISH==='1';
-  const args=['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding'];
+  const args=['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream', '--autoplay-policy=no-user-gesture-required', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding'];
   if(prescribed)args.push('--use-file-for-fake-audio-capture='+process.env.CRLA_TEST_SYNTHETIC);
   if(liveGoogle)args.push('--use-file-for-fake-audio-capture='+require('node:path').join(process.env.TEMP,'pabasa-crla-stream-test.wav'));
   const clientCount=Number(process.env.CRLA_TEST_CLIENTS || 1);
@@ -279,8 +273,16 @@ const {chromium}=require('playwright');
     await page.goto(`http://127.0.0.1:${process.env.CRLA_TEST_PORT}/stream-test/`);
     return {page, context, pageErrors};
     }));
+    // Fifty synthetic microphones share one physical PC. Ramp up device
+    // initialization in groups; all streams remain active until the provider
+    // barrier confirms the requested number are connected before any final.
+    for(let start=0;start<pages.length;start+=5) {
+      await Promise.all(pages.slice(start,start+5).map(async ({page})=>{
+        await page.click(english?'#record-verse':'#start');
+        if(!prescribed)await page.waitForFunction(()=>window.live?.socket?.readyState===1&&!live.rotating,{},{timeout:15000});
+      }));
+    }
     await Promise.all(pages.map(async ({page,context,pageErrors}) => {
-    await page.click(english?'#record-verse':'#start');
     await page.waitForFunction(()=>window.results.length>=1||window.errors.length>0,{},{timeout:60000});
     if(english)try{await page.waitForFunction(()=>document.querySelector('.lesson27-prompt')?.textContent.includes('verse 2'),{},{timeout:20000});}
     catch(error){throw new Error(JSON.stringify(await page.evaluate(()=>({prompt:document.querySelector('.lesson27-prompt')?.textContent,errors,results:results.map(r=>({complete:r.complete,cursor:r.current_syllable_index})),evaluations}))))}
@@ -301,7 +303,10 @@ const {chromium}=require('playwright');
 })().catch(e=>{console.error(e);process.exitCode=1});
 '''
             try:
-                subprocess.run(['node', '-e', script], env=env, check=True)
+                outcome = subprocess.run(['node', '-e', script], env=env)
+                if outcome.returncode:
+                    print(f'Browser fixture diagnostics: provider_clients={len(clients)}, PCM_frames={len(frames)}', flush=True)
+                    raise RuntimeError('Browser integration failed; see aggregate diagnostics above.')
             finally:
                 if audio_file:
                     audio_file.unlink()
