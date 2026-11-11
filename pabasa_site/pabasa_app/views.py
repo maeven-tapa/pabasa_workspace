@@ -28704,14 +28704,9 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
                     f"- {student.first_name} {student.last_name}".strip()
                     for student in missed_students
                 ] or ['- None'])
-                _send_pabasa_email(
-                    f"Live Assessment Summary: {session.material.title or 'Reading Activity'}",
-                    "\n".join(body_lines),
-                    [session.teacher.email],
-                    heading='Live assessment summary',
-                    eyebrow='PABASA classroom activity',
-                    fail_silently=True,
-                )
+                from .live_assessment_email import send_summary_email
+                send_summary_email(session, completed_students, missed_students, ended_at,
+                                   "\n".join(body_lines))
             except Exception:
                 logger.exception('Failed to send live assessment summary email for session %s', session.id)
         queue_after_commit(_send_session_summary, label='live_session_summary')
