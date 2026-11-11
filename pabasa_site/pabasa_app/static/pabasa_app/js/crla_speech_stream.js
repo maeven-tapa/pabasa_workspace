@@ -132,7 +132,11 @@
         sendAudio(audio) {
             if (!this.active || this.capturePaused) return;
             if (this.rotating) {
-                if (this.backlog.length >= 50) { this.fail(new Error('Live speech connection is too slow.')); return; }
+                // Preserve ten seconds of startup/rotation audio regardless of
+                // frame duration (16 kHz, mono, two bytes per sample).
+                if (this.backlog.reduce((bytes, frame) => bytes + frame.byteLength, 0) + audio.byteLength > 320000) {
+                    this.fail(new Error('Live speech connection is too slow.')); return;
+                }
                 this.backlog.push(audio);
             } else if (this.socket?.readyState === WebSocket.OPEN) {
                 if (this.socket.bufferedAmount > 128000) { this.fail(new Error('Live speech connection is too slow.')); return; }

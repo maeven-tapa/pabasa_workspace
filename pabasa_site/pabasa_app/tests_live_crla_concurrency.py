@@ -300,6 +300,9 @@ class LiveCrlaConcurrentRequestsTests(TransactionTestCase):
     def test_thirty_enrolled_students_can_reconnect_and_publish_concurrently(self):
         self.run_enrolled_students(30)
 
+    def test_fifty_enrolled_students(self):
+        self.run_enrolled_students(50)
+
     def run_enrolled_students(self, client_count):
         cache.clear()
         self.test_password_hash = make_password('concurrent-test-password')
@@ -333,11 +336,11 @@ class LiveCrlaConcurrentRequestsTests(TransactionTestCase):
             class_code='CONCURRENT-B', class_name='Concurrent Class B', subject='Reading', assessment_week_enabled=True)
         sections = [section, other_section]
         teachers = [teacher, other_teacher]
-        if client_count == 30:
-            third_teacher = self.make_user('CONCURRENT-THIRD-TEACHER', 'teacher')
-            sections.append(Section.objects.create(school=self.school, school_calendar=calendar, teacher=third_teacher,
-                class_code='CONCURRENT-C', class_name='Concurrent Class C', subject='Reading', assessment_week_enabled=True))
-            teachers.append(third_teacher)
+        for group in range(2, client_count // 10):
+            extra_teacher = self.make_user(f'CONCURRENT-EXTRA-TEACHER-{group}', 'teacher')
+            sections.append(Section.objects.create(school=self.school, school_calendar=calendar, teacher=extra_teacher,
+                class_code=f'CONCURRENT-{group}', class_name=f'Concurrent Class {group}', subject='Reading', assessment_week_enabled=True))
+            teachers.append(extra_teacher)
         material.assigned_sections.add(*sections)
         students = []
         for index in range(client_count):
@@ -347,8 +350,8 @@ class LiveCrlaConcurrentRequestsTests(TransactionTestCase):
             login.update({'user_id': student.pk, 'user_role': 'student'})
             login.create()
             students.append(student)
-        # Preserve the product's ten-student batch limit: two legitimate classes
-        # read simultaneously, for twenty distinct enrolled student clients.
+        # Preserve the product's ten-student batch limit in every class while
+        # all requested distinct enrolled students read simultaneously.
         sessions = []
         for group in range(client_count // 10):
             members = students[group * 10:(group + 1) * 10]
@@ -364,7 +367,7 @@ class LiveCrlaConcurrentRequestsTests(TransactionTestCase):
             database = Path(directory) / 'live.sqlite3'
             with closing(sqlite3.connect(database)) as target:
                 connection.connection.backup(target)
-            code = CONCURRENT_REQUESTS if client_count == 20 else re.sub(r'\b20\b', '30', CONCURRENT_REQUESTS)
+            code = CONCURRENT_REQUESTS if client_count == 20 else re.sub(r'\b20\b', str(client_count), CONCURRENT_REQUESTS)
             result = subprocess.run([sys.executable, '-c', code, str(database), sessions[0].pk],
                 cwd=Path(__file__).resolve().parents[1], env={**os.environ, 'K_SERVICE': ''},
                 capture_output=True, text=True, timeout=120)

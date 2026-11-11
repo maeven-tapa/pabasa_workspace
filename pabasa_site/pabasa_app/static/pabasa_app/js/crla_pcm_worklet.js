@@ -2,7 +2,8 @@
 class CrlaPcmProcessor extends AudioWorkletProcessor {
     constructor() {
         super();
-        this.frame = new Int16Array(3200);
+        // 120 ms at 16 kHz; validated against the previous 200 ms transport.
+        this.frame = new Int16Array(1920);
         this.index = 0;
         this.phase = 0;
         this.sum = 0;

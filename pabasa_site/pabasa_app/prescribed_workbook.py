@@ -74,6 +74,12 @@ L24_G4_X_ACCEPTED_SPEECH = {
 # validation boundary so duplicate text such as "phone" stays distinct.
 L24_G4_X_CANONICAL_WORDS = ()
 
+# Deliberately empty until an approved pronunciation specification is supplied.
+# Keep this keyed by stable cell ID: the two ``phone`` cells are distinct reading
+# steps even though they share a recording.  An incomplete table never unlocks
+# the builder or consumes an attempt.
+L24_G4_BUILDER_READING_ALIASES = {}
+
 L24_G3_X_ACCEPTED_SPEECH = {
     'alex': {'alex'}, 'xylophone': {'xylophone'}, 'alexis': {'alexis'},
     'saxophone': {'saxophone'}, 'alexander': {'alexander'}, 'dixon': {'dixon'},
@@ -886,6 +892,10 @@ def initial_l24_g4_builder_state():
     return {
         'index': 0, 'built_words': [],
         'draft': {'builder': [], 'words': []},
+        'reading_index': 0, 'read_aloud_started': False,
+        'read_aloud_completed': False, 'reading_attempts': 0,
+        'reading_phase': 'preview', 'pronunciation_help_played': False,
+        'last_transcript': '', 'reading_configuration_required': True,
         'last_feedback': '', 'completed': False, 'revision': 0,
     }
 
@@ -922,9 +932,10 @@ def normalize_l24_g5_syllabication_state(state):
 
 
 def normalize_l24_g4_builder_state(state):
-    """Keep Gawain 4 as a cell-ID word builder, not a reading sequence."""
+    """Keep Gawain 4's existing cell-ID builder compatible with its read gate."""
     if not isinstance(state, dict):
         state = initial_l24_g4_builder_state()
+    legacy_builder_state = 'reading_index' not in state
     allowed = {item['id'] for item in ACTIVITIES['aral-l24-g4-x-syllable-builder']['items']}
     draft = state.get('draft') if isinstance(state.get('draft'), dict) else {}
     builder = draft.get('builder') if isinstance(draft.get('builder'), list) else []
@@ -942,10 +953,44 @@ def normalize_l24_g4_builder_state(state):
     state['built_words'] = [word for word in built if word]
     state['draft'] = {'builder': builder, 'words': words}
     state['index'] = len(state['built_words'])
+    item_count = len(ACTIVITIES['aral-l24-g4-x-syllable-builder']['items'])
+    configured = all(
+        isinstance(L24_G4_BUILDER_READING_ALIASES.get(item['id']), (set, tuple, list))
+        and L24_G4_BUILDER_READING_ALIASES.get(item['id'])
+        for item in ACTIVITIES['aral-l24-g4-x-syllable-builder']['items']
+    )
+    state['reading_index'] = max(0, min(item_count, int(state.get('reading_index', 0) or 0)))
+    state['read_aloud_started'] = bool(state.get('read_aloud_started'))
+    state['read_aloud_completed'] = bool(state.get('read_aloud_completed')) or state['reading_index'] >= item_count
+    state['reading_attempts'] = max(0, min(3, int(state.get('reading_attempts', 0) or 0)))
+    state['reading_phase'] = state.get('reading_phase') if state.get('reading_phase') in {'preview', 'read', 'help', 'complete', 'unconfigured'} else 'preview'
+    state['pronunciation_help_played'] = bool(state.get('pronunciation_help_played'))
+    state['last_transcript'] = str(state.get('last_transcript') or '')
+    state['reading_configuration_required'] = not configured
+    if not configured:
+        # Existing learners keep their builder access while pronunciation rules
+        # are awaiting explicit approval.
+        state['reading_phase'] = 'unconfigured'
+    elif state['read_aloud_completed']:
+        state['reading_index'] = item_count
+        state['reading_phase'] = 'complete'
+    elif legacy_builder_state and state['built_words']:
+        # Do not retroactively block learners who already have saved builder
+        # work from before the optional reading infrastructure existed.
+        state.update(reading_index=item_count, read_aloud_completed=True, reading_phase='complete')
     state['last_feedback'] = str(state.get('last_feedback') or '')
     state['completed'] = bool(state.get('completed'))
     state['revision'] = max(0, int(state.get('revision', 0) or 0))
     return state
+
+
+def l24_g4_builder_pronunciation_match(item_id, transcript):
+    """Use only explicitly approved L24 G4 cell aliases; never fuzzy-match."""
+    accepted = L24_G4_BUILDER_READING_ALIASES.get(str(item_id))
+    if not accepted:
+        return None
+    heard = normalize_l24_g4_speech(transcript)
+    return bool(heard and heard in {normalize_l24_g4_speech(value) for value in accepted})
 
 
 def initial_l23_g2_state():
@@ -2372,7 +2417,7 @@ def apply_event(activity, state, event, verified_reading=None):
     if activity['activity_key'] == 'aral-l24-g3-x-word-reading':
         return _apply_l24_g3_reading(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l24-g4-x-syllable-builder':
-        return _apply_l24_g4_builder(state, event)
+        return _apply_l24_g4_builder(state, event, verified_reading)
     if activity['activity_key'] == 'aral-l24-g5-z-syllabication':
         return _apply_l24_g5_syllabication(state, event)
     if activity['activity_key'] == 'aral-l24-g4-x-pictures':
@@ -2533,7 +2578,7 @@ def apply_event(activity, state, event, verified_reading=None):
     return state
 
 
-def _apply_l24_g4_builder(state, event):
+def _apply_l24_g4_builder(state, event, verified_reading=None):
     """Persist open-ended Big Box construction until its answer key exists."""
     normalize_l24_g4_builder_state(state)
     action = event.get('action')
@@ -2544,6 +2589,50 @@ def _apply_l24_g4_builder(state, event):
     if state['completed']:
         return state
     allowed = {item['id'] for item in ACTIVITIES['aral-l24-g4-x-syllable-builder']['items']}
+    reading_enabled = not state['reading_configuration_required']
+    if action == 'reading_started':
+        if not reading_enabled:
+            state.update(reading_phase='unconfigured', last_feedback='Hindi pa handa ang pagsuri ng pagbigkas para sa gawaing ito.')
+            return state
+        if state['read_aloud_completed']:
+            raise ValueError('Natapos na ang pagbasa.')
+        state.update(read_aloud_started=True, reading_phase='read', last_feedback='', last_transcript='')
+        return state
+    if action == 'reading_syllable_attempt':
+        if not reading_enabled:
+            state.update(reading_phase='unconfigured', last_feedback='Hindi pa handa ang pagsuri ng pagbigkas para sa gawaing ito.')
+            return state
+        if not state['read_aloud_started'] or state['reading_phase'] != 'read':
+            raise ValueError('Simulan muna ang pagbasa.')
+        if event.get('item_index') is not None and int(event['item_index']) != state['reading_index']:
+            raise ValueError('Ito ay hindi na ang kasalukuyang pantig.')
+        state['last_transcript'] = str(event.get('transcript') or '').strip()
+        if verified_reading is None:
+            state['last_feedback'] = 'Hindi ko malinaw na narinig. Subukan muli.'
+            return state
+        if verified_reading:
+            state['reading_index'] = min(len(allowed), state['reading_index'] + 1)
+            state['reading_attempts'] = 0
+            state['last_feedback'] = 'Tama!'
+            if state['reading_index'] >= len(allowed):
+                state.update(read_aloud_completed=True, reading_phase='complete')
+        else:
+            state['reading_attempts'] = min(3, state['reading_attempts'] + 1)
+            state['last_feedback'] = 'Subukan muli.'
+            if state['reading_attempts'] >= 3:
+                state.update(reading_phase='help', pronunciation_help_played=False)
+        return state
+    if action == 'read_aloud':
+        if not reading_enabled or state['reading_phase'] != 'help':
+            raise ValueError('Pakinggan ang tamang pagbigkas pagkatapos ng tatlong maling pagbasa.')
+        state['pronunciation_help_played'] = True
+        state['last_feedback'] = ''
+        return state
+    if action == 'retry_reading':
+        if not reading_enabled or state['reading_phase'] != 'help' or not state['pronunciation_help_played']:
+            raise ValueError('Pakinggan muna ang tamang pagbigkas.')
+        state.update(reading_phase='read', reading_attempts=0, pronunciation_help_played=False, last_transcript='', last_feedback='')
+        return state
     if action == 'draft':
         draft = event.get('draft')
         if not isinstance(draft, dict) or len(json.dumps(draft)) > 350000:

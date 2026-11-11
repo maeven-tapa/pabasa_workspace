@@ -1,4 +1,5 @@
 from pathlib import Path
+from unittest.mock import patch
 
 from django.test import SimpleTestCase
 
@@ -11,12 +12,82 @@ from .prescribed_workbook import (
     initial_l24_g4_builder_state,
     normalize_l24_g4_builder_state,
     l24_g4_pronunciation_match,
+    L24_G4_BUILDER_READING_ALIASES,
+    l24_g4_builder_pronunciation_match,
     initial_l24_g5_syllabication_state,
     normalize_l24_g5_syllabication_state,
 )
 
 
 class Lesson24Gawain4WorkbookTests(SimpleTestCase):
+    def test_configured_reading_to_builder_and_completion_state_machine(self):
+        """Exercise the target-only gate with temporary, test-only aliases."""
+        activity = get_activity('aral-l24-g4-x-syllable-builder')
+        aliases = {item['id']: {f"approved-{item['id']}"} for item in activity['items']}
+        with patch.dict(L24_G4_BUILDER_READING_ALIASES, aliases, clear=True):
+            state = initial_l24_g4_builder_state()
+            normalize_l24_g4_builder_state(state)
+            self.assertFalse(state['reading_configuration_required'])
+            self.assertTrue(l24_g4_builder_pronunciation_match('item-1', 'approved-item-1'))
+            self.assertFalse(l24_g4_builder_pronunciation_match('item-1', 'unapproved-item-1'))
+            self.assertEqual([item['id'] for item in activity['items'] if item['text'] == 'phone'], ['item-5', 'item-12'])
+            apply_event(activity, state, {'action': 'reading_started'})
+            for _ in range(3):
+                apply_event(activity, state, {'action': 'reading_syllable_attempt', 'item_index': 0}, verified_reading=False)
+            self.assertEqual(state['reading_phase'], 'help')
+            apply_event(activity, state, {'action': 'read_aloud'})
+            apply_event(activity, state, {'action': 'retry_reading'})
+            for index in range(len(activity['items'])):
+                apply_event(activity, state, {'action': 'reading_syllable_attempt', 'item_index': index, 'transcript': f'approved-item-{index + 1}'}, verified_reading=True)
+            self.assertTrue(state['read_aloud_completed'])
+            self.assertEqual(state['reading_index'], 12)
+            self.assertEqual(state['reading_phase'], 'complete')
+            apply_event(activity, state, {'action': 'build_words', 'words': [['item-1', 'item-8']]})
+            apply_event(activity, state, {'action': 'finish'})
+            self.assertTrue(state['completed'])
+            completed_state = dict(state)
+            apply_event(activity, state, {'action': 'finish'})
+            self.assertEqual(state, completed_state)
+
+    def test_unconfigured_reading_gate_keeps_existing_builder_available(self):
+        activity = get_activity('aral-l24-g4-x-syllable-builder')
+        state = initial_l24_g4_builder_state()
+        self.assertEqual(L24_G4_BUILDER_READING_ALIASES, {})
+        apply_event(activity, state, {'action': 'reading_started'})
+        self.assertTrue(state['reading_configuration_required'])
+        self.assertEqual(state['reading_index'], 0)
+        self.assertEqual(state['reading_attempts'], 0)
+        apply_event(activity, state, {'action': 'draft', 'draft': {'builder': ['item-1'], 'words': []}})
+        self.assertEqual(state['draft']['builder'], ['item-1'])
+
+    def test_builder_preserves_multiple_submissions_and_finish_eligibility(self):
+        activity = get_activity('aral-l24-g4-x-syllable-builder')
+        state = initial_l24_g4_builder_state()
+        with self.assertRaisesMessage(ValueError, 'Bumuo muna'):
+            apply_event(activity, state, {'action': 'finish'})
+        apply_event(activity, state, {'action': 'build_words', 'words': [['item-1', 'item-8']]})
+        apply_event(activity, state, {'action': 'build_words', 'words': [['item-5', 'item-10']]})
+        restored = normalize_l24_g4_builder_state(state)
+        self.assertEqual(restored['built_words'], [['item-1', 'item-8'], ['item-5', 'item-10']])
+        self.assertEqual(restored['index'], 2)
+        apply_event(activity, restored, {'action': 'finish'})
+        self.assertTrue(restored['completed'])
+
+    def test_reading_scaffold_is_target_guarded_and_uses_local_mapped_audio(self):
+        root = Path(__file__).parent
+        js = (root / 'static/pabasa_app/js/prescribed_workbook.js').read_text(encoding='utf-8')
+        views = (root / 'views.py').read_text(encoding='utf-8')
+        template = (root / 'templates/pabasa_app/prescribed_workbook_page.html').read_text(encoding='utf-8')
+        self.assertIn('function startL24G4Reading()', js)
+        self.assertIn("if(l24G4Builder&&!preview&&!l24G4BuilderFallback&&!state.read_aloud_completed)", js)
+        self.assertIn('let l24G4BuilderFallback = false;', js)
+        self.assertIn("add('Bumuo ng Salita',()=>{l24G4BuilderFallback=true;renderBuilder();},false)", js)
+        self.assertIn("if(state.reading_configuration_required){\n      state.last_feedback='Hindi pa handa ang pagsuri ng pagbigkas para sa gawaing ito.'", js)
+        self.assertIn('if(l24G4Builder)content.replaceChildren(box)', js)
+        self.assertIn("workbook_payload.activity.activity_key == 'aral-l24-g4-x-syllable-builder' %}<script src=\"{% static 'pabasa_app/js/prescribed_workbook.js' %}?v=20261111-l24-g4-reading-first-1\"", template)
+        self.assertIn("l22_g1_audio_root = 'pabasa_app/prescribed/audio/SESSION_8/LESSON_22/GAWAIN_1/'", views)
+        self.assertIn("'Handa ka na?': static(l22_g1_audio_root + 'Handa ka na_TTS.mp3')", views)
+
     def test_big_box_activity_uses_exact_four_by_three_source_grid(self):
         activity = get_activity('aral-l24-g4-x-syllable-builder')
         self.assertEqual(activity['interaction_type'], 'builder')

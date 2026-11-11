@@ -99,6 +99,14 @@ async function transportTest() {
     assert.equal(interrupted.active, false);
     assert.equal(errors.length, 1, 'overflow must be explicit instead of silently losing speech');
 
+    const buffering = new context.window.CrlaSpeechStream({onError: error => errors.push(error.message)});
+    buffering.rotating = true;
+    for (let i = 0; i < 83; i++) buffering.sendAudio(new ArrayBuffer(3840));
+    buffering.sendAudio(new ArrayBuffer(1280));
+    assert.equal(buffering.active, true, '120 ms frames retain the previous ten-second startup allowance');
+    buffering.sendAudio(new ArrayBuffer(2));
+    assert.equal(buffering.active, false, 'the ten-second byte bound remains enforced');
+
     const pausedFinish = new context.window.CrlaSpeechStream({csrf: () => 'csrf', fields: {}, onFinal() {}, onInterim() {}, onError: error => errors.push(error.message)});
     await pausedFinish.start({});
     await pausedFinish.pauseCapture();
@@ -123,9 +131,11 @@ function pcmTest() {
         processor.port.onmessage({data: 'flush'});
         assert.equal(frames.reduce((total, frame) => total + frame.byteLength / 2, 0), 16000);
         for (const frame of frames) {
-            assert.ok(frame.byteLength <= 6400);
+            assert.ok(frame.byteLength <= 3840, 'each frame contains at most 120 ms of 16 kHz PCM');
             assert.equal(new Int16Array(frame)[0], 16384);
         }
+        assert.equal(frames.length, 9, 'one second yields eight 120 ms frames plus a partial flush');
+        assert.equal(frames.at(-1).byteLength, 1280, 'flush retains the last 40 ms');
     }
 }
 
@@ -153,7 +163,9 @@ function statusTest() {
     const end = source.indexOf('\n        function syncPhraseMicrophoneButton()', start);
     assert.ok(start >= 0 && end > start, 'the official CRLA status renderer is available');
     const elements = {
-        status: {textContent: ''}, dot: {setAttribute() {}}, overlay: {hidden: true},
+        status: {textContent: '', dataset: {}, classList: {add() {}, remove() {}},
+            replaceChildren() { this.textContent = ''; }, appendChild(child) { this.textContent += child.textContent; }},
+        dot: {setAttribute() {}}, overlay: {hidden: true},
         helper: {hidden: true, classList: {toggle() {}}, querySelector: selector => ({
             '.helper-dot': elements.dot,
         })[selector]},
@@ -161,12 +173,13 @@ function statusTest() {
     const context = vm.createContext({
         document: {
             querySelector: () => elements.helper,
-            getElementById: id => id === 'crlaProcessingOverlay' ? elements.overlay : elements.status,
+            getElementById: id => ({crlaProcessingOverlay: elements.overlay, readingHelperText: elements.status})[id] || null,
+            createElement: () => ({textContent: '', style: {setProperty() {}}}),
         },
         isOfficialAssessmentLaunch: true, isCrla: true,
         isSendingChunk: false, pendingAudioChunk: null, crlaLiveSpeech: null,
         isRecording: true, isMuted: false, recognitionActive: true,
-        currentAssessmentBranch: 'words',
+        currentAssessmentBranch: 'words', mode: 'word', currentStoryState: '',
         shell: {classList: {contains: name => name === 'is-hearing'}}, speechFrameCount: 3,
         readingWord: null, itemLocked: [], currentIndex: 0, getCurrentSectionLabel: () => 'Word',
     });
@@ -184,27 +197,31 @@ function statusTest() {
     assert.equal(elements.overlay.hidden, false, 'overlay remains visible for a pending live final');
     context.crlaLiveSpeech = null;
     render();
-    assert.equal(elements.status.textContent, 'Hearing you...', 'normal live speech still reports detected audio');
+    assert.equal(elements.status.textContent, 'Naririnig...', 'normal live speech still reports detected audio');
     assert.equal(elements.overlay.hidden, true, 'overlay disappears after evaluation');
     context.speechFrameCount = 0;
     context.shell.classList.contains = () => false;
     render();
-    assert.equal(elements.status.textContent, 'Listening...', 'active capture with no detected speech reports Listening');
+    assert.equal(elements.status.textContent, 'Nakikinig...', 'active capture with no detected speech reports Listening');
     context.currentAssessmentBranch = 'rhymes';
     context.recognitionActive = false;
     render();
-    assert.equal(elements.status.textContent, 'Read the Rhyme', 'the rhyme branch shows its singular reading prompt');
+    assert.equal(elements.status.textContent, 'Basahin ang salita', 'the rhyme branch shows its reading prompt');
     for (const [branch, section, label] of [
-        ['words', 'Word', 'Read the Word'],
-        ['sentences', 'Sentence', 'Read the Sentence'],
-        ['story', 'Story', 'Read the Story'],
+        ['words', 'Word', 'Basahin ang salita'],
+        ['sentences', 'Sentence', 'Basahin ang pangungusap'],
+        ['story', 'Story', 'Basahin ang kuwento'],
     ]) {
         context.currentAssessmentBranch = branch;
+        context.mode = branch === 'sentences' ? 'sentence' : 'word';
+        context.currentStoryState = branch === 'story' ? 'story_reading' : '';
         context.getCurrentSectionLabel = () => section;
         render();
         assert.equal(elements.status.textContent, label, `${branch} branch starts with its reading prompt`);
     }
     context.currentAssessmentBranch = 'words';
+    context.mode = 'word';
+    context.currentStoryState = '';
     context.recognitionActive = true;
     context.isSendingChunk = true;
     render();
@@ -215,7 +232,7 @@ function statusTest() {
     context.currentAssessmentBranch = 'words';
     context.getCurrentSectionLabel = () => 'Word';
     render();
-    assert.equal(elements.status.textContent, 'Read the Word', 'idle state returns to its assessment prompt');
+    assert.equal(elements.status.textContent, 'Basahin ang salita', 'idle state returns to its assessment prompt');
 }
 
 async function fallbackSilenceTest() {
@@ -233,6 +250,7 @@ async function fallbackSilenceTest() {
     const context = vm.createContext({
         window: {MediaRecorder: Recorder}, MediaRecorder: Recorder, Blob,
         mediaStream: {}, stoppingSpeechRecognition: false, isMuted: false, isRecording: true,
+        liveSessionPaused: false, liveSessionEnded: false, liveSessionEndRedirecting: false,
         isAdvancingItem: false, sentenceCountdownTimer: null, mediaRecorder: null,
         canStreamCrla: () => false, currentSpeechContext: () => ({itemText: 'bata'}),
         pickAudioMimeType: () => '',
