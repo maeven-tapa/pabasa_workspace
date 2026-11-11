@@ -2674,7 +2674,74 @@ def _aral_exit_matches_scope(state, crla_term=None, crla_phase=None):
     )
 
 
-def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, crla_phase=None):
+def _teacher_live_crla_progress(teacher_user, section, student_ids, crla_term, crla_phase):
+    """Display saved Live progress without promoting it to an official result."""
+    if not section or not student_ids or crla_term not in (1, 2, 3):
+        return {}
+    progress = {}
+    seen = set()
+    roster_ids = {str(student_id) for student_id in student_ids}
+    sessions = LiveAssessmentSession.objects.filter(
+        teacher=teacher_user, section=section, status__in=('started', 'paused'),
+        material__is_active=True,
+    ).select_related('material', 'material__assessment').order_by('-created_at', '-id')
+    for session in sessions:
+        if not _is_official_crla_material(session.material):
+            continue
+        is_official, phase, _term = _crla_attempt_phase_and_term(session.material)
+        taken_on = timezone.localtime(session.start_at or session.created_at).date()
+        term = _calendar_current_term(section.school_calendar, on_date=taken_on)
+        if not is_official or term != crla_term or (crla_phase and phase != crla_phase):
+            continue
+        session_roster = {str(student_id) for student_id in (session.student_ids or [])}
+        states = session.student_states if isinstance(session.student_states, dict) else {}
+        for student_id in roster_ids & session_roster:
+            if student_id in seen:
+                continue
+            seen.add(student_id)
+            state = states.get(student_id)
+            if not isinstance(state, dict):
+                continue
+            status = str(state.get('status') or '').lower()
+            recovery = state.get('recovery_state')
+            recovery = recovery if isinstance(recovery, dict) else {}
+            if status in {'skipped', 'missed'}:
+                continue
+            if status == 'completed' and recovery.get('temporary_completed'):
+                code, label, description = (
+                    'completed', 'Completed — awaiting End Session',
+                    'CRLA is finished. End Session saves the official result and reading level.',
+                )
+            elif state.get('participation_status') == 'saved':
+                code, label, description = (
+                    'saved', 'Saved — ready to resume',
+                    'CRLA progress is saved. Resume the live session to continue.',
+                )
+            elif state.get('participation_status') == 'save_requested':
+                code, label, description = (
+                    'saving', 'Saving progress',
+                    'Waiting for the student to confirm the latest saved progress.',
+                )
+            elif status == 'paused' or (session.status == 'paused' and recovery):
+                code, label, description = (
+                    'paused', 'Paused — ready to resume',
+                    'Resume the live session to continue CRLA.',
+                )
+            elif recovery or status in {'reading', 'started', 'in_progress'}:
+                code, label, description = (
+                    'in_progress', 'CRLA in progress',
+                    'The student has started CRLA. A final reading level is not available yet.',
+                )
+            else:
+                continue
+            progress[student_id] = {
+                'status': code, 'label': label, 'description': description,
+                'session_url': reverse('live_assessment_session', args=[session.pk]),
+            }
+    return progress
+
+
+def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, crla_phase=None, *, include_live_progress=False):
     sections = [section] if section else list(_teacher_current_sections(teacher_user))
     level_counts = {label: 0 for label in CRLA_DASHBOARD_CLASSIFICATIONS}
     level_counts['Pending'] = 0
@@ -2823,6 +2890,9 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
     official_crla_results = _latest_completed_official_crla_results(
         user_ids, section=section, crla_term=crla_term, crla_phase=crla_phase,
     )
+    live_crla_progress = _teacher_live_crla_progress(
+        teacher_user, section, user_ids, crla_term, crla_phase,
+    ) if include_live_progress else {}
     now = system_now()
     thirty_days_ago = now - timedelta(days=30)
     seven_days_ago = now - timedelta(days=7)
@@ -3129,6 +3199,7 @@ def _teacher_student_roster_payload(teacher_user, section=None, crla_term=None, 
             'last_active_at': last_active.isoformat() if last_active else None,
             'improvement_30d': round(improvement, 1),
             'crla_result': crla_result,
+            'crla_progress': live_crla_progress.get(sid_key) if not has_completed_assessment else None,
             'assigned_activities': summary_metrics[user.id]['assigned'],
             'total_assigned_activities': summary_metrics[user.id]['assigned'],
             'completed_activities': summary_metrics[user.id]['completed'],
@@ -38374,7 +38445,8 @@ def get_teacher_students_api(request):
             # The dropdown's fixed phase/term pairs also scope historical exports.
             crla_phase = STUDENT_DIRECTORY_TERM_PHASES.get(crla_term)
         results, level_counts, dashboard_metrics = _teacher_student_roster_payload(
-            teacher, section=selected_section, crla_term=crla_term, crla_phase=crla_phase
+            teacher, section=selected_section, crla_term=crla_term, crla_phase=crla_phase,
+            include_live_progress=directory_calendar is not None,
         ) if directory_calendar is None or (selected_section and crla_term) else ([], {}, {})
         crla_material = None
         if crla_term and crla_phase:

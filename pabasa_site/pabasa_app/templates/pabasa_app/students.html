@@ -698,6 +698,7 @@
     .level-grade { background: #dcfce7; color: #166534; }
     .level-high { background: #d9eef4; color: #155e75; }
     .level-pending { background: #f3f4f6; color: #4b5563; }
+    .level-live-progress { background: #d9eef4; color: #155e75; white-space: normal; text-align: center; }
 
     .student-aral-indicator {
         border-radius: 999px;
@@ -2464,6 +2465,7 @@ function renderStudentDirectory(sourceStudents) {
         const name = getStudentDirectoryCardName(student);
         const hasExitedAral = student.aral_exited === true;
         const levelText = hasExitedAral ? 'Reading At Grade Level' : resolveStudentReadingLevel(student);
+        const liveProgress = !student.crla_result && !hasExitedAral ? student.crla_progress : null;
         student.level = levelText;
         const levelIndications = {
             'Low Emerging Readers': 'Needs immediate word-level support',
@@ -2476,10 +2478,10 @@ function renderStudentDirectory(sourceStudents) {
         // The API has already restricted the classification to the current
         // applicable finalized official CRLA result. Any canonical level is
         // therefore completed; only the explicit Pending level is awaiting.
-        const levelIndication = levelText === 'Pending'
+        const levelIndication = liveProgress?.description || (levelText === 'Pending'
             ? levelIndications.Pending
-            : '';
-        const levelClass = getReadingLevelChipClass(levelText);
+            : '');
+        const levelClass = liveProgress ? 'level-live-progress' : getReadingLevelChipClass(levelText);
         const aralLevels = new Set(['Low Emerging Reader', 'High Emerging Reader', 'Developing Reader', 'Transitioning Reader']);
         const aralIndicatorHtml = aralLevels.has(levelText) && student.aral_status === 'active' && !hasExitedAral
             ? '<span class="student-aral-indicator">ARAL Program</span>'
@@ -2487,7 +2489,7 @@ function renderStudentDirectory(sourceStudents) {
         const levelIndicationHtml = levelIndication
             ? `<span class="small text-secondary" style="max-width: 240px; text-align: right;">${escapeStudentDirectoryHtml(levelIndication)}</span>`
             : '';
-        const completedLevelBadgeHtml = student.crla_result ? '' : `<span class="badge rounded-pill level-chip ${levelClass}">${escapeStudentDirectoryHtml(levelText)}</span>`;
+        const completedLevelBadgeHtml = student.crla_result ? '' : `<span class="badge rounded-pill level-chip ${levelClass}"${liveProgress ? ` data-crla-progress="${escapeStudentDirectoryHtml(liveProgress.status)}"` : ''}>${escapeStudentDirectoryHtml(liveProgress?.label || levelText)}</span>`;
         const levelBadgeHtml = `<div class="d-flex flex-column align-items-end gap-1">${completedLevelBadgeHtml}${aralIndicatorHtml}${levelIndicationHtml}</div>`;
         const moveToAral = levelText === 'Readers at Grade Level';
         const aralActionHtml = studentDirectoryActionsAvailable && moveToAral && !hasExitedAral
@@ -2506,6 +2508,7 @@ function renderStudentDirectory(sourceStudents) {
                         ${levelBadgeHtml}
                     </div>
                     ${aralActionHtml ? `<div class="student-meta">${aralActionHtml}</div>` : ''}
+                    ${liveProgress?.session_url ? `<div class="student-meta"><a href="${escapeStudentDirectoryHtml(liveProgress.session_url)}">Open Live Session</a></div>` : ''}
                     ${renderCrlaResultDetails(student.crla_result, student)}
                 </div>
             </article>
