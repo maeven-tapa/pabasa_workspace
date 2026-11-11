@@ -35,6 +35,7 @@ def main():
     from pabasa_app.models import (ActivityLog, Assessment, LiveAssessmentSession, Material,
         Notification, School, SchoolCalendar, Section, User)
     from pabasa_app.views import _calendar_current_term
+    from pabasa_app.system_clock import now as system_now
 
     run_id = uuid.uuid4().hex[:10]
     report = {'run_id': run_id, 'host': args.host, 'checks': [], 'passed': False}
@@ -97,7 +98,7 @@ def main():
                 type='assessment', status='published', section=section)
             live = LiveAssessmentSession.objects.create(id='aral-release-' + run_id,
                 teacher=teacher, section=section, material=material, student_ids=[student.pk],
-                student_count=1, status='started', start_at=timezone.now(),
+                student_count=1, status='started', start_at=system_now(),
                 batch_assignments={str(student.pk): 1},
                 student_states={str(student.pk): {'status': 'reading', 'recovery_state': {'stage': 'words'}}})
             store = SessionStore()

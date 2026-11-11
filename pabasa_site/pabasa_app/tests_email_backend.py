@@ -44,6 +44,21 @@ class FallbackSMTPBackendTests(SimpleTestCase):
         self.primary.login.assert_called_once_with('test@smtp-brevo.com', 'test-only-primary-key')
         self.backup.sendmail.assert_not_called()
 
+    def test_live_summary_related_logo_and_alternatives_survive_backup_delivery(self):
+        from email import policy
+        from email.parser import BytesParser
+        from .live_assessment_email import send_summary_email
+        from .tests_live_assessment_email import sample_session
+        self.primary.sendmail.side_effect = smtplib.SMTPDataError(452, b'quota exceeded')
+        session, completed, missed, ended = sample_session(1, 1)
+        self.assertEqual(send_summary_email(session, completed, missed, ended, 'Original summary'), 1)
+        sender, recipients, payload = self.backup.sendmail.call_args.args
+        self.assertEqual(recipients, ['teacher@example.com'])
+        mime = BytesParser(policy=policy.default).parsebytes(payload)
+        self.assertEqual(mime.get_body(preferencelist=('plain',)).get_content().strip(), 'Original summary')
+        self.assertIn('cid:pabasa-live-summary-logo', mime.get_body(preferencelist=('html',)).get_content())
+        self.assertEqual(sum(part.get_content_type() == 'image/png' for part in mime.walk()), 1)
+
     def test_connection_failure_uses_backup(self):
         self.smtp.side_effect = [TimeoutError('connection timed out'), self.backup]
         self.assertEqual(self.message().send(), 1)
