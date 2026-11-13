@@ -1823,6 +1823,9 @@ class StoryResponseSubmission(models.Model):
     grade = models.PositiveSmallIntegerField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(5)])
     graded_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="graded_story_response_submissions")
     graded_at = models.DateTimeField(null=True, blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='reviewed_story_responses')
     submitted_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -2112,6 +2115,13 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.title} -> {self.recipient.custom_id}"
+
+
+class TeacherReviewInbox(models.Model):
+    """Delivery cursor for one grouped alert; submissions remain the task source."""
+    teacher = models.OneToOneField(User, on_delete=models.CASCADE, related_name='review_inbox')
+    notification = models.ForeignKey(Notification, null=True, blank=True, on_delete=models.SET_NULL)
+    seen_tokens = models.JSONField(default=list)
 
 
 class ActivityLog(models.Model):

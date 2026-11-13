@@ -9,6 +9,10 @@
         const type = String(notificationType || "").toLowerCase();
         const url = String(actionUrl || "").toLowerCase();
 
+        if (url.includes("/teacher/needs-checking/")) {
+            return { icon: "bi-inbox", label: "Needs Checking" };
+        }
+
         if (type === "material" || url.includes("/practice/")) {
             return { icon: "bi-book", label: "New reading material" };
         }

@@ -1,19 +1,24 @@
 import json
+import tempfile
 from io import BytesIO
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from openpyxl import load_workbook
 from django.test import Client
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from .prescribed_test_fixtures import prescribed_term_fixture
 
-from .models import Enrollment, Material, School, Section, StoryResponseSubmission, User
+from .models import Enrollment, Material, School, Section, StoryResponseSubmission, SupplementaryMaterialPublication, User
 
 
 class StoryResponseReviewTests(TestCase):
     def setUp(self):
+        media = tempfile.TemporaryDirectory(prefix='pabasa-story-review-')
+        self.addCleanup(media.cleanup)
+        settings = override_settings(MEDIA_ROOT=media.name)
+        settings.enable(); self.addCleanup(settings.disable)
         self.school = School.objects.create(name="Story Review School", code="STORY-REVIEW")
         self.teacher = User.objects.create(custom_id="T-STORY", role="teacher", first_name="T", last_name="Teacher", sex="female", birth_month=1, birth_day=1, birth_year=1990, email="teacher-story@example.com", password_hash="x")
         self.student = User.objects.create(custom_id="S-STORY", role="student", first_name="S", last_name="Student", sex="female", birth_month=1, birth_day=1, birth_year=2018, email="student-story@example.com", password_hash="x")
@@ -26,6 +31,10 @@ class StoryResponseReviewTests(TestCase):
         self.story = Material.objects.create(teacher=self.teacher, section=self.section, title="The Story", item_type="paragraph", status="published", content_json={"activity_type": "story_reading", "storyTitle": "The Story", "storyText": "Once."})
         self.material = Material.objects.create(teacher=self.teacher, section=self.section, title="Tell me", item_type="paragraph", type="assessment", status="published", student_access=True, content_json={"activity_type": "story_response", "source_story_reading_material_id": self.story.id, "response_prompt": "What happened?"})
         self.material.assigned_sections.add(self.section)
+        # Student submission guards require an explicit current-term publication.
+        for material in (self.story, self.material):
+            SupplementaryMaterialPublication.objects.create(material=material,
+                section=self.section, school_calendar=self.section.school_calendar, term=1)
 
     def login_as(self, user):
         session = self.client.session
@@ -61,9 +70,10 @@ class StoryResponseReviewTests(TestCase):
         export = self.client.get(reverse("export_material_results"), {"material_id": self.material.id})
         self.assertEqual(export.status_code, 200)
         sheet = load_workbook(BytesIO(export.content), data_only=True).active
-        self.assertEqual(sheet["G5"].value, "4")
-        self.assertEqual(sheet["H5"].value, "80%")
-        self.assertEqual(sheet["I5"].value, "Graded")
+        headers = {cell.value: cell.column for cell in sheet[4]}
+        self.assertEqual(sheet.cell(5, headers['Score']).value, "4")
+        self.assertEqual(sheet.cell(5, headers['Percentage']).value, "80%")
+        self.assertEqual(sheet.cell(5, headers['Status']).value, "Graded")
 
     def test_student_completion_payload_is_submission_backed_and_route_blocks_retake(self):
         self.login_as(self.student)

@@ -3,9 +3,10 @@
 
 {% block extra_head %}
 <script src="{% static 'pabasa_app/js/letter_sound_matching_display.js' %}?v=1"></script>
-<script src="{% static 'pabasa_app/js/lesson15_reading_review.js' %}?v=4" defer></script>
+<script src="{% static 'pabasa_app/js/lesson15_reading_review.js' %}?v=5" defer></script>
 <link rel="stylesheet" href="{% static 'pabasa_app/css/student_activity_review.css' %}?v=6">
-<script src="{% static 'pabasa_app/js/student_activity_review.js' %}?v=7" defer></script>
+<script src="{% static 'pabasa_app/js/student_activity_review.js' %}?v=8" defer></script>
+<script src="{% static 'pabasa_app/js/course_review_inbox.js' %}?v=1" data-course-review-inbox data-detail-url="{% url 'teacher_review_detail' %}" data-action-url="{% url 'teacher_review_action' %}" data-queue-url="{% url 'teacher_review_queue_api' %}" data-inbox-url="{% url 'teacher_review_queue' %}" defer></script>
 <link rel="stylesheet" href="{% static 'pabasa_app/css/aral_session_folder_icon.css' %}?v=20261010-2">
 <script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[data-prescribed-activity="lesson-7-gawain-1"]').forEach(x=>x.dataset.prescribedActivity='lesson-7-gawain-1')});</script>
 <script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('[data-prescribed-activity="letrang-msa"]').forEach(x=>x.dataset.prescribedActivity='lesson-6-gawain-1');document.querySelectorAll('[data-prescribed-preview="letrang-msa"]').forEach(x=>x.dataset.prescribedPreview='lesson-6-gawain-1')});</script>
@@ -11775,6 +11776,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const response = await fetch('/api/teacher/story-response/grade/', { method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRFToken': token}, body: JSON.stringify({submission_id: saveButton.dataset.submissionId, grade: select?.value}) });
             const data = await response.json().catch(() => ({}));
             if (!response.ok || !data.success) throw new Error(data.error || `Grade could not be saved (HTTP ${response.status}).`);
+            window.dispatchEvent(new Event('pabasa:review-saved'));
         const row = saveButton.closest('.story-response-review-row');
         row?.querySelector('.story-response-status-badge')?.replaceChildren(document.createTextNode('Graded'));
         row?.querySelector('.story-response-status-badge')?.classList.add('is-graded');
@@ -14993,7 +14995,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     };
 
     // Existing course student-progress actions use this delegated click event.
-    document.addEventListener('click', function(e) {
+    function handleStudentProgressEvent(e) {
         function progressStudentMatches(attempt, studentId, studentName) {
             if (!attempt) return false;
             const attemptStudentId = attempt.student_id ?? attempt.studentId ?? attempt.user_id ?? '';
@@ -15134,17 +15136,22 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return source.startsWith('prescribed_');
         }
 
-        async function openStudentProgressModal(studentId, studentName, courseId) {
-            const course = findCourseById(courseId || document.getElementById('courseDetailModal')?.dataset?.courseId);
+        async function openStudentProgressModal(studentId, studentName, courseId, reviewContext = null) {
+            const course = reviewContext ? {title: reviewContext.task.section} : findCourseById(courseId || document.getElementById('courseDetailModal')?.dataset?.courseId);
             if (!course) return showToast('Course not found', 'error');
 
             const modalEl = document.getElementById('studentProgressModal');
+            if (!reviewContext) {
+                modalEl?.querySelectorAll('.nc-course-review-nav').forEach(node => node.remove());
+                window.dispatchEvent(new Event('pabasa:student-progress-native'));
+            }
             const titleEl = document.getElementById('studentProgressModalLabel');
             const subtextEl = document.getElementById('studentProgressSubtext');
             const list = document.getElementById('studentProgressList');
             if (!modalEl || !list) return;
 
             const sourceToggle = document.getElementById('studentProgressSourceToggle');
+            sourceToggle?.classList.toggle('d-none', Boolean(reviewContext));
             sourceToggle?.classList.toggle('active-prescribed', studentProgressSourceFilter === 'prescribed');
             sourceToggle?.classList.toggle('active-supplementary', studentProgressSourceFilter === 'supplementary');
             sourceToggle?.querySelectorAll('[data-student-progress-source]').forEach(button => {
@@ -15153,7 +15160,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 button.setAttribute('aria-pressed', String(active));
                 button.onclick = () => {
                     studentProgressSourceFilter = button.dataset.studentProgressSource || 'prescribed';
-                    openStudentProgressModal(studentId, studentName, courseId);
+                    openStudentProgressModal(studentId, studentName, courseId, reviewContext);
                 };
             });
 
@@ -15169,7 +15176,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 modalEl.addEventListener('hidden.bs.modal', () => window.StudentActivityReview.closeAll(list));
             }
 
-            const tasks = courseProgressTasks(course, studentId);
+            const tasks = reviewContext ? [reviewContext.task.progress_task] : courseProgressTasks(course, studentId);
             if (tasks.length === 0) {
                 list.innerHTML = '<div class="student-progress-empty">No reading activities assigned yet.</div>';
                 return;
@@ -15177,7 +15184,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
             window.__studentProgressStudentId = studentId;
             window.__studentProgressStudentName = studentName || '';
-            const assessmentDetails = await fetchAssessmentProgressDetails(tasks.map(task => task.assessmentId));
+            const assessmentDetails = reviewContext
+                ? {[tasks[0].assessmentId]: {attempts: [reviewContext.task.progress_attempt]}}
+                : await fetchAssessmentProgressDetails(tasks.map(task => task.assessmentId));
             const reviewOptions = {
                 url: "{% url 'teacher_prescribed_review_availability' %}", studentId,
                 onError: message => showToast(message, 'error'), completed: {},
@@ -15350,6 +15359,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         : (isRetellStory || isStoryResponse)
                         ? `<select class="student-progress-retell-score form-select form-select-sm${(isStoryResponse || isRetellStory) && (attempt?.grade_locked || retellGradeValue !== '') ? ' is-locked' : ''}" data-submission-id="${escapeHtml(retellSubmissionId || '')}" data-previous-value="${escapeHtml(retellGradeValue)}" ${(!retellSubmissionId || ((isStoryResponse || isRetellStory) && (attempt?.grade_locked || retellGradeValue !== ''))) ? 'disabled' : ''} aria-label="Teacher score"${(isStoryResponse || isRetellStory) && (attempt?.grade_locked || retellGradeValue !== '') ? ' title="Score is locked after submission."' : ''}><option value="" ${retellGradeValue === '' ? 'selected' : ''}>Not scored</option>${['Poor', 'Fair/Beginning', 'Basic/Approaching', 'Proficient', 'Mastery', 'Ready'].map((label, value) => `<option value="${value}" ${retellGradeValue === String(value) ? 'selected' : ''}>${value} - ${label}</option>`).join('')}</select>`
                         : displayedScore;
+                    const retellReviewHtml = isRetellStory && retellSubmissionId && retellGradeValue === ''
+                        ? (attempt?.reviewed_at ? '<p class="small text-success mt-2">Reviewed · numerical score is optional</p>'
+                            : attempt?.review_task ? `<button type="button" class="btn btn-outline-primary btn-sm mt-2" data-retell-reviewed="${escapeHtml(attempt.review_task)}" data-review-version="${escapeHtml(attempt.review_version)}">Mark Reviewed</button>` : '')
+                        : '';
                     const typeLabel = task.activityLabel || 'Reading Activity';
                     return `
                         <article class="student-progress-card${isLesson1Recording ? ' lesson1-recording-card' : ''}${usesLetterSoundScores ? ' session4-recording-card' : ''}" data-review-activity="${escapeHtml(task.assessmentId || '')}" data-review-prescribed="${isPrescribedProgressTask(task)}">
@@ -15365,6 +15378,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Time Spent</span><span class="student-progress-stat-value student-progress-time-spent">${timeSpent !== undefined && timeSpent !== null && timeSpent !== '' ? escapeHtml(formatCourseReportDuration(timeSpent)) : '—'}</span></div>
                                 <div class="student-progress-stat"><span class="student-progress-stat-label">Score</span><span class="student-progress-stat-value student-progress-score">${scoreValue}</span></div>
                             </div>
+                            ${retellReviewHtml}
                             ${(isRetellStory || isStoryResponse || isLesson1Recording || isLesson29TraceSay || isSession4Gawain1 || isSession4Gawain2 || isLesson13Gawain1 || isSession5Fluency) ? `<div class="student-progress-recording" data-recording-key="${escapeHtml(retellRecordingKey)}">
                                 <div class="student-progress-recording-panel">
                                     ${isSession5Fluency ? `<div class="session5-fluency-review">${session5RecordingHtml}</div>` : isLesson1Recording ? window.StudentActivityReview.renderSingleRecording(attempt, recordingHtml, escapeHtml) : recordingHtml}
@@ -15384,8 +15398,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (searchInput) searchInput.oninput = renderRows;
             if (sortInput) sortInput.onchange = renderRows;
             renderRows();
+            if (reviewContext) window.dispatchEvent(new CustomEvent('pabasa:student-progress-ready', {detail: reviewContext}));
         }
 
+        // Inbox entry uses this same student-progress dialog and grading handlers.
+        if (e.type === 'pabasa:open-student-progress') {
+            const context = e.detail;
+            studentProgressSourceFilter = context.task.category;
+            const search = document.getElementById('studentProgressSearch');
+            if (search) search.value = '';
+            openStudentProgressModal(context.task.student_id, context.task.student_name, null, context);
+            return;
+        }
         if (e.target.closest('.view-student-progress')) {
             const btn = e.target.closest('.view-student-progress');
             const id = btn.dataset.studentId;
@@ -15393,7 +15417,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const courseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
             openStudentProgressModal(id, name, courseId);
         }
-    });
+    }
+    document.addEventListener('click', handleStudentProgressEvent);
+    document.addEventListener('pabasa:open-student-progress', handleStudentProgressEvent);
 
     document.addEventListener('change', async function(event) {
         const select = event.target.closest('.student-progress-retell-score');
@@ -15423,6 +15449,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 select.disabled = true;
             }
             showToast('Teacher score saved', 'success');
+            window.dispatchEvent(new Event('pabasa:review-saved'));
         } catch (error) {
             select.value = previousValue;
             showToast(error.message || 'Score could not be saved.', 'error');
@@ -15498,6 +15525,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             })).then(response => response.json().then(data => ({ response, data }))).then(({ response, data }) => {
                 if (!response.ok || !data.success) throw new Error(data.error || 'Review action failed.');
                 showToast(lesson29Action.dataset.action === 'checked' ? 'Activity marked complete' : 'Activity sent for retry', 'success');
+                window.dispatchEvent(new Event('pabasa:review-saved'));
                 window.StudentActivityReview.removeRecording(lesson29Action.closest('.student-progress-recording'));
             }).catch(error => showToast(error.message || 'Review action failed.', 'error'));
             return;
@@ -15530,6 +15558,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 row?.querySelectorAll('.student-progress-lesson1-action').forEach(button => { button.disabled = true; });
                 if (data.status === 'checked') row?.querySelector('.lesson1-review-actions')?.remove();
                 showToast('Recording review updated', 'success');
+                window.dispatchEvent(new Event('pabasa:review-saved'));
             }).catch(error => {
                 buttons.forEach((button, index) => { button.disabled = disabled[index]; });
                 showToast(error.message || 'Review action failed.', 'error');

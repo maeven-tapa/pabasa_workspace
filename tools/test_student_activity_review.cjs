@@ -15,7 +15,7 @@ const live = Boolean(process.env.PABASA_REVIEW_SERVER);
 const lesson1Only = process.env.PABASA_REVIEW_LESSON1_ONLY === '1';
 const liveUrls = JSON.parse(process.env.PABASA_REVIEW_URLS || '{}');
 const urls = text => text.replace(/{% url ["']([^"']+)["'] %}/g, (_, name) => liveUrls[name] || '/test/'+name);
-const progress = between('        function progressStudentMatches(', "        if (e.target.closest('.view-student-progress'))");
+const progress = between('        function progressStudentMatches(', '        // Inbox entry uses this same student-progress dialog');
 const audio = between('    const studentProgressRetellGrades = new Map();', '    // Existing course student-progress actions');
 const grades = between("    document.addEventListener('click', function(event) {\n        const fluencyButton", "    document.addEventListener('input', function(event) {");
 const fluency = between("    document.addEventListener('change', function(event) {\n        const select = event.target.closest('.session5-fluency-select')", "    document.addEventListener('click', function(event) {\n        const courseTrigger");
@@ -87,8 +87,8 @@ const formatDateTime=String,formatCourseReportDuration=String,ensureCsrfToken=as
 class Modal{constructor(element){this._element=element;Modal.instances.set(element,this)}show(){this._element.classList.add('show')}hide(){this._element.classList.remove('show');this._element.dispatchEvent(new Event('hidden.bs.modal'))}static getOrCreateInstance(element){return Modal.getInstance(element)||new Modal(element)}static getInstance(element){return Modal.instances.get(element)}}
 Modal.instances=new WeakMap();window.bootstrap={Modal};
 ${audio}
-${urls(lesson1Only ? progress.replace('const tasks = courseProgressTasks(course, studentId);',
-    "const tasks = courseProgressTasks(course, studentId).filter(task=>task.assessmentId==='prescribed-lesson-1-gawain-1');") : progress)}
+${urls(lesson1Only ? progress.replace('courseProgressTasks(course, studentId);',
+    "courseProgressTasks(course, studentId).filter(task=>task.assessmentId==='prescribed-lesson-1-gawain-1');") : progress)}
 ${urls(grades)}
 ${seek}
 ${urls(fluency)}
@@ -128,6 +128,7 @@ new (require('node:vm').Script)(setup);
                     return route.continue();
                 }
                 if(url.pathname==='/static/pabasa_app/font/Righteous-Regular.ttf')return route.fulfill({contentType:'font/ttf',body:fs.readFileSync(path.join(app,'static/pabasa_app/font/Righteous-Regular.ttf'))});
+                if(url.pathname==='/static/pabasa_app/font/AndBasR.ttf')return route.fulfill({contentType:'font/ttf',body:fs.readFileSync(path.join(app,'static/pabasa_app/font/AndBasR.ttf'))});
                 if(url.pathname==='/fonts/bootstrap-icons.woff2')return route.fulfill({contentType:'font/woff2',body:fs.readFileSync(path.join(app,'static/pabasa_app/vendor/bootstrap-icons/fonts/bootstrap-icons.woff2'))});
                 if(url.pathname.startsWith('/test/')) {
                     if(url.pathname==='/test/teacher_prescribed_review_availability') {
@@ -146,6 +147,7 @@ new (require('node:vm').Script)(setup);
             await page.goto(base+'/activity');
             await page.setContent(`<style>body{font-family:Arial;margin:0}.d-none{display:none!important}.modal:not(.course-detail-page){display:none}.student-progress-list{display:grid;gap:12px}.student-progress-card{border:1px solid #dce8ed;border-radius:12px;padding:16px}.student-progress-card-header,.student-progress-stats{display:flex;justify-content:space-between}.student-progress-title{margin:8px 0}.student-progress-type{font-size:12px;color:#176078}.student-progress-stats{margin-top:12px}.student-progress-stat-label{display:block;font-size:11px}.form-select{padding:10px;width:100%}${courseCss}${fs.readFileSync(path.join(app,'static/pabasa_app/css/student_activity_review.css'),'utf8')}</style><main id="courseDetailModal" class="course-detail-page"><button class="course-modal-close-btn" data-bs-dismiss="modal">Close course</button><div id="courseMainContent"></div><aside id="courseSidebar"></aside><div id="courseInlineDialogHost"></div></main>${modalHtml}`);
             await page.addStyleTag({content:dashboardCss});
+            await page.addStyleTag({content:fs.readFileSync(path.join(app,'static/pabasa_app/css/typography.css'),'utf8').replaceAll('../font/', '/static/pabasa_app/font/')});
             await page.addStyleTag({path:path.join(app,'static/pabasa_app/vendor/bootstrap-icons/bootstrap-icons.css')});
             await page.evaluate(()=>document.getElementById('courseDetailModal').classList.add('dashboard-app-shell'));
             await page.addScriptTag({content:displayScale});
@@ -308,7 +310,7 @@ new (require('node:vm').Script)(setup);
                     assert.equal(await dialog.locator('.reading-review-neutral').count(),count-1);
                     assert.equal(await dialog.locator('.session4-score-button').count(),2);
                     await dialog.locator('.student-progress-review-header h2').evaluate(node=>document.fonts.load(getComputedStyle(node).font));
-                    assert.equal(await dialog.locator('.student-progress-review-header h2').evaluate(node=>getComputedStyle(node).fontFamily.includes('Righteous')),true);
+                    assert.equal(await dialog.locator('.student-progress-review-header h2').evaluate(node=>getComputedStyle(node).fontFamily.includes('Andika')),true);
                     for(const size of [{width:390,height:844},{width,height}]){
                         await page.setViewportSize(size);
                         await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));

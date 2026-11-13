@@ -116,6 +116,7 @@ class StudentActivityReviewBrowserTests(StaticLiveServerTestCase):
             index = 1 if key == keys[2] else 0
             StudentActivityRecordingSubmission.objects.create(
                 student=self.student, activity_key=key, item_index=index,
+                school_calendar=self.calendar, term=1,
                 substep=0 if key == keys[1] else None,
                 audio_file=SimpleUploadedFile('review.wav', audio.getvalue(), content_type='audio/wav'),
                 expected_text=(prescribed_activity(key)['items'][index].get('text', '')),

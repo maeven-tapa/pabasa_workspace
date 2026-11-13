@@ -1,9 +1,15 @@
 from django.urls import path
+from . import review_queue
 from . import views
 from . import lesson15_reading
 from . import crla_stream
 
 urlpatterns = [
+    path('dashboard/teacher/needs-checking/', review_queue.workspace, name='teacher_review_queue'),
+    path('api/teacher/needs-checking/', review_queue.queue_api, name='teacher_review_queue_api'),
+    path('api/teacher/needs-checking/detail/', review_queue.detail_api, name='teacher_review_detail'),
+    path('api/teacher/needs-checking/action/', review_queue.action_api, name='teacher_review_action'),
+    path('api/teacher/needs-checking/audio/', review_queue.audio_api, name='teacher_review_audio'),
     path('api/lesson-15-gawain-3/skip/', lesson15_reading.skip, name='lesson15_reading_skip'),
     path('api/teacher/lesson-15-gawain-3/reviews/', lesson15_reading.reviews, name='lesson15_reading_reviews'),
     path('api/teacher/lesson-15-gawain-3/classify/', lesson15_reading.classify, name='lesson15_reading_classify'),

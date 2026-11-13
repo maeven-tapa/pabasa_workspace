@@ -72,6 +72,7 @@
         if (item) Object.assign(item, values);
         row.dataset.reviewState = 'reviewed';
         refreshSummary(row.closest('.compact-reading-review'));
+        window.dispatchEvent(new Event('pabasa:review-saved'));
     }
 
     function order(task) {

@@ -32,6 +32,7 @@
       if (!response.ok || !data.success) throw new Error(data.error || 'Hindi na-save ang grado. Subukan muli.');
       table.items.splice(0, table.items.length, ...data.items);
       root.outerHTML = render(table.items, root.dataset.studentId, table.escapeHtml, table.saveUrl);
+      window.dispatchEvent(new Event('pabasa:review-saved'));
     } catch (error) {
       select.value = labels[previous] ? previous : '';
       root.querySelector('.lesson15-review-feedback').textContent = error.message;

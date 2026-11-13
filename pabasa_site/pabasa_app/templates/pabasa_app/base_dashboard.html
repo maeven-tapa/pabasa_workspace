@@ -3896,7 +3896,7 @@
     <script src="{% static 'pabasa_app/js/student_classes.js' %}?v=20261011-1"></script>
     {% endif %}
     <script src="{% static 'pabasa_app/js/base_dashboard.js' %}?v=20261016-light-appearance"></script>
-    <script src="{% static 'pabasa_app/js/notifications_shared.js' %}"></script>
+    <script src="{% static 'pabasa_app/js/notifications_shared.js' %}?v=20261113-1"></script>
     <script>
         (() => {
             const logoutModal = document.getElementById("logoutConfirmModal");
@@ -4937,6 +4937,10 @@
         });
         window.setInterval(updateInAppNotifications, 10000);
     </script>
+    {% if nav_role == 'teacher' %}
+    <link rel="stylesheet" href="{% static 'pabasa_app/css/needs_checking.css' %}?v=1">
+    <script src="{% static 'pabasa_app/js/review_inbox.js' %}?v=1" data-review-inbox-url="{% url 'teacher_review_queue_api' %}" defer></script>
+    {% endif %}
     <script src="{% static 'pabasa_app/js/signature_sidebar.js' %}?v=20261012-1"></script>
 </body>
 </html>

@@ -1,0 +1,35 @@
+{% extends "pabasa_app/base_dashboard.html" %}
+{% load static %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'pabasa_app/css/needs_checking.css' %}?v=1">
+<script src="{% static 'pabasa_app/js/needs_checking.js' %}?v=1" defer></script>
+{% endblock %}
+{% block header %}{% include "pabasa_app/partials/_header.html" with page_title="Needs Checking" page_date="" %}{% endblock %}
+{% block content %}
+<main class="nc-workspace" id="nc-workspace" data-list-url="{% url 'teacher_review_queue_api' %}" data-detail-url="{% url 'teacher_review_detail' %}" data-action-url="{% url 'teacher_review_action' %}" aria-labelledby="nc-title">
+    {% csrf_token %}
+    <header class="nc-heading"><div><a class="nc-back" href="{% url 'dashboard_teacher' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Teacher dashboard</a><span class="nc-eyebrow">YOUR TEACHER INBOX</span><h1 id="nc-title">Needs checking<span>.</span></h1><p>See their progress. Hear their voice. Guide their next step.</p></div><div class="nc-heading-actions"><span class="nc-sync"><span class="nc-live-dot" aria-hidden="true"></span><span data-nc-sync>Connecting…</span></span><button class="nc-button nc-button-secondary" id="nc-refresh" type="button"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Refresh</button></div></header>
+    <section class="nc-kpis" aria-label="Review overview">
+        <div class="nc-kpi nc-kpi-primary"><span class="nc-kpi-icon"><i class="bi bi-inbox" aria-hidden="true"></i></span><span>Awaiting your feedback</span><strong data-nc-stat="pending">—</strong><small>Student activity submissions</small></div>
+        <div class="nc-kpi"><span class="nc-kpi-icon"><i class="bi bi-people" aria-hidden="true"></i></span><span>Students waiting</span><strong data-nc-stat="students">—</strong><small>Readers you can help today</small></div>
+        <div class="nc-kpi"><span class="nc-kpi-icon nc-amber"><i class="bi bi-circle-half" aria-hidden="true"></i></span><span>Checking in progress</span><strong data-nc-stat="partial">—</strong><small>Pick up where you left off</small></div>
+        <div class="nc-kpi"><span class="nc-kpi-icon nc-green"><i class="bi bi-check2-all" aria-hidden="true"></i></span><span>Reviewed this term</span><strong data-nc-stat="reviewed">—</strong><small>Feedback already delivered</small></div>
+    </section>
+    <section class="nc-inbox" aria-labelledby="nc-inbox-title">
+        <div class="nc-inbox-heading"><div><h2 id="nc-inbox-title">Your review inbox</h2><p>Find submitted work and open the activity’s review screen.</p></div><span class="nc-inbox-note"><i class="bi bi-shield-check" aria-hidden="true"></i> Your current classes &amp; terms</span></div>
+        <div class="nc-categories" role="group" aria-label="Activity source"><button type="button" class="is-active" data-category="" aria-pressed="true">All submissions <b data-nc-stat="pending">—</b></button><button type="button" data-category="prescribed" aria-pressed="false"><i class="bi bi-journal-bookmark" aria-hidden="true"></i> Prescribed workbook <b data-nc-stat="prescribed">—</b></button><button type="button" data-category="supplementary" aria-pressed="false"><i class="bi bi-book" aria-hidden="true"></i> Supplementary materials <b data-nc-stat="supplementary">—</b></button></div>
+        <form id="nc-filters" class="nc-filters" role="search" aria-label="Filter review submissions">
+            <label class="nc-search"><span class="visually-hidden">Search students or activities</span><i class="bi bi-search" aria-hidden="true"></i><input type="search" name="q" placeholder="Search a student, activity, or class…" maxlength="160" autocomplete="off"></label>
+            <label><span>Class</span><select name="section"><option value="">All classes</option></select></label>
+            <label><span>Status</span><select name="status"><option value="needs_review">Needs checking</option><option value="pending">New submissions</option><option value="partial">Partially reviewed</option><option value="reviewed">Reviewed</option><option value="retry">Awaiting resubmission</option><option value="all">All statuses</option></select></label>
+            <label><span>Sort by</span><select name="sort"><option value="oldest">Oldest first</option><option value="newest">Newest first</option><option value="student">Student A–Z</option><option value="remaining">Most items remaining</option></select></label>
+            <details class="nc-more-filters"><summary><i class="bi bi-sliders" aria-hidden="true"></i> More filters</summary><div><label><span>Activity</span><select name="activity"><option value="">All activities</option></select></label><label><span>School year</span><select name="calendar"><option value="">All current school years</option></select></label><label><span>Term</span><select name="term"><option value="">All current terms</option></select></label></div></details>
+            <button type="reset" class="nc-reset">Reset filters</button>
+        </form>
+        <div class="nc-list-meta"><span id="nc-results-count" role="status" aria-live="polite">Finding submitted work…</span><span>One card per student activity</span></div>
+        <div id="nc-list" class="nc-list" aria-busy="true"><div class="nc-skeleton"></div><div class="nc-skeleton"></div><div class="nc-skeleton"></div></div>
+        <footer class="nc-pagination"><span id="nc-page-label"></span><div><button class="nc-button nc-button-secondary" id="nc-prev" type="button" disabled><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button><button class="nc-button nc-button-secondary" id="nc-next" type="button" disabled>Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button></div></footer>
+    </section>
+    <p class="nc-scope-note"><i class="bi bi-info-circle" aria-hidden="true"></i> Work stays here until it is checked. Reading a notification never clears a submission.</p>
+</main>
+{% endblock %}

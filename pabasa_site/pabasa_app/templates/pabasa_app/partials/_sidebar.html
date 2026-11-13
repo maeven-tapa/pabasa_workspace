@@ -23,6 +23,7 @@
             <a class="signature-nav-item nav-link dash-link d-flex align-items-center gap-2" href="{% url 'assessment' %}" data-nav-tooltip data-student-class-required title="Join a class to unlock Reading Assessment" data-unlocked-title="Take your reading assessment"><i class="bi bi-journal-check"></i><span class="sidebar-text">Reading Assessment</span></a>
             {% else %}
             <a class="signature-nav-item nav-link dash-link d-flex align-items-center gap-2" href="{% url 'courses' %}" data-nav-tooltip title="Course"><i class="bi bi-folder2-open"></i><span class="sidebar-text">Course</span></a>
+            {% if nav_role == 'teacher' %}<a class="signature-nav-item nav-link dash-link d-flex align-items-center gap-2 nc-review-nav" href="{% url 'teacher_review_queue' %}" data-nav-tooltip title="Needs Checking"><i class="bi bi-inbox"></i><span class="sidebar-text">Needs Checking <span class="nc-sidebar-count" data-nc-badge hidden></span></span></a>{% endif %}
             <a id="sidebarClassLink" class="signature-nav-item nav-link dash-link d-flex align-items-center gap-2" href="{% url 'class_management' %}" data-nav-tooltip data-active-path="{% url 'class_management' %}" title="Section"><i class="bi bi-door-open"></i><span class="sidebar-text">Section</span></a>
             <a class="signature-nav-item nav-link dash-link d-flex align-items-center gap-2" href="{% url 'students' %}" data-nav-tooltip title="ARAL Program"><i class="bi bi-people"></i><span class="sidebar-text">ARAL Program</span></a>
             {% endif %}

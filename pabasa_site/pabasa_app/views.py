@@ -310,6 +310,20 @@ def _current_progress_queryset(student, lifecycle=None):
     )
 
 
+def _current_manual_review_recordings(student, activity_key):
+    """Current binary evidence, including dated legacy uploads in this attempt."""
+    lifecycle = _current_learning_context(student)
+    calendar, term = lifecycle.get('school_calendar'), lifecycle.get('term')
+    if not calendar or term not in (1, 2, 3):
+        return StudentActivityRecordingSubmission.objects.none()
+    progress = _current_progress_queryset(student, lifecycle).filter(activity_key=activity_key).first()
+    ownership = Q(school_calendar=calendar, term=term)
+    if progress:
+        ownership |= Q(school_calendar__isnull=True, term__isnull=True,
+                       submitted_at__gte=progress.created_at)
+    return StudentActivityRecordingSubmission.objects.filter(student=student, activity_key=activity_key).filter(ownership)
+
+
 def _lesson29_teacher_can_review(teacher, student, lifecycle=None):
     lifecycle = lifecycle or _current_learning_context(student)
     calendar = lifecycle.get('school_calendar')
@@ -12424,6 +12438,8 @@ def session_5_lesson_14_gawain_4_recording(request):
         old_name = row.audio_file.name if row and row.audio_file else ''
         if not row:
             row = StudentActivityRecordingSubmission(student=student, activity_key=activity_key, item_index=item_index)
+        row.school_calendar = lifecycle.get('school_calendar')
+        row.term = lifecycle.get('term')
         row.audio_file = audio
         row.duration_seconds = int(round(duration)) or None
         row.expected_text = expected
@@ -22426,23 +22442,27 @@ def session_4_gawain_1_recording(request):
     except (TypeError, ValueError):
         duration = None
     activity_key = 'session-4-gawain-1'
+    lifecycle = _current_learning_context(student)
+    recording_scope = {'school_calendar': lifecycle.get('school_calendar'), 'term': lifecycle.get('term')}
     with transaction.atomic():
         submission = StudentActivityRecordingSubmission.objects.select_for_update().filter(
             student=student, activity_key=activity_key, item_index=item_index,
         ).first()
         old_name = submission.audio_file.name if submission and submission.audio_file else ''
         if submission:
+            submission.school_calendar = recording_scope['school_calendar']
+            submission.term = recording_scope['term']
             submission.audio_file = audio
             submission.duration_seconds = duration or None
             submission.status = 'submitted'
             submission.teacher_score = None
             submission.checked_by = None
             submission.checked_at = None
-            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'teacher_score', 'checked_by', 'checked_at', 'updated_at'])
+            submission.save(update_fields=['school_calendar', 'term', 'audio_file', 'duration_seconds', 'status', 'teacher_score', 'checked_by', 'checked_at', 'updated_at'])
         else:
             submission = StudentActivityRecordingSubmission.objects.create(
                 student=student, activity_key=activity_key, item_index=item_index,
-                audio_file=audio, duration_seconds=duration or None,
+                audio_file=audio, duration_seconds=duration or None, **recording_scope,
             )
         if old_name and old_name != submission.audio_file.name:
             try:
@@ -22477,19 +22497,23 @@ def lesson_13_gawain_1_recording(request):
         duration = max(0, int(request.POST.get('duration_seconds') or 0))
     except (TypeError, ValueError):
         duration = None
+    lifecycle = _current_learning_context(student)
+    recording_scope = {'school_calendar': lifecycle.get('school_calendar'), 'term': lifecycle.get('term')}
     with transaction.atomic():
         submission = StudentActivityRecordingSubmission.objects.select_for_update().filter(student=student, activity_key=activity_key, item_index=item_index).first()
         old_name = submission.audio_file.name if submission and submission.audio_file else ''
         if submission:
+            submission.school_calendar = recording_scope['school_calendar']
+            submission.term = recording_scope['term']
             submission.audio_file = audio
             submission.duration_seconds = duration or None
             submission.status = 'submitted'
             submission.teacher_score = None
             submission.checked_by = None
             submission.checked_at = None
-            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'teacher_score', 'checked_by', 'checked_at', 'updated_at'])
+            submission.save(update_fields=['school_calendar', 'term', 'audio_file', 'duration_seconds', 'status', 'teacher_score', 'checked_by', 'checked_at', 'updated_at'])
         else:
-            submission = StudentActivityRecordingSubmission.objects.create(student=student, activity_key=activity_key, item_index=item_index, audio_file=audio, duration_seconds=duration or None)
+            submission = StudentActivityRecordingSubmission.objects.create(student=student, activity_key=activity_key, item_index=item_index, audio_file=audio, duration_seconds=duration or None, **recording_scope)
         new_name = submission.audio_file.name if submission.audio_file else ''
         if old_name and old_name != new_name:
             try:
@@ -22520,23 +22544,27 @@ def session_4_gawain_2_recording(request):
     except (TypeError, ValueError):
         duration = None
     activity_key = 'session-4-gawain-2'
+    lifecycle = _current_learning_context(student)
+    recording_scope = {'school_calendar': lifecycle.get('school_calendar'), 'term': lifecycle.get('term')}
     with transaction.atomic():
         submission = StudentActivityRecordingSubmission.objects.select_for_update().filter(
             student=student, activity_key=activity_key, item_index=item_index, substep=substep,
         ).first()
         old_name = submission.audio_file.name if submission and submission.audio_file else ''
         if submission:
+            submission.school_calendar = recording_scope['school_calendar']
+            submission.term = recording_scope['term']
             submission.audio_file = audio
             submission.duration_seconds = duration or None
             submission.status = 'submitted'
             submission.teacher_score = None
             submission.checked_by = None
             submission.checked_at = None
-            submission.save(update_fields=['audio_file', 'duration_seconds', 'status', 'teacher_score', 'checked_by', 'checked_at', 'updated_at'])
+            submission.save(update_fields=['school_calendar', 'term', 'audio_file', 'duration_seconds', 'status', 'teacher_score', 'checked_by', 'checked_at', 'updated_at'])
         else:
             submission = StudentActivityRecordingSubmission.objects.create(
                 student=student, activity_key=activity_key, item_index=item_index, substep=substep,
-                audio_file=audio, duration_seconds=duration or None,
+                audio_file=audio, duration_seconds=duration or None, **recording_scope,
             )
         if old_name and old_name != submission.audio_file.name:
             try:
@@ -22564,7 +22592,7 @@ def teacher_prescribed_progress(request):
     activities = [item for item in active_prescribed_activities() if int(item.get('session_number') or 0) == session_number]
     rows = []
     for activity in activities:
-        progress = StudentActivityProgress.objects.filter(student=student, activity_key=activity['activity_key']).order_by('-updated_at', '-id').first()
+        progress = _current_progress_queryset(student).filter(activity_key=activity['activity_key']).order_by('-updated_at', '-id').first()
         state = progress.state if progress and isinstance(progress.state, dict) else {}
         pending = bool(state.get('awaiting_teacher_verdict') or state.get('pending_review'))
         checked = bool(state.get('checked') and progress and progress.activity_completed)
@@ -22598,6 +22626,7 @@ def teacher_prescribed_progress(request):
 @login_required(role='teacher')
 @csrf_protect
 @require_http_methods(['POST'])
+@transaction.atomic
 def teacher_prescribed_review_action(request):
     """Approve or return one of the two Session 9 drawing submissions."""
     teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
@@ -22616,7 +22645,7 @@ def teacher_prescribed_review_action(request):
     activity = prescribed_activity(key)
     if not student or not activity:
         return JsonResponse({'success': False, 'error': 'Student or activity not found.'}, status=404)
-    progress = StudentActivityProgress.objects.filter(student=student, activity_key=key).order_by('-updated_at', '-id').first()
+    progress = _current_progress_queryset(student).select_for_update().filter(activity_key=key).order_by('-updated_at', '-id').first()
     if not progress:
         return JsonResponse({'success': False, 'error': 'No submitted work exists.'}, status=400)
     from .prescribed_workbook import initial_s9_a1_state, initial_s9_a2_state
@@ -22637,6 +22666,7 @@ def teacher_prescribed_review_action(request):
         history = list(state.get('review_history') or [])
         history.append({'action': 'complete', 'at': timezone.now().isoformat()})
         state['review_history'] = history
+        progress.state = state
         total = len(activity.get('items') or []) or 1
         progress.current_index = progress.completed_items = progress.correct_items = total
         progress.total_items = total
@@ -22964,13 +22994,12 @@ def teacher_session_4_gawain_1_score(request):
         submission.save(update_fields=['teacher_score', 'status', 'checked_by', 'checked_at', 'updated_at'])
         activity = prescribed_activity('session-4-gawain-1') or {}
         total = len(activity.get('items') or [])
-        reviewed = StudentActivityRecordingSubmission.objects.filter(
-            student_id=submission.student_id, activity_key='session-4-gawain-1',
+        reviewed = _current_manual_review_recordings(submission.student, 'session-4-gawain-1').filter(
             item_index__isnull=False, teacher_score__isnull=False,
         )
         correct_items = sum(row.teacher_score for row in reviewed)
-        progress = StudentActivityProgress.objects.filter(
-            student_id=submission.student_id, activity_key='session-4-gawain-1',
+        progress = _current_progress_queryset(submission.student).filter(
+            activity_key='session-4-gawain-1',
         ).first()
         if progress:
             progress.correct_items = correct_items
@@ -23069,13 +23098,12 @@ def teacher_lesson_13_gawain_1_score(request):
         submission.checked_at = timezone.now()
         submission.save(update_fields=['teacher_score', 'status', 'checked_by', 'checked_at', 'updated_at'])
         total = len((prescribed_activity('lesson-13-gawain-1') or {}).get('items') or [])
-        reviewed = StudentActivityRecordingSubmission.objects.filter(
-            student_id=submission.student_id, activity_key='lesson-13-gawain-1',
+        reviewed = _current_manual_review_recordings(submission.student, 'lesson-13-gawain-1').filter(
             item_index__isnull=False, teacher_score__isnull=False,
         )
         correct_items = sum(row.teacher_score for row in reviewed)
-        progress = StudentActivityProgress.objects.filter(
-            student_id=submission.student_id, activity_key='lesson-13-gawain-1',
+        progress = _current_progress_queryset(submission.student).filter(
+            activity_key='lesson-13-gawain-1',
         ).first()
         if progress and reviewed.count() == total:
             progress.correct_items = correct_items
@@ -23177,14 +23205,13 @@ def teacher_session_4_gawain_2_score(request):
         submission.checked_at = timezone.now()
         submission.save(update_fields=['teacher_score', 'status', 'checked_by', 'checked_at', 'updated_at'])
         activity_total = len((prescribed_activity('session-4-gawain-2') or {}).get('items') or [])
-        manual_rows = StudentActivityRecordingSubmission.objects.filter(
-            student_id=submission.student_id, activity_key='session-4-gawain-2',
+        manual_rows = _current_manual_review_recordings(submission.student, 'session-4-gawain-2').filter(
             item_index__isnull=False, substep__in=(0, 1), teacher_score__isnull=False,
         )
         manual_total = activity_total * 2
         manual_subtotal = sum(row.teacher_score for row in manual_rows)
-        progress = StudentActivityProgress.objects.filter(
-            student_id=submission.student_id, activity_key='session-4-gawain-2',
+        progress = _current_progress_queryset(submission.student).filter(
+            activity_key='session-4-gawain-2',
         ).first()
         automatic_subtotal = max(0, min(activity_total, int(progress.completed_items if progress else 0)))
         all_reviewed = manual_rows.count() == manual_total
@@ -39577,6 +39604,8 @@ def story_response_submit(request):
                 'grade': None,
                 'graded_by': None,
                 'graded_at': None,
+                'reviewed_at': None,
+                'reviewed_by': None,
             },
         )
         if is_retell_story:
@@ -39632,6 +39661,7 @@ def story_response_submit(request):
 
 
 def _story_response_review_payload(submission):
+    from .review_queue import digest
     content = submission.story_material.content_json if submission.story_material_id else {}
     return {
         'id': submission.id,
@@ -39642,10 +39672,14 @@ def _story_response_review_payload(submission):
         'recording_url': reverse('teacher_story_response_audio', args=[submission.id]) if submission.audio_file else None,
         'response_text': submission.response_text,
         'duration_seconds': submission.duration_seconds,
-        'story_title': str(content.get('storyTitle') or submission.story_material.title or '').strip(),
+        'story_title': str(content.get('storyTitle') or (submission.story_material.title if submission.story_material else submission.material.title) or '').strip(),
         'prompt': submission.prompt,
         'grade': submission.grade,
         'grade_locked': submission.grade is not None,
+        'reviewed_at': submission.reviewed_at.isoformat() if submission.reviewed_at else None,
+        'review_task': (f'{submission.student_id}:{submission.school_calendar_id}:{submission.term}:material-{submission.material_id}'
+            if submission.school_calendar_id and submission.term else None),
+        'review_version': digest([submission.pk, submission.updated_at]),
         'submitted_at': submission.submitted_at.isoformat(),
     }
 
@@ -39686,10 +39720,11 @@ def teacher_story_response_review(request):
 @csrf_protect
 @require_http_methods(["POST"])
 @login_required(role='teacher')
+@transaction.atomic
 def teacher_story_response_grade(request):
     try:
         payload = json.loads(request.body or '{}')
-        submission = StoryResponseSubmission.objects.select_related('material').get(pk=payload.get('submission_id'))
+        submission = StoryResponseSubmission.objects.select_for_update().get(pk=payload.get('submission_id'))
         teacher = User.objects.filter(pk=request.session.get('user_id'), role='teacher', is_archived=False).first()
         is_retell_story = _is_retell_story_material(submission.material)
         if not teacher or not _teacher_can_access_material(teacher, submission.material):
