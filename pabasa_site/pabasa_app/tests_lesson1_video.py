@@ -38,7 +38,7 @@ class Lesson1VideoSubmissionTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(StudentActivityProgress.objects.get().activity_completed)
         self.assertEqual(response.context['lesson_1_data']['submission_status'], 'submitted')
-        self.assertContains(response, 'session1_lesson1_gawain1.mp4')
+        self.assertContains(response, 'session1_lesson1_gawain1_lyrics.mp4')
 
     def test_empty_unfinished_and_invalid_duration_cannot_submit(self):
         for fields in (
