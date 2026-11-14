@@ -778,11 +778,11 @@
         white-space: nowrap;
     }
 
-    .teacher-reading-item.level-low { --level-color: #dc2626; }
-    .teacher-reading-item.level-high { --level-color: #f59e0b; }
-    .teacher-reading-item.level-developing { --level-color: #8b5cf6; }
-    .teacher-reading-item.level-transitioning { --level-color: #0284c7; }
-    .teacher-reading-item.level-grade { --level-color: #16a34a; }
+    .teacher-reading-item.level-low { --level-color: #E53935; }
+    .teacher-reading-item.level-high { --level-color: #9B59B6; }
+    .teacher-reading-item.level-developing { --level-color: #F1C40F; }
+    .teacher-reading-item.level-transitioning { --level-color: #3498DB; }
+    .teacher-reading-item.level-grade { --level-color: #2EAD62; }
 
     .class-empty-notice {
         align-items: flex-start;
@@ -1414,11 +1414,11 @@
         white-space: nowrap;
     }
 
-    .level-low { background: #fee2e2; color: #991b1b; }
-    .level-developing { background: #ffedd5; color: #9a3412; }
-    .level-transitioning { background: #fef3c7; color: #92400e; }
-    .level-grade { background: #dcfce7; color: #166534; }
-    .level-high { background: #d9eef4; color: #155e75; }
+    .level-low { background: #FBE9E7; color: #E53935; }
+    .level-high { background: #F1E7F5; color: #9B59B6; }
+    .level-developing { background: #FCF3CF; color: #6F5600; }
+    .level-transitioning { background: #EAF4FC; color: #3498DB; }
+    .level-grade { background: #E8F5EC; color: #2EAD62; }
 
     .modal-content {
         background: var(--surface-solid);
@@ -1549,13 +1549,18 @@
     body.dark-theme .mini-metric,
     body.dark-theme .generated-code,
     body.dark-theme .class-code-pill,
-    body.dark-theme .level-chip,
     body.dark-theme #createdClassCode {
         background: #0f172a !important;
         background-image: none !important;
         border-color: rgba(255, 255, 255, 0.1) !important;
         color: #e2e8f0 !important;
     }
+
+    body.dark-theme .level-chip.level-low { background: rgba(229, 57, 53, 0.16) !important; border-color: rgba(229, 57, 53, 0.28) !important; color: #ff8a80 !important; }
+    body.dark-theme .level-chip.level-high { background: rgba(155, 89, 182, 0.18) !important; border-color: rgba(155, 89, 182, 0.3) !important; color: #d6a7e3 !important; }
+    body.dark-theme .level-chip.level-developing { background: rgba(241, 196, 15, 0.16) !important; border-color: rgba(241, 196, 15, 0.28) !important; color: #f1c40f !important; }
+    body.dark-theme .level-chip.level-transitioning { background: rgba(52, 152, 219, 0.16) !important; border-color: rgba(52, 152, 219, 0.28) !important; color: #7cc4f2 !important; }
+    body.dark-theme .level-chip.level-grade { background: rgba(46, 173, 98, 0.16) !important; border-color: rgba(46, 173, 98, 0.28) !important; color: #75d69a !important; }
 
     body.dark-theme .teacher-glance-heading h3,
     body.dark-theme .teacher-reading-summary-head h4,

@@ -828,6 +828,12 @@
         border: 1px solid rgba(15, 23, 42, 0.08);
     }
 
+    .section-information-students .student-reading-level .reading-level-chip.level-low { background: #FBE9E7; color: #E53935; }
+    .section-information-students .student-reading-level .reading-level-chip.level-high { background: #F1E7F5; color: #9B59B6; }
+    .section-information-students .student-reading-level .reading-level-chip.level-developing { background: #FCF3CF; color: #6F5600; }
+    .section-information-students .student-reading-level .reading-level-chip.level-transitioning { background: #EAF4FC; color: #3498DB; }
+    .section-information-students .student-reading-level .reading-level-chip.level-grade { background: #E8F5EC; color: #2EAD62; }
+
     .student-table .text-center {
         text-align: center;
     }
@@ -1156,7 +1162,7 @@
 
     body.dark-theme .student-table th,
     body.dark-theme .student-table td,
-    body.dark-theme .status-chip,
+    body.dark-theme .status-chip:not(.reading-level-chip),
     body.dark-theme .form-control,
     body.dark-theme .form-select,
     body.dark-theme textarea,
@@ -1167,6 +1173,12 @@
         border-color: rgba(255, 255, 255, 0.12) !important;
         color: #e2e8f0 !important;
     }
+
+    body.dark-theme .section-information-students .student-reading-level .reading-level-chip.level-low { background: rgba(229, 57, 53, 0.16) !important; border-color: rgba(229, 57, 53, 0.28) !important; color: #ff8a80 !important; }
+    body.dark-theme .section-information-students .student-reading-level .reading-level-chip.level-high { background: rgba(155, 89, 182, 0.18) !important; border-color: rgba(155, 89, 182, 0.3) !important; color: #d6a7e3 !important; }
+    body.dark-theme .section-information-students .student-reading-level .reading-level-chip.level-developing { background: rgba(241, 196, 15, 0.16) !important; border-color: rgba(241, 196, 15, 0.28) !important; color: #f1c40f !important; }
+    body.dark-theme .section-information-students .student-reading-level .reading-level-chip.level-transitioning { background: rgba(52, 152, 219, 0.16) !important; border-color: rgba(52, 152, 219, 0.28) !important; color: #7cc4f2 !important; }
+    body.dark-theme .section-information-students .student-reading-level .reading-level-chip.level-grade { background: rgba(46, 173, 98, 0.16) !important; border-color: rgba(46, 173, 98, 0.28) !important; color: #75d69a !important; }
 
     body.dark-theme .card-title,
     body.dark-theme .section-heading h2,

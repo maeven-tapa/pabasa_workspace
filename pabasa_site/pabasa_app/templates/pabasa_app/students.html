@@ -662,17 +662,17 @@
     .student-crla-field { align-items: baseline; display: grid; font-size: .76rem; gap: .55rem; grid-template-columns: minmax(0,1fr) minmax(0,1.25fr); padding: .16rem 0; }
     .student-crla-field span { color: var(--dash-muted); min-width: 0; }
     .student-crla-field strong { color: var(--dash-text); min-width: 0; overflow-wrap: anywhere; text-align: right; }
-    .student-crla-field strong .student-crla-profile-grade { color: #15803d; }
-    .student-crla-field strong .student-crla-profile-transitioning { color: #1d4ed8; }
-    .student-crla-field strong .student-crla-profile-developing { color: #c2410c; }
-    .student-crla-field strong .student-crla-profile-high { color: #c2410c; }
-    .student-crla-field strong .student-crla-profile-low { color: #b42318; }
+    .student-crla-field strong .student-crla-profile-grade { color: #2EAD62; }
+    .student-crla-field strong .student-crla-profile-transitioning { color: #3498DB; }
+    .student-crla-field strong .student-crla-profile-developing { color: #6F5600; }
+    .student-crla-field strong .student-crla-profile-high { color: #9B59B6; }
+    .student-crla-field strong .student-crla-profile-low { color: #E53935; }
     .student-crla-profile-badge { border-radius: 999px; display: inline-block; font-size: .8rem; font-weight: 800; line-height: 1.2; max-width: 100%; padding: .38rem .72rem; text-align: center; }
-    .student-crla-profile-grade { background-color: #dcfce7; color: #15803d; }
-    .student-crla-profile-transitioning { background-color: #dbeafe; color: #1d4ed8; }
-    .student-crla-profile-developing { background-color: #ffedd5; color: #c2410c; }
-    .student-crla-profile-high { background-color: #ffe4e6; color: #c2410c; }
-    .student-crla-profile-low { background-color: #fee2e2; color: #b91c1c; }
+    .student-crla-profile-grade { background-color: #E8F5EC; color: #2EAD62; }
+    .student-crla-profile-transitioning { background-color: #EAF4FC; color: #3498DB; }
+    .student-crla-profile-developing { background-color: #FCF3CF; color: #6F5600; }
+    .student-crla-profile-high { background-color: #F1E7F5; color: #9B59B6; }
+    .student-crla-profile-low { background-color: #FBE9E7; color: #E53935; }
     .student-crla-final { grid-column: 1 / -1; }
     .student-crla-observation-level { background: #fff; border: 1px solid rgba(31,111,139,.25); border-radius: 6px; color: var(--dash-text); font: inherit; font-weight: 800; max-width: 8.5rem; padding: .16rem .35rem; text-align: right; }
     @media (max-width:767px) { .student-crla-layout { grid-template-columns: 1fr; } .student-crla-info, .student-crla-final { grid-column: auto; } }
@@ -692,11 +692,11 @@
         white-space: nowrap;
     }
 
-    .level-low { background: #fee2e2; color: #991b1b; }
-    .level-developing { background: #ffedd5; color: #9a3412; }
-    .level-transitioning { background: #fef3c7; color: #92400e; }
-    .level-grade { background: #dcfce7; color: #166534; }
-    .level-high { background: #d9eef4; color: #155e75; }
+    .level-low { background: #FBE9E7; color: #E53935; }
+    .level-high { background: #F1E7F5; color: #9B59B6; }
+    .level-developing { background: #FCF3CF; color: #6F5600; }
+    .level-transitioning { background: #EAF4FC; color: #3498DB; }
+    .level-grade { background: #E8F5EC; color: #2EAD62; }
     .level-pending { background: #f3f4f6; color: #4b5563; }
     .level-live-progress { background: #d9eef4; color: #155e75; white-space: normal; text-align: center; }
 
@@ -1435,16 +1435,17 @@
         color: #f8fafc !important;
     }
 
-    body.dark-theme .level-pending,
-    body.dark-theme .level-high,
-    body.dark-theme .level-grade,
-    body.dark-theme .level-transitioning,
-    body.dark-theme .level-developing,
-    body.dark-theme .level-low {
+    body.dark-theme .level-pending {
         background: rgba(56, 189, 248, 0.12) !important;
         border-color: rgba(125, 211, 252, 0.22) !important;
         color: #7dd3fc !important;
     }
+
+    body.dark-theme .level-low { background: rgba(229, 57, 53, 0.16) !important; border-color: rgba(229, 57, 53, 0.28) !important; color: #ff8a80 !important; }
+    body.dark-theme .level-high { background: rgba(155, 89, 182, 0.18) !important; border-color: rgba(155, 89, 182, 0.3) !important; color: #d6a7e3 !important; }
+    body.dark-theme .level-developing { background: rgba(241, 196, 15, 0.16) !important; border-color: rgba(241, 196, 15, 0.28) !important; color: #f1c40f !important; }
+    body.dark-theme .level-transitioning { background: rgba(52, 152, 219, 0.16) !important; border-color: rgba(52, 152, 219, 0.28) !important; color: #7cc4f2 !important; }
+    body.dark-theme .level-grade { background: rgba(46, 173, 98, 0.16) !important; border-color: rgba(46, 173, 98, 0.28) !important; color: #75d69a !important; }
 
     body.dark-theme .priority-card {
         background: #0f172a !important;
@@ -1591,8 +1592,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <span class="small text-secondary fw-bold" id="distLowCount">0 (0%)</span>
                 </div>
-                <div style="background: #fee2e2; border-radius: 8px; height: 28px; overflow: hidden;">
-                    <div style="background: #dc2626; height: 100%; width: 0%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;" id="distLowBar"></div>
+                <div style="background: #FBE9E7; border-radius: 8px; height: 28px; overflow: hidden;">
+                    <div style="background: #E53935; height: 100%; width: 0%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;" id="distLowBar"></div>
                 </div>
             </div>
             <div style="display: grid; gap: 0.35rem;">
@@ -1603,8 +1604,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <span class="small text-secondary fw-bold" id="distHighCount">0 (0%)</span>
                 </div>
-                <div style="background: #fed7aa; border-radius: 8px; height: 28px; overflow: hidden;">
-                    <div style="background: #ea580c; height: 100%; width: 0%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;" id="distHighBar"></div>
+                <div style="background: #F1E7F5; border-radius: 8px; height: 28px; overflow: hidden;">
+                    <div style="background: #9B59B6; height: 100%; width: 0%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;" id="distHighBar"></div>
                 </div>
             </div>
             <div style="display: grid; gap: 0.35rem;">
@@ -1615,8 +1616,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <span class="small text-secondary fw-bold" id="distDevCount">0 (0%)</span>
                 </div>
-                <div style="background: #fef3c7; border-radius: 8px; height: 28px; overflow: hidden;">
-                    <div style="background: #d97706; height: 100%; width: 0%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;" id="distDevBar"></div>
+                <div style="background: #FCF3CF; border-radius: 8px; height: 28px; overflow: hidden;">
+                    <div style="background: #F1C40F; height: 100%; width: 0%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: #4A3B00; font-size: 0.7rem; font-weight: 700;" id="distDevBar"></div>
                 </div>
             </div>
             <div style="display: grid; gap: 0.35rem;">
@@ -1627,8 +1628,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <span class="small text-secondary fw-bold" id="distTransCount">0 (0%)</span>
                 </div>
-                <div style="background: #dbeafe; border-radius: 8px; height: 28px; overflow: hidden;">
-                    <div style="background: #0284c7; height: 100%; width: 0%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;" id="distTransBar"></div>
+                <div style="background: #EAF4FC; border-radius: 8px; height: 28px; overflow: hidden;">
+                    <div style="background: #3498DB; height: 100%; width: 0%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;" id="distTransBar"></div>
                 </div>
             </div>
             <div style="display: grid; gap: 0.35rem;">
@@ -1639,8 +1640,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <span class="small text-secondary fw-bold" id="distGradeCount">0 (0%)</span>
                 </div>
-                <div style="background: #dcfce7; border-radius: 8px; height: 28px; overflow: hidden;">
-                    <div style="background: #16a34a; height: 100%; width: 0%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;" id="distGradeBar"></div>
+                <div style="background: #E8F5EC; border-radius: 8px; height: 28px; overflow: hidden;">
+                    <div style="background: #2EAD62; height: 100%; width: 0%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;" id="distGradeBar"></div>
                 </div>
             </div>
         </div>
@@ -2140,11 +2141,11 @@ function updateReadingLevelChart(levelCounts) {
             datasets: [{
                 data: chartData,
                 backgroundColor: [
-                    "#16a34a",  // Grade Level - Green
-                    "#0284c7",  // Transitioning - Blue
-                    "#d97706",  // Developing - Orange
-                    "#ea580c",  // High Emerging - Red Orange
-                    "#dc2626"   // Low Emerging - Red
+                    "#2EAD62",  // Grade Level - Green
+                    "#3498DB",  // Transitioning - Blue
+                    "#F1C40F",  // Developing - Yellow
+                    "#9B59B6",  // High Emerging - Purple
+                    "#E53935"   // Low Emerging - Red
                 ],
                 borderColor: "#fff",
                 borderWidth: 2,
