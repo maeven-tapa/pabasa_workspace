@@ -4093,6 +4093,12 @@
             if (dots) dots.setAttribute("aria-hidden", "true");
         }
 
+        async function waitForOfficialCrlaProcessingAudio() {
+            while (crlaProcessingAudioActive || crlaProcessingAudioQueue > 0) {
+                await new Promise((resolve) => window.setTimeout(resolve, 40));
+            }
+        }
+
         function syncPhraseMicrophoneButton() {
             if (!btnStartReading || !shell?.classList.contains("reader-phrase")) return;
 
@@ -4236,6 +4242,7 @@
                             syllableStitchingContextAt = Date.now();
                         } else resetSyllableStitching();
                         if (data.transcript) appendRawMicInput(window.SpeechDebug.format(data));
+                        if (isOfficialAssessmentLaunch && isCrla) await waitForOfficialCrlaProcessingAudio();
                         handleSpeechResult(data, context);
                         evaluated = true;
                     } finally {
@@ -5321,6 +5328,7 @@
                 if (data.transcript) {
                     appendRawMicInput(window.SpeechDebug.format(data));
                 }
+                if (isOfficialAssessmentLaunch && isCrla) await waitForOfficialCrlaProcessingAudio();
                 handleSpeechResult(data, context);
             } catch (error) {
                 console.warn("PABASA: Reading transcription failed", error);
