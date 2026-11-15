@@ -29,6 +29,21 @@ from pabasa_app.scoring import (
 
 
 class AssessmentWorkflowBranchingTests(TestCase):
+    def test_official_crla_processing_audio_plays_once_until_ended(self):
+        source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
+        status = source.split("function renderOfficialCrlaStatus()", 1)[1].split("function ", 1)[0]
+
+        self.assertIn("if (processing && !crlaProcessingAudioActive && !crlaProcessingAudioFinished)", status)
+        self.assertIn("processingAudio.onended = () =>", status)
+        self.assertIn("crlaProcessingAudioActive = false;", status)
+        self.assertNotIn("processingAudio.pause()", status)
+        self.assertNotIn("processingAudio.currentTime = 0;", status.split("processingAudio.onended", 1)[1])
+        self.assertIn("processing || processingAudioWaiting", status)
+        self.assertNotIn("crlaProcessingAudioFinished = false;", status)
+        start = source.split("const startReading =", 1)[1].split("btnStartReading?.addEventListener", 1)[0]
+        self.assertIn("if (!isRecording)", start)
+        self.assertIn("crlaProcessingAudioFinished = false;", start)
+
     def test_part1_classification_matches_official_boundaries(self):
         expected = {
             10: "Full Refresher",

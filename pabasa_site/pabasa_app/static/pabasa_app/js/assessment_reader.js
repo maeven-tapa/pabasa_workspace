@@ -522,6 +522,7 @@
         let speechFrameCount = 0;
         let speechChunkStartedAt = 0;
         let crlaProcessingAudioActive = false;
+        let crlaProcessingAudioFinished = false;
         // Multisyllable words need the same uninterrupted capture window as
         // longer reading modes. A short fixed chunk can stop after the first
         // syllable, and capture is paused while that chunk is sent to STT.
@@ -4042,18 +4043,31 @@
             helper.hidden = false;
             helper.classList.toggle("is-status-active", animated);
             helper.classList.toggle("is-status-processing", processing);
-            if (processingOverlay) processingOverlay.hidden = !processing;
             if (processingAudio) {
-                if (processing && !crlaProcessingAudioActive) {
+                if (processing && !crlaProcessingAudioActive && !crlaProcessingAudioFinished) {
                     crlaProcessingAudioActive = true;
                     processingAudio.currentTime = 0;
-                    processingAudio.play().catch(() => {});
-                } else if (!processing && crlaProcessingAudioActive) {
-                    crlaProcessingAudioActive = false;
-                    processingAudio.pause();
-                    processingAudio.currentTime = 0;
+                    processingAudio.onended = () => {
+                        crlaProcessingAudioActive = false;
+                        crlaProcessingAudioFinished = true;
+                        renderOfficialCrlaStatus();
+                    };
+                    processingAudio.onerror = () => {
+                        crlaProcessingAudioActive = false;
+                        crlaProcessingAudioFinished = true;
+                        renderOfficialCrlaStatus();
+                    };
+                    processingAudio.play().catch(() => {
+                        crlaProcessingAudioActive = false;
+                        crlaProcessingAudioFinished = true;
+                        renderOfficialCrlaStatus();
+                    });
                 }
             }
+            const processingAudioWaiting = Boolean(
+                !processing && crlaProcessingAudioActive && !crlaProcessingAudioFinished
+            );
+            if (processingOverlay) processingOverlay.hidden = !(processing || processingAudioWaiting);
             if (text) {
                 if (text.dataset.waveStatus !== status) {
                     text.replaceChildren();
@@ -8369,6 +8383,10 @@
             }
             startAssessmentTimer();
             if (!isRecording) {
+                if (isOfficialAssessmentLaunch && isCrla) {
+                    crlaProcessingAudioActive = false;
+                    crlaProcessingAudioFinished = false;
+                }
                 isRecording = true;
                 spokenTranscript = "";
                 correctWordCounts = new Array(items.length).fill(0);
