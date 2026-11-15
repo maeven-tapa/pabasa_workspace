@@ -33,6 +33,12 @@ for the complete pipeline, including failures before deployment.
    verified revision only after all checks pass. Keep previous revisions for
    traffic rollback. Do not automatically reverse database migrations.
 
+The build identity also needs
+`projects/pabasa-web/roles/pabasaReleaseBuildRead`, containing only
+`cloudbuild.builds.get` and `cloudbuild.builds.list`, to check build ordering
+before promotion. The existing Artifact Registry writer, Cloud Run admin,
+service account user and logging writer bindings remain in place.
+
 The web image retains both startup guards: recorded migration readiness and
 `migrate --check`. Speech project selection is read directly from runtime
 environment settings; the build does not rewrite application source.
