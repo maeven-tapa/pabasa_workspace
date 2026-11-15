@@ -9,7 +9,8 @@ import deploy_checked_release as deploy
 
 
 class DeploymentTests(unittest.TestCase):
-    def run_release(self, *, bad_digest=False, http_error=False, job_error=False, stale=False):
+    def run_release(self, *, bad_digest=False, http_error=False, job_error=False, stale=False,
+                    service='service'):
         image = 'registry.test/project/app@sha256:' + 'a' * 64
         self.commands = []
 
@@ -19,7 +20,7 @@ class DeploymentTests(unittest.TestCase):
                 return {'spec': {'template': {'metadata': {'annotations': {}}, 'spec': {
                     'serviceAccountName': 'runtime@example.test', 'containers': [{'image': image}]}}},
                     'status': {'url': 'https://service.run.app', 'traffic': [
-                        {'revisionName': 'service-b12345678', 'percent': 100}]}}
+                        {'revisionName': service + '-b12345678', 'percent': 100}]}}
             if args[:3] == ['run', 'revisions', 'describe']:
                 return {'status': {'imageDigest': 'wrong' if bad_digest else image,
                                    'conditions': [{'type': 'Ready', 'status': 'True'}]}}
@@ -37,7 +38,7 @@ class DeploymentTests(unittest.TestCase):
             response = MagicMock()
             response.__enter__.return_value.status = 200
             response.__enter__.return_value.read.return_value = b'<html>healthy</html>'
-            argv = ['deploy', '--project=project', '--region=region', '--service=service',
+            argv = ['deploy', '--project=project', '--region=region', '--service=' + service,
                     '--commit=' + 'b' * 40, '--build=12345678-build', '--image-file=' + str(path)]
             with patch.object(sys, 'argv', argv), patch.object(deploy, 'cli', side_effect=cli), \
                     patch.object(deploy.urllib.request, 'urlopen',
@@ -54,6 +55,13 @@ class DeploymentTests(unittest.TestCase):
         self.assertIn('--no-traffic', stage)
         self.assertTrue(any(arg.startswith('--image=registry.test/project/app@sha256:') for arg in stage))
         self.assertTrue(any(args[:3] == ['run', 'services', 'update-traffic'] for args in self.commands))
+
+    def test_production_service_verification_tag_fits_cloud_run_limit(self):
+        service = 'pabasa-workspace-deployment--trigger'
+        self.run_release(service=service)
+        stage = next(args for args in self.commands if args[:3] == ['run', 'services', 'update'])
+        tag = next(arg.split('=', 1)[1] for arg in stage if arg.startswith('--tag='))
+        self.assertLessEqual(len(service) + len(tag), 46)
 
     def test_wrong_digest_is_never_promoted(self):
         with self.assertRaises(RuntimeError):

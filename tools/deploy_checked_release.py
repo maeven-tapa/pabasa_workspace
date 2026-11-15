@@ -22,7 +22,11 @@ def main():
         raise ValueError('A verified immutable image digest is required.')
     flags = ['--project=' + args.project, '--region=' + args.region, '--quiet']
     source = cli(['run', 'services', 'describe', args.service, *flags, '--format=json'], json_result=True)
-    tag = 'check-' + args.build[:8]
+    # Cloud Run limits the combined service name and traffic tag to 46 chars.
+    tag_length = 46 - len(args.service)
+    if tag_length < 5:
+        raise ValueError('The service name leaves insufficient space for a unique verification tag.')
+    tag = 'b' + args.build[:min(8, tag_length - 1)]
     host = tag + '---' + urlsplit(source['status']['url']).hostname
     revision = args.service + '-b' + args.build[:8]
     labels = 'managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=' + args.commit + ',gcb-build-id=' + args.build
