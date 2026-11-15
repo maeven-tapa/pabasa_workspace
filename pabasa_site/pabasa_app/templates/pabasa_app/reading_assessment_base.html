@@ -635,6 +635,16 @@
             opacity: 0.4;
         }
 
+        /* Evaluation may complete before its processing overlay. Keep correct
+           words visually neutral until the learner sees processing finish. */
+        .reader-card:has(> #crlaProcessingOverlay:not([hidden])) .reading-word .syllable.is-read,
+        .reader-card:has(> #crlaProcessingOverlay:not([hidden])) .reading-word .story-word.is-correct {
+            background: transparent !important;
+            background-image: none !important;
+            color: inherit !important;
+            box-shadow: none !important;
+        }
+
         .crla-processing-spinner {
             box-sizing: border-box;
             width: 30px;
