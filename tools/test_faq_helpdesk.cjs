@@ -28,7 +28,7 @@ test('normalizes case, extra whitespace, punctuation and accents', () => {
 });
 test('finds real question, answer, topic, and keyword content', () => {
     assert(filterRecords(records, 'microphone').some(record => record.id === 'help-oral-reading'));
-    assert(filterRecords(records, 'PABASA ID').some(record => record.id === 'help-account-access'));
+    assert(filterRecords(records, 'PAGBASA ID').some(record => record.id === 'help-account-access'));
     assert(filterRecords(records, 'session 9 drawings').some(record => record.id === 'help-automatic-checking'));
     assert.equal(filterRecords(records, 'Getting Started').length, 4);
     assert(filterRecords(records, 'brownout').some(record => record.id === 'help-interrupted-assessment'));

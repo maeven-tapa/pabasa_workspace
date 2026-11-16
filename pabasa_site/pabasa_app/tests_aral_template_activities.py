@@ -80,7 +80,7 @@ class DedicatedAralTemplateActivityTests(TestCase):
         self.assertContains(response, "Read the context clue.")
         self.assertContains(response, "word-meaning-activity-data")
         self.assertNotContains(response, "/reading_ui/")
-        self.assertNotContains(response, "What is PABASA")
+        self.assertNotContains(response, "What is PAGBASA")
 
     def test_fluency_route_is_selected_by_slug_not_editable_title_or_item_type(self):
         material = self.make_material(

@@ -1,8 +1,8 @@
-# PABASA agent instructions
+# PAGBASA agent instructions
 
 ## Repository and local development
 
-- PABASA is a Django reading assessment and guided practice application for
+- PAGBASA is a Django reading assessment and guided practice application for
   students, teachers, and school administrators.
 - Use Python 3.13 and the dependencies in `requirements.txt`.
 - Run commands from the repository root. The Django entry point is

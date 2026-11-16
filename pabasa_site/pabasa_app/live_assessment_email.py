@@ -140,7 +140,7 @@ class _SummaryEmail(EmailMultiAlternatives):
         logo = _logo_bytes()
         if html is not None and logo:
             html.add_related(logo, maintype='image', subtype='png',
-                cid='<pabasa-live-summary-logo>', filename='pabasa-logo.png', disposition='inline')
+                cid='<pabasa-live-summary-logo>', filename='pagbasa-logo.png', disposition='inline')
         return message
 
 

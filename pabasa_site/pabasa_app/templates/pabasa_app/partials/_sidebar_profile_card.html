@@ -15,7 +15,7 @@
             {{ initials|default:'P' }}
         {% endif %}
     </a>
-    <div class="signature-name sidebar-profile-name">{% if user_full_name %}{{ user_full_name }}{% else %}PABASA User{% endif %}</div>
+    <div class="signature-name sidebar-profile-name">{% if user_full_name %}{{ user_full_name }}{% else %}PAGBASA User{% endif %}</div>
     <div class="signature-section sidebar-profile-section">
         {% with current_section=joined_classes|first %}
             {% if current_section.name %}{{ current_section.name }}{% elif current_section.code %}{{ current_section.code }}{% else %}No section assigned{% endif %}

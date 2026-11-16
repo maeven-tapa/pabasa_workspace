@@ -1,237 +1,34 @@
 {% load static %}
 <!doctype html>
-<html lang="en">
+<html lang="fil">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Learner Experience Rating | PABASA</title>
-    <style>
-
-
-        :root {
-            --ink: #234b3b;
-            --ink-soft: #527462;
-            --selected: #e4b83f;
-        }
-
-        * { box-sizing: border-box; }
-
-        html,
-        body {
-            min-height: 100%;
-            margin: 0;
-        }
-
-        body {
-            align-items: center;
-            background: linear-gradient(135deg, #fff8df 0%, #e6f3e9 100%);
-            color: var(--ink);
-            display: grid;
-            font-family: var(--font-family-primary);
-            min-height: 100vh;
-            overflow-x: hidden;
-            padding: 3vh 4vw;
-        }
-
-        .board {
-            align-items: center;
-            display: flex;
-            height: 100%;
-            justify-content: center;
-            margin: auto;
-            position: relative;
-            width: 100%;
-        }
-
-        .board-content {
-            align-items: center;
-            display: flex;
-            flex-direction: column;
-            gap: clamp(1rem, 2.4vh, 1.65rem);
-            height: auto;
-            justify-content: center;
-            padding: 4vh 0 2vh;
-            text-align: center;
-            transform: translateY(2vh);
-            width: min(1240px, 100%);
-        }
-
-        h1 {
-            color: var(--ink);
-            font-family: var(--font-family-primary);
-            font-size: clamp(2.1rem, 5vw, 4.4rem);
-            line-height: 1;
-            margin: 0;
-        }
-
-        .instruction {
-            color: var(--ink-soft);
-            font-size: clamp(1.3rem, 2.7vw, 2.25rem);
-            font-weight: 400;
-            margin: 0.45rem 0 0;
-        }
-
-        .rating-form {
-            align-items: stretch;
-            display: flex;
-            gap: clamp(0.55rem, 1.2vw, 1rem);
-            justify-content: center;
-            max-width: 1120px;
-            width: 100%;
-        }
-
-        .rating-option {
-            align-items: center;
-            background: #fffefa;
-            border: 2px solid #d5e6e3;
-            border-radius: 22px;
-            color: var(--ink);
-            cursor: pointer;
-            display: flex;
-            flex: 1 1 0;
-            flex-direction: column;
-            gap: 0.35rem;
-            min-width: 0;
-            min-height: 240px;
-            padding: 0.85rem 0.55rem 1rem;
-            box-shadow: 0 8px 20px rgba(35,75,59,.08);
-            transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
-        }
-
-        .rating-option:hover,
-        .rating-option:focus-visible {
-            background: #f4fbff;
-            border-color: #8fc3da;
-            outline: none;
-            transform: translateY(-4px);
-        }
-
-        .rating-option:focus-visible {
-            box-shadow: 0 0 0 3px rgba(35, 75, 59, 0.25);
-        }
-
-        .rating-option.is-selected {
-            background: #fffbea;
-            border-color: var(--selected);
-            box-shadow: 0 0 0 4px rgba(228, 184, 63, 0.25), 0 12px 24px rgba(35,75,59,.12);
-            transform: translateY(-4px);
-        }
-
-        .rating-pip {
-            display: block;
-            flex: none;
-            width: min(100%, 130px);
-            aspect-ratio: 3 / 4;
-            background-image: url("{% static 'pabasa_app/images/learner_experience/pip_reactions.png' %}");
-            background-position: var(--pip-position) center;
-            background-repeat: no-repeat;
-            background-size: 500% auto;
-        }
-        .rating-option[data-rating="1"] { --pip-position: 0%; }
-        .rating-option[data-rating="2"] { --pip-position: 25%; }
-        .rating-option[data-rating="3"] { --pip-position: 50%; }
-        .rating-option[data-rating="4"] { --pip-position: 75%; }
-        .rating-option[data-rating="5"] { --pip-position: 100%; }
-
-        .rating-label {
-            color: var(--ink);
-            font-family: var(--font-family-primary);
-            font-size: clamp(1rem, 1.5vw, 1.3rem);
-            font-weight: 700;
-            line-height: 1.2;
-        }
-        .rating-number { color:#527462; font:800 .85rem var(--font-family-primary); }
-
-        .continue-button {
-            background: #e4b83f;
-            border: 0;
-            border-radius: 999px;
-            box-shadow: 0 5px 10px rgba(10, 30, 20, 0.25);
-            color: #234b3b;
-            cursor: pointer;
-            font: 400 clamp(1.15rem, 2vw, 1.7rem) var(--font-family-primary);
-            min-height: 3.2rem;
-            padding: 0.65rem 2.5rem;
-            transition: filter 160ms ease, transform 160ms ease;
-        }
-
-        .continue-button:not(:disabled):hover,
-        .continue-button:not(:disabled):focus-visible {
-            filter: brightness(1.08);
-            outline: 3px solid rgba(35, 75, 59, 0.25);
-            outline-offset: 2px;
-            transform: translateY(-2px);
-        }
-
-        .continue-button:disabled {
-            cursor: not-allowed;
-            opacity: 0.48;
-        }
-
-        @media (max-width: 700px) {
-            body { padding: 1.5rem .75rem; }
-
-            .board-content {
-                gap: 1.1rem;
-                height: auto;
-                padding: 3vh 0 1vh;
-                width: 100%;
-            }
-
-            .rating-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; }
-            .rating-option { min-height:190px; padding:.6rem .35rem; }
-            .rating-option:last-child { grid-column:1 / -1; width:min(100%,240px); justify-self:center; }
-            .rating-pip { width:min(100%,110px); }
-            .continue-button { min-height: 2.7rem; padding: 0.45rem 1.5rem; }
-        }
-        @media (prefers-reduced-motion: reduce) { .rating-option, .continue-button { transition:none; } }
-    </style>
-{% include "pabasa_app/includes/typography.html" %}
+    <title>Learner Experience Rating | PAGBASA</title>
+    {% include "pabasa_app/includes/typography.html" %}
+    <link rel="stylesheet" href="{% static 'pabasa_app/css/learner_experience.css' %}">
 </head>
-<body>
-    <main class="board" aria-labelledby="page-title">
-        <div class="board-content">
-            <header>
+<body style="margin: 0">
+    <main class="learner-experience" aria-labelledby="page-title">
+        <div class="learner-experience-content">
+            <header class="learner-experience-heading">
                 <h1 id="page-title">Ano ang pakiramdam mo sa pagbasa?</h1>
-                <p class="instruction">Piliin ang Pip na katulad ng naramdaman mo.</p>
+                <p class="learner-experience-instruction">Piliin ang mukha na katulad ng naramdaman mo.</p>
             </header>
-
-            <div class="rating-form" role="radiogroup" aria-label="How did the reading feel for you?">
-                {% for rating in "12345" %}
-                <button class="rating-option" type="button" role="radio" aria-checked="false" data-rating="{{ rating }}">
-                    <span class="rating-pip" aria-hidden="true"></span>
-                    <span class="rating-label">{% if rating == '1' %}Nahirapan ako{% elif rating == '2' %}Medyo nahirapan ako{% elif rating == '3' %}Okay lang{% elif rating == '4' %}Madali lang{% else %}Ang saya ko!{% endif %}</span>
-                    <span class="rating-number">{{ rating }} / 5</span>
-                </button>
-                {% endfor %}
-            </div>
-
-            <button class="continue-button" id="continueButton" type="button" disabled>Continue</button>
+            {% include "pabasa_app/partials/_learner_experience_choices.html" only %}
+            <button class="rating-continue" id="continueButton" type="button" lang="en" disabled>Continue</button>
         </div>
     </main>
-
     <script>
         (() => {
-            const options = Array.from(document.querySelectorAll(".rating-option"));
+            const choices = document.querySelector(".rating-form");
             const continueButton = document.getElementById("continueButton");
-            let selectedRating = null;
-
-            options.forEach((option) => {
-                option.addEventListener("click", () => {
-                    selectedRating = option.dataset.rating;
-                    options.forEach((item) => {
-                        const isSelected = item === option;
-                        item.classList.toggle("is-selected", isSelected);
-                        item.setAttribute("aria-checked", String(isSelected));
-                    });
-                    continueButton.disabled = false;
-                });
+            choices.addEventListener("change", () => {
+                continueButton.disabled = !choices.querySelector(".rating-input:checked");
             });
-
             continueButton.addEventListener("click", () => {
-                if (selectedRating) {
-                    console.log(`Learner Experience rating selected: ${selectedRating}`);
-                }
+                const selected = choices.querySelector(".rating-input:checked");
+                if (selected) console.log(`Learner Experience rating selected: ${selected.value}`);
             });
         })();
     </script>

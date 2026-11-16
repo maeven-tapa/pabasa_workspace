@@ -72,7 +72,9 @@ def run():
             response = clients[index].getresponse()
             body = response.read()
             status = response.status
-            ok = status == 200 and (b'PABASA Dashboard' in body if name == 'dashboard'
+            ok = status == 200 and (any(
+                title in body for title in (b'PAGBASA Dashboard', b'PABASA Dashboard')
+            ) if name == 'dashboard'
                                    else json.loads(body).get('success') is True)
             if not ok: error = 'UnexpectedStatusOrContent'
         except Exception as exc:

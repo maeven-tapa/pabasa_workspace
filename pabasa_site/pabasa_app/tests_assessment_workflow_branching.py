@@ -716,7 +716,7 @@ class AssessmentWorkflowBranchingTests(TestCase):
     def test_rating_save_is_integer_bounded_and_failure_safe(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")
         rating = source.split("async function saveLearnerExperienceRating", 1)[1].split("function startCRLASpokenAttempt", 1)[0]
-        template = (Path(__file__).parent / "templates" / "pabasa_app" / "learner_experience_rating.html").read_text(encoding="utf-8")
+        template = (Path(__file__).parent / "templates" / "pabasa_app" / "partials" / "_learner_experience_choices.html").read_text(encoding="utf-8")
         self.assertIn('{% for rating in "12345" %}', template)
         self.assertIn("Number.parseInt(rating, 10)", rating)
         self.assertIn("selectedRating < 1 || selectedRating > 5", rating)
@@ -724,6 +724,16 @@ class AssessmentWorkflowBranchingTests(TestCase):
         self.assertIn("deferLocalStorage: true", rating)
         self.assertIn("We could not save your rating. Please try again.", rating)
         self.assertIn("learnerExperienceContinue.disabled = false", rating)
+
+    def test_rating_preview_renders_the_shared_five_point_scale(self):
+        response = self.client.get(reverse("learner_experience_rating"))
+        self.assertContains(response, 'name="learner-experience"', count=5)
+        labels = ("Nahirapan ako", "Medyo nahirapan ako", "Okay lang", "Madali lang", "Ang saya ko!")
+        for value, label in enumerate(labels, start=1):
+            with self.subTest(value=value):
+                self.assertContains(response, f'name="learner-experience" value="{value}"', count=1)
+                self.assertContains(response, f'learner_experience/face-{value}.webp', count=1)
+                self.assertContains(response, f'class="rating-label">{label}</span>')
 
     def test_official_story_choices_have_stable_one_based_keys(self):
         source = (Path(__file__).parent / "static" / "pabasa_app" / "js" / "assessment_reader.js").read_text(encoding="utf-8")

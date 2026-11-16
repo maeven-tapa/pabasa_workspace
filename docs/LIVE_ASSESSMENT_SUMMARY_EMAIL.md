@@ -14,7 +14,7 @@ scoring and scheduling are unchanged. Other email templates and both PDF report
 renderers are untouched.
 
 The email still uses Django's configured mail backend and SMTP failover. The
-existing PABASA PNG is embedded as a related MIME image inside the HTML
+existing PAGBASA PNG is embedded as a related MIME image inside the HTML
 alternative, retaining the plain-text alternative. This avoids a remote image
 request for the normal logo. If the local asset is unavailable, the existing
 first-party image URL and accessible alternative text are used.

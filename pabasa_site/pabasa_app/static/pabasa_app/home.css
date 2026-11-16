@@ -1,11 +1,11 @@
 /* ============================================================
-   PABASA HOME CSS — Child-friendly, Blue + Yellow, Educational
+   PAGBASA HOME CSS — Child-friendly, Blue + Yellow, Educational
    ============================================================ */
 
 :root {
     color-scheme: light;
 
-    /* Core palette — PABASA brand colors */
+    /* Core palette — PAGBASA brand colors */
     --pabasa-blue-deep:   #10466E;   /* deep navy blue */
     --pabasa-blue:        #2EA8E5;   /* bright sky blue */
     --pabasa-blue-mid:    #3AAEEA;
@@ -754,7 +754,7 @@ h1, h2, h3, h4 {
 .section-container-3 { background: #FFFFFF; }
 .section-container-4 { background: rgba(245, 248, 251, 0.82); }
 
-/* Animated home-section atmosphere: varied, coordinated PABASA blue themes. */
+/* Animated home-section atmosphere: varied, coordinated PAGBASA blue themes. */
 .section-container {
     isolation: isolate;
     overflow: hidden;
@@ -4220,7 +4220,7 @@ section.pb-md-5 h2::after {
     }
 }
 
-/* Inside PABASA hero, scoped to the opening section. */
+/* Inside PAGBASA hero, scoped to the opening section. */
 .inside-pabasa-hero {
     background: linear-gradient(160deg, #f8fcff 0%, #eaf7fd 58%, #f9fcff 100%);
 }

@@ -1,7 +1,7 @@
 {% load static %}
 <!doctype html><html lang="{% if workbook_payload.activity.language == 'English' %}en{% else %}fil{% endif %}">
 <head>{% include 'pabasa_app/basahin_script.html' %}<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{{ workbook_payload.activity.section_display_label|default:workbook_payload.activity.display_label }} | PABASA</title>
+<title>{{ workbook_payload.activity.section_display_label|default:workbook_payload.activity.display_label }} | PAGBASA</title>
 <link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_workbook.css' %}">
 	{% if workbook_payload.activity.activity_key == 'aral-l22-g1-c-syllable-builder' %}<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l22_c_builder.css' %}?v=20261007-l22-g1-result-audio-only-1"><link rel="stylesheet" href="{% static 'pabasa_app/css/lesson_start_modal.css' %}">{% elif workbook_payload.activity.specialized_builder %}<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l22_c_builder.css' %}">{% endif %}
 	{% if workbook_payload.activity.activity_key == 'aral-l24-g1-v-syllable-builder' %}<link rel="stylesheet" href="{% static 'pabasa_app/css/prescribed_l24_g1_builder.css' %}">{% endif %}

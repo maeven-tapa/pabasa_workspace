@@ -89,10 +89,10 @@ class LiveSummaryPresentationTests(SimpleTestCase):
         html = render_summary_email(*args)
         text = _Text(html).text
         for value in ['Salawag', 'Sample Teacher', 'Sample Section', 'Grade 2', 'Session duration',
-                      'Session status', 'PABASA ID:', 'None', 'nan', 'undefined']:
+                      'Session status', 'PAGBASA ID:', 'None', 'nan', 'undefined']:
             self.assertNotIn(value, text)
         self.assertIn('Reading Activity', text)
-        self.assertIn('PABASA classroom session', text)
+        self.assertIn('PAGBASA classroom session', text)
 
     def test_full_participation_does_not_change_actual_session_status(self):
         session, completed, missed, ended = sample_session(1, 1)
@@ -146,7 +146,7 @@ class LiveSummaryPresentationTests(SimpleTestCase):
         self.assertIn('max-width:660px', html)
         self.assertIn('@media only screen', html)
         self.assertIn('bgcolor="#0866ad"', html)
-        self.assertIn('alt="PABASA"', html)
+        self.assertIn('alt="PAGBASA"', html)
         self.assertIn('width="198" height="66"', html)
 
     def test_no_individual_academic_scores_are_added(self):
@@ -179,7 +179,7 @@ class LiveSummaryPresentationTests(SimpleTestCase):
     def test_missing_logo_asset_uses_existing_first_party_url_and_alt(self, _logo):
         html = render_summary_email(*sample_session())
         self.assertNotIn('cid:', html)
-        self.assertIn('alt="PABASA"', html)
+        self.assertIn('alt="PAGBASA"', html)
         self.assertIn('/pabasa_app/images/pabasa_logo.png', html)
 
 

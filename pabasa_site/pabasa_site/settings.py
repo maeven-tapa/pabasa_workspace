@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+from email.utils import formataddr, parseaddr
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -185,6 +186,13 @@ if DJANGO_ENV == 'production':
     SECURE_SSL_REDIRECT = True
 
 # SMTP settings. Cloud Run supplies the password through Secret Manager.
+def _branded_sender(value):
+    display_name, address = parseaddr(value)
+    if address and (not display_name or display_name.casefold() == 'pabasa'):
+        return formataddr(('PAGBASA', address))
+    return value
+
+
 EMAIL_BACKEND = 'pabasa_site.email_backend.FallbackSMTPBackend'
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = 587
@@ -192,16 +200,14 @@ EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'pabasa.tupc@gmail.com')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'pabasa.tupc@gmail.com')
+DEFAULT_FROM_EMAIL = _branded_sender(os.environ.get('DEFAULT_FROM_EMAIL', 'pabasa.tupc@gmail.com'))
 EMAIL_TIMEOUT = 15
 
 # A separate secret enables Gmail fallback; never reuse Brevo's SMTP key here.
 EMAIL_BACKUP_HOST = os.environ.get('EMAIL_BACKUP_HOST', 'smtp.gmail.com')
 EMAIL_BACKUP_HOST_USER = os.environ.get('EMAIL_BACKUP_HOST_USER', 'pabasa.tupc@gmail.com')
 EMAIL_BACKUP_HOST_PASSWORD = os.environ.get('EMAIL_BACKUP_HOST_PASSWORD', '')
-EMAIL_BACKUP_FROM_EMAIL = os.environ.get(
-    'EMAIL_BACKUP_FROM_EMAIL', 'PABASA <pabasa.tupc@gmail.com>'
-)
+EMAIL_BACKUP_FROM_EMAIL = _branded_sender(os.environ.get('EMAIL_BACKUP_FROM_EMAIL', 'pabasa.tupc@gmail.com'))
 
 # Google Cloud Speech-to-Text settings used by the reading assessment UI.
 GOOGLE_STT_API_KEY = os.environ.get('GOOGLE_API_KEY', '')

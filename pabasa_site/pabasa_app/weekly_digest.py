@@ -320,7 +320,7 @@ def render_digest_text(digest):
     name = _student_label(user)
     start = digest["start"].date().isoformat()
     end = (digest["end"] - timedelta(days=1)).date().isoformat()
-    lines = [f"Hello {name},", "", f"Here is your PABASA weekly digest for {start} to {end}.", ""]
+    lines = [f"Hello {name},", "", f"Here is your PAGBASA weekly digest for {start} to {end}.", ""]
 
     if digest["role"] == "teacher":
         lines.extend([
@@ -366,7 +366,7 @@ def render_digest_text(digest):
             digest["encouraging_message"],
         ])
 
-    lines.extend(["", "Thank you,", "The PABASA Team"])
+    lines.extend(["", "Thank you,", "The PAGBASA Team"])
     return "\n".join(lines)
 
 
@@ -501,7 +501,7 @@ def render_digest_html(digest):
                     <tr>
                         <td class="mobile-padding" style="padding: 28px 30px; background: linear-gradient(135deg, #10466E 0%, #2EA8E5 72%, #FFD639 100%);">
                             {email_logo_html()}
-                            <h1 style="margin: 14px 0 0; color: #ffffff; font-size: 26px; line-height: 34px;">Your Weekly PABASA Digest</h1>
+                            <h1 style="margin: 14px 0 0; color: #ffffff; font-size: 26px; line-height: 34px;">Your Weekly PAGBASA Digest</h1>
                             <p style="margin: 8px 0 0; color: rgba(255,255,255,0.86); font-size: 14px; line-height: 22px;">{escape(start)} to {escape(end)}</p>
                         </td>
                     </tr>
@@ -522,7 +522,7 @@ def render_digest_html(digest):
                     <tr>
                         <td align="center" style="padding: 22px 24px 28px; color: #60777b; font-size: 12px; line-height: 20px;">
                             {email_logo_html(width=144)}<br>
-                            Copyright &copy; {system_now().year} PABASA. This email was generated automatically from your account activity.
+                            Copyright &copy; {system_now().year} PAGBASA. This email was generated automatically from your account activity.
                         </td>
                     </tr>
                 </table>
@@ -561,7 +561,7 @@ def send_weekly_digest(user, start, end, dry_run=False, force=False):
 
     body = render_digest_text(digest)
     html_body = render_digest_html(digest)
-    subject = "Your Weekly PABASA Digest"
+    subject = "Your Weekly PAGBASA Digest"
     if not dry_run:
         send_mail(
             subject,

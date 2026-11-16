@@ -149,7 +149,7 @@ class ParentReportPresentationTests(SimpleTestCase):
                     if 'NEXT STEPS' in text:
                         self.assertIn(report['recommendations'][0], ' '.join(text.split()),
                                       'The recommendation key must stay with the first action.')
-                    body = text[:text.rfind('PABASA  /  Reading development, together')].strip()
+                    body = text[:text.rfind('PAGBASA  /  Reading development, together')].strip()
                     for label in ['CRLA PROGRESS HISTORY', 'SUPPLEMENTARY ARAL ACTIVITIES',
                                   'ARAL WORKBOOK PERFORMANCE', 'READING SKILLS PRACTICED THROUGH SUPPLEMENTARY ACTIVITIES',
                                   'READING PROGRESS', "TEACHER'S NOTE", 'NEXT STEPS',

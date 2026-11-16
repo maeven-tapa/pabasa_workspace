@@ -1,0 +1,30 @@
+<tr role="row"{% if student %} data-student-id="{{ student.id }}" data-last-name="{{ student.last_name|default:'' }}" data-first-name="{{ student.first_name|default:'' }}" data-middle-initial="{{ student.middle_initial|default:'' }}"{% endif %}>
+    <td role="cell">
+        <div class="monitor-student">
+            <span class="monitor-student-avatar" aria-hidden="true">{{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}</span>
+            <div class="monitor-student-profile">
+                <div class="monitor-student-name">{% if student %}{{ student.crla_display_name|default:student.full_name }}{% endif %}</div>
+                <div class="monitor-student-id">{{ student.custom_id }}</div>
+            </div>
+        </div>
+    </td>
+    <td role="cell" class="monitor-status-cell">
+        <span class="monitor-row-status" data-status-col="{{ student.id }}">Waiting</span>
+    </td>
+    <td role="cell" data-label="Progress">
+        <div class="monitor-progress-track">
+            <div class="monitor-progress-fill" role="progressbar" aria-label="Assessment progress" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-progress-bar="{{ student.id }}"></div>
+        </div>
+        <div class="monitor-stage" data-progress-text="{{ student.id }}">—</div>
+    </td>
+    <td role="cell" class="monitor-student-time" data-label="Time" data-elapsed-col="{{ student.id }}">—</td>
+    <td role="cell" class="monitor-reading-level" data-label="Reading level" data-reading-level-col="{{ student.id }}">—</td>
+    <td role="cell" class="monitor-control" data-label="Control">
+        <span class="monitor-no-action"><span aria-hidden="true">—</span><span class="visually-hidden">No action available</span></span>
+        <button type="button" class="monitor-action" data-student-pause hidden>
+            <i class="bi bi-pause-fill" aria-hidden="true"></i>
+            <span class="monitor-button-spinner" aria-hidden="true" hidden></span>
+            <span data-monitor-action-label>Pause</span>
+        </button>
+    </td>
+</tr>

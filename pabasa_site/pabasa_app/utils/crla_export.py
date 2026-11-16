@@ -1,4 +1,4 @@
-"""Export Pabasa assessment results into the official CRLA workbook."""
+"""Export Pagbasa assessment results into the official CRLA workbook."""
 
 from __future__ import annotations
 
@@ -357,14 +357,15 @@ def _completed_part2_score_data(score_data, state=None):
     return has_reading and has_comprehension
 
 
-def _row_formulas(row):
+def _row_formulas(row, story_total_words=None):
+    passage_word_count = story_total_words or f'IF(K{row}=2,$P$7,$M$7)'
     return {
         "I": f'=IF(AND(F{row}="",G{row}="",H{row}=""),"",SUM(F{row}:H{row}))',
         "J": f'=IF(I{row}="","",IF(I{row}<=10,"Full Refresher",IF(I{row}<17,"Moderate Refresher",IF(I{row}<27,"Light Refresher","Grade Ready"))))',
         "P": f'=IF(AND(K{row}<>"",M{row}<>"",OR(N{row}>0,O{row}>0)),(M{row}/((N{row}*60)+O{row}))*60,"")',
         # A blank Part 2 row must remain blank in Excel.  Without this guard,
         # a blank M cell is treated as zero and produces a misleading 0%.
-        "Q": f'=IF(AND(K{row}<>"",M{row}<>""),IFERROR(M{row}/IF(K{row}=2,$P$7,$M$7),""),"")',
+        "Q": f'=IF(AND(K{row}<>"",M{row}<>""),IFERROR(M{row}/{passage_word_count},""),"")',
     }
 
 
@@ -575,6 +576,7 @@ def _student_values(student, attempt, state, assessment):
         "part_1_total": part_1_total,
         "part_1_reading_level": _part_1_reading_level(part_1_total),
         "story_number": story_number,
+        "story_total_words": raw_total_words,
         "miscues": miscues,
         "total_words_read": story_words_read,
         "reading_minutes": minutes,
@@ -652,7 +654,7 @@ def export_crla_excel(assessment_id, section_id=None, crla_term=None, crla_phase
     male_count = sum(str(student.sex or "").strip().lower() == "male" for student in students)
     female_count = sum(str(student.sex or "").strip().lower() == "female" for student in students)
     school_values = {
-        # C3 is the CRLA administration period, not Pabasa's content type
+        # C3 is the CRLA administration period, not Pagbasa's content type
         # (word/sentence/paragraph). Default to BoSY when no school preference
         # has been configured.
         "assessment_type": _profile_value(
@@ -670,6 +672,7 @@ def export_crla_excel(assessment_id, section_id=None, crla_term=None, crla_phase
     for field, cell in SCHOOL_CELLS.items():
         worksheet[cell] = school_values[field]
 
+    is_eosy = crla_phase == "posttest" or assessment.system_assessment_key == "eosy_crla_posttest"
     for offset, student in enumerate(students):
         row = STUDENT_START_ROW + offset
         values = _student_values(
@@ -678,9 +681,11 @@ def export_crla_excel(assessment_id, section_id=None, crla_term=None, crla_phase
             _student_end_state(student, material_ids),
             assessment,
         )
+        # Earlier EoSY attempts can use the opposite numbering for the same passages.
+        formulas = _row_formulas(row, values["story_total_words"] if is_eosy else None)
         for field, column in STUDENT_COLUMNS.items():
             if column in FORMULA_COLUMNS:
-                worksheet[f"{column}{row}"] = _row_formulas(row)[column]
+                worksheet[f"{column}{row}"] = formulas[column]
                 continue
             worksheet[f"{column}{row}"] = values[field]
 

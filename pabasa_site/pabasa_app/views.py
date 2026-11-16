@@ -954,13 +954,13 @@ def _set_profile_dict(user, key, profile_dict):
 def _email_verification_message(code):
     return (
         'Hello!\n\n'
-        'We received a request to update the email address associated with your PABASA account.\n\n'
+        'We received a request to update the email address associated with your PAGBASA account.\n\n'
         'To verify your new email address, please enter the verification code below:\n\n'
         f'{code}\n\n'
         'This code will expire in 10 minutes.\n\n'
         'If you did not request this change, you can safely ignore this email. '
         'Your current email address will remain unchanged.\n\n'
-        'Thank you,\nThe PABASA Team'
+        'Thank you,\nThe PAGBASA Team'
     )
 
 
@@ -1782,7 +1782,7 @@ def _section_has_student(section, user, active_only=True):
 
 
 def _display_user_name(user):
-    """Build a display name for the custom PABASA User model."""
+    """Build a display name for the custom PAGBASA User model."""
     if not user:
         return ''
     parts = [
@@ -1976,9 +1976,9 @@ def _create_notification(recipient, title, message, notification_type='info', ac
                 email_body if email_body is not None else message,
                 [recipient.email],
                 heading=notification_subject,
-                eyebrow='PABASA notification',
+                eyebrow='PAGBASA notification',
                 action_url=action_url or None,
-                action_label='View in PABASA',
+                action_label='View in PAGBASA',
                 fail_silently=True,
             )
     except Exception as e:
@@ -3860,7 +3860,7 @@ def _format_reading_report_text(report):
         "Reading Classification",
         f"CRLA Reading Classification: {classification_details.get('crla_reading_classification') or 'Not yet available'}",
         f"Phil-IRI Classification: {classification_details.get('phil_iri_classification') or 'Not yet available'}",
-        f"PABASA Level: {classification_details.get('pabasa_level') or 'Not yet available'}",
+        f"PAGBASA Level: {classification_details.get('pabasa_level') or 'Not yet available'}",
         metric("Accuracy", report.get('accuracy'), "%"),
         metric("Words Per Minute", report.get('wpm'), " WPM"),
         metric("Fluency Score", report.get('fluency_score'), "%"),
@@ -3907,7 +3907,7 @@ def _resolve_course_for_assessment_completion(student_user, material=None, asses
     return course
 
 
-def _build_certificate_pdf(student_name='', issued_on=None, school_name='PABASA', teacher_name=''):
+def _build_certificate_pdf(student_name='', issued_on=None, school_name='PAGBASA', teacher_name=''):
     """Create a polished certificate PDF for performance commendation emails."""
     try:
         from reportlab.lib import colors
@@ -3954,7 +3954,7 @@ def _build_certificate_pdf(student_name='', issued_on=None, school_name='PABASA'
         issued_on = timezone.localtime(system_now(), timezone.get_default_timezone()).strftime('%B %d, %Y')
 
     elements = []
-    elements.append(Paragraph('PABASA', title_style))
+    elements.append(Paragraph('PAGBASA', title_style))
     elements.append(Paragraph('Certificate of Achievement', subtitle_style))
     elements.append(Spacer(1, 0.15 * inch))
     elements.append(Paragraph('This certificate is proudly presented to', body_style))
@@ -3962,7 +3962,7 @@ def _build_certificate_pdf(student_name='', issued_on=None, school_name='PABASA'
     elements.append(Paragraph(student_name or 'Student Name', name_style))
     elements.append(Spacer(1, 0.12 * inch))
     elements.append(Paragraph(
-        'In recognition of your outstanding reading performance and dedication to improving your reading skills through the PABASA Reading Assessment System. Your hard work, perseverance, and commitment to learning are truly commendable. Keep up the excellent work and continue striving for success.',
+        'In recognition of your outstanding reading performance and dedication to improving your reading skills through the PAGBASA Reading Assessment System. Your hard work, perseverance, and commitment to learning are truly commendable. Keep up the excellent work and continue striving for success.',
         body_style,
     ))
     elements.append(Spacer(1, 0.2 * inch))
@@ -3970,7 +3970,7 @@ def _build_certificate_pdf(student_name='', issued_on=None, school_name='PABASA'
     elements.append(Spacer(1, 0.35 * inch))
     elements.append(HRFlowable(width=available_width * 0.5, thickness=0.6, color=colors.HexColor('#8B3E2F')))
     elements.append(Spacer(1, 0.04 * inch))
-    elements.append(Paragraph(school_name or 'PABASA School', signature_style))
+    elements.append(Paragraph(school_name or 'PAGBASA School', signature_style))
     elements.append(Paragraph('Principal / School Representative', signature_style))
     elements.append(Paragraph(teacher_name or 'Teacher', signature_style))
 
@@ -4109,8 +4109,8 @@ def _build_reading_report_pdf(report, message='', course=None, teacher=None, rec
     if logo_path.exists():
         header_parts.append(Image(str(logo_path), width=0.75 * inch, height=0.75 * inch))
     else:
-        header_parts.append(Paragraph('<b>PABASA</b>', title_style))
-    header_parts.append(Paragraph('PABASA Reading Report', title_style))
+        header_parts.append(Paragraph('<b>PAGBASA</b>', title_style))
+    header_parts.append(Paragraph('PAGBASA Reading Report', title_style))
     header_table = Table([[header_parts[0], header_parts[1]]], colWidths=[0.9 * inch, available_width - 0.9 * inch], repeatRows=0)
     header_table.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -4181,7 +4181,7 @@ def _build_reading_report_pdf(report, message='', course=None, teacher=None, rec
     classification_rows = [
         ['CRLA Reading Classification', classification_details.get('crla_reading_classification') or 'Not yet available'],
         ['Phil-IRI Classification', classification_details.get('phil_iri_classification') or 'Not yet available'],
-        ['PABASA Level', classification_details.get('pabasa_level') or 'Not yet available'],
+        ['PAGBASA Level', classification_details.get('pabasa_level') or 'Not yet available'],
     ]
     classification_table = Table(classification_rows, colWidths=[2.4 * inch, available_width - 2.4 * inch], repeatRows=0)
     classification_table.setStyle(TableStyle([
@@ -4220,7 +4220,7 @@ def _build_reading_report_pdf(report, message='', course=None, teacher=None, rec
         canvas_obj.saveState()
         canvas_obj.setFont('Helvetica', 8)
         canvas_obj.setFillColor(colors.HexColor('#6b7280'))
-        canvas_obj.drawString(left_margin, 0.38 * inch, 'PABASA Automated Reading Assessment System')
+        canvas_obj.drawString(left_margin, 0.38 * inch, 'PAGBASA Automated Reading Assessment System')
         canvas_obj.drawCentredString(page_size[0] / 2.0, 0.38 * inch, f'Page {canvas_obj.getPageNumber()}')
         canvas_obj.drawRightString(page_size[0] - right_margin, 0.38 * inch, f'Generated {generated_at}')
         canvas_obj.restoreState()
@@ -4274,28 +4274,28 @@ def _send_course_update_to_student(
     report_attachment_included = False
 
     if normalized_update_type == 'followup':
-        subject = "Student Reading Progress Report - PABASA"
+        subject = "Student Reading Progress Report - PAGBASA"
         report_attachment_included = True
         attachment_name = f"{student_name.replace(' ', '_')}_reading_report.pdf"
         email_body = (
             "Dear Parent/Guardian,\n\n"
             "We hope you are doing well.\n\n"
-            "Attached is the latest Reading Progress Report for your child from the PABASA Reading Assessment System. "
+            "Attached is the latest Reading Progress Report for your child from the PAGBASA Reading Assessment System. "
             "The report contains an overview of your child's recent reading performance, including assessment results, progress, and other relevant information.\n\n"
             "We encourage you to review the attached report and continue supporting your child's reading development at home.\n\n"
             "If you have any questions or would like to discuss your child's progress, please feel free to contact the school.\n\n"
             "Thank you for your continued support and partnership in your child's learning.\n\n"
             "Sincerely,\n\n"
-            "PABASA Team"
+            "PAGBASA Team"
         )
         include_attachment = True
     elif normalized_update_type == 'commendation':
-        subject = "Performance Commendation - PABASA"
+        subject = "Performance Commendation - PAGBASA"
         certificate_date = timezone.localtime(system_now(), timezone.get_default_timezone()).strftime('%B %d, %Y')
         certificate_pdf = _build_certificate_pdf(
             student_name=student_name,
             issued_on=certificate_date,
-            school_name='PABASA',
+            school_name='PAGBASA',
             teacher_name=f"{teacher_user.first_name} {teacher_user.last_name}".strip() or 'Teacher',
         )
         email_body = (
@@ -4307,14 +4307,14 @@ def _send_course_update_to_student(
             "This Certificate of Achievement celebrates your outstanding reading performance and dedication to learning. "
             "Please keep it as a reminder of your outstanding reading achievement.\n\n"
             "Sincerely,\n\n"
-            "PABASA Team"
+            "PAGBASA Team"
         )
         include_attachment = True
         attachment_name = f"{student_name.replace(' ', '_')}_certificate_of_achievement.pdf"
         attachment_bytes = certificate_pdf
         attachment_mime = 'application/pdf'
     elif normalized_update_type == 'assessment':
-        subject = "Scheduled Assessment Notice - PABASA"
+        subject = "Scheduled Assessment Notice - PAGBASA"
         assessment_title = str(assessment_title or 'Reading Assessment').strip() or 'Reading Assessment'
         scheduled_at = str(scheduled_at_input or 'TBD').strip() or 'TBD'
         reading_material = str(reading_material_input or 'Not specified').strip() or 'Not specified'
@@ -4335,23 +4335,23 @@ def _send_course_update_to_student(
             f"{personalized_message}\n\n"
             "Please prepare ahead of time and be ready to do your best.\n\n"
             "Sincerely,\n\n"
-            "PABASA Team"
+            "PAGBASA Team"
         )
         include_attachment = False
     else:
-        subject = "Student Reading Progress Report - PABASA"
+        subject = "Student Reading Progress Report - PAGBASA"
         report_attachment_included = True
         attachment_name = f"{student_name.replace(' ', '_')}_reading_report.pdf"
         email_body = (
             "Dear Parent/Guardian,\n\n"
             "We hope you are doing well.\n\n"
-            "Attached is the latest Reading Progress Report for your child from the PABASA Reading Assessment System. "
+            "Attached is the latest Reading Progress Report for your child from the PAGBASA Reading Assessment System. "
             "The report contains an overview of your child's recent reading performance, including assessment results, progress, and other relevant information.\n\n"
             "We encourage you to review the attached report and continue supporting your child's reading development at home.\n\n"
             "If you have any questions or would like to discuss your child's progress, please feel free to contact the school.\n\n"
             "Thank you for your continued support and partnership in your child's learning.\n\n"
             "Sincerely,\n\n"
-            "PABASA Team"
+            "PAGBASA Team"
         )
         include_attachment = True
 
@@ -4368,7 +4368,7 @@ def _send_course_update_to_student(
 
     email_message = EmailMultiAlternatives(subject, email_body, sender, [student.email])
     email_message.attach_alternative(
-        _pabasa_email_shell(subject, 'PABASA course update', _email_paragraphs(email_body)),
+        _pabasa_email_shell(subject, 'PAGBASA course update', _email_paragraphs(email_body)),
         'text/html',
     )
     if include_attachment:
@@ -4424,7 +4424,7 @@ def _auto_send_regular_progress_update(student, course, teacher_user, assessment
         "A new Regular Progress report is ready based on your latest completed assessment. "
         "Please review the attached reading report for your updated performance summary.\n\n"
         "Thank you,\n"
-        "PABASA Team"
+        "PAGBASA Team"
     )
     return _send_course_update_to_student(
         course=course,
@@ -4439,7 +4439,7 @@ def _auto_send_regular_progress_update(student, course, teacher_user, assessment
 
 # Authentication functions
 def _student_grade_prefix(grade_level):
-    """Convert values like 'Grade 6' into the expected PABASA prefix 'G6'."""
+    """Convert values like 'Grade 6' into the expected PAGBASA prefix 'G6'."""
     match = re.search(r'(\d+)', str(grade_level or ''))
     if match:
         return f"G{match.group(1)}"
@@ -4646,8 +4646,8 @@ def _signup_birth_date_error(data, role):
             return 'Teachers must be at least 18 years old.'
     return ''
 
-def _send_pabasa_otp_email(subject, text_message, recipient_email, first_name, otp, eyebrow, heading, intro, action_url=None, action_label="Open PABASA"):
-    safe_name = escape(first_name or "PABASA user")
+def _send_pabasa_otp_email(subject, text_message, recipient_email, first_name, otp, eyebrow, heading, intro, action_url=None, action_label="Open PAGBASA"):
+    safe_name = escape(first_name or "PAGBASA user")
     safe_otp = escape(str(otp))
     safe_eyebrow = escape(eyebrow)
     safe_heading = escape(heading)
@@ -4717,7 +4717,7 @@ def _send_pabasa_otp_email(subject, text_message, recipient_email, first_name, o
                                 <tr>
                                     <td style="padding-top: 18px;">
                                         <p style="color: #6B7D8F; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.6; margin: 0;">If you did not request this code, you can safely ignore this email.</p>
-                                        <p style="color: #0F2D45; font-family: Arial, sans-serif; font-size: 14px; font-weight: 700; line-height: 1.6; margin: 18px 0 0;">Thank you,<br>The PABASA Team</p>
+                                        <p style="color: #0F2D45; font-family: Arial, sans-serif; font-size: 14px; font-weight: 700; line-height: 1.6; margin: 18px 0 0;">Thank you,<br>The PAGBASA Team</p>
                                     </td>
                                 </tr>
                             </table>
@@ -4749,9 +4749,9 @@ def _email_paragraphs(text):
     return ''.join(paragraphs)
 
 
-def _send_pabasa_email(subject, text_message, recipients, *, heading=None, eyebrow='PABASA update',
-                       action_url=None, action_label='Open PABASA', fail_silently=False):
-    """Send standard PABASA messages in the same visual shell as OTP emails."""
+def _send_pabasa_email(subject, text_message, recipients, *, heading=None, eyebrow='PAGBASA update',
+                       action_url=None, action_label='Open PAGBASA', fail_silently=False):
+    """Send standard PAGBASA messages in the same visual shell as OTP emails."""
     recipients = [recipient for recipient in recipients if recipient]
     if not recipients:
         return
@@ -4765,7 +4765,7 @@ def _send_pabasa_email(subject, text_message, recipients, *, heading=None, eyebr
     html_message = f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{safe_heading}</title></head>
 <body style="margin: 0; padding: 0; background: #F0F8FF;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: #F0F8FF; margin: 0; padding: 32px 12px;"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 620px; background: #ffffff; border-radius: 28px; overflow: hidden; border: 1px solid rgba(16, 70, 110, 0.12); box-shadow: 0 18px 42px rgba(16, 70, 110, 0.12);">
 <tr><td style="background: linear-gradient(135deg, #10466E 0%, #2EA8E5 72%, #FFD639 100%); padding: 28px 30px;">{email_logo_html()}<h1 style="color: #ffffff; font-family: Arial, sans-serif; font-size: 30px; line-height: 1.15; margin: 18px 0 8px;">{safe_heading}</h1><p style="color: rgba(255,255,255,0.86); font-family: Arial, sans-serif; font-size: 14px; line-height: 1.55; margin: 0;">{safe_eyebrow}</p></td></tr>
-<tr><td style="padding: 30px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td>{_email_paragraphs(text_message)}</td></tr>{action_html}<tr><td style="padding-top: 6px;"><p style="color: #0F2D45; font-family: Arial, sans-serif; font-size: 14px; font-weight: 700; line-height: 1.6; margin: 0;">Thank you,<br>The PABASA Team</p></td></tr></table></td></tr>
+<tr><td style="padding: 30px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td>{_email_paragraphs(text_message)}</td></tr>{action_html}<tr><td style="padding-top: 6px;"><p style="color: #0F2D45; font-family: Arial, sans-serif; font-size: 14px; font-weight: 700; line-height: 1.6; margin: 0;">Thank you,<br>The PAGBASA Team</p></td></tr></table></td></tr>
 </table></td></tr></table></body></html>'''
     email = EmailMultiAlternatives(subject, text_message, settings.DEFAULT_FROM_EMAIL, recipients)
     email.attach_alternative(html_message, 'text/html')
@@ -4777,20 +4777,20 @@ def _pabasa_email_shell(heading, eyebrow, content_html):
     return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{escape(heading)}</title></head>
 <body style="margin:0;padding:0;background:#F0F8FF;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#F0F8FF;padding:32px 12px;"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border-radius:28px;overflow:hidden;border:1px solid rgba(16,70,110,.12);box-shadow:0 18px 42px rgba(16,70,110,.12);">
 <tr><td style="background:linear-gradient(135deg,#10466E 0%,#2EA8E5 72%,#FFD639 100%);padding:28px 30px;">{email_logo_html()}<h1 style="color:#fff;font-family:Arial,sans-serif;font-size:30px;line-height:1.15;margin:18px 0 8px;">{escape(heading)}</h1><p style="color:rgba(255,255,255,.86);font-family:Arial,sans-serif;font-size:14px;line-height:1.55;margin:0;">{escape(eyebrow)}</p></td></tr>
-<tr><td style="padding:30px;">{content_html}<p style="color:#0F2D45;font-family:Arial,sans-serif;font-size:14px;font-weight:700;line-height:1.6;margin:20px 0 0;">Thank you,<br>The PABASA Team</p></td></tr>
+<tr><td style="padding:30px;">{content_html}<p style="color:#0F2D45;font-family:Arial,sans-serif;font-size:14px;font-weight:700;line-height:1.6;margin:20px 0 0;">Thank you,<br>The PAGBASA Team</p></td></tr>
 </table></td></tr></table></body></html>'''
 
 def send_teacher_signup_otp_email(request, email, otp, first_name):
     auth_url = request.build_absolute_uri(reverse('auth'))
-    subject = "PABASA Teacher Signup OTP"
+    subject = "PAGBASA Teacher Signup OTP"
     message = (
         f"Hello {first_name},\n\n"
-        f"Use the following One-Time Password (OTP) to complete your PABASA teacher account registration:\n\n"
+        f"Use the following One-Time Password (OTP) to complete your PAGBASA teacher account registration:\n\n"
         f"{otp}\n\n"
         "This OTP is valid for 10 minutes.\n\n"
         "If you did not request this, please ignore this email.\n\n"
         f"You can log in after verification at: {auth_url}\n\n"
-        "Thank you,\nPABASA Team"
+        "Thank you,\nPAGBASA Team"
     )
     _send_pabasa_otp_email(
         subject,
@@ -4800,43 +4800,43 @@ def send_teacher_signup_otp_email(request, email, otp, first_name):
         otp,
         "Teacher account verification",
         "Complete your teacher signup",
-        "Use the code below to finish creating your PABASA teacher account.",
+        "Use the code below to finish creating your PAGBASA teacher account.",
         auth_url,
-        "Go to PABASA"
+        "Go to PAGBASA"
     )
 
 def send_teacher_confirmation_email(request, user, teacher_code):
     if not user.email:
         return
     auth_url = request.build_absolute_uri(reverse('auth'))
-    subject = "Your PABASA Teacher Account is Ready"
+    subject = "Your PAGBASA Teacher Account is Ready"
     message = (
         f"Hello {user.first_name},\n\n"
-        "Your PABASA teacher account has been created successfully.\n\n"
+        "Your PAGBASA teacher account has been created successfully.\n\n"
         f"User ID: {user.custom_id}\n"
         f"Teacher Code: {teacher_code}\n"
         f"Email: {user.email}\n\n"
         f"You can now log in at: {auth_url}\n\n"
-        "Thank you for joining PABASA.\n"
+        "Thank you for joining PAGBASA.\n"
     )
     _send_pabasa_email(
         subject, message, [user.email],
         heading='Your teacher account is ready',
-        eyebrow='Welcome to the PABASA teaching community',
-        action_url=auth_url, action_label='Log in to PABASA',
+        eyebrow='Welcome to the PAGBASA teaching community',
+        action_url=auth_url, action_label='Log in to PAGBASA',
     )
 
 def send_student_signup_otp_email(request, email, otp, first_name):
     auth_url = request.build_absolute_uri(reverse('auth'))
-    subject = "PABASA Student Signup OTP"
+    subject = "PAGBASA Student Signup OTP"
     message = (
         f"Hello {first_name},\n\n"
-        f"Use the following One-Time Password (OTP) to complete your PABASA student account registration:\n\n"
+        f"Use the following One-Time Password (OTP) to complete your PAGBASA student account registration:\n\n"
         f"{otp}\n\n"
         "This OTP is valid for 10 minutes.\n\n"
         "If you did not request this, please ignore this email.\n\n"
         f"You can log in after verification at: {auth_url}\n\n"
-        "Thank you,\nPABASA Team"
+        "Thank you,\nPAGBASA Team"
     )
     _send_pabasa_otp_email(
         subject,
@@ -4846,29 +4846,29 @@ def send_student_signup_otp_email(request, email, otp, first_name):
         otp,
         "Student account verification",
         "Complete your student signup",
-        "Use the code below to finish creating your PABASA student account.",
+        "Use the code below to finish creating your PAGBASA student account.",
         auth_url,
-        "Go to PABASA"
+        "Go to PAGBASA"
     )
 
 def send_student_confirmation_email(request, user):
     if not user.email:
         return
     auth_url = request.build_absolute_uri(reverse('auth'))
-    subject = "Your PABASA Student Account is Ready"
+    subject = "Your PAGBASA Student Account is Ready"
     message = (
         f"Hello {user.first_name},\n\n"
-        "Your PABASA student account has been created successfully.\n\n"
+        "Your PAGBASA student account has been created successfully.\n\n"
         f"User ID: {user.custom_id}\n"
         f"Email: {user.email}\n\n"
         f"You can now log in at: {auth_url}\n\n"
-        "Thank you for joining PABASA.\n"
+        "Thank you for joining PAGBASA.\n"
     )
     _send_pabasa_email(
         subject, message, [user.email],
         heading='Your student account is ready',
-        eyebrow='Welcome to your PABASA reading journey',
-        action_url=auth_url, action_label='Log in to PABASA',
+        eyebrow='Welcome to your PAGBASA reading journey',
+        action_url=auth_url, action_label='Log in to PAGBASA',
     )
 
 
@@ -4887,15 +4887,15 @@ def _clear_pending_password_reset(request):
 
 def send_password_reset_otp_email(request, email, otp, first_name):
     otp_url = request.build_absolute_uri(reverse('forgot_password_otp'))
-    subject = "PABASA Password Reset OTP"
+    subject = "PAGBASA Password Reset OTP"
     message = (
         f"Hello {first_name},\n\n"
-        "We received a request to reset your PABASA password. Use the code below to continue:\n\n"
+        "We received a request to reset your PAGBASA password. Use the code below to continue:\n\n"
         f"{otp}\n\n"
         "This OTP is valid for 10 minutes.\n\n"
         f"If you did not request this, please ignore this email.\n\n"
         f"Open the following link to verify the code: {otp_url}\n\n"
-        "Thank you,\nPABASA Team"
+        "Thank you,\nPAGBASA Team"
     )
     _send_pabasa_otp_email(
         subject,
@@ -4904,8 +4904,8 @@ def send_password_reset_otp_email(request, email, otp, first_name):
         first_name,
         otp,
         "Password reset verification",
-        "Reset your PABASA password",
-        "We received a request to reset your PABASA password. Use the code below to continue.",
+        "Reset your PAGBASA password",
+        "We received a request to reset your PAGBASA password. Use the code below to continue.",
         otp_url,
         "Verify OTP"
     )
@@ -4913,19 +4913,19 @@ def send_password_reset_otp_email(request, email, otp, first_name):
 
 def send_password_reset_confirmation_email(request, user):
     auth_url = request.build_absolute_uri(reverse('auth'))
-    subject = "Your PABASA Password Has Been Reset"
+    subject = "Your PAGBASA Password Has Been Reset"
     message = (
         f"Hello {user.first_name},\n\n"
         "Your password has been successfully reset.\n\n"
         f"You can now log in at: {auth_url}\n\n"
         "If you did not make this change, please contact support immediately.\n\n"
-        "Thank you,\nPABASA Team"
+        "Thank you,\nPAGBASA Team"
     )
     _send_pabasa_email(
         subject, message, [user.email],
         heading='Your password has been reset',
-        eyebrow='Your PABASA account is ready to use',
-        action_url=auth_url, action_label='Log in to PABASA',
+        eyebrow='Your PAGBASA account is ready to use',
+        action_url=auth_url, action_label='Log in to PAGBASA',
     )
 
 
@@ -5563,7 +5563,7 @@ def _complete_student_signup(request, pending, *, otp_disabled=False):
         if user is None:
             logger.error("VERIFY STUDENT OTP could not allocate unique custom ID")
             _clear_pending_student_signup(request)
-            return JsonResponse({'success': False, 'error': 'A student with this PABASA ID already exists. Please try again.'}, status=400)
+            return JsonResponse({'success': False, 'error': 'A student with this PAGBASA ID already exists. Please try again.'}, status=400)
 
         logger.debug("VERIFY STUDENT OTP AFTER USER CREATE user_id=%s custom_id=%s", user.id, user.custom_id)
         # Student signup resolves the existing canonical section above and
@@ -6808,11 +6808,11 @@ def admin_official_reading_override_request(request, material_id):
     supporting_lines = '\n'.join(f"{idx}. {link}" for idx, link in enumerate(supporting_links, start=1)) or 'No supporting documentation links provided.'
     try:
         _send_pabasa_email(
-            '[PABASA] Official Assessment Integrity Override Request — Review Required',
-            f"Integrity Override Request\n\nRequest ID: {request_id}\nRequested by: {admin_user.first_name} {admin_user.last_name}\nAdmin account: {admin_user.custom_id} / {admin_user.email}\nDate/Time submitted: {timezone.localtime(override_request.submitted_at).strftime('%B %d, %Y %I:%M %p')}\nOfficial Material Set: {material.title}\n\nDepEd Source / Reference\n{deped_reference}\n\nMaterial to Be Changed\n{material_change}\n\nJustification\n{justification}\n\nSupporting Documentation\n{supporting_lines}\n\nStatus\nPending Review\n\nPlease review this request through the PABASA Admin interface and determine whether the requested integrity override should be authorized.",
+            '[PAGBASA] Official Assessment Integrity Override Request — Review Required',
+            f"Integrity Override Request\n\nRequest ID: {request_id}\nRequested by: {admin_user.first_name} {admin_user.last_name}\nAdmin account: {admin_user.custom_id} / {admin_user.email}\nDate/Time submitted: {timezone.localtime(override_request.submitted_at).strftime('%B %d, %Y %I:%M %p')}\nOfficial Material Set: {material.title}\n\nDepEd Source / Reference\n{deped_reference}\n\nMaterial to Be Changed\n{material_change}\n\nJustification\n{justification}\n\nSupporting Documentation\n{supporting_lines}\n\nStatus\nPending Review\n\nPlease review this request through the PAGBASA Admin interface and determine whether the requested integrity override should be authorized.",
             ['im.donapalacios@gmail.com'],
             heading='Integrity override review required',
-            eyebrow='PABASA assessment administration',
+            eyebrow='PAGBASA assessment administration',
         )
     except Exception as exc:
         logger.warning('Unable to send override request email for %s: %s', request_id, exc)
@@ -6860,30 +6860,30 @@ def _principal_temporary_password(last_name):
 
 def _send_principal_credentials_email(request, user, school_name, temporary_password, *, is_reset=False):
     auth_url = request.build_absolute_uri(reverse('auth'))
-    subject = 'Your PABASA Principal Temporary Password' if is_reset else 'Your PABASA Principal Account is Ready'
+    subject = 'Your PAGBASA Principal Temporary Password' if is_reset else 'Your PAGBASA Principal Account is Ready'
     account_message = (
-        'An Administrator reset your PABASA Principal account password.'
+        'An Administrator reset your PAGBASA Principal account password.'
         if is_reset else
-        'A PABASA Principal account has been created for you.'
+        'A PAGBASA Principal account has been created for you.'
     )
     message = (
         f"Hello {user.first_name} {user.last_name},\n\n"
         f"{account_message}\n\n"
         f"Full Name: {user.first_name} {user.last_name}\n"
         f"School Name: {school_name}\n"
-        f"PABASA ID / Username: {user.custom_id}\n"
+        f"PAGBASA ID / Username: {user.custom_id}\n"
         f"Temporary Password: {temporary_password}\n\n"
         "This temporary password expires 24 hours after it is issued. If it expires, request a password reset.\n\n"
-        "Log in using the existing PABASA login page:\n"
+        "Log in using the existing PAGBASA login page:\n"
         f"{auth_url}\n\n" 
         "After logging in, you will be required to create a new private password before continuing.\n\n"
-        "Thank you,\nPABASA Team"
+        "Thank you,\nPAGBASA Team"
     )
     _send_pabasa_email(
         subject, message, [user.email],
         heading='Your principal account is ready' if not is_reset else 'Your temporary password',
-        eyebrow='PABASA school administration',
-        action_url=auth_url, action_label='Log in to PABASA',
+        eyebrow='PAGBASA school administration',
+        action_url=auth_url, action_label='Log in to PAGBASA',
     )
 
 
@@ -7045,7 +7045,7 @@ def admin_users(request):
             and _student_returning_eligibility(user, active_calendar)
         ) if active_calendar else False
 
-    context = _admin_context(request, 'Users', ['Name', 'PABASA-ID', 'Email', 'Category', 'Created At', 'Actions'])
+    context = _admin_context(request, 'Users', ['Name', 'PAGBASA-ID', 'Email', 'Category', 'Created At', 'Actions'])
     context.update({
         'users': users,
         'search_query': search_query,
@@ -10566,10 +10566,20 @@ def _official_reading_launch_data(material):
         return {}
     payload = _official_reading_material_payload(material)
     content_json = getattr(material, 'content_json', None) or {}
+    assessment_key = getattr(material, 'system_assessment_key', '')
     official_crla_payload = None
     if getattr(material, 'assessment_kind', '') == 'crla':
         from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
-        official_crla_payload = OFFICIAL_CRLA_CONTENT.get(getattr(material, 'system_assessment_key', ''))
+        official_crla_payload = OFFICIAL_CRLA_CONTENT.get(assessment_key)
+    passages = payload['passages']
+    if assessment_key == 'eosy_crla_posttest' and official_crla_payload:
+        # Already-seeded materials can still store the original EoSY order.
+        story_order = {
+            passage['title'].casefold(): index
+            for index, passage in enumerate(official_crla_payload['passages'])
+        }
+        if len(passages) == len(story_order) and {passage['title'].casefold() for passage in passages} == story_order.keys():
+            passages = sorted(passages, key=lambda passage: story_order[passage['title'].casefold()])
     story_qas = content_json.get('story_qas') if isinstance(content_json, dict) and isinstance(content_json.get('story_qas'), list) else []
     assessment_type = _official_reading_assessment_type(material)
     official_title = str(getattr(material, 'title', '') or '').strip() or payload['title']
@@ -10585,8 +10595,8 @@ def _official_reading_launch_data(material):
         'words': payload['words'],
         'rhyme_pairs': (official_crla_payload or {}).get('rhyme_pairs', content_json.get('rhyme_pairs', [])),
         'sentences': payload['sentences'],
-        'passages': payload['passages'],
-        'stories': [{'title': str(passage.get('title') or '').strip(), 'content': str(passage.get('content') or '').strip()} for passage in payload['passages'] if isinstance(passage, dict)],
+        'passages': passages,
+        'stories': passages,
         'story_qas': story_qas,
         'official_title': official_title,
         'official_code': official_code,
@@ -24626,12 +24636,22 @@ def reading_para_page(request):
             'submission_id': submission.id if submission else None,
         }
         return render(request, 'pabasa_app/retell_story_background_page.html', context)
-    context['student_end_assessment_state_json'] = json.dumps(
-        (_get_user_state(User.objects.filter(id=request.session.get('user_id')).first()).get('student_end_assessment_state') or {}),
-        default=str, separators=(',', ':'),
-    )
     official_assessment_id = request.GET.get('official_assessment_id') or ''
     _, material_id = _parse_prefixed_id(official_assessment_id)
+    student_id = request.session.get('user_id')
+    live_recovery_state = {}
+    live_session_id = str(request.GET.get('live_session_id') or '').strip()
+    if material_id and live_session_id and request.GET.get('live_recovery') == '1' and request.session.get('user_role') == 'student':
+        live_session = LiveAssessmentSession.objects.filter(
+            id=live_session_id, material_id=material_id, status__in=LIVE_ASSESSMENT_ACTIVE_STATUSES,
+        ).only('student_ids', 'student_states').first()
+        if live_session and str(student_id) in {str(value) for value in live_session.student_ids or []}:
+            live_student_state = (live_session.student_states or {}).get(str(student_id), {})
+            live_recovery_state = _canonical_live_recovery_state(live_student_state.get('recovery_state'))
+    context['student_end_assessment_state_json'] = json.dumps(
+        live_recovery_state or _get_user_state(User.objects.filter(id=student_id).first()).get('student_end_assessment_state') or {},
+        default=str, separators=(',', ':'),
+    )
     if material_id:
         material = Material.objects.filter(
             pk=material_id,
@@ -26988,9 +27008,8 @@ def _live_student_update_is_allowed(session, student_id):
     if str((session.batch_assignments or {}).get(str(student_id), 0)) != str(session.current_batch):
         return False
     state = ((session.student_states or {}).get(str(student_id), {}) or {})
-    # Close & Save is a teacher-authoritative checkpoint.  A reader heartbeat
-    # that was already in flight must not reactivate or overwrite it.
-    if str(state.get('participation_status') or '').lower() == 'saved':
+    # An in-flight heartbeat cannot undo an individual pause or saved checkpoint.
+    if state.get('paused_by_teacher') or str(state.get('participation_status') or '').lower() == 'saved':
         return False
     return str(state.get('status') or '').lower() not in {'skipped', 'completed', 'missed'}
 
@@ -28373,9 +28392,9 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                             f"Hello {teacher_name},\n\n"
                             f"This is to inform you that {student_name} has completed retake attempt {attempt_number} of 3 "
                             f"for \"{title_text}\" in {display_class}.\n\n"
-                            "You may review the student's latest submission and performance through your PABASA dashboard.\n\n"
+                            "You may review the student's latest submission and performance through your PAGBASA dashboard.\n\n"
                             "Thank you,\n\n"
-                            "The PABASA Team"
+                            "The PAGBASA Team"
                         )
 
                     _create_notification(
@@ -30055,6 +30074,7 @@ def live_assessment_session_state(request, session_id):
         and student_batch_is_active
         and not student_completed
         and student_participation_status != 'saved'
+        and not student_state.get('paused_by_teacher')
     ):
         reader_url = _build_live_assessment_action_url(
             session.material,
@@ -30136,6 +30156,7 @@ def live_assessment_session_state(request, session_id):
             'official_crla': True,
             'student_states': session.student_states or {},
             'reading_levels': reading_levels,
+            'state_version': session.state_version,
             'viewer_student_state': student_state if user_role == 'student' else {},
             'activity_log': session.activity_log or [],
             'available_students': available_profiles,
@@ -30245,12 +30266,15 @@ def live_assessment_student_state_update(request, session_id):
     if not state_values:
         return JsonResponse({'success': False, 'error': 'No update data provided'}, status=400)
 
+    incoming_status = str(state_values.get('status') or '').lower()
+
     def apply_student_update(current):
         _ensure_live_session_batches(current)
         # A retry must validate against the newest teacher/system state.  A
         # stale heartbeat after skip, completion, pause, end, or batch advance
         # is intentionally a successful no-op.
         current_student_state = (current.student_states or {}).get(str(user_id), {}) or {}
+        paused = current.status == 'paused' or bool(current_student_state.get('paused_by_teacher'))
         requested_save_ack = (
             state_values.get('save_acknowledged') is True
             and current.status in {'started', 'paused'}
@@ -30259,18 +30283,18 @@ def live_assessment_student_state_update(request, session_id):
             and str(current_student_state.get('status') or '').lower() not in {'completed', 'skipped', 'missed'}
         )
         paused_snapshot_allowed = (
-            current.status == 'paused'
+            paused and current.status in {'started', 'paused'}
             and user_id in (current.student_ids or [])
             and str(current.batch_assignments.get(str(user_id), 0)) == str(current.current_batch)
-            and str(state_values.get('status') or '').lower() == 'paused'
+            and incoming_status == 'paused'
             and str(current_student_state.get('status') or '').lower() == 'paused'
             and str(current_student_state.get('participation_status') or '').lower() != 'saved'
-            and str(current_student_state.get('status') or '').lower() not in {'completed', 'skipped', 'missed'}
         )
-        if not _live_student_update_is_allowed(current, user_id) and not requested_save_ack and not paused_snapshot_allowed:
+        active_update_allowed = incoming_status != 'paused' and _live_student_update_is_allowed(current, user_id)
+        if not (active_update_allowed or requested_save_ack or paused_snapshot_allowed):
             return None
         accepted_values = dict(state_values)
-        if current.status == 'paused':
+        if paused:
             # A teacher-requested final snapshot may finish during Pause. It
             # saves evidence without authorizing the student to resume reading.
             accepted_values['status'] = current_student_state.get('status', 'paused')
@@ -30286,6 +30310,13 @@ def live_assessment_student_state_update(request, session_id):
     session, mutation_error = _mutate_live_session_state(session_id, apply_student_update)
     if not session:
         return JsonResponse({'success': False, 'error': mutation_error or 'Unable to save live state'}, status=409)
+    student_state = (session.student_states or {}).get(str(user_id), {}) or {}
+    if (
+        incoming_status in {'completed', 'submitted', 'finished'}
+        and student_state.get('paused_by_teacher')
+        and student_state.get('status') == 'paused'
+    ):
+        return JsonResponse({'success': False, 'error': 'Wait for your teacher to resume your assessment before submitting.'}, status=409)
     _trace_live_end_flow(
         'student_update_saved',
         session,
@@ -30343,8 +30374,10 @@ def live_assessment_session_action(request, session_id):
             'material_title': current.material.title if current.material else '',
             'course_title': current.course.title if current.course else '',
             'reader_url': reader_url,
+            'official_crla': True,
             'ends_at': current.ends_at.isoformat() if current.ends_at else None,
             'student_states': current.student_states or {},
+            'state_version': current.state_version,
             'activity_log': current.activity_log or [],
             'available_students': [],
             **_live_session_batch_payload(current),
@@ -30518,6 +30551,46 @@ def live_assessment_session_action(request, session_id):
         if error:
             return JsonResponse({'success': False, 'error': error}, status=409)
         session = transitioned_session
+    elif action in {'pause_student', 'resume_student'}:
+        raw_student_id = str(data.get('student_id') or '')
+        if not re.fullmatch(r'[0-9]{1,19}', raw_student_id):
+            return JsonResponse({'success': False, 'error': 'A valid student is required'}, status=400)
+        student_id = int(raw_student_id)
+        pause_student = action == 'pause_student'
+        action_error = None
+
+        def apply_student_pause(current):
+            nonlocal action_error
+            _ensure_live_session_batches(current)
+            if current.status != 'started' or student_id not in _live_batch_student_ids(current):
+                action_error = 'Only students in the active batch can be paused or resumed.'
+                return None
+            state = (current.student_states or {}).get(str(student_id), {}) or {}
+            status = str(state.get('status') or 'waiting').lower()
+            if (
+                status in {'completed', 'finished', 'submitted', 'skipped', 'missed'}
+                or state.get('participation_status') in {'save_requested', 'saved'}
+            ):
+                action_error = 'This student is no longer available to pause or resume.'
+                return None
+            if bool(state.get('paused_by_teacher')) == pause_student:
+                return None
+            if pause_student:
+                if status != 'paused':
+                    state['previous_status'] = status
+                state['status'] = 'paused'
+                state['paused_by_teacher'] = True
+            else:
+                state['status'] = state.pop('previous_status', 'reading')
+                state.pop('paused_by_teacher', None)
+            current.student_states = {**(current.student_states or {}), str(student_id): state}
+            verb = 'paused' if pause_student else 'resumed'
+            _append_live_session_activity(current, f'Teacher {verb} Live CRLA for student {student_id}.')
+            return {'activity_log'}
+
+        session, mutation_error = _mutate_live_session_state(session.id, apply_student_pause)
+        if not session or action_error:
+            return JsonResponse({'success': False, 'error': action_error or mutation_error}, status=409)
     elif action == 'skip_student':
         if session.status not in ['started', 'paused']:
             return JsonResponse({'success': False, 'error': 'Only an active session can skip a student'}, status=400)
@@ -30676,7 +30749,7 @@ def live_assessment_session_action(request, session_id):
             for student_key, student_state in states.items():
                 if student_state.get('participation_status') == 'saved':
                     student_state['participation_status'] = 'active'
-                if student_state.get('status') == 'paused':
+                if student_state.get('status') == 'paused' and not student_state.get('paused_by_teacher'):
                     student_state['status'] = student_state.pop('previous_status', 'reading')
                 states[student_key] = student_state
             current.student_states = states
@@ -30795,7 +30868,7 @@ def live_assessment_session_action(request, session_id):
                     _action_state_trace('recover_before', student_key, before_state, states)
                     if student_state.get('participation_status') == 'saved':
                         student_state['participation_status'] = 'active'
-                    if student_state.get('status') == 'paused':
+                    if student_state.get('status') == 'paused' and not student_state.get('paused_by_teacher'):
                         student_state['status'] = student_state.pop('previous_status', 'reading')
                     states[student_key] = student_state
                     _action_state_trace('recover_after', student_key, student_state, {student_key: before_state})
@@ -31935,7 +32008,7 @@ def profile(request):
                     }
                     try:
                         send_mail(
-                            'PABASA | Verify Your New Email Address',
+                            'PAGBASA | Verify Your New Email Address',
                             _email_verification_message(code),
                             settings.DEFAULT_FROM_EMAIL,
                             [email],
@@ -32028,7 +32101,7 @@ def profile(request):
                 'resend_available_at': time.time() + 60,
             })
             try:
-                send_mail('PABASA | Verify Your New Email Address', _email_verification_message(code), settings.DEFAULT_FROM_EMAIL, [pending['email']], fail_silently=False)
+                send_mail('PAGBASA | Verify Your New Email Address', _email_verification_message(code), settings.DEFAULT_FROM_EMAIL, [pending['email']], fail_silently=False)
             except Exception:
                 return JsonResponse({'success': False, 'error': 'Could not resend the verification code. Please try again.'})
             _set_profile_dict(user, 'profile_info', profile_info)
@@ -32255,7 +32328,7 @@ def send_parent_email(request):
         if html_message:
             email = EmailMultiAlternatives(subject, message or "Reading Report", sender, [recipient])
             email.attach_alternative(
-                _pabasa_email_shell(subject or 'PABASA reading update', 'PABASA reading report', html_message),
+                _pabasa_email_shell(subject or 'PAGBASA reading update', 'PAGBASA reading report', html_message),
                 "text/html",
             )
             email.send(fail_silently=False)
@@ -32263,7 +32336,7 @@ def send_parent_email(request):
             _send_pabasa_email(
                 subject, message, [recipient],
                 heading=subject,
-                eyebrow='Message from PABASA',
+                eyebrow='Message from PAGBASA',
             )
         return JsonResponse({'success': True})
 
@@ -32500,7 +32573,7 @@ def unenroll_class(request):
                 _send_pabasa_email(
                     subject, message, [teacher_user.email],
                     heading='Student unenrolled',
-                    eyebrow='PABASA course update',
+                    eyebrow='PAGBASA course update',
                     fail_silently=True,
                 )
             except Exception:
@@ -33917,7 +33990,7 @@ def export_material_results(request):
     header_fill = PatternFill('solid', fgColor='E9ECEF')
     header_font = Font(bold=True)
 
-    ws['A1'] = 'PABASA — Student Activity Results'
+    ws['A1'] = 'PAGBASA — Student Activity Results'
     ws['A1'].font = Font(bold=True, size=14)
     ws.merge_cells('A1:K1')
     ws['A2'] = f'Activity: {material.title}'
@@ -33928,7 +34001,7 @@ def export_material_results(request):
 
     headers = [
         'Student Name',
-        'PABASA ID',
+        'PAGBASA ID',
         'Grade',
         'Section',
         'Activity Title',
@@ -34994,7 +35067,7 @@ def teacher_remove_student(request):
                 section = assigned_sections.filter(pk=int(section_id)).first()
             except (TypeError, ValueError):
                 section = None
-        # Match by internal database ID or the custom Pabasa ID
+        # Match by internal database ID or the custom Pagbasa ID
         student = User.objects.filter(Q(id=student_id_val) | Q(custom_id=student_id_val), role='student').first()
         
         if not student:
@@ -37327,8 +37400,8 @@ def _queue_material_creation_followups(material, section, teacher_user, status, 
                     email_body = (
                         f'Hello {student_user.first_name},\n\n'
                         f'A new learning material, "{material.title}", has been published in {section.class_name} by {teacher_user.first_name} {teacher_user.last_name}.\n\n'
-                        f'Log in to PABASA to access the material and continue your learning journey.\n\n'
-                        f'Happy learning!\nThe PABASA Team'
+                        f'Log in to PAGBASA to access the material and continue your learning journey.\n\n'
+                        f'Happy learning!\nThe PAGBASA Team'
                     )
                     _create_notification(
                         student_user,

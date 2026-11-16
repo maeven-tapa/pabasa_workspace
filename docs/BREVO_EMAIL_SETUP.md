@@ -3,7 +3,7 @@
 Prepared October 10, 2026 (Asia/Manila). Deployment status must be verified
 against Cloud Run; this document is not evidence of an activated release.
 
-PABASA uses `pabasa_site.email_backend.FallbackSMTPBackend` for OTPs,
+PAGBASA uses `pabasa_site.email_backend.FallbackSMTPBackend` for OTPs,
 confirmations, and notifications. The primary SMTP host, login, and sender are
 configurable with environment variables. Without overrides, the existing Gmail
 settings remain the defaults. Both connections use port 587 with STARTTLS and a
@@ -13,7 +13,7 @@ password is configured.
 ## Account and secret preparation
 
 1. Authenticate `tupcpabasa.app` in Brevo using the DNS records shown in the
-   account, and add sender `PABASA <noreply@tupcpabasa.app>`.
+   account, and add sender `PAGBASA <noreply@tupcpabasa.app>`.
 2. Generate an SMTP key (not an API key). Replace any key exposed in chat or
    screenshots. Do not put the key in source code, logs, command arguments,
    or this document.
@@ -32,11 +32,11 @@ password is configured.
 | --- | --- |
 | `EMAIL_HOST` | `smtp-relay.brevo.com` |
 | `EMAIL_HOST_USER` | SMTP login from Brevo's SMTP settings page |
-| `DEFAULT_FROM_EMAIL` | `PABASA <noreply@tupcpabasa.app>` |
+| `DEFAULT_FROM_EMAIL` | `PAGBASA <noreply@tupcpabasa.app>` |
 | `EMAIL_HOST_PASSWORD` | `brevo_emailpass:<numeric version>` |
 | `EMAIL_BACKUP_HOST` | `smtp.gmail.com` |
 | `EMAIL_BACKUP_HOST_USER` | `pabasa.tupc@gmail.com` |
-| `EMAIL_BACKUP_FROM_EMAIL` | `PABASA <pabasa.tupc@gmail.com>` |
+| `EMAIL_BACKUP_FROM_EMAIL` | `PAGBASA <pabasa.tupc@gmail.com>` |
 | `EMAIL_BACKUP_HOST_PASSWORD` | `pabasa_apppassword:<numeric version>` |
 
 The SMTP login is a technical identifier, not the sender email. Use the exact
@@ -128,7 +128,7 @@ actual received OTPs and delivery headers still need to be checked by a user.
 
 Brevo's free allowance is 300 emails per day, shared by OTPs, resends,
 confirmations, and other messages. Messages queued after reaching the allowance
-can arrive after PABASA's 10-minute OTP expiry.
+can arrive after PAGBASA's 10-minute OTP expiry.
 
 References:
 

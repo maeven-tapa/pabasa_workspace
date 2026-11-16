@@ -201,7 +201,7 @@ class _ReportCanvas(Canvas):
             self.line(MARGIN, 34, PAGE_WIDTH - MARGIN, 34)
             self.setFont(_fonts()[0], 7)
             self.setFillColor(MUTED)
-            self.drawString(MARGIN, 22, 'PABASA  /  Reading development, together')
+            self.drawString(MARGIN, 22, 'PAGBASA  /  Reading development, together')
             self.drawRightString(PAGE_WIDTH - MARGIN, 22, f'Page {self._pageNumber} of {total}')
             self.restoreState()
             super().showPage()
@@ -309,7 +309,7 @@ class _ReportDesign:
         else:
             canvas.setFont(self.fonts[2], 19)
             canvas.setFillColor(BLUE)
-            canvas.drawString(MARGIN + 10, PAGE_HEIGHT - 44, 'PABASA')
+            canvas.drawString(MARGIN + 10, PAGE_HEIGHT - 44, 'PAGBASA')
         canvas.setFont(self.fonts[1], 7.2)
         canvas.setFillColor(AMBER)
         canvas.drawRightString(PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 39, 'FOR PARENTS & GUARDIANS')
@@ -344,7 +344,7 @@ class _ReportDesign:
         canvas.saveState()
         canvas.setFillColor(BLUE)
         canvas.setFont(self.fonts[2], 15)
-        canvas.drawString(MARGIN, PAGE_HEIGHT - 39, 'PABASA')
+        canvas.drawString(MARGIN, PAGE_HEIGHT - 39, 'PAGBASA')
         canvas.setFillColor(MUTED)
         canvas.setFont(self.fonts[0], 8)
         canvas.drawRightString(PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 38, 'Student reading progress  /  Family report')
@@ -614,7 +614,7 @@ def build_reading_progress_pdf(report, message='', teacher=None, *, date_formatt
     buffer = BytesIO()
     doc = BaseDocTemplate(buffer, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN,
                           bottomMargin=47, topMargin=68,
-                          title='Student Reading Progress Report', author='PABASA',
+                          title='Student Reading Progress Report', author='PAGBASA',
                           subject='Reading assessment and guided practice progress')
     first_top = PAGE_HEIGHT - (133 if compact else 165)
     doc.addPageTemplates([

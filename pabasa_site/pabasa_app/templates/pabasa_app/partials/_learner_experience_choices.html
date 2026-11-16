@@ -1,0 +1,18 @@
+{% load static %}
+<fieldset class="rating-form">
+    <legend class="rating-legend">Pakiramdam sa pagbasa</legend>
+    <div class="rating-grid">
+        {% for rating in "12345" %}
+        <label class="rating-option">
+            <input class="rating-input" type="radio" name="learner-experience" value="{{ rating }}">
+            <span class="rating-card">
+                <span class="rating-number" aria-hidden="true">{{ rating }}</span>
+                <span class="rating-check" aria-hidden="true"></span>
+                {% static 'pabasa_app/images/learner_experience/face-'|add:rating|add:'.webp' as face_url %}
+                <img class="rating-face" src="{{ face_url }}" width="256" height="256" alt="">
+                <span class="rating-label">{% if rating == '1' %}Nahirapan ako{% elif rating == '2' %}Medyo nahirapan ako{% elif rating == '3' %}Okay lang{% elif rating == '4' %}Madali lang{% else %}Ang saya ko!{% endif %}</span>
+            </span>
+        </label>
+        {% endfor %}
+    </div>
+</fieldset>

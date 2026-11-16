@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Word Explorer | PABASA</title>
+  <title>Word Explorer | PAGBASA</title>
   <link rel="icon" href="{% static 'pabasa_app/images/pabasalogo.png' %}">
   <style>
     :root { --night:#190b42; --purple:#5d3196; --orange:#ff8a38; --sun:#ffc45b; --cream:#fffaf0; --ink:#352550; --good:#287b57; --bad:#bd4552; }
@@ -64,7 +64,7 @@
 <body>
   <div class="sky" aria-hidden="true"></div><div class="sunset" aria-hidden="true"></div>
   <main class="app">
-    <header class="top"><a class="back" href="{% url 'assessment' %}" aria-label="Back to activities">← <span>Activities</span></a><img class="logo" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA"><span class="badge" id="languageBadge"></span></header>
+    <header class="top"><a class="back" href="{% url 'assessment' %}" aria-label="Back to activities">← <span>Activities</span></a><img class="logo" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PAGBASA"><span class="badge" id="languageBadge"></span></header>
     <section class="activity-wrap"><section class="card" id="activityCard" aria-live="polite"></section></section>
   </main>
   {{ word_meaning_activity|json_script:"word-meaning-activity-data" }}

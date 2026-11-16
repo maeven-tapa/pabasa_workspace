@@ -1,1 +1,1 @@
-"""Utility helpers for the Pabasa application."""
+"""Utility helpers for the Pagbasa application."""

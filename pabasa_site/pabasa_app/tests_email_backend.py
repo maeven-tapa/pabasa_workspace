@@ -7,6 +7,19 @@ from django.core.mail import EmailMultiAlternatives, get_connection
 from django.test import RequestFactory, SimpleTestCase, override_settings
 
 
+class EmailSenderBrandingTests(SimpleTestCase):
+    def test_rebrands_legacy_sender_without_changing_address_or_custom_name(self):
+        from pabasa_site.settings import _branded_sender
+
+        for sender, expected in (
+            ('Pabasa <sender@example.com>', 'PAGBASA <sender@example.com>'),
+            ('sender@example.com', 'PAGBASA <sender@example.com>'),
+            ('School Office <sender@example.com>', 'School Office <sender@example.com>'),
+        ):
+            with self.subTest(sender=sender):
+                self.assertEqual(_branded_sender(sender), expected)
+
+
 @override_settings(
     EMAIL_BACKEND='pabasa_site.email_backend.FallbackSMTPBackend',
     EMAIL_HOST='smtp-relay.brevo.com',

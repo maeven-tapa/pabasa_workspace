@@ -38,8 +38,8 @@ def main():
         if logo:
             html = html.replace('cid:pabasa-live-summary-logo',
                                 'data:image/png;base64,' + base64.b64encode(logo).decode('ascii'))
-        html = html.replace('<title>PABASA Live Assessment Summary</title>',
-                            f'<title>ILLUSTRATIVE SAMPLE - {label} - PABASA Live Assessment Summary</title>')
+        html = html.replace('<title>PAGBASA Live Assessment Summary</title>',
+                            f'<title>ILLUSTRATIVE SAMPLE - {label} - PAGBASA Live Assessment Summary</title>')
         # The visible banner belongs to the preview only, not the delivered email.
         start = html.index('>', html.index('<body ')) + 1
         html = html[:start] + '<p style="margin:12px;text-align:center;font:12px Arial,sans-serif;color:#496c85;">ILLUSTRATIVE PREVIEW - Fictional student and session data</p>' + html[start:]

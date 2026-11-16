@@ -4,9 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if crla_official_assessment_data.assessment_kind == 'crla' %}PABASA | CRLA{% else %}{% block page_title %}Reading Assessment{% endblock %}{% endif %}</title>
+    <title>{% if crla_official_assessment_data.assessment_kind == 'crla' %}PAGBASA | CRLA{% else %}{% block page_title %}Reading Assessment{% endblock %}{% endif %}</title>
     <link rel="icon" type="image/png" href="{% static 'pabasa_app/images/pabasalogo.png' %}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{% static 'pabasa_app/css/learner_experience.css' %}">
     <style>
 
 
@@ -1677,42 +1678,6 @@
         .reader-shell.is-complete .completion-page {
             display: grid;
         }
-
-        #learnerExperiencePage {
-            align-items: center;
-            background: radial-gradient(ellipse 72% 68% at 50% 50%, rgba(255,255,255,.82), transparent 78%), linear-gradient(110deg, #e8f5ff 0%, #f5faff 32%, #fff9e9 68%, #e7f3ff 100%);
-            color: #234b3b;
-            display: none;
-            min-height: calc(100vh - clamp(0.85rem, 2vw, 1.5rem) * 2);
-            overflow: hidden;
-            place-items: center;
-            position: relative;
-            z-index: 3;
-        }
-
-        #learnerExperiencePage:not(.d-none) { display: grid; }
-        #learnerExperiencePage .learner-experience-content { align-items:center; background:#fffefa; border:1px solid rgba(255,255,255,.98); border-radius:30px; box-shadow:0 24px 60px rgba(30,80,115,.15); display:flex; flex-direction:column; gap:clamp(.8rem,1.8vh,1.15rem); max-height:96%; padding:clamp(1.3rem,3vh,2.1rem) clamp(1.3rem,3vw,2.6rem); position:relative; text-align:center; width:min(1120px,calc(100% - 3rem)); z-index:1; }
-        #learnerExperiencePage h1 { color:#234b3b; font-family:var(--font-family-primary); font-size:clamp(2rem,4.6vh,3.45rem); font-weight:700; line-height:1.15; margin:0 0 .3rem; }
-        #learnerExperiencePage .learner-experience-instruction { color:#527462; font-family:var(--font-family-primary); font-size:clamp(1rem,2.2vh,1.3rem); font-weight:400; line-height:1.35; margin:0; }
-        #learnerExperiencePage .rating-form { align-items: stretch; display: flex; gap: clamp(.55rem, 1.2vw, 1.1rem); justify-content: center; max-width: 1080px; width: 100%; }
-        #learnerExperiencePage .rating-option { align-items:center; background:#fffdf7; border:3px solid #d5e6e3; border-radius:22px; color:#234b3b; cursor:pointer; display:flex; flex:1 1 0; flex-direction:column; font-family:var(--font-family-primary); gap:.5rem; justify-content:center; min-height:220px; min-width:0; padding:.7rem .4rem .8rem; transition:background-color 180ms ease,border-color 180ms ease,box-shadow 180ms ease,transform 180ms ease; }
-        #learnerExperiencePage .rating-option:hover, #learnerExperiencePage .rating-option:focus-visible { background:#f5fbff; border-color:#9ac9df; outline:none; transform:translateY(-3px); }
-        #learnerExperiencePage .rating-option:focus-visible { box-shadow: 0 0 0 3px rgba(35, 75, 59, 0.25); }
-        #learnerExperiencePage .rating-option.is-selected { background: #fff0bd; border-color: #e4b83f; box-shadow: 0 0 0 3px rgba(228, 184, 63, .28), 0 10px 18px rgba(35,75,59,.12); transform: translateY(-5px) scale(1.025); }
-        #learnerExperiencePage .rating-pip { display:block; flex:none; width:min(100%,clamp(110px,15dvh,138px)); aspect-ratio:3 / 4; background-image:url("{% static 'pabasa_app/images/learner_experience/pip_reactions.png' %}"); background-position:var(--pip-position) center; background-repeat:no-repeat; background-size:500% auto; }
-        #learnerExperiencePage .rating-option[data-rating="1"] { --pip-position:0%; }
-        #learnerExperiencePage .rating-option[data-rating="2"] { --pip-position:25%; }
-        #learnerExperiencePage .rating-option[data-rating="3"] { --pip-position:50%; }
-        #learnerExperiencePage .rating-option[data-rating="4"] { --pip-position:75%; }
-        #learnerExperiencePage .rating-option[data-rating="5"] { --pip-position:100%; }
-        #learnerExperiencePage .rating-label { color:#234b3b; font-family:var(--font-family-primary); font-size:clamp(.95rem,1.2vw,1.08rem); font-weight:400; line-height:1.25; }
-        #learnerExperiencePage .rating-number { color:#53746a; font-family:var(--font-family-primary); font-size:1rem; font-weight:400; line-height:1; }
-        #learnerExperiencePage .continue-button { background:#e4b83f; border:0; border-radius:999px; box-shadow:0 8px 16px rgba(10,30,20,.2); color:#234b3b; cursor:pointer; font:400 clamp(1.15rem,2.4vh,1.45rem) var(--font-family-primary); min-height:3.5rem; min-width:280px; padding:.65rem 3.5rem; transition:filter 180ms ease,transform 180ms ease,box-shadow 180ms ease; }
-        #learnerExperiencePage .continue-button:not(:disabled):hover { filter:brightness(1.06); transform:translateY(-2px); }
-        #learnerExperiencePage .continue-button:disabled { cursor:not-allowed; opacity:.52; box-shadow:none; }
-        #learnerExperienceFeedback { color: #a13d32; font-family: var(--font-family-primary); font-weight: 800; min-height: 1.25rem; }
-        @media (max-width:700px) { #learnerExperiencePage { overflow-y:auto; } #learnerExperiencePage .learner-experience-content { border-radius:24px; gap:.75rem; max-height:none; padding:1rem .7rem; width:96vw; } #learnerExperiencePage .rating-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem; } #learnerExperiencePage .rating-option { border-radius:16px; min-height:190px; padding:.55rem .25rem .7rem; } #learnerExperiencePage .rating-option:last-child { grid-column:1 / -1; width:min(100%,220px); justify-self:center; } #learnerExperiencePage .rating-pip { width:min(100%,110px); } #learnerExperiencePage .continue-button { min-height:2.8rem; min-width:220px; padding:.45rem 2rem; } }
-        @media (prefers-reduced-motion:reduce) { #learnerExperiencePage .rating-option,#learnerExperiencePage .continue-button { transition:none; } }
 
         .completion-card {
             background:
@@ -4298,44 +4263,19 @@
             justify-self: stretch;
         }
     }
-    html:has(body.is-crla-reader .reader-shell.is-learner-experience) { height: 100%; overflow: hidden; }
-    body.is-crla-reader:has(.reader-shell.is-learner-experience) { height: 100dvh; min-height: 0; overflow: hidden; }
+    html:has(body.is-crla-reader .reader-shell.is-learner-experience),
+    body.is-crla-reader:has(.reader-shell.is-learner-experience) {
+        height: auto;
+        min-height: 100dvh;
+        overflow: auto;
+    }
     body.is-crla-reader .reader-shell.is-learner-experience {
-        height: 100dvh;
-        min-height: 0;
+        height: auto;
+        min-height: 100dvh;
         padding: 0;
         gap: 0;
+        overflow: visible;
         grid-template-rows: minmax(0, 1fr);
-    }
-    body.is-crla-reader .reader-shell.is-learner-experience #learnerExperiencePage {
-        width: 100%;
-        height: 100%;
-        min-height: 0;
-        max-height: 100dvh;
-        overflow: hidden;
-    }
-    body.is-crla-reader #learnerExperiencePage .learner-experience-content {
-        width: min(1100px, calc(100% - 3rem));
-        max-height: none;
-        padding: clamp(1.25rem, 3vh, 2rem) clamp(1rem, 2.5vw, 2.2rem);
-        gap: .9rem;
-    }
-    body.is-crla-reader #learnerExperiencePage h1 { font-size: clamp(2rem, 6dvh, 3rem); }
-    body.is-crla-reader #learnerExperiencePage .learner-experience-instruction { font-size: 1.1rem; }
-    body.is-crla-reader #learnerExperiencePage .rating-option { padding: .45rem .2rem .6rem; }
-    body.is-crla-reader #learnerExperiencePage .rating-pip { width:min(100%,clamp(100px,15dvh,138px)); }
-    body.is-crla-reader #learnerExperiencePage .rating-number { font-size:1rem; }
-    body.is-crla-reader #learnerExperiencePage .continue-button {
-        min-height: 44px;
-        min-width: min(220px, 100%);
-        padding: .4rem 1.5rem;
-    }
-    @media (max-width: 700px), (max-height: 620px) {
-        html:has(body.is-crla-reader .reader-shell.is-learner-experience),
-        body.is-crla-reader:has(.reader-shell.is-learner-experience) { height: auto; min-height: 100dvh; overflow: auto; }
-        body.is-crla-reader .reader-shell.is-learner-experience { height: auto; min-height: 100dvh; overflow: visible; }
-        body.is-crla-reader .reader-shell.is-learner-experience #learnerExperiencePage { height: auto; min-height: 100dvh; max-height: none; overflow: visible; padding-block: 1rem; }
-        body.is-crla-reader #learnerExperiencePage .learner-experience-content { width: min(calc(100% - 1rem), 1100px); }
     }
     @media (max-width: 600px) {
         body.is-crla-reader .reader-footer.is-official-crla-nav {
@@ -4877,23 +4817,15 @@
             </article>
         </section>
 
-        <section id="learnerExperiencePage" class="d-none" aria-labelledby="learnerExperienceTitle">
+        <section id="learnerExperiencePage" class="learner-experience d-none" lang="fil" aria-labelledby="learnerExperienceTitle">
             <div class="learner-experience-content">
-                <header>
-                    <h1 id="learnerExperienceTitle">Ano ang pakiramdam mo sa pagbasa?</h1>
-                    <p class="learner-experience-instruction">Piliin ang Pip na katulad ng naramdaman mo.</p>
+                <header class="learner-experience-heading">
+                    <h1 id="learnerExperienceTitle" tabindex="-1">Ano ang pakiramdam mo sa pagbasa?</h1>
+                    <p class="learner-experience-instruction">Piliin ang mukha na katulad ng naramdaman mo.</p>
                 </header>
-                <div class="rating-form" role="radiogroup" aria-label="Pakiramdam sa pagbasa">
-                    {% for rating in "12345" %}
-                    <button class="rating-option" type="button" role="radio" aria-checked="false" data-rating="{{ rating }}">
-                        <span class="rating-pip" aria-hidden="true"></span>
-                        <span class="rating-label">{% if rating == '1' %}Nahirapan ako{% elif rating == '2' %}Medyo nahirapan ako{% elif rating == '3' %}Okay lang{% elif rating == '4' %}Madali lang{% else %}Ang saya ko!{% endif %}</span>
-                        <span class="rating-number">{{ rating }}</span>
-                    </button>
-                    {% endfor %}
-                </div>
-                <button class="continue-button" id="learnerExperienceContinue" type="button" disabled>Tapos Na!</button>
-                <div id="learnerExperienceFeedback" role="status" aria-live="polite"></div>
+                {% include "pabasa_app/partials/_learner_experience_choices.html" only %}
+                <button class="rating-continue" id="learnerExperienceContinue" type="button" disabled>Tapos Na!</button>
+                <p class="rating-feedback" id="learnerExperienceFeedback" role="status" aria-live="polite"></p>
             </div>
         </section>
 

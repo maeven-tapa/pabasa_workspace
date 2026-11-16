@@ -59,7 +59,7 @@ class BenchmarkTests(unittest.TestCase):
 
             def getresponse(self):
                 failed = fail_baseline or (fail_wave and len(requests) > 9)
-                body = (b'PABASA Dashboard' if '/dashboard/teacher/?' in self.path
+                body = (b'PAGBASA Dashboard' if '/dashboard/teacher/?' in self.path
                         else b'{"success": true}')
                 return types.SimpleNamespace(status=503 if failed else 200, read=lambda: body)
 
@@ -69,7 +69,7 @@ class BenchmarkTests(unittest.TestCase):
         def view(request):
             dashboard = '/dashboard/teacher/?' in request.path
             return types.SimpleNamespace(status_code=200,
-                content=b'PABASA Dashboard' if dashboard else b'{"success": true}',
+                content=b'PAGBASA Dashboard' if dashboard else b'{"success": true}',
                 get=lambda name, default='': 'text/html' if dashboard else 'application/json')
 
         class Queries(list):

@@ -1,7 +1,7 @@
 {% extends "pabasa_app/reading_assessment_base.html" %}
 {% load static %}
 
-{% block page_title %}{% if sentence_bot_language|lower == 'filipino' %}Bot ng Pangungusap | PABASA{% else %}Sentence Bot | PABASA{% endif %}{% endblock %}
+{% block page_title %}{% if sentence_bot_language|lower == 'filipino' %}Bot ng Pangungusap | PAGBASA{% else %}Sentence Bot | PAGBASA{% endif %}{% endblock %}
 {% block mode_class %}reader-sentence sentence-bot-root{% endblock %}
 {% block level_mark %}SB{% endblock %}
 {% block eyebrow %}{% if sentence_bot_language|lower == 'filipino' %}Bot ng Pangungusap{% else %}Sentence Bot{% endif %}{% endblock %}
@@ -21,7 +21,7 @@ window.__PABASA_SENTENCE_BOT_I18N__ = {% if sentence_bot_language|lower == 'fili
   listening:'NAKIKINIG', checking:'SINUSURI', learnedStatus:'NATUTUHAN', retry:'SUBUKAN MULI', teach:'TURUAN SI PIPPO', sameRetry:'PAREHONG PANGUNGUSAP · SUBUKAN MULI', checkingReading:'SINUSURI ANG PAGBASA', active:'AKTIBO ANG BOSES', sentenceLearned:'PANGUNGUSAP NATUTUHAN ✓', guideRetry:'Basahin muli ang parehong pangungusap', guideChecking:'Sinusuri ni Pippo ang iyong pagbasa', guideListening:'Magsalita nang malinaw — nakikinig si Pippo', guideSuccess:'Mahusay na pagbasa!', readySentence:'Basahin nang malakas ang pangungusap',
   completeKicker:'PAGSASANAY NG ROBOT', complete:'TAPOS NA! 🤖', correct:'MGA TAMANG PANGUNGUSAP NA NABASA', done:'Tapos na', backMaterials:'Bumalik sa mga Materyal', completeAll:'Yehey! Alam na ni Pippo ang lahat ng pangungusap!', completeNone:'Magpatuloy sa pagsasanay! Natututo pa si Pippo.', completeHigh:'Mahusay! Natutuhan ni Pippo ang {correct} sa {total} pangungusap.', completeSome:'Magaling! Natutuhan ni Pippo ang {correct} sa {total} pangungusap.'
 }{% else %}{
-  language:'ENGLISH', lab:'PABASA LANGUAGE LAB', bot:'SENTENCE BOT', back:'Back', system:'PIPPO SYSTEM', ready:'READY', readyLearn:'READY TO LEARN', input:'KNOWLEDGE INPUT', guide:'Read the sentence aloud', resultReady:'SENTENCE READY', memory:'ROBOT MEMORY', learned:'LEARNED', training:'TRAINING', finish:'Finish', skip:'Skip',
+  language:'ENGLISH', lab:'PAGBASA LANGUAGE LAB', bot:'SENTENCE BOT', back:'Back', system:'PIPPO SYSTEM', ready:'READY', readyLearn:'READY TO LEARN', input:'KNOWLEDGE INPUT', guide:'Read the sentence aloud', resultReady:'SENTENCE READY', memory:'ROBOT MEMORY', learned:'LEARNED', training:'TRAINING', finish:'Finish', skip:'Skip',
   listening:'LISTENING', checking:'CHECKING', learnedStatus:'LEARNED', retry:'TRY AGAIN', teach:'TEACH PIPPO', sameRetry:'SAME SENTENCE · TRY AGAIN', checkingReading:'CHECKING YOUR READING', active:'VOICE SIGNAL ACTIVE', sentenceLearned:'SENTENCE LEARNED ✓', guideRetry:'Read the same sentence again', guideChecking:'Pippo is checking your reading', guideListening:'Speak clearly — Pippo is listening', guideSuccess:'Great reading!', readySentence:'Read the sentence aloud',
   completeKicker:'ROBOT TRAINING', complete:'COMPLETE! 🤖', correct:'CORRECT SENTENCES READ', done:'Done', backMaterials:'Back to Materials', completeAll:'Woohoo! Pippo knows all the sentences now!', completeNone:'Keep practicing! Pippo is still learning these sentences.', completeHigh:'Great job! Pippo learned {correct} out of {total} sentences.', completeSome:'Nice work! Pippo learned {correct} out of {total} sentences.'
 }{% endif %};

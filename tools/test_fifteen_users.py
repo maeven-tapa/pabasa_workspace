@@ -136,7 +136,9 @@ def run_test():
                             body = response.read()
                             status = response.status
                             if name == 'dashboard':
-                                ok = status == 200 and b'PABASA Dashboard' in body
+                                ok = status == 200 and any(
+                                    title in body for title in (b'PAGBASA Dashboard', b'PABASA Dashboard')
+                                )
                             else:
                                 ok = status == 200 and json.loads(body).get('success') is True
                         except Exception:

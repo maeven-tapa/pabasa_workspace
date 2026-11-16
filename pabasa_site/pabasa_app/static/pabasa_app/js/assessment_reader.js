@@ -39,7 +39,8 @@
         const completionClassificationPanel = document.getElementById("completionClassificationPanel");
         const completionClassificationLabel = document.getElementById("completionClassificationLabel");
         const learnerExperiencePage = document.getElementById("learnerExperiencePage");
-        const learnerExperienceOptions = Array.from(document.querySelectorAll("#learnerExperiencePage .rating-option"));
+        const learnerExperienceChoices = learnerExperiencePage?.querySelector(".rating-form");
+        const learnerExperienceOptions = Array.from(learnerExperienceChoices?.querySelectorAll(".rating-input") || []);
         const learnerExperienceContinue = document.getElementById("learnerExperienceContinue");
         const learnerExperienceFeedback = document.getElementById("learnerExperienceFeedback");
         const storySelectionPanel = document.getElementById("storySelectionPanel");
@@ -148,7 +149,7 @@
         const isCrla = officialAssessmentData?.assessment_kind === "crla";
         document.body.classList.toggle("is-crla-reader", isCrla);
         document.body.classList.toggle("is-admin-crla-preview", isAdminPreview && isCrla);
-        if (isCrla) document.title = "PABASA | CRLA";
+        if (isCrla) document.title = "PAGBASA | CRLA";
         if (isCrla) {
             const levelMark = shell.querySelector(".level-mark");
             if (levelMark && !levelMark.classList.contains("level-mark-deped")) {
@@ -327,7 +328,6 @@
         let currentStoryQuestions = [];
         let currentStoryAnswers = [];
         let currentStoryResults = [];
-        let selectedLearnerExperienceRating = null;
         let learnerExperienceSubmitting = false;
         let storyMiscueCount = 0;
         let storyWordResults = {};
@@ -2069,14 +2069,12 @@
             shell.classList.remove("is-complete");
             setLearnerExperienceView(true);
             learnerExperiencePage?.classList.remove("d-none");
-            learnerExperienceOptions.forEach(option => {
-                option.classList.remove("is-selected");
-                option.setAttribute("aria-checked", "false");
-            });
+            learnerExperienceOptions.forEach(option => { option.checked = false; });
             if (learnerExperienceContinue) learnerExperienceContinue.disabled = true;
             if (learnerExperienceFeedback) learnerExperienceFeedback.textContent = "";
             updateFooterForStoryState("learner_experience");
             window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+            document.getElementById("learnerExperienceTitle")?.focus({ preventScroll: true });
         }
 
         async function showLearnerExperience() {
@@ -2093,6 +2091,7 @@
             const selectedRating = Number.parseInt(rating, 10);
             if (learnerExperienceSubmitting || !Number.isInteger(selectedRating) || selectedRating < 1 || selectedRating > 5) return;
             learnerExperienceSubmitting = true;
+            if (learnerExperienceChoices) learnerExperienceChoices.disabled = true;
             if (learnerExperienceContinue) learnerExperienceContinue.disabled = true;
             if (learnerExperienceFeedback) learnerExperienceFeedback.textContent = "Saving your rating...";
             const persisted = readStudentEndState();
@@ -2104,6 +2103,7 @@
             }, { deferLocalStorage: true });
             if (!saved) {
                 learnerExperienceSubmitting = false;
+                if (learnerExperienceChoices) learnerExperienceChoices.disabled = false;
                 if (learnerExperienceContinue) learnerExperienceContinue.disabled = false;
                 if (learnerExperienceFeedback) learnerExperienceFeedback.textContent = "We could not save your rating. Please try again.";
                 return;
@@ -2128,6 +2128,7 @@
                 });
                 if (!liveSaved) {
                     learnerExperienceSubmitting = false;
+                    if (learnerExperienceChoices) learnerExperienceChoices.disabled = false;
                     if (learnerExperienceContinue) learnerExperienceContinue.disabled = false;
                     if (learnerExperienceFeedback) learnerExperienceFeedback.textContent = 'We could not save your live session completion. Please try again.';
                     return;
@@ -2141,19 +2142,16 @@
             await showCompletion(true);
         }
 
-        learnerExperienceOptions.forEach(option => {
-            option.addEventListener("click", () => {
-                selectedLearnerExperienceRating = option.dataset.rating;
-                learnerExperienceOptions.forEach(item => {
-                    const isSelected = item === option;
-                    item.classList.toggle("is-selected", isSelected);
-                    item.setAttribute("aria-checked", String(isSelected));
-                });
-                if (learnerExperienceContinue) learnerExperienceContinue.disabled = false;
-            });
+        learnerExperienceChoices?.addEventListener("change", () => {
+            if (learnerExperienceSubmitting) return;
+            if (learnerExperienceContinue) {
+                learnerExperienceContinue.disabled = !learnerExperienceOptions.some(option => option.checked);
+            }
+            if (learnerExperienceFeedback) learnerExperienceFeedback.textContent = "";
         });
         learnerExperienceContinue?.addEventListener("click", () => {
-            if (selectedLearnerExperienceRating) saveLearnerExperienceRating(selectedLearnerExperienceRating);
+            const selected = learnerExperienceOptions.find(option => option.checked);
+            if (selected) saveLearnerExperienceRating(selected.value);
         });
 
         function abortCRLASpokenAttemptForPause() {
@@ -3157,8 +3155,13 @@
                 const persistedStoryTitle = String(persistedEndState.selected_story || "").trim().toLowerCase();
                 if (activeStage === "story") {
                     resetStoryMiscueTracking(persistedEndState.miscues, persistedEndState);
-                    const restoredStory = currentStoryChoices.find(item => String(item.title || "").trim().toLowerCase() === persistedStoryTitle);
-                    if (restoredStory) {
+                    const matchingStory = currentStoryChoices.find(item => String(item.title || "").trim().toLowerCase() === persistedStoryTitle);
+                    if (matchingStory) {
+                        // A saved selection keeps the number assigned when the student chose it.
+                        const savedStoryNumber = Number(persistedEndState.story_number);
+                        const restoredStory = Number.isSafeInteger(savedStoryNumber) && savedStoryNumber > 0
+                            ? { ...matchingStory, key: savedStoryNumber }
+                            : matchingStory;
                         currentSelectedStory = restoredStory;
                         if (["story_comprehension", "learner_experience"].includes(workflowStage)) {
                             const savedDuration = Number(persistedEndState.duration_seconds);
@@ -8105,14 +8108,15 @@
                 showLiveSessionEnded({ kind: 'saved' });
                 return;
             }
-            if (state.status === 'paused') {
+            const pausedByTeacher = state.status === 'started' && studentStatus === 'paused'
+                && viewerStudentState.paused_by_teacher === true;
+            if (state.status === 'paused' || pausedByTeacher) {
                 if (!liveSessionPaused) {
-                    const pausedStudentState = (state.student_states || {})[currentStudentId] || {};
-                    const savedElapsed = Number(pausedStudentState.elapsed_seconds);
+                    pauseLiveElapsedTimer();
+                    const savedElapsed = Number(viewerStudentState.elapsed_seconds);
                     if (Number.isFinite(savedElapsed) && savedElapsed >= 0) {
                         liveActiveElapsedSeconds = Math.max(liveActiveElapsedSeconds, savedElapsed);
                     }
-                    pauseLiveElapsedTimer();
                     liveSessionPaused = true;
                     liveSessionEnded = false;
                     pauseAutoAdvanceTimer();
@@ -8140,15 +8144,14 @@
                 return;
             }
             if (state.status === 'started' && !liveSessionPaused && !liveActiveIntervalStartedAt) {
-                const savedElapsed = Number((state.student_states || {})[currentStudentId]?.elapsed_seconds);
+                const savedElapsed = Number(viewerStudentState.elapsed_seconds);
                 if (Number.isFinite(savedElapsed) && savedElapsed >= 0) liveActiveElapsedSeconds = savedElapsed;
             }
             if (liveSessionPaused && state.status === 'started') {
                 liveSessionPaused = false;
                 liveSessionEnded = false;
                 syncStoryReadingTimerProcessing();
-                const restoredStudentState = (state.student_states || {})[currentStudentId] || {};
-                resumeLiveElapsedTimer(restoredStudentState);
+                resumeLiveElapsedTimer(viewerStudentState);
                 hideLiveSessionPaused();
                 if (crlaComprehensionAdvancePendingIndex !== null) {
                     const completedQuestionIndex = crlaComprehensionAdvancePendingIndex;

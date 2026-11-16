@@ -80,7 +80,7 @@ var getStudentClassData = window.getStudentClassData = function() {
         loader.setAttribute("aria-label", "Loading page");
         loader.innerHTML = `
             <div class="dashboard-page-loader__content">
-                <img class="dashboard-page-loader__logo" src="/static/pabasa_app/images/pabasalogo.png" alt="PABASA">
+                <img class="dashboard-page-loader__logo" src="/static/pabasa_app/images/pabasalogo.png" alt="PAGBASA">
                 <div class="dashboard-page-loader__spinner"></div>
             </div>
         `;
@@ -856,7 +856,7 @@ var getStudentClassData = window.getStudentClassData = function() {
                                 id: Date.now() + Math.random(),
                                 classCode: code,
                                 title: `${className} has a new reading: "${m.title || 'New Reading'}"`,
-                                message: `Hello ${studentName},\n\nA new reading material has just been added to PABASA and is ready for you to explore!\n\nTitle: ${m.title || 'New Reading'}\n\nTake a few moments to log in and check it out. Every word you read helps you build confidence,\nimprove your skills, and discover something new.\n\nHappy reading, and enjoy learning with PABASA!\n\nWarm regards,\n\nThe PABASA Team`,
+                                message: `Hello ${studentName},\n\nA new reading material has just been added to PAGBASA and is ready for you to explore!\n\nTitle: ${m.title || 'New Reading'}\n\nTake a few moments to log in and check it out. Every word you read helps you build confidence,\nimprove your skills, and discover something new.\n\nHappy reading, and enjoy learning with PAGBASA!\n\nWarm regards,\n\nThe PAGBASA Team`,
                                 timestamp: Date.now(),
                                 read: false,
                                 role: 'student',

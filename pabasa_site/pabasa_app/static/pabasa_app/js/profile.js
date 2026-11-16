@@ -977,13 +977,13 @@ function initProfilePage() {
                     if (Notification.permission !== "granted") {
                         Notification.requestPermission().then(permission => {
                             if (permission === "granted") {
-                                new Notification("PABASA", { body: "In-app alerts are enabled! You will now receive dashboard updates." });
+                                new Notification("PAGBASA", { body: "In-app alerts are enabled! You will now receive dashboard updates." });
                             } else {
                                 showToast("Notification access denied. Check browser settings.", "info");
                             }
                         });
                     } else {
-                        new Notification("PABASA", { body: "In-app alerts are active." });
+                        new Notification("PAGBASA", { body: "In-app alerts are active." });
                     }
                 }
             }

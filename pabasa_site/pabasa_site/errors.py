@@ -23,7 +23,7 @@ def server_error(request):
                 response = HttpResponse(format_html(
                     '<!doctype html><html lang="en"><meta charset="utf-8">'
                     '<meta name="viewport" content="width=device-width,initial-scale=1">'
-                    '<title>Please wait | PABASA</title>'
+                    '<title>Please wait | PAGBASA</title>'
                     '<link rel="stylesheet" href="{}"><body>'
                     '<main style="max-width:32rem;margin:15vh auto;padding:1.5rem;font-size:1.1rem">'
                     '<h1>Please wait a moment</h1><p id="retry-message" role="status">'

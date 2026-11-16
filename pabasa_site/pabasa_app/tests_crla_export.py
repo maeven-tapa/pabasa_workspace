@@ -641,7 +641,7 @@ class CrlaExportResultTests(TestCase):
         self.assertEqual(sheet["M11"].value, 96)
         self.assertEqual((sheet["N11"].value, sheet["O11"].value), (8, 40))
         self.assertTrue(str(sheet["P11"].value).startswith("="))
-        self.assertTrue(str(sheet["Q11"].value).startswith("="))
+        self.assertEqual(sheet["Q11"].value, '=IF(AND(K11<>"",M11<>""),IFERROR(M11/96,""),"")')
         self.assertEqual(sheet["R11"].value, 4)
         self.assertEqual(sheet["S11"].value, 4)
         self.assertEqual(sheet["T11"].value, "Level 3")
@@ -1026,9 +1026,10 @@ class CrlaExportResultTests(TestCase):
                     is_official_reading=True, is_system_owned=True,
                     system_assessment_key=f"{key}-METRICS", system_assessment_period=period, system_assessment_phase=phase,
                 )
+                story_number = 2 if phase == "posttest" else 1
                 student.preference = {"reading_assessment_state": {"crla_result_states": {
                     str(material.id): {
-                        "material_id": str(material.id), "stage": "completed", "story_number": 1,
+                        "material_id": str(material.id), "stage": "completed", "story_number": story_number,
                         "selected_story": "Ang Pagong at ang Kuneho", "story_total_words": 96,
                         "words_read": 72, "miscues": 24, "duration_seconds": 125,
                         "wpm": 34.56, "story_read_percent": 75, "comprehension_correct": 3,
@@ -1041,7 +1042,7 @@ class CrlaExportResultTests(TestCase):
                     assessment_type="paragraph", status="published", attempt_status="completed",
                     completed_at=timezone.now(), crla_classification="Transitioning Reader", crla_score_data={
                         "task1_score": 8, "task2_type": "Task 2H / Sentences", "task2_score": 7,
-                        "story_number": 1, "story_total_words": None, "words_read": None,
+                        "story_number": story_number, "story_total_words": None, "words_read": None,
                         "miscues": "", "duration_seconds": 125, "wpm": None,
                         "passage_accuracy_percent": 75, "comprehension_correct": 3,
                     },
@@ -1049,13 +1050,15 @@ class CrlaExportResultTests(TestCase):
                 original_scores = dict(result.crla_score_data)
                 workbook = load_workbook(BytesIO(export_crla_excel(root.id).getvalue()), data_only=False)
                 sheet = workbook["G2 MT Reading Scoresheet"]
-                self.assertEqual(sheet["K11"].value, 1)
+                self.assertEqual(sheet["K11"].value, story_number)
                 self.assertEqual(sheet["L11"].value, 24)
                 self.assertEqual(sheet["M11"].value, 72)
                 self.assertEqual((sheet["N11"].value, sheet["O11"].value), (2, 5))
                 self.assertEqual(sheet["R11"].value, 3)
                 for column in ("P", "Q"):
                     self.assertTrue(sheet[f"{column}11"].value.startswith("="))
+                if phase == "posttest":
+                    self.assertEqual(sheet["Q11"].value, '=IF(AND(K11<>"",M11<>""),IFERROR(M11/96,""),"")')
                 values = _student_values(student, result, {}, root)
                 self.assertEqual(values["words_per_minute"], 34.56)
                 self.assertEqual(values["correct_words_percentage"], 0.75)

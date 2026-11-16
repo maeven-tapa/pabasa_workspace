@@ -401,13 +401,17 @@
     }
 
     const studentCompleted = ['completed', 'submitted'].includes(String(state.viewer_student_state?.status || '').toLowerCase());
+    const individuallyPaused = state.status === 'started' && state.viewer_student_state?.status === 'paused'
+      && state.viewer_student_state.paused_by_teacher === true;
     setText('wrStatus', state.status === 'ended'
       ? 'Ended'
       : studentCompleted && state.status !== 'cancelled'
         ? 'Completed'
-        : state.status === 'waiting'
-          ? 'Handa na'
-          : state.status?.charAt(0).toUpperCase() + state.status?.slice(1));
+        : individuallyPaused
+          ? 'Paused'
+          : state.status === 'waiting'
+            ? 'Handa na'
+            : state.status?.charAt(0).toUpperCase() + state.status?.slice(1));
     document.querySelector('.waiting-room-page')?.classList.toggle('is-assessment-complete',
       studentCompleted && !state.reader_url && !['waiting', 'ended', 'cancelled'].includes(state.status));
 
@@ -453,6 +457,11 @@
       if (participationStatus === 'saved') {
         setText('waitingMessage', 'Saved na ang ginawa mo! Hintayin muna si Teacher para magpatuloy.');
         document.querySelector('.waiting-room-description').textContent = 'Kapag handa na si Teacher, tuloy na tayo.';
+        return;
+      }
+      if (individuallyPaused) {
+        setText('waitingMessage', 'Paused by teacher');
+        document.querySelector('.waiting-room-description').textContent = 'Please wait for your teacher to resume your assessment.';
         return;
       }
       if (state.reader_url) {

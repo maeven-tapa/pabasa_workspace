@@ -7719,7 +7719,7 @@ document.addEventListener('DOMContentLoaded',()=>{
                                         <h5 class="course-modal-title" id="courseDetailTitle">Course</h5>
                                         <span class="course-modal-code-badge" id="courseDetailCode"></span>
                                     </div>
-                                    <p class="course-modal-subtitle">PABASA learning workspace · course details</p>
+                                    <p class="course-modal-subtitle">PAGBASA learning workspace · course details</p>
                                 </div>
                             </div>
                             <button type="button" class="course-modal-close-btn d-none" data-bs-dismiss="modal" aria-label="Close dialog">
@@ -8156,7 +8156,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     display: grid;
     gap: 0.75rem;
 }
-/* Unified Pabasa activity-authoring system */
+/* Unified Pagbasa activity-authoring system */
 .template-builder-panel {
     --activity-brand: #1f6f8b;
     --activity-brand-deep: #15556c;
@@ -14428,7 +14428,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     general: "Good day. This week, we are conducting regular reading checks. Please help your child practice reading for 10 minutes at home and focus on clarity.",
                     commendation: "Excellent news! {name} has shown great improvement in reading accuracy this week. Their effort is truly paying off. Keep up the good work!",
                     followup: "Hello. {name} needs a bit more practice with word decoding and vowel recognition. We suggest focusing on sentence materials this weekend.",
-                    assessment: "Notice: An oral reading assessment is scheduled for {name} next week. Please ensure they have a quiet place for practice using the PABASA dashboard."
+                    assessment: "Notice: An oral reading assessment is scheduled for {name} next week. Please ensure they have a quiet place for practice using the PAGBASA dashboard."
                 };
 
                 const toggleScheduleFields = () => {
@@ -15883,8 +15883,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value },
                 body: JSON.stringify({
                     email: s.email,
-                    subject: `PABASA: ${title}`,
-                    message: `Hello ${s.name},\n\n${emailMessageContent}\n\nLog in to your PABASA dashboard to start practicing.\n\nThank you,\nPABASA Team`
+                    subject: `PAGBASA: ${title}`,
+                    message: `Hello ${s.name},\n\n${emailMessageContent}\n\nLog in to your PAGBASA dashboard to start practicing.\n\nThank you,\nPAGBASA Team`
                 })
             }).catch(e => console.warn('Failed to send email to', s.email, e));
         });
@@ -16416,7 +16416,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             general: "Good day. This week, we are conducting regular reading checks. Please help your child practice reading for 10 minutes at home and focus on clarity.",
             commendation: "Excellent news! {name} has shown great improvement in reading accuracy this week. Their effort is truly paying off. Keep up the good work!",
             followup: "Hello. {name} needs a bit more practice with word decoding and vowel recognition. We suggest focusing on sentence materials this weekend.",
-            assessment: "Notice: An oral reading assessment is scheduled for {name} next week. Please ensure they have a quiet place for practice using the PABASA dashboard."
+            assessment: "Notice: An oral reading assessment is scheduled for {name} next week. Please ensure they have a quiet place for practice using the PAGBASA dashboard."
         };
 
         const toggleScheduleFields = () => {
@@ -20151,7 +20151,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             } else if (templateTitle === 'Word Meaning Match') {
                 instruction = learnerCopy.meaning;
                 const item = items[0];
-                previewBody = item ? `<article class="preview-reading-card text-center"><img src="{% static 'pabasa_app/images/footer-mascot.png' %}" alt="PABASA reading buddy" width="72" height="72" style="object-fit:contain"><div><span class="badge text-bg-warning mb-3">Word 1 of ${items.length}</span></div><div class="preview-answer-token fs-3">${escapeHtml(item.word || '')}</div><div class="mt-2 mb-3">${escapeHtml(item.sentence || '')}</div><div class="small fw-bold text-muted mb-2">${language === 'Filipino' ? 'Ano ang kahulugan ng salita?' : 'What does this word mean?'}</div><div class="d-grid gap-2">${(item.choices || []).map(choice => `<button class="btn btn-outline-success" type="button" tabindex="-1">${escapeHtml(choice)}</button>`).join('')}</div></article>` : empty('Choose a vocabulary reading set to begin the preview.');
+                previewBody = item ? `<article class="preview-reading-card text-center"><img src="{% static 'pabasa_app/images/footer-mascot.png' %}" alt="PAGBASA reading buddy" width="72" height="72" style="object-fit:contain"><div><span class="badge text-bg-warning mb-3">Word 1 of ${items.length}</span></div><div class="preview-answer-token fs-3">${escapeHtml(item.word || '')}</div><div class="mt-2 mb-3">${escapeHtml(item.sentence || '')}</div><div class="small fw-bold text-muted mb-2">${language === 'Filipino' ? 'Ano ang kahulugan ng salita?' : 'What does this word mean?'}</div><div class="d-grid gap-2">${(item.choices || []).map(choice => `<button class="btn btn-outline-success" type="button" tabindex="-1">${escapeHtml(choice)}</button>`).join('')}</div></article>` : empty('Choose a vocabulary reading set to begin the preview.');
             } else if (isPhraseReadingTemplate(templateTitle) || isSentenceReadingTemplate(templateTitle)) {
                 instruction = isPhraseReadingTemplate(templateTitle) ? learnerCopy.phrase : learnerCopy.sentence;
                 if (isPhraseReadingTemplate(templateTitle)) {
@@ -20172,7 +20172,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             } else if (templateTitle === 'Fluency Reading' || isStoryReadingTemplate(templateTitle)) {
                 instruction = templateTitle === 'Fluency Reading' ? learnerCopy.fluency : learnerCopy.story;
                 const passage = templateTitle === 'Fluency Reading' ? (activeTemplateActivity?.aralReadingSet?.data?.[0] || '') : (summary.body?.[0] || templateDynamicFields?.querySelector('[data-field-key="passage"]')?.value || '');
-                previewBody = passage ? (isStoryReadingTemplate(templateTitle) ? `<section class="template-learner-preview story-reading-learner-preview" aria-label="Story Reading learner preview"><div class="template-learner-preview-header"><strong>📖 Story Reading</strong><div class="template-learner-preview-progress">Scene 1 / 6<div class="template-learner-preview-track"><div class="template-learner-preview-fill" style="width:16%"></div></div></div></div><div class="story-reading-learner-preview-scene"><div class="story-reading-learner-preview-art" aria-hidden="true">📖</div><div class="story-reading-learner-preview-copy"><h3>${escapeHtml(summary.title || 'Story Reading')}</h3><p>${escapeHtml(passage)}</p><div class="story-reading-preview-buttons">🔊 Listen &nbsp; · &nbsp; ◀ Previous Scene &nbsp; · &nbsp; ▶ Read With Me</div></div></div></section>` : `<article class="preview-reading-card"><div class="d-flex align-items-center justify-content-between gap-3 mb-3"><div class="d-flex flex-wrap gap-2"><span class="badge text-bg-primary">1. ${language === 'Filipino' ? 'Makinig' : 'Listen'}</span><span class="badge text-bg-light">2. ${language === 'Filipino' ? 'Magsanay' : 'Practice'}</span><span class="badge text-bg-light">3. ${language === 'Filipino' ? 'Bumasa' : 'Read'}</span></div><img src="{% static 'pabasa_app/images/footer-mascot.png' %}" alt="PABASA reading buddy" width="64" height="64" style="object-fit:contain"></div><div class="fs-5 lh-lg text-center">${escapeHtml(passage)}</div><div class="d-flex flex-wrap justify-content-center gap-2 mt-3"><button class="btn btn-primary" type="button" tabindex="-1">🔊 ${language === 'Filipino' ? 'Pakinggan' : 'Listen'}</button><button class="btn btn-outline-primary" type="button" tabindex="-1">${language === 'Filipino' ? 'Magsanay' : 'Start Practice'} →</button></div></article>`) : empty('Choose a fluency reading set to begin the preview.');
+                previewBody = passage ? (isStoryReadingTemplate(templateTitle) ? `<section class="template-learner-preview story-reading-learner-preview" aria-label="Story Reading learner preview"><div class="template-learner-preview-header"><strong>📖 Story Reading</strong><div class="template-learner-preview-progress">Scene 1 / 6<div class="template-learner-preview-track"><div class="template-learner-preview-fill" style="width:16%"></div></div></div></div><div class="story-reading-learner-preview-scene"><div class="story-reading-learner-preview-art" aria-hidden="true">📖</div><div class="story-reading-learner-preview-copy"><h3>${escapeHtml(summary.title || 'Story Reading')}</h3><p>${escapeHtml(passage)}</p><div class="story-reading-preview-buttons">🔊 Listen &nbsp; · &nbsp; ◀ Previous Scene &nbsp; · &nbsp; ▶ Read With Me</div></div></div></section>` : `<article class="preview-reading-card"><div class="d-flex align-items-center justify-content-between gap-3 mb-3"><div class="d-flex flex-wrap gap-2"><span class="badge text-bg-primary">1. ${language === 'Filipino' ? 'Makinig' : 'Listen'}</span><span class="badge text-bg-light">2. ${language === 'Filipino' ? 'Magsanay' : 'Practice'}</span><span class="badge text-bg-light">3. ${language === 'Filipino' ? 'Bumasa' : 'Read'}</span></div><img src="{% static 'pabasa_app/images/footer-mascot.png' %}" alt="PAGBASA reading buddy" width="64" height="64" style="object-fit:contain"></div><div class="fs-5 lh-lg text-center">${escapeHtml(passage)}</div><div class="d-flex flex-wrap justify-content-center gap-2 mt-3"><button class="btn btn-primary" type="button" tabindex="-1">🔊 ${language === 'Filipino' ? 'Pakinggan' : 'Listen'}</button><button class="btn btn-outline-primary" type="button" tabindex="-1">${language === 'Filipino' ? 'Magsanay' : 'Start Practice'} →</button></div></article>`) : empty('Choose a fluency reading set to begin the preview.');
             } else if (templateTitle === "5W's Story Questions") {
                 instruction = learnerCopy.questions;
                 const storyTitle = activeTemplateActivity.content?.storyTitle || 'Story 1 — Ang Umaga ni Lito';
@@ -20215,7 +20215,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const sceneUrl = `{% static 'pabasa_app/images/story_reading' %}/${storyLanguage}/Set_${storyNumber}/1.png`;
                 stage?.classList.add('story-reading-preview-stage');
                 if (content) {
-                    content.innerHTML = `<section class="story-live-learner-preview" aria-label="Story Reading live stream learner preview"><header class="story-live-learner-header"><img class="story-live-learner-logo" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt=""><span class="story-live-learner-brand">PABASA <b>LIVE</b></span><em>Story Reading</em><span style="margin-left:auto">Preview</span></header><div class="story-live-learner-layout"><div class="story-live-learner-main"><div class="story-live-learner-media"><img class="story-live-learner-scene" src="${sceneUrl}" alt="${escapeAttr(storyTitle)} scene"><div class="story-live-learner-shade"></div><div class="story-live-learner-subtitle">${escapeHtml(storyText.slice(0, 220))}${storyText.length > 220 ? '…' : ''}</div></div><div class="story-live-learner-meta"><strong>${escapeHtml(storyTitle)}</strong><small>${escapeHtml(storyLanguage)} · Story Reading</small></div><div class="story-live-learner-controls"><span>↻ Retry</span><span class="story-live-learner-progress"></span><span>🔊 Listen</span></div><div class="story-live-learner-read">▣ Read With Me</div></div><aside class="story-live-learner-comments"><h4>Live comments</h4><div class="story-live-learner-comment"><strong>Story Guide</strong>Listen to the story, then read with me.</div><div class="story-live-learner-comment"><strong>PABASA</strong>Scene 1 of 6</div></aside></div></section>`;
+                    content.innerHTML = `<section class="story-live-learner-preview" aria-label="Story Reading live stream learner preview"><header class="story-live-learner-header"><img class="story-live-learner-logo" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt=""><span class="story-live-learner-brand">PAGBASA <b>LIVE</b></span><em>Story Reading</em><span style="margin-left:auto">Preview</span></header><div class="story-live-learner-layout"><div class="story-live-learner-main"><div class="story-live-learner-media"><img class="story-live-learner-scene" src="${sceneUrl}" alt="${escapeAttr(storyTitle)} scene"><div class="story-live-learner-shade"></div><div class="story-live-learner-subtitle">${escapeHtml(storyText.slice(0, 220))}${storyText.length > 220 ? '…' : ''}</div></div><div class="story-live-learner-meta"><strong>${escapeHtml(storyTitle)}</strong><small>${escapeHtml(storyLanguage)} · Story Reading</small></div><div class="story-live-learner-controls"><span>↻ Retry</span><span class="story-live-learner-progress"></span><span>🔊 Listen</span></div><div class="story-live-learner-read">▣ Read With Me</div></div><aside class="story-live-learner-comments"><h4>Live comments</h4><div class="story-live-learner-comment"><strong>Story Guide</strong>Listen to the story, then read with me.</div><div class="story-live-learner-comment"><strong>PAGBASA</strong>Scene 1 of 6</div></aside></div></section>`;
                 }
             }
             if (templateTitle === "5W's Story Questions") {
@@ -24659,7 +24659,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                     const link = document.createElement("a");
                     link.setAttribute("href", URL.createObjectURL(blob));
-                    link.setAttribute("download", `PABASA_${classData.name}_Report_${new Date().toISOString().split('T')[0]}.csv`);
+                    link.setAttribute("download", `PAGBASA_${classData.name}_Report_${new Date().toISOString().split('T')[0]}.csv`);
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
@@ -24752,7 +24752,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             },
                             body: JSON.stringify({
                                 email: log.contact,
-                                subject: `PABASA: Reading Update for ${log.student}`,
+                                subject: `PAGBASA: Reading Update for ${log.student}`,
                                 message: log.plain_message,
                                 html_message: log.html_message
                             })

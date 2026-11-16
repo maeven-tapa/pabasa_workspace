@@ -1479,7 +1479,7 @@
     @media(max-width:900px){body:has(.player-profile) .profile-main{grid-template-columns:1fr}}
     @media(max-width:560px){body:has(.player-profile) .profile-details-mini{grid-template-columns:1fr}.settings-theme-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
-    /* Shared PABASA settings surface for teacher and student profiles. */
+    /* Shared PAGBASA settings surface for teacher and student profiles. */
     .player-settings-modal .modal-dialog { width:min(calc(100% - 1.5rem), 760px); max-width:760px; }
     .player-settings-modal .modal-content {
         background:var(--dash-panel) !important;
@@ -1593,7 +1593,7 @@
         .settings-accordion .accordion-body { padding:.85rem; }
     }
 
-    /* Verification dialog follows the same compact PABASA modal system. */
+    /* Verification dialog follows the same compact PAGBASA modal system. */
     #teacherEmailVerificationModal .modal-dialog { width:min(calc(100% - 1.5rem), 440px); max-width:440px; }
     #teacherEmailVerificationModal .modal-content {
         background:var(--dash-panel);
@@ -2116,7 +2116,7 @@
         <div class="player-dashboard-grid">
             <section class="player-card player-student-info"><h3 class="player-card-title"><i class="bi bi-person-lines-fill"></i> Student Info</h3><div class="player-info-grid">
                 <div class="player-info-chip"><i class="bi bi-envelope"></i><div><small>Email</small><strong>{{ email }}</strong></div></div>
-                <div class="player-info-chip"><i class="bi bi-person-badge"></i><div><small>PABASA ID</small><strong>{{ pabasa_id }}</strong></div></div>
+                <div class="player-info-chip"><i class="bi bi-person-badge"></i><div><small>PAGBASA ID</small><strong>{{ pabasa_id }}</strong></div></div>
                 <div class="player-info-chip"><i class="bi bi-person-vcard"></i><div><small>Gender</small><strong>{{ gender|default:"Not set" }}</strong></div></div>
                 <div class="player-info-chip"><i class="bi bi-calendar-heart"></i><div><small>Birthday</small><strong>{{ birthday_display|default:"Not set" }}</strong></div></div>
                 <div class="player-info-chip"><i class="bi bi-building"></i><div><small>School</small><strong>{{ school_name|default:"Not set" }}</strong></div></div>
@@ -2168,7 +2168,7 @@
                                 <div>
                                     <span class="profile-detail-icon"><i class="bi bi-person-badge"></i></span>
                                     <span class="profile-detail-text">
-                                        <span class="label">PABASA ID</span>
+                                        <span class="label">PAGBASA ID</span>
                                         <span class="value">{{ pabasa_id }}</span>
                                     </span>
                                 </div>
@@ -2208,7 +2208,7 @@
                                 </div>
                                 <div>
                                     <span class="profile-detail-icon"><i class="bi bi-book-half"></i></span>
-                                    <span class="profile-detail-text"><span class="label">PABASA Reading Level</span><span class="value">{{ pabasa_reading_level|default:"Not set" }}</span></span>
+                                    <span class="profile-detail-text"><span class="label">PAGBASA Reading Level</span><span class="value">{{ pabasa_reading_level|default:"Not set" }}</span></span>
                                 </div>
                                 <div>
                                     <span class="profile-detail-icon"><i class="bi bi-card-heading"></i></span>
@@ -2359,7 +2359,7 @@
                     </div>
                     <div class="profile-stat-box">
                         <div class="profile-stat-value" id="profileStudentLevel">-</div>
-                        <div class="profile-stat-label">PABASA Level</div>
+                        <div class="profile-stat-label">PAGBASA Level</div>
                     </div>
                 </div>
             </div>

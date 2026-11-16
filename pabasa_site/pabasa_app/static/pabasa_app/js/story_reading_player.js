@@ -219,7 +219,7 @@ console.error('STORY_READING_PLAYER_JS_LOADED_TEST');
         const liveHeader = document.createElement('header');
         liveHeader.className = 'live-app-header';
         const logoUrl = window.pabasaStoryLogoUrl || '/static/pabasa_app/images/pabasalogo.png';
-        liveHeader.innerHTML = `<div class="live-brand"><img src="${logoUrl}" alt="PABASA" class="brand-logo-image"><span>Edu<span>PABASA</span></span><b>LIVE</b><em>Story Reading</em></div>`;
+        liveHeader.innerHTML = `<div class="live-brand"><img src="${logoUrl}" alt="PAGBASA" class="brand-logo-image"><span>Edu<span>PAGBASA</span></span><b>LIVE</b><em>Story Reading</em></div>`;
         const backLink = playerHeader.querySelector('.back-link');
         if (backLink) {
             if (data.return_url) backLink.href = data.return_url;

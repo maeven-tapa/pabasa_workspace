@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="pabasa_site/pabasa_app/static/pabasa_app/images/pabasalogo.png" alt="PABASA logo" width="110">
-  <h1>P.A.B.A.S.A</h1>
+  <img src="pabasa_site/pabasa_app/static/pabasa_app/images/pabasa_logo.png" alt="PAGBASA logo" width="110">
+  <h1>PAGBASA</h1>
   <p><strong>Platform for Automated Basic Reading and Speech Assessment</strong></p>
   <p>Helping teachers guide every child toward confident reading.</p>
   <p>Reading assessment · Guided practice · Classroom management · Learner progress</p>
@@ -16,13 +16,13 @@
   <p><a href="#overview">Overview</a> · <a href="#features">Features</a> · <a href="#quick-start">Quick start</a> · <a href="#configuration">Configuration</a> · <a href="#research-and-team">Research & team</a></p>
 </div>
 
-![PABASA website homepage showing the reading learning space and Get Started and Login buttons](pabasa_site/pabasa_app/static/pabasa_app/images/screenshot.png)
+![PAGBASA homepage showing the reading learning space](pabasa_site/pabasa_app/static/pabasa_app/images/screenshot.avif)
 
 <p align="center"><em>Every child deserves the opportunity to become a confident reader.</em></p>
 
 ## Overview
 
-PABASA is a web-based reading evaluation system developed for **Grade 2 students at Salawag Elementary School**, as a research project at **Technological University of the Philippines – Cavite**.
+PAGBASA is a web-based reading evaluation system developed for **Grade 2 students at Salawag Elementary School**, as a research project at **Technological University of the Philippines – Cavite**.
 
 Teachers can organize classes, prepare learning materials, assess reading, and review learner progress in one place. Students take part in reading activities and guided practice, with speech recognition supporting automated assessment and feedback.
 
@@ -40,7 +40,7 @@ Teachers can organize classes, prepare learning materials, assess reading, and r
 
 ## Technology stack
 
-PABASA uses server-rendered Django pages with JavaScript for interactive activities and browser audio recording.
+PAGBASA uses server-rendered Django pages with JavaScript for interactive activities and browser audio recording.
 
 | Layer | Technologies |
 | --- | --- |
@@ -86,7 +86,7 @@ python pabasa_site/manage.py createsuperuser
 python pabasa_site/manage.py runserver
 ```
 
-### 3. Open PABASA
+### 3. Open PAGBASA
 
 Open the [local homepage](http://127.0.0.1:8000/) to explore the website. The superuser account created above can access [Django administration](http://127.0.0.1:8000/admin/). Registration and other email-dependent flows require working SMTP configuration.
 

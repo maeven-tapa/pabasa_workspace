@@ -30,7 +30,7 @@ const command = name => new Promise(resolve => { input.once('line', resolve); co
     }, {id:process.env.PABASA_SYNC_STUDENT,term,level});
     await waitCount(12);
     assert.deepEqual(await page.locator('.section-information-students thead th').allTextContents(),
-      ['Name','PABASA ID','Email','Reading Level','Year-End Outcome','Actions']);
+      ['Name','PAGBASA ID','Email','Reading Level','Year-End Outcome','Actions']);
     await waitLevel(1,'Low Emerging Reader');
     await page.waitForTimeout(1200); // Settle the initial calendar response.
     await page.locator('#enrolledStudentSearch').fill('SYNC-student');

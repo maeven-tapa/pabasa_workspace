@@ -86,7 +86,7 @@
   const item = () => items[index];
   const word = () => String(item()?.word || '').toUpperCase();
   const parts = () => item()?.syllables || [];
-  const mascot = () => `<img class="clap-count-mascot" src="${esc(window.CLAP_MASCOT_URL)}" alt="PABASA mascot">`;
+  const mascot = () => `<img class="clap-count-mascot" src="${esc(window.CLAP_MASCOT_URL)}" alt="PAGBASA mascot">`;
   const card = x => `<article class="clap-count-card game-card-container">${x}${mascot()}</article>`;
 
   const phaseStyles = `

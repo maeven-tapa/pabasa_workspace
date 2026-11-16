@@ -15,7 +15,7 @@ def email_logo_html(width=240):
     return (
         '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">'
         '<tr><td align="center" style="text-align: center;">'
-        f'<img src="{escape(email_logo_url(), quote=True)}" alt="PABASA" width="{width}" '
+        f'<img src="{escape(email_logo_url(), quote=True)}" alt="PAGBASA" width="{width}" '
         f'height="{width // 3}" style="display: block; width: {width}px; max-width: 100%; '
         'height: auto; margin: 0 auto; border: 0;">'
         '</td></tr></table>'

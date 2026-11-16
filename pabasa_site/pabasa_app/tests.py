@@ -3810,7 +3810,7 @@ class AssessmentResultsPageTests(TestCase):
         self.assertIn("Readers at Grade Level", text)
         self.assertIn("Phil-IRI Classification", text)
         self.assertIn("Independent", text)
-        self.assertIn("PABASA Level", text)
+        self.assertIn("PAGBASA Level", text)
         self.assertIn("Expert Reader", text)
 
 
@@ -6842,6 +6842,32 @@ class LiveAssessmentStartTests(TestCase):
         self.assertEqual((states[str(students[1].id)]['items_completed'], states[str(students[1].id)]['items_total']), (4, 4))
         self.assertEqual((states[str(students[2].id)]['items_completed'], states[str(students[2].id)]['items_total']), (6, 8))
 
+    @patch('pabasa_app.views._assessment_week_allows_material', return_value=True)
+    def test_story_reader_recovery_uses_the_enrolled_students_saved_live_selection(self, _assessment_week):
+        self.material.student_access = True
+        self.material.save(update_fields=['student_access'])
+        saved_story = {
+            'stage': 'story_ready', 'selected_story': 'Ang Pagong at ang Kuneho', 'story_number': 1,
+        }
+        live_session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=[self.student.id], student_count=1, status='started',
+            student_states={str(self.student.id): {'recovery_state': saved_story}},
+        )
+        student_client = Client()
+        auth = student_client.session
+        auth.update({'user_id': self.student.id, 'user_role': 'student'})
+        auth.save()
+        query = {'official_assessment_id': self.material.id, 'live_session_id': live_session.id, 'live_recovery': '1'}
+        response = student_client.get(reverse('reading_para_page'), query)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.context['student_end_assessment_state_json']), saved_story)
+
+        live_session.student_ids = []
+        live_session.save(update_fields=['student_ids'])
+        response = student_client.get(reverse('reading_para_page'), query)
+        self.assertNotIn('selected_story', json.loads(response.context['student_end_assessment_state_json']))
+
     def test_stale_story_snapshot_cannot_replace_resumed_segment_or_timer(self):
         session = LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex,
@@ -6991,8 +7017,8 @@ if (storyReadingTimerId !== restoredInterval || intervalsCreated !== 1) throw ne
         self.assertIn('Story · Segment ${storySegmentIndex + 1}/${itemsTotal}', monitor)
         self.assertIn('Math.round(((storySegmentIndex + 1) / itemsTotal) * 100)', monitor)
         self.assertIn('storyPositionPercent ?? reportedPercent', monitor)
-        self.assertIn("statusLower === 'paused' && isOfficialCrlaSession && isStoryStage", monitor)
-        self.assertIn('if (progressText) progressText.textContent = crlaProgressText;', monitor)
+        self.assertIn('let displayedStage = isOfficialCrlaSession ? crlaProgressText : progressTextValue;', monitor)
+        self.assertIn("updateText(progressText, displayedStage === '--' ? '—' : displayedStage);", monitor)
         self.assertNotIn('segments completed`', monitor)
         self.assertIn("recoveryState.story_segment_index", monitor)
         self.assertIn("'Story —'", monitor)
@@ -7392,6 +7418,89 @@ if (storyReadingTimerId !== restoredInterval || intervalsCreated !== 1) throw ne
         self.assertEqual(duplicate_resume.json()['session']['status'], 'started')
         self.assertEqual(duplicate_resume.json()['session']['student_states'][str(other_student.id)]['progress'], 0.7)
         self.assertEqual(duplicate_resume.json()['session']['student_count'], 2)
+
+    def test_individual_pause_keeps_other_student_reading_and_survives_class_resume(self):
+        other_student = User.objects.create(
+            custom_id=f"STD-{uuid.uuid4().hex[:8].upper()}", role='student',
+            first_name='Noah', last_name='Student', sex='male',
+            birth_month=8, birth_day=14, birth_year=2013,
+            email='other-live-pause-student@example.com', grade_level='Grade 2',
+        )
+        student_key, other_key = str(self.student.id), str(other_student.id)
+        initial_state = {'status': 'reading', 'elapsed_seconds': 20, 'current_item': 'Puno'}
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex, teacher=self.teacher, course=self.course, material=self.material,
+            student_ids=[self.student.id, other_student.id], student_count=2,
+            batch_assignments={student_key: 1, other_key: 1}, status='started',
+            start_at=timezone.now() - timedelta(seconds=30), countdown_seconds=0,
+            student_states={student_key: dict(initial_state), other_key: dict(initial_state)},
+        )
+        urls = {'session_id': session.id}
+        action_url = reverse('live_assessment_session_action', kwargs=urls)
+        state_url = reverse('live_assessment_session_state', kwargs=urls)
+        update_url = reverse('live_assessment_student_state_update', kwargs=urls)
+
+        def student_client(student):
+            client = Client()
+            auth = client.session
+            auth.update({'user_id': student.id, 'user_role': 'student'})
+            auth.save()
+            return client
+
+        paused_client = student_client(self.student)
+        other_client = student_client(other_student)
+
+        def act(action, target=self.student.id, client=self.client):
+            return client.post(action_url, {'action': action, 'student_id': target}, content_type='application/json')
+
+        self.assertEqual(act('pause_student', client=other_client).status_code, 403)
+        response = act('pause_student')
+        self.assertEqual(response.status_code, 200)
+        state = response.json()['session']
+        self.assertEqual(state['status'], 'started')
+        self.assertEqual(state['student_states'][other_key], initial_state)
+        self.assertTrue(state['student_states'][student_key]['paused_by_teacher'])
+        self.assertEqual(act('pause_student').status_code, 200)
+
+        paused_view = paused_client.get(state_url).json()['session']
+        self.assertTrue(paused_view['viewer_student_state']['paused_by_teacher'])
+        self.assertEqual(paused_view['reader_url'], '')
+        self.assertTrue(other_client.get(state_url).json()['session']['reader_url'])
+
+        def update(client, status, elapsed):
+            return client.post(update_url, {'status': status, 'elapsed_seconds': elapsed}, content_type='application/json')
+
+        self.assertEqual(update(paused_client, 'paused', 24).status_code, 200)
+        self.assertEqual(update(paused_client, 'reading', 30).status_code, 200)
+        self.assertEqual(update(paused_client, 'completed', 30).status_code, 409)
+        self.assertEqual(update(other_client, 'reading', 30).status_code, 200)
+        self.assertEqual(act('pause').status_code, 200)
+        self.assertEqual(act('resume_student').status_code, 409)
+        response = act('resume')
+        self.assertEqual(response.status_code, 200)
+        states = response.json()['session']['student_states']
+        self.assertEqual(states[student_key]['status'], 'paused')
+        self.assertEqual(states[student_key]['elapsed_seconds'], 24)
+        self.assertEqual(states[student_key]['current_item'], 'Puno')
+        self.assertEqual(states[other_key]['status'], 'reading')
+        self.assertEqual(states[other_key]['elapsed_seconds'], 30)
+
+        response = act('resume_student')
+        self.assertEqual(response.status_code, 200)
+        resumed = response.json()['session']['student_states'][student_key]
+        self.assertEqual(resumed['status'], 'reading')
+        self.assertNotIn('paused_by_teacher', resumed)
+        self.assertTrue(paused_client.get(state_url).json()['session']['reader_url'])
+        self.assertEqual(update(paused_client, 'reading', 26).status_code, 200)
+        self.assertEqual(update(paused_client, 'paused', 24).status_code, 200)
+        session.refresh_from_db()
+        self.assertEqual(session.student_states[student_key]['elapsed_seconds'], 26)
+        self.assertEqual(session.student_states[student_key]['status'], 'reading')
+
+        session.batch_assignments[other_key] = 2
+        session.total_batches = 2
+        session.save(update_fields=['batch_assignments', 'total_batches'])
+        self.assertEqual(act('pause_student', target=other_student.id).status_code, 409)
 
     def test_paused_student_can_publish_pause_snapshot_but_stale_reading_update_is_rejected(self):
         session = LiveAssessmentSession.objects.create(
@@ -13002,7 +13111,7 @@ class WeeklyDigestTests(TestCase):
         self.assertIn("Assessments completed by students: 1", email_body)
         self.assertIn("Average class reading performance: 88.0%", email_body)
         self.assertIn("<html", html_body)
-        self.assertIn("Your Weekly PABASA Digest", html_body)
+        self.assertIn("Your Weekly PAGBASA Digest", html_body)
         self.assertIn("pabasalogo.png", html_body)
         self.assertIn("Assessments made", html_body)
         self.assertIn("Class average", html_body)
@@ -13745,12 +13854,12 @@ class TeacherStudentsDirectoryTests(TestCase):
         workbook = load_workbook(BytesIO(response.content), data_only=False)
         self.assertEqual(workbook.sheetnames[0], 'Activity Results')
         sheet = workbook.active
-        self.assertEqual(sheet['A1'].value, 'PABASA — Student Activity Results')
+        self.assertEqual(sheet['A1'].value, 'PAGBASA — Student Activity Results')
         self.assertEqual(sheet['A2'].value, 'Activity: Phrase Reading')
         header = [cell.value for cell in sheet[4]]
         self.assertEqual(header[:10], [
             'Student Name',
-            'PABASA ID',
+            'PAGBASA ID',
             'Grade',
             'Section',
             'Activity Title',
@@ -13918,12 +14027,12 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertTrue(data["report_included"])
         self.assertIn("report_summary", data["sent"][0])
         mock_email_cls.assert_called_once()
-        self.assertEqual(mock_email_cls.call_args[0][0], "Student Reading Progress Report - PABASA")
+        self.assertEqual(mock_email_cls.call_args[0][0], "Student Reading Progress Report - PAGBASA")
         email_instance = mock_email_cls.return_value
         email_body = mock_email_cls.call_args[0][1]
         self.assertIn("Dear Parent/Guardian", email_body)
         self.assertIn("Attached is the latest Reading Progress Report", email_body)
-        self.assertIn("PABASA Team", email_body)
+        self.assertIn("PAGBASA Team", email_body)
         self.assertNotIn("Reading Performance Report", email_body)
         self.assertNotIn("Accuracy: 88%", email_body)
         self.assertNotIn("Words Per Minute: 72 WPM", email_body)
@@ -14047,11 +14156,11 @@ class TeacherStudentsDirectoryTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["success"])
-        self.assertEqual(mock_email_cls.call_args[0][0], "Student Reading Progress Report - PABASA")
+        self.assertEqual(mock_email_cls.call_args[0][0], "Student Reading Progress Report - PAGBASA")
         email_body = mock_email_cls.call_args[0][1]
         self.assertIn("Dear Parent/Guardian", email_body)
         self.assertIn("Attached is the latest Reading Progress Report", email_body)
-        self.assertIn("PABASA Team", email_body)
+        self.assertIn("PAGBASA Team", email_body)
         self.assertNotIn("No completed assessment yet", email_body)
         mock_email_cls.return_value.attach.assert_called_once()
 
@@ -14083,7 +14192,7 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["success"])
         self.assertFalse(response.json()["report_included"])
-        self.assertEqual(mock_email_cls.call_args[0][0], "Performance Commendation - PABASA")
+        self.assertEqual(mock_email_cls.call_args[0][0], "Performance Commendation - PAGBASA")
         email_body = mock_email_cls.call_args[0][1]
         self.assertIn("Congratulations", email_body)
         self.assertIn("certificate is attached", email_body.lower())
@@ -14122,7 +14231,7 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["success"])
         self.assertFalse(response.json()["report_included"])
-        self.assertEqual(mock_email_cls.call_args[0][0], "Scheduled Assessment Notice - PABASA")
+        self.assertEqual(mock_email_cls.call_args[0][0], "Scheduled Assessment Notice - PAGBASA")
         email_body = mock_email_cls.call_args[0][1]
         self.assertIn("Oral Reading Check", email_body)
         self.assertIn("July 10, 2026 at 09:00 AM", email_body)

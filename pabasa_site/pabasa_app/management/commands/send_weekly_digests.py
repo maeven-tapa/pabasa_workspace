@@ -22,7 +22,7 @@ def _parse_bound(value, option_name):
 
 
 class Command(BaseCommand):
-    help = "Send weekly PABASA digest emails to users who enabled Weekly Digest."
+    help = "Send weekly PAGBASA digest emails to users who enabled Weekly Digest."
 
     def add_arguments(self, parser):
         parser.add_argument("--start", help="Inclusive window start as ISO date/datetime.")

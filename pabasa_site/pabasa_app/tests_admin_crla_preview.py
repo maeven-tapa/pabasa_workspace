@@ -36,7 +36,7 @@ class AdminCrlaPreviewTests(SimpleTestCase):
                     'crla_official_assessment_data': {'assessment_kind': 'crla'},
                     'is_admin_preview': True,
                 })
-                self.assertIn('<title>PABASA | CRLA</title>', html)
+                self.assertIn('<title>PAGBASA | CRLA</title>', html)
                 self.assertIn('Quit</button>', html)
                 self.assertIn('<body class="is-crla-reader is-admin-crla-preview"', html)
                 self.assertIn('class="level-mark level-mark-deped"', html)

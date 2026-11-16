@@ -167,7 +167,7 @@ async function fitsScreen(page, label) {
           + (scenario === 'preview_live_parameters' ? '&live=1&live_session_id=preview-test&countdown=0' : ''));
         await page.waitForFunction(() => window.__readerTest && (!document.getElementById('readingWord').textContent.includes('Loading')
           || document.querySelector('.reader-shell').classList.contains('is-complete')));
-        assert.equal(await page.title(), 'PABASA | CRLA');
+        assert.equal(await page.title(), 'PAGBASA | CRLA');
         assert.deepEqual(await page.evaluate(() => ({...window.__firstPaintTheme,
           background: window.__firstPaintTheme.background === getComputedStyle(document.body).backgroundImage,
           card: window.__firstPaintTheme.card === getComputedStyle(document.querySelector('.completion-card')).backgroundColor})),

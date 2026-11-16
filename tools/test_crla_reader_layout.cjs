@@ -161,7 +161,7 @@ async function snapshot(page) {
           await page.reload();
           await page.waitForFunction(() => !document.getElementById('readingWord').textContent.includes('Loading'));
           assert.deepEqual(await snapshot(page), before, `${branch}, ${viewport.width}px, debug=${debug}: refresh`);
-          assert.equal(await page.title(), 'PABASA | CRLA');
+          assert.equal(await page.title(), 'PAGBASA | CRLA');
           if (!debug && viewport.width <= 1024) {
             const size = await page.evaluate(() => ({width: document.documentElement.scrollWidth,
               height: document.documentElement.scrollHeight, viewportHeight: window.innerHeight}));

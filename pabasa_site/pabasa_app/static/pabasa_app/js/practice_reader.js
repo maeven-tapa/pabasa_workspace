@@ -2241,7 +2241,7 @@
         const activeMaterial = getActiveMaterialMeta();
         const difficultyLabelText = normalizeMaterialValue(activeMaterial?.difficulty_label || activeMaterial?.difficulty || selectedDifficulty || 'Easy');
         const levelLabelText = normalizeMaterialValue(activeMaterial?.level_label || activeMaterial?.level || 'Level 2');
-        const titleText = 'Pabasa Scrolls';
+        const titleText = 'Pagbasa Scrolls';
         const currentLevelContext = getLevelProgressContext();
         const levelEntry = ensureLevelProgressEntry(getPracticeProgressState(), currentLevelContext.mode, currentLevelContext.difficulty, currentLevelContext.level);
 

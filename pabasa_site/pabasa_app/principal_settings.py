@@ -59,7 +59,7 @@ def settings_context(request, user, context):
                     context['settings_success'] = 'Password changed successfully.'
         elif action == 'save_personal_info':
             if any(key in request.POST for key in ('position', 'role', 'custom_id', 'pabasa_id', 'principal_id')):
-                return HttpResponseForbidden('PABASA ID and role/position are managed by an Administrator.')
+                return HttpResponseForbidden('PAGBASA ID and role/position are managed by an Administrator.')
             data = request.POST.copy()
             data['contact_no'] = data.get('contact_number', '')
             form = PersonalInformationForm(data, instance=user)

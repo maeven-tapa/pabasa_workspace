@@ -356,5 +356,5 @@ class ClassManagementTermReadingTests(ManagementSyncFixtures, TestCase):
         import re
         head = response.content.decode().split('<thead>', 1)[1].split('</thead>', 1)[0]
         self.assertEqual(re.findall(r'<th>(.*?)</th>', head),
-            ['Name', 'PABASA ID', 'Email', 'Reading Level', 'Year-End Outcome', 'Actions'])
+            ['Name', 'PAGBASA ID', 'Email', 'Reading Level', 'Year-End Outcome', 'Actions'])
         self.assert_level(self.sync().json(), 'Pending')

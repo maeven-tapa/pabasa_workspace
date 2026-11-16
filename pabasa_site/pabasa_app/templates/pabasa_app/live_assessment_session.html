@@ -4,6 +4,7 @@
 {% block page_title %}Live Assessment Control Center{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'pabasa_app/css/live_crla_monitor.css' %}">
 <div class="container-fluid py-3 teacher-control">
     <div class="live-page-header d-flex align-items-center justify-content-between mb-3">
         <div class="live-page-heading">
@@ -28,201 +29,6 @@
             box-sizing: border-box;
         }
 
-        .live-monitor-card {
-            container-type: inline-size;
-            container-name: live-monitor;
-            border: 1px solid rgba(31, 111, 139, 0.08);
-            background: var(--panel, #ffffff);
-            border-radius: clamp(16px, 4vw, 24px);
-            box-shadow: 0 18px 40px rgba(2, 6, 23, 0.06);
-            font-family: inherit;
-            width: 100%;
-            max-width: 100%;
-        }
-        .live-monitor-card .status-dot {
-            width: 0.7rem;
-            height: 0.7rem;
-            border-radius: 50%;
-            display: inline-block;
-            box-shadow: 0 0 0 4px rgba(107, 114, 128, 0.12);
-            flex: 0 0 auto;
-        }
-        .live-monitor-card .monitor-status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.45rem;
-            padding: clamp(0.45rem, 1.6vw, 0.7rem) clamp(0.7rem, 2.2vw, 1rem);
-            border-radius: 999px;
-            min-width: 0;
-            max-width: 100%;
-            flex-wrap: wrap;
-        }
-        .live-monitor-card .monitor-status-waiting {
-            background: rgba(107, 114, 128, 0.08);
-            color: #374151;
-        }
-        .live-monitor-card .monitor-status-ready {
-            background: rgba(59, 130, 246, 0.12);
-            color: #1d4ed8;
-        }
-        .live-monitor-card .monitor-status-live {
-            background: rgba(34, 197, 94, 0.12);
-            color: #16a34a;
-        }
-        .live-monitor-card .monitor-status-paused {
-            background: rgba(245, 158, 11, 0.12);
-            color: #b45309;
-        }
-        .live-monitor-card .monitor-status-finished {
-            background: rgba(107, 114, 128, 0.08);
-            color: #374151;
-        }
-        .live-monitor-card .status-dot-waiting {
-            box-shadow: 0 0 0 4px rgba(107, 114, 128, 0.12);
-            background: #6b7280;
-        }
-        .live-monitor-card .status-dot-ready {
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
-            background: #1d4ed8;
-        }
-        .live-monitor-card .status-dot-live {
-            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
-            background: #16a34a;
-        }
-        .live-monitor-card .status-dot-paused {
-            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.12);
-            background: #d97706;
-        }
-        .live-monitor-card .status-dot-finished {
-            box-shadow: 0 0 0 4px rgba(107, 114, 128, 0.12);
-            background: #374151;
-        }
-        .live-monitor-card .monitor-status-time {
-            color: var(--muted, #6b7280);
-        }
-        .live-monitor-card .table-monitor th {
-            font-size: 0.78rem;
-            color: var(--muted, #6b7280);
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            border-bottom: 1px solid rgba(31, 111, 139, 0.06);
-            padding: 0.85rem 0.75rem;
-            font-weight: 800;
-        }
-        .live-monitor-card .table-monitor td {
-            border-top: 1px solid rgba(31, 111, 139, 0.04);
-            padding: 0.9rem 0.75rem;
-            color: var(--ink, #1b1a17);
-            vertical-align: middle;
-        }
-        .live-monitor-card .student-cell {
-            min-width: 0;
-            width: 34%;
-        }
-        .live-monitor-card .student-monitor-table {
-            table-layout: fixed;
-            width: 100%;
-        }
-        .live-monitor-card .student-monitor-table th,
-        .live-monitor-card .student-monitor-table td {
-            overflow: hidden;
-        }
-        .live-monitor-card .student-monitor-table th:first-child,
-        .live-monitor-card .student-monitor-table td:first-child {
-            width: 38%;
-            text-align: left;
-        }
-        .live-monitor-card .student-monitor-table th:nth-child(2),
-        .live-monitor-card .student-monitor-table td:nth-child(2) {
-            width: 16%;
-            text-align: center;
-        }
-        .live-monitor-card .student-monitor-table th:nth-child(3),
-        .live-monitor-card .student-monitor-table td:nth-child(3) {
-            width: 22%;
-            text-align: left;
-        }
-        .live-monitor-card .student-monitor-table th:nth-child(4),
-        .live-monitor-card .student-monitor-table td:nth-child(4) {
-            width: 10%;
-            text-align: center;
-            white-space: nowrap;
-        }
-        .live-monitor-card .student-monitor-table th:nth-child(5),
-        .live-monitor-card .student-monitor-table td:nth-child(5) {
-            width: 18%;
-            text-align: center;
-            white-space: nowrap;
-        }
-        .live-monitor-card .reading-level-calculating {
-            display: inline-flex;
-            align-items: baseline;
-            white-space: nowrap;
-        }
-        .live-monitor-card .reading-level-dots {
-            display: inline-flex;
-            width: 1.15em;
-            justify-content: flex-start;
-        }
-        .live-monitor-card .reading-level-dot {
-            animation: reading-level-dot 1.2s infinite ease-in-out;
-            opacity: 0.2;
-        }
-        .live-monitor-card .reading-level-dot:nth-child(2) { animation-delay: 0.2s; }
-        .live-monitor-card .reading-level-dot:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes reading-level-dot {
-            0%, 60%, 100% { opacity: 0.2; }
-            30% { opacity: 1; }
-        }
-        .live-monitor-card .student-monitor-table td:first-child > .d-flex {
-            min-width: 0;
-        }
-        .live-monitor-card .student-monitor-table td:first-child > .d-flex > div:last-child {
-            min-width: 0;
-            overflow: hidden;
-        }
-        .live-monitor-card .student-monitor-table td:first-child .fw-semibold {
-            overflow: hidden;
-            white-space: normal;
-            overflow-wrap: anywhere;
-        }
-        .live-monitor-card .student-avatar {
-            width: clamp(2rem, 4.8vw, 2.375rem);
-            height: clamp(2rem, 4.8vw, 2.375rem);
-            line-height: clamp(2rem, 4.8vw, 2.375rem);
-            font-size: clamp(0.8rem, 2vw, 0.9rem);
-            flex: 0 0 auto;
-        }
-        .live-monitor-card .progress-sm {
-            height: 8px;
-            border-radius: 999px;
-            background: rgba(15, 45, 69, 0.08);
-            width: 100%;
-        }
-        .live-monitor-card .progress-sm .progress-bar {
-            background: var(--dash-primary);
-            border-radius: 999px;
-        }
-        .live-monitor-card .status-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            padding: 0.28rem 0.56rem;
-            border-radius: 999px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            letter-spacing: 0.01em;
-            text-transform: capitalize;
-            max-width: 100%;
-        }
-        .live-monitor-card .status-pill-reading { background: rgba(31,111,139,0.10); color: var(--accent-deep, #164e9b); }
-        .live-monitor-card .status-pill-waiting { background: rgba(250, 204, 21, 0.10); color: #92400e; }
-        .live-monitor-card .status-pill-ready { background: rgba(59, 130, 246, 0.10); color: #1d4ed8; }
-        .live-monitor-card .status-pill-finished { background: rgba(107, 114, 128, 0.08); color: #374151; }
-        .live-monitor-card .status-pill-needs_attention { background: rgba(220, 38, 38, 0.10); color: #991b1b; }
-
-        .live-monitor-card .small { font-size: 0.88rem; }
-        .live-monitor-card .fw-semibold { font-weight: 700; }
         .batch-view-pagination { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 0.4rem; padding-top: 0.75rem; }
         .batch-view-pagination .btn { border-radius: 0.7rem; min-width: 2.25rem; }
         .batch-view-pagination .btn.active { background: #1d6fc5; border-color: #1d6fc5; color: #fff; }
@@ -274,21 +80,9 @@
             max-width: 100%;
             border-radius: clamp(16px, 4vw, 24px);
         }
-        .teacher-control .student-monitor-table {
-            width: 100%;
-            table-layout: fixed;
-        }
-        .teacher-control .student-monitor-table thead th {
-            white-space: nowrap;
-            word-break: normal;
-            overflow-wrap: normal;
-            writing-mode: horizontal-tb;
-        }
         .teacher-control .btn { font-weight: 800; border-radius: 10px; }
         .teacher-control .btn.btn-lg { padding: 0.7rem 0.95rem; font-size: clamp(0.92rem, 2.2vw, 1rem); }
 
-        .teacher-control .table-monitor th { font-size: 0.80rem; color: var(--muted, #6b7280); }
-        .teacher-control .table-monitor td { font-size: 0.96rem; }
 
         #activityTimeline .mb-2 { padding: 6px 0; border-bottom: 1px dashed rgba(31,111,139,0.03); }
         #activityTimeline .small.text-muted { font-size: 0.82rem; }
@@ -503,7 +297,7 @@
         .teacher-control .live-page-header,
         .teacher-control .live-page-heading,
         .teacher-control .live-page-status,
-        .teacher-control .monitor-card-header,
+
         .teacher-control .control-card-header {
             min-width: 0;
         }
@@ -538,7 +332,7 @@
             max-width: 100%;
         }
         .teacher-control .control-panel-card { top: 16px; }
-        .teacher-control .live-session-top-row { align-items: stretch; min-width: 0; width: 100%; }
+        .teacher-control .live-session-top-row { align-items: flex-start; min-width: 0; width: 100%; }
         .teacher-control .live-session-top-row > [class*="col-"] { display: flex; min-width: 0; }
         .teacher-control .live-session-top-row .live-monitor-card > *,
         .teacher-control .live-session-top-row .control-panel-card > *,
@@ -546,16 +340,12 @@
         .teacher-control .control-card-header > * { min-width: 0; max-width: 100%; }
         .teacher-control .control-panel-card h5,
         .teacher-control .control-panel-card .small { overflow-wrap: anywhere; }
-        .teacher-control .live-session-top-row .live-monitor-card,
+
         .teacher-control .live-session-top-row .control-panel-card { padding: 0.85rem !important; }
-        .teacher-control .live-session-top-row .live-monitor-card,
+
         .teacher-control .live-session-top-row .control-panel-card { display: flex; flex: 1 1 auto; flex-direction: column; height: auto; margin-bottom: 0 !important; min-height: 0; overflow: visible; }
-        .teacher-control .live-session-top-row .live-monitor-card .table-responsive { flex: 0 1 auto; min-height: 0; overflow-x: auto; overflow-y: visible; }
-        .teacher-control .live-session-top-row .live-monitor-card .table-monitor thead th { position: sticky; top: 0; z-index: 1; background: var(--dash-panel, #fff); }
         .teacher-control .live-session-top-row .activity-timeline-section { display: flex; flex: 0 1 auto; flex-direction: column; min-height: 0; }
         .teacher-control .live-session-top-row #activityTimeline { flex: 0 1 auto; min-height: 0; max-height: none !important; overflow-x: hidden !important; overflow-y: visible !important; }
-        .teacher-control .live-session-top-row .live-monitor-card:has(#studentsTableBody tr:nth-child(11)) { max-height: 40rem; overflow: hidden; }
-        .teacher-control .live-session-top-row .live-monitor-card:has(#studentsTableBody tr:nth-child(11)) .table-responsive { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
         .teacher-control .session-setup { padding: 0.65rem 0.75rem; border: 1px solid rgba(31, 111, 139, 0.12); border-radius: 12px; background: var(--dash-bg); }
         .teacher-control .active-countdown-display { padding: 0.65rem 0.75rem; border: 1px solid rgba(31, 111, 139, 0.12); border-radius: 12px; background: var(--dash-bg); }
         .teacher-control .active-countdown-display .active-countdown-value { font-size: 1.8rem; font-weight: 800; line-height: 1; color: var(--accent-deep, #155e75); }
@@ -570,9 +360,9 @@
             .teacher-control .session-status-grid .session-status-item { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
         }
 
-        @media (min-width: 1200px) {
-            .teacher-control .live-session-top-row > .col-xl-9 { flex: 0 0 68%; width: 68%; }
-            .teacher-control .live-session-top-row > .col-xl-3 { flex: 0 0 32%; width: 32%; }
+        @media (min-width: 1440px) {
+            .teacher-control .live-session-top-row > .live-monitor-column { flex: 1 1 0%; width: auto; }
+            .teacher-control .live-session-top-row > .live-control-column { flex: 0 0 clamp(17rem, 21vw, 22rem); width: auto; }
         }
 
         @media (min-width: 992px) {
@@ -588,14 +378,10 @@
             .teacher-control .live-page-status-pill strong { font-size: 0.88rem; }
             .teacher-control .live-session-top-row { row-gap: 0.5rem; }
             .teacher-control .live-session-top-row { margin-top: 0 !important; margin-bottom: 0 !important; }
-            .teacher-control .monitor-card-header,
+
             .teacher-control .control-card-header { margin-bottom: 0.4rem !important; }
-            .teacher-control .live-session-top-row .live-monitor-card,
+
             .teacher-control .live-session-top-row .control-panel-card { padding: 0.55rem !important; border-radius: 16px; }
-            .teacher-control .live-monitor-card .table-monitor th { padding: 0.55rem 0.6rem; font-size: 0.72rem; }
-            .teacher-control .live-monitor-card .table-monitor td { padding: 0.55rem 0.6rem; font-size: 0.88rem; }
-            .teacher-control .live-monitor-card .student-avatar { width: 1.85rem; height: 1.85rem; line-height: 1.85rem; font-size: 0.74rem; }
-            .teacher-control .live-monitor-card .status-pill { padding: 0.2rem 0.45rem; font-size: 0.76rem; }
             .teacher-control .btn.btn-lg { min-height: 38px; padding: 0.5rem 0.8rem; font-size: 0.9rem; }
             .teacher-control .session-setup,
             .teacher-control .active-countdown-display { padding: 0.4rem 0.55rem; }
@@ -612,28 +398,14 @@
             #activityTimeline .mb-2 { padding: 3px 0; margin-bottom: 0.25rem !important; }
             #activityTimeline .small.text-muted { font-size: 0.76rem; }
             #activityTimeline > .mb-2 > div:last-child { line-height: 1.35; font-size: 0.84rem; }
-            .teacher-control #batchProgressPanel,
             .teacher-control #allSelectedStudentsCompletedBanner { padding: 0.45rem 0.65rem !important; margin-bottom: 0.55rem !important; }
-            .teacher-control .live-session-top-row { align-items: stretch; }
-            .teacher-control .live-session-top-row .live-monitor-card,
+
             .teacher-control .live-session-top-row .control-panel-card {
                 height: var(--live-card-height);
                 min-height: 0;
                 max-height: none;
                 overflow: hidden;
             }
-            .teacher-control .live-session-top-row .live-monitor-card .table-responsive {
-                flex: 1 1 0;
-                min-height: 0;
-                overflow-x: auto;
-                overflow-y: hidden;
-            }
-            .teacher-control .live-session-top-row .student-monitor-table { display: block; height: 100%; }
-            .teacher-control .live-session-top-row .student-monitor-table thead,
-            .teacher-control .live-session-top-row .student-monitor-table tbody { display: block; width: 100%; }
-            .teacher-control .live-session-top-row .student-monitor-table thead tr,
-            .teacher-control .live-session-top-row .student-monitor-table tbody tr { display: table; width: 100%; table-layout: fixed; }
-            .teacher-control .live-session-top-row .student-monitor-table tbody { height: calc(100% - 3rem); min-height: 0; overflow-y: auto; }
             .teacher-control .live-session-top-row .activity-timeline-section {
                 display: flex;
                 flex: 1 1 auto;
@@ -672,9 +444,8 @@
         @media (max-width: 991.98px) {
             .teacher-control .live-session-top-row { align-items: initial; }
             .teacher-control .live-session-top-row > [class*="col-"] { display: block; }
-            .teacher-control .live-session-top-row .live-monitor-card,
+
             .teacher-control .live-session-top-row .control-panel-card { display: block; height: auto; min-height: 0; margin-bottom: 1rem !important; overflow: visible; }
-            .teacher-control .live-session-top-row .live-monitor-card .table-responsive { overflow-y: visible; }
             .teacher-control .live-session-top-row .activity-timeline-section { min-height: 14rem; }
             .teacher-control .live-session-top-row #activityTimeline { max-height: none !important; overflow-y: auto !important; }
         }
@@ -819,7 +590,6 @@
             --muted: var(--dash-muted, #94a3b8);
             color: var(--dash-text, #f1f5f9);
         }
-        body.dark-theme .teacher-control .live-monitor-card,
         body.dark-theme .teacher-control .control-panel-card,
         body.dark-theme .teacher-control .configuration-card,
         body.dark-theme .teacher-control .live-session-summary-card {
@@ -840,26 +610,16 @@
         }
         body.dark-theme .teacher-control .profile-surface-value,
         body.dark-theme .teacher-control .profile-surface-option,
-        body.dark-theme .teacher-control .table-monitor td,
         body.dark-theme .teacher-control label.form-label {
             color: #f1f5f9;
         }
         body.dark-theme .teacher-control .profile-surface-option:hover,
-        body.dark-theme .teacher-control .profile-surface-option.is-selected,
-        body.dark-theme .teacher-control .table-monitor tbody tr {
+        body.dark-theme .teacher-control .profile-surface-option.is-selected {
             background: rgba(56, 189, 248, 0.1);
         }
-        body.dark-theme .teacher-control .table-monitor th,
-        body.dark-theme .teacher-control .table-monitor td,
         body.dark-theme .teacher-control .participant-row {
             border-color: rgba(148, 163, 184, 0.18);
         }
-        body.dark-theme .teacher-control .monitor-status-waiting,
-        body.dark-theme .teacher-control .monitor-status-finished {
-            background: rgba(148, 163, 184, 0.16);
-            color: #e2e8f0;
-        }
-
         @media (max-width: 768px) {
             .teacher-control {
                 padding: 0.75rem 0 1.25rem !important;
@@ -876,8 +636,6 @@
             .teacher-control .profile-surface-value,
             .teacher-control .profile-surface-option-title,
             .teacher-control .profile-surface-option-subtitle,
-            .teacher-control .status-pill,
-            .teacher-control .monitor-status-badge,
             .teacher-control .small,
             .teacher-control .fw-semibold,
             .teacher-control .form-label,
@@ -892,9 +650,8 @@
             .teacher-control > .row > [class*="col-"] { padding-left: 0; padding-right: 0; }
             .teacher-control .live-session-top-row { align-items: initial; }
             .teacher-control .live-session-top-row > [class*="col-"] { display: block; }
-            .teacher-control .live-session-top-row .live-monitor-card,
+
             .teacher-control .live-session-top-row .control-panel-card { display: block; height: auto; min-height: 0; margin-bottom: 1rem !important; overflow: visible; }
-            .teacher-control .live-session-top-row .live-monitor-card .table-responsive { overflow-y: visible; }
             .teacher-control .live-session-top-row .activity-timeline-section { min-height: 14rem; }
             .teacher-control .live-session-top-row #activityTimeline { max-height: none !important; overflow-y: auto !important; }
             .teacher-control .live-page-header {
@@ -916,25 +673,18 @@
                 max-width: 65%;
                 text-align: right;
             }
-            .teacher-control .live-monitor-card,
             .teacher-control .control-panel-card,
             .teacher-control .configuration-card {
                 border-radius: 16px;
                 padding: 0.9rem !important;
             }
-            .teacher-control .monitor-card-header,
+
             .teacher-control .control-card-header {
                 align-items: stretch !important;
                 flex-direction: column;
                 gap: 0.75rem;
             }
-            .teacher-control .monitor-card-header > .text-end,
             .teacher-control .control-card-header > .btn { text-align: left !important; }
-            .teacher-control .monitor-card-header .d-inline-flex {
-                justify-content: space-between;
-                width: 100%;
-            }
-            .teacher-control .monitor-status-badge { min-width: 0; }
             .teacher-control .control-panel-card {
                 position: static !important;
                 top: auto !important;
@@ -944,54 +694,6 @@
                 min-height: 44px;
                 padding: 0.5rem 0 !important;
             }
-            .teacher-control .table-responsive { overflow-x: hidden; width: 100%; }
-            .teacher-control .table-monitor,
-            .teacher-control .table-monitor tbody { display: block; width: 100%; }
-            .teacher-control .table-monitor thead { display: none; }
-            .teacher-control .table-monitor tbody tr {
-                background: rgba(31, 111, 139, 0.035);
-                border: 1px solid rgba(31, 111, 139, 0.09);
-                border-radius: 14px;
-                display: grid;
-                margin-bottom: 0.75rem;
-                overflow: hidden;
-                padding: 0.35rem 0.75rem;
-                width: 100%;
-            }
-            .teacher-control .table-monitor tbody tr:last-child { margin-bottom: 0; }
-            .teacher-control .table-monitor tbody td {
-                align-items: center;
-                border-top: 1px solid rgba(31, 111, 139, 0.07);
-                display: grid;
-                gap: 0.75rem;
-                grid-template-columns: minmax(5.25rem, 34%) minmax(0, 1fr);
-                min-width: 0;
-                padding: 0.65rem 0;
-                width: 100%;
-            }
-            .teacher-control .table-monitor tbody td:first-child {
-                border-top: 0;
-                display: block;
-                padding: 0.7rem 0;
-            }
-            .teacher-control .table-monitor tbody td:nth-child(2)::before { content: "Status"; }
-            .teacher-control .table-monitor tbody td:nth-child(3)::before { content: "Progress"; }
-            .teacher-control .table-monitor tbody td:nth-child(4)::before { content: "Time"; }
-            .teacher-control .table-monitor tbody td:nth-child(5)::before { content: "Reading Level"; }
-            .teacher-control .table-monitor tbody td::before {
-                color: var(--muted, #6b7280);
-                font-size: 0.7rem;
-                font-weight: 800;
-                letter-spacing: 0.06em;
-                text-transform: uppercase;
-            }
-            .teacher-control .table-monitor tbody tr.text-muted td[colspan] {
-                border: 0;
-                display: block;
-                padding: 1.25rem 0.4rem !important;
-                text-align: center;
-            }
-            .teacher-control .table-monitor tbody tr.text-muted td[colspan]::before { content: none; }
             .teacher-control .configuration-card .row > [class*="col-"] {
                 min-width: 0;
                 width: 100%;
@@ -1005,91 +707,6 @@
                 text-align: right;
             }
             .teacher-control .profile-surface-menu { max-height: min(280px, 42vh); }
-        }
-
-        @container live-monitor (max-width: 680px) {
-            .live-monitor-card .table-responsive {
-                overflow-x: hidden;
-            }
-            .live-monitor-card .student-monitor-table,
-            .live-monitor-card .student-monitor-table tbody {
-                display: block;
-                width: 100%;
-            }
-            .live-monitor-card .student-monitor-table thead {
-                display: none;
-            }
-            .live-monitor-card .student-monitor-table tbody tr {
-                display: grid;
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-                column-gap: 1rem;
-                row-gap: 0;
-                width: 100%;
-                height: auto;
-                min-height: 0;
-                padding: 0.35rem 0.75rem;
-                overflow: visible;
-            }
-            .live-monitor-card .student-monitor-table tbody td {
-                display: flex;
-                flex-direction: column;
-                align-items: stretch;
-                justify-content: center;
-                gap: 0.28rem;
-                width: auto;
-                min-width: 0;
-                overflow: visible;
-                padding: 0.55rem 0;
-                text-align: left;
-            }
-            .live-monitor-card .student-monitor-table tbody td:first-child {
-                grid-column: 1 / -1;
-                display: block;
-                width: 100%;
-                padding: 0.6rem 0 0.7rem;
-            }
-            .live-monitor-card .student-monitor-table tbody td:first-child > .d-flex > div:last-child,
-            .live-monitor-card .student-monitor-table tbody td:first-child .fw-semibold {
-                overflow: visible;
-                overflow-wrap: anywhere;
-            }
-            .live-monitor-card .student-monitor-table tbody td::before {
-                display: block;
-                flex: 0 0 auto;
-                overflow-wrap: normal;
-                white-space: nowrap;
-            }
-            .live-monitor-card .student-monitor-table tbody td:nth-child(2) {
-                text-align: left;
-            }
-            .live-monitor-card .student-monitor-table tbody td:nth-child(2)::before { content: "Status"; }
-            .live-monitor-card .student-monitor-table tbody td:nth-child(3)::before { content: "Progress"; }
-            .live-monitor-card .student-monitor-table tbody td:nth-child(4)::before { content: "Time"; }
-            .live-monitor-card .student-monitor-table tbody td:nth-child(5)::before { content: "Reading Level"; }
-            .live-monitor-card .student-monitor-table tbody td:nth-child(4),
-            .live-monitor-card .student-monitor-table tbody td:nth-child(5) {
-                white-space: normal;
-            }
-            .live-monitor-card .student-monitor-table .progress-sm {
-                min-width: 0;
-            }
-            .live-monitor-card .student-monitor-table .status-pill {
-                align-self: flex-start;
-            }
-            .live-monitor-card .reading-level-calculating {
-                white-space: normal;
-                max-width: 100%;
-            }
-            .live-monitor-card .reading-level-dots {
-                flex: 0 0 1.15em;
-            }
-            .live-monitor-card .student-monitor-table tbody tr.text-muted td[colspan] {
-                grid-column: 1 / -1;
-                display: block;
-                width: 100%;
-                padding: 1rem 0.4rem !important;
-                text-align: center;
-            }
         }
 
         @media (max-width: 420px) {
@@ -1109,41 +726,34 @@
                 min-height: 46px;
                 width: 100%;
             }
-            .teacher-control .monitor-card-header .d-inline-flex {
-                align-items: flex-start;
-                flex-direction: column;
-                gap: 0.5rem !important;
-            }
-            .teacher-control .table-monitor tbody td {
-                grid-template-columns: 4.75rem minmax(0, 1fr);
-            }
         }
     </style>
 
     <div class="row g-2 g-lg-3 mb-1 live-session-top-row">
-        <div class="col-12 col-lg-8 col-xl-9 order-1">
-            <div class="card live-monitor-card monitor-card p-3 mb-2">
-                <div class="monitor-card-header d-flex align-items-start justify-content-between mb-2">
+        <div class="col-12 live-monitor-column order-1">
+            <section class="live-monitor-card" aria-labelledby="studentMonitorTitle">
+                <header class="monitor-card-header">
                     <div>
-                        <h5 class="mb-1">Student Monitor</h5>
-                        <div class="small text-muted">Monitor selected participants in real time</div>
+                        <h2 id="studentMonitorTitle" class="monitor-title">Student Monitor</h2>
+                        <p class="monitor-description">Monitor selected participants in real time.</p>
                     </div>
-                    <div class="text-end">
-                        <div class="d-inline-flex align-items-center gap-3">
-                            <div id="monitorStatusBadge" class="monitor-status-badge monitor-status-waiting">
-                                <span class="status-dot status-dot-waiting"></span>
-                                <span id="monitorStatusLabel" class="small fw-semibold">Waiting</span>
-                            </div>
-                            <div id="monitorTime" class="small monitor-status-time">—</div>
+                    <div class="monitor-header-meta">
+                        <div id="monitorStatusBadge" class="monitor-status-badge" role="status">
+                            <span class="monitor-status-dot" aria-hidden="true"></span>
+                            <span id="monitorStatusLabel">Waiting</span>
+                        </div>
+                        <div class="monitor-session-time" role="timer" aria-label="Session elapsed time">
+                            <i class="bi bi-clock" aria-hidden="true"></i>
+                            <span id="monitorTime">—</span>
                         </div>
                     </div>
-                </div>
-                <div id="batchProgressPanel" class="alert alert-info py-2 px-3 mb-3 d-none">
+                </header>
+                <div id="batchProgressPanel" class="monitor-batch-panel d-none">
                     <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
-                        <div>
+                        <div class="monitor-batch-summary">
                             <strong id="batchLabel">Batch 1 of 1</strong>
-                            <div id="batchProgressText" class="small">0 / 0 completed</div>
-                            <div id="overallProgressText" class="small">Overall: 0 / 0 students assessed</div>
+                            <span id="batchProgressText">0 / 0 completed</span>
+                            <span id="overallProgressText" hidden>Overall: 0 / 0 students assessed</span>
                         </div>
                         <div id="batchTransition" class="d-none text-end">
                             <div id="batchTransitionText" class="small mb-2"></div>
@@ -1158,61 +768,44 @@
                     <strong>CRLA Live Assessment Complete</strong>
                     <div class="small">All selected students have completed the reading assessment.</div>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-borderless table-monitor student-monitor-table mb-0 align-middle">
-                        <colgroup>
-                            <col class="student-monitor-col-student">
-                            <col class="student-monitor-col-status">
-                            <col class="student-monitor-col-progress">
-                            <col class="student-monitor-col-time">
-                            <col class="student-monitor-col-reading-level">
-                        </colgroup>
-                        <thead>
-                            <tr>
-                                <th class="student-cell">Student</th>
-                                <th>Status</th>
-                                <th>Progress</th>
-                                <th>Time</th>
-                                <th>Reading Level</th>
-                            </tr>
-                        </thead>
-                        <tbody id="studentsTableBody">
-                            {% if student_profiles %}
-                                {% for student in student_profiles %}
-                                <tr data-student-id="{{ student.id }}" data-last-name="{{ student.last_name|default:'' }}" data-first-name="{{ student.first_name|default:'' }}" data-middle-initial="{{ student.middle_initial|default:'' }}">
-                                    <td>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="avatar student-avatar rounded-circle bg-secondary text-white text-center">{{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}</div>
-                                            <div class="small">
-                                                <div class="fw-semibold">{{ student.crla_display_name|default:student.full_name }}</div>
-                                                <div class="text-muted small">{{ student.custom_id }}</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td><span class="status-pill status-pill-waiting" data-status-col="{{ student.id }}">Waiting</span></td>
-                                    <td>
-                                        <div class="progress progress-sm mb-1">
-                                            <div class="progress-bar" role="progressbar" style="width:0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-progress-bar="{{ student.id }}"></div>
-                                        </div>
-                                        <div class="small text-muted" data-progress-text="{{ student.id }}">--</div>
-                                    </td>
-                                    <td class="small text-muted" data-elapsed-col="{{ student.id }}">--</td>
-                                    <td class="small text-muted fw-semibold" data-reading-level-col="{{ student.id }}"></td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr class="text-muted"><td colspan="5" class="small text-center py-4">
-                                    <strong>No participants selected yet.</strong><br>
-                                    This Live CRLA session has no assigned participants.
-                                </td></tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
+                <table class="student-monitor-table" role="table" aria-labelledby="studentMonitorTitle">
+                    <colgroup>
+                        <col class="student-monitor-col-student">
+                        <col class="student-monitor-col-status">
+                        <col class="student-monitor-col-progress">
+                        <col class="student-monitor-col-time">
+                        <col class="student-monitor-col-reading-level">
+                        <col class="student-monitor-col-control">
+                    </colgroup>
+                    <thead role="rowgroup">
+                        <tr role="row">
+                            <th scope="col" role="columnheader">Student</th>
+                            <th scope="col" role="columnheader">Status</th>
+                            <th scope="col" role="columnheader">Progress</th>
+                            <th scope="col" role="columnheader" class="monitor-time-heading">Time</th>
+                            <th scope="col" role="columnheader">Reading Level</th>
+                            <th scope="col" role="columnheader" class="monitor-control-heading">Control</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentsTableBody" role="rowgroup">
+                        {% for student in student_profiles %}
+                            {% include "pabasa_app/partials/_live_crla_monitor_row.html" with student=student only %}
+                        {% endfor %}
+                        <tr id="monitorEmptyRow" role="row"{% if student_profiles %} hidden{% endif %}>
+                            <td colspan="6" role="cell" class="monitor-empty-cell">
+                                <strong>No participants selected yet.</strong>
+                                Students will appear here when they’re added to the session.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <template id="monitorRowTemplate">
+                    {% include "pabasa_app/partials/_live_crla_monitor_row.html" only %}
+                </template>
                 <nav id="batchViewPagination" class="batch-view-pagination d-none" aria-label="Student Monitor batches"></nav>
-            </div>
+            </section>
         </div>
-        <div class="col-12 col-lg-4 col-xl-3 order-2">
+        <div class="col-12 live-control-column order-2">
             <div class="card control-panel-card p-3 mb-2 sticky-top">
                 <div class="control-card-header d-flex align-items-center justify-content-between mb-2">
                     <div>
@@ -1517,7 +1110,7 @@
         return transition;
     }
         // Shared by the recovery component so destructive recovery actions
-        // use this page's accessible PABASA modal rather than confirm().
+        // use this page's accessible PAGBASA modal rather than confirm().
         window.PabasaLiveConfirm = showConfirm;
 
         function showAlert(title, message) {
@@ -1622,7 +1215,12 @@
 
     function setText(selector, text) {
         const el = document.querySelector(selector);
-        if (el) el.textContent = text;
+        if (el) updateText(el, text);
+    }
+
+    function updateText(element, value) {
+        const text = String(value ?? '');
+        if (element.textContent !== text) element.textContent = text;
     }
 
     function addActivity(message, when) {
@@ -1646,10 +1244,11 @@
     }
 
     function formatElapsed(seconds) {
-        if (!seconds) return '0s';
-        const m = Math.floor(seconds / 60);
-        const s = Math.floor(seconds % 60);
-        return m ? `${m}m ${s}s` : `${s}s`;
+        if (seconds == null || !Number.isFinite(Number(seconds)) || Number(seconds) < 0) return '—';
+        const elapsed = Math.floor(Number(seconds));
+        const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
+        const remainder = String(elapsed % 60).padStart(2, '0');
+        return `${minutes}:${remainder}`;
     }
 
 
@@ -1752,6 +1351,11 @@
     }
 
     function refreshLiveTimers() {
+        const endedAt = Date.parse(lastSessionState?.ends_at);
+        const end = Number.isFinite(endedAt) ? endedAt : Date.now();
+        const sessionElapsed = summarySessionStartAtMs == null ? null : Math.max(0, (end - summarySessionStartAtMs) / 1000);
+        setText('#monitorTime', formatElapsed(sessionElapsed));
+
         const sessionStatus = summaryCurrentStatus;
         if (sessionStatus === 'waiting') return;
 
@@ -1794,48 +1398,38 @@
     function setMonitorHeaderStatus(session) {
         const badge = document.getElementById('monitorStatusBadge');
         const label = document.getElementById('monitorStatusLabel');
-        const time = document.getElementById('monitorTime');
-        if (!badge || !label || !time) return;
+        if (!badge || !label) return;
 
         const statusKey = (session.status || 'waiting').toLowerCase();
         const selectedCount = session.student_count || 0;
         let display = 'Waiting';
         let className = 'monitor-status-waiting';
-        let dotClass = 'status-dot-waiting';
 
         if (statusKey === 'waiting' || statusKey === 'batch_loaded') {
             if (selectedCount > 0) {
                 display = statusKey === 'batch_loaded' ? 'Batch Loaded' : 'Ready';
                 className = 'monitor-status-ready';
-                dotClass = 'status-dot-ready';
             } else {
                 display = 'Waiting';
                 className = 'monitor-status-waiting';
-                dotClass = 'status-dot-waiting';
             }
         } else if (statusKey === 'countdown' || statusKey === 'started') {
             display = 'Live';
             className = 'monitor-status-live';
-            dotClass = 'status-dot-live';
         } else if (statusKey === 'paused') {
             display = 'Paused';
             className = 'monitor-status-paused';
-            dotClass = 'status-dot-paused';
         } else if (statusKey === 'ended' || statusKey === 'finished') {
             display = 'Finished';
             className = 'monitor-status-finished';
-            dotClass = 'status-dot-finished';
         } else if (statusKey === 'ready') {
             display = 'Ready';
             className = 'monitor-status-ready';
-            dotClass = 'status-dot-ready';
         }
 
-        badge.className = `monitor-status-badge ${className}`;
-        const dot = badge.querySelector('.status-dot');
-        if (dot) dot.className = `status-dot ${dotClass}`;
-        label.textContent = display;
-        time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const badgeClass = `monitor-status-badge ${className}`;
+        if (badge.className !== badgeClass) badge.className = badgeClass;
+        updateText(label, display);
     }
 
     function renderCountdownArea(session) {
@@ -1918,6 +1512,8 @@
 
     function updateFromState(session) {
         if (!session) return;
+        // A poll already in flight may return a snapshot from before a teacher action.
+        if (Number.isInteger(session.state_version) && session.state_version < lastSessionState?.state_version) return;
         if (session.status === 'ended' || session.status === 'cancelled') {
             stopPolling();
             setEndSessionLoading(false);
@@ -1963,6 +1559,7 @@
 
         summaryCountdownSeconds = Number.isFinite(Number(session.countdown_seconds)) ? Number(session.countdown_seconds) : null;
         summaryCurrentStatus = (session.status || 'waiting').toLowerCase();
+        refreshLiveTimers();
         renderCountdownArea(session);
 
         const statusKey = summaryCurrentStatus;
@@ -2118,6 +1715,55 @@
 
     document.getElementById('pauseBtn').addEventListener('click', () => sendAction('pause'));
     document.getElementById('resumeBtn').addEventListener('click', () => sendAction('resume'));
+    const studentPauseRequests = new Map();
+
+    function renderStudentControl(row, action) {
+        const button = row.querySelector('[data-student-pause]');
+        const pendingAction = studentPauseRequests.get(row.dataset.studentId);
+        const pending = Boolean(pendingAction);
+        const displayedAction = pendingAction || action || '';
+        if (button.dataset.action === displayedAction && button.hasAttribute('aria-busy') === pending) return;
+        const isResume = displayedAction === 'resume_student';
+        const label = pending ? (isResume ? 'Resuming' : 'Pausing') : (isResume ? 'Resume' : 'Pause');
+        const studentName = row.querySelector('.monitor-student-name').textContent.trim();
+
+        button.hidden = !displayedAction;
+        row.querySelector('.monitor-no-action').hidden = Boolean(displayedAction);
+        button.dataset.action = displayedAction;
+        if (pending) {
+            button.setAttribute('aria-disabled', 'true');
+            button.setAttribute('aria-busy', 'true');
+        } else {
+            button.removeAttribute('aria-disabled');
+            button.removeAttribute('aria-busy');
+        }
+        button.setAttribute('aria-label', `${label} ${studentName}`);
+        const icon = button.querySelector('i');
+        icon.hidden = pending;
+        icon.classList.toggle('bi-play-fill', isResume);
+        icon.classList.toggle('bi-pause-fill', !isResume);
+        button.querySelector('.monitor-button-spinner').hidden = !pending;
+        updateText(button.querySelector('[data-monitor-action-label]'), label);
+    }
+
+    document.getElementById('studentsTableBody').addEventListener('click', async (event) => {
+        const button = event.target.closest('[data-student-pause]');
+        const row = button?.closest('tr');
+        const studentId = row?.dataset.studentId;
+        const action = button?.dataset.action;
+        if (!studentId || !action || button.hidden || studentPauseRequests.has(studentId)) return;
+
+        studentPauseRequests.set(studentId, action);
+        renderStudentControl(row, action);
+        try {
+            await sendAction(action, { student_id: studentId });
+        } finally {
+            studentPauseRequests.delete(studentId);
+            const latest = lastSessionState;
+            const selected = latest?.student_ids?.map(String) || [];
+            if (latest) renderMonitorBatch(latest, selected);
+        }
+    });
     document.getElementById('closeAndSaveBtn').addEventListener('click', async () => {
         const confirmed = await showConfirm(
             'Save & Exit?',
@@ -2260,10 +1906,13 @@
     let selectionHydratedFromServer = false;
     let lastSessionState = null;
     let viewedBatch = 1;
+    let renderedBatchPagination = '';
     const monitorProfiles = new Map(Array.from(document.querySelectorAll('#studentsTableBody tr[data-student-id]'), (row) => [row.dataset.studentId, {
         last_name: row.dataset.lastName,
         first_name: row.dataset.firstName,
         middle_initial: row.dataset.middleInitial,
+        full_name: row.querySelector('.monitor-student-name').textContent.trim(),
+        custom_id: row.querySelector('.monitor-student-id').textContent.trim(),
     }]));
 
     function renderMonitorBatch(session, participantIds) {
@@ -2281,16 +1930,15 @@
             return Number(left) - Number(right);
         });
         updateMonitorRows(session, ids);
-        const tbody = document.getElementById('studentsTableBody');
-        ids.forEach((id) => {
-            const row = tbody?.querySelector(`tr[data-student-id="${id}"]`);
-            if (row) tbody.appendChild(row);
-        });
         const completed = ids.filter((id) => ['completed', 'skipped'].includes(String(session.student_states?.[String(id)]?.status || '').toLowerCase())).length;
         setText('#batchLabel', `Batch ${viewedBatch} of ${total}`);
         setText('#batchProgressText', `${completed} / ${ids.length} completed`);
+        document.getElementById('overallProgressText').hidden = total < 2;
         const pagination = document.getElementById('batchViewPagination');
         if (!pagination) return;
+        const paginationState = `${total}:${viewedBatch}`;
+        if (renderedBatchPagination === paginationState) return;
+        renderedBatchPagination = paginationState;
         pagination.classList.toggle('d-none', total < 2);
         if (total < 2) { pagination.replaceChildren(); return; }
         const button = (label, batch, active = false, ariaLabel = '') => {
@@ -2327,162 +1975,47 @@
         selectionHydratedFromServer = true;
     }
 
-    function getMonitorStudentProfile(studentId, session) {
-        if (session && Array.isArray(session.available_students)) {
-            const profile = session.available_students.find((item) => String(item.id) === String(studentId));
-            if (profile) {
-                return {
-                    id: profile.id,
-                    full_name: profile.crla_display_name || profile.full_name || 'Student',
-                    custom_id: profile.custom_id || '',
-                    grade: profile.grade || 'N/A',
-                };
-            }
+    function createMonitorRow(studentId) {
+        const profile = monitorProfiles.get(studentId) || participantData.find((item) => String(item.id) === studentId);
+        const name = profile?.crla_display_name || profile?.full_name || profile?.name || 'Student';
+        const first = profile?.first_name || name;
+        const last = profile?.last_name || name.split(/\s+/).at(-1);
+        const row = document.getElementById('monitorRowTemplate').content.firstElementChild.cloneNode(true);
+        row.dataset.studentId = studentId;
+        row.querySelector('.monitor-student-avatar').textContent = first.slice(0, 1) + last.slice(0, 1);
+        row.querySelector('.monitor-student-name').textContent = name;
+        row.querySelector('.monitor-student-id').textContent = profile?.custom_id || '';
+        for (const field of ['status-col', 'progress-bar', 'progress-text', 'elapsed-col', 'reading-level-col']) {
+            row.querySelector(`[data-${field}]`).setAttribute(`data-${field}`, studentId);
         }
-
-        const existingRow = document.querySelector(`tr[data-student-id="${studentId}"]`);
-        if (existingRow) {
-            const nameEl = existingRow.querySelector('.fw-semibold');
-            const idEl = existingRow.querySelector('.text-muted.small');
-            return {
-                id: studentId,
-                full_name: nameEl?.textContent?.trim() || 'Student',
-                custom_id: idEl?.textContent?.trim() || '',
-                grade: existingRow.querySelector('td .text-muted')?.textContent?.trim() || 'N/A',
-            };
-        }
-
-        const checkbox = document.querySelector(`.participant-checkbox[data-student-id="${studentId}"]`);
-        if (checkbox) {
-            const rowEl = checkbox.closest('.participant-row');
-            return {
-                id: studentId,
-                full_name: rowEl?.querySelector('.fw-semibold')?.textContent?.trim() || 'Student',
-                custom_id: checkbox.dataset.customId || checkbox.getAttribute('data-custom-id') || rowEl?.dataset.customId || '',
-                grade: rowEl?.querySelector('.text-muted')?.textContent?.trim() || 'N/A',
-            };
-        }
-
-        const participant = participantData.find((item) => String(item.id) === String(studentId));
-        if (participant) {
-            return {
-                id: participant.id,
-                full_name: participant.name,
-                custom_id: participant.custom_id || '',
-                grade: participant.grade || 'N/A',
-            };
-        }
-
-        return { id: studentId, full_name: 'Student', custom_id: '', grade: 'N/A' };
-    }
-
-    function ensureMonitorRow(studentId, session) {
-        const tbody = document.getElementById('studentsTableBody');
-        if (!tbody) return null;
-        const existingRow = tbody.querySelector(`tr[data-student-id="${studentId}"]`);
-        const profile = getMonitorStudentProfile(studentId, session);
-
-        if (existingRow) {
-            const nameEl = existingRow.querySelector('.fw-semibold');
-            const idEl = existingRow.querySelector('.text-muted.small');
-            if (nameEl) {
-                nameEl.textContent = profile.full_name || nameEl.textContent;
-            }
-            if (idEl) {
-                idEl.textContent = profile.custom_id || idEl.textContent || '';
-            }
-            return existingRow;
-        }
-
-        const initials = `${(profile.full_name || '').slice(0, 1)}${(profile.full_name || '').split(' ').slice(-1)[0].slice(0, 1)}`;
-        const tr = document.createElement('tr');
-        tr.setAttribute('data-student-id', studentId);
-        tr.innerHTML = `
-            <td>
-                <div class="d-flex align-items-center gap-2">
-                    <div class="avatar student-avatar rounded-circle bg-secondary text-white text-center">${initials}</div>
-                    <div class="small">
-                        <div class="fw-semibold">${profile.full_name}</div>
-                        <div class="text-muted small">${profile.custom_id || ''}</div>
-                    </div>
-                </div>
-            </td>
-            <td><span class="status-pill status-pill-waiting" data-status-col="${studentId}">Waiting</span></td>
-            <td>
-                <div class="progress progress-sm mb-1"><div class="progress-bar" role="progressbar" style="width:0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-progress-bar="${studentId}"></div></div>
-                <div class="small text-muted" data-progress-text="${studentId}">--</div>
-            </td>
-            <td class="small text-muted" data-elapsed-col="${studentId}">--</td>
-            <td class="small text-muted fw-semibold" data-reading-level-col="${studentId}"></td>
-        `;
-        tbody.appendChild(tr);
-        return tr;
+        return row;
     }
 
     function updateMonitorRows(session, selectedIds) {
         const tbody = document.getElementById('studentsTableBody');
-        if (!tbody) return;
-        const ids = Array.from(selectedIds || []);
-        if (ids.length === 0) {
-            tbody.innerHTML = '<tr class="text-muted"><td colspan="5" class="small text-center py-4"><strong>No participants selected yet.</strong><br>This Live CRLA session has no assigned participants.</td></tr>';
-            return;
+        const ids = Array.from(selectedIds || [], String);
+        const desiredIds = new Set(ids);
+        const existing = new Map();
+        for (const row of tbody.querySelectorAll('tr[data-student-id]')) {
+            if (desiredIds.has(row.dataset.studentId)) existing.set(row.dataset.studentId, row);
+            else row.remove();
         }
+        const empty = document.getElementById('monitorEmptyRow');
+        empty.hidden = ids.length > 0;
 
-        // Remove any placeholder rows before we render actual student rows.
-        tbody.querySelectorAll('tr').forEach((row) => {
-            if (!row.hasAttribute('data-student-id')) {
-                row.remove();
-            }
-        });
-
-        const existing = {};
-        tbody.querySelectorAll('tr[data-student-id]').forEach((row) => {
-            const id = row.getAttribute('data-student-id');
-            if (id) existing[id] = row;
-        });
-
-        const desiredSet = new Set(ids.map(String));
-        for (const id of Object.keys(existing)) {
-            if (!desiredSet.has(id)) {
-                existing[id].remove();
-                delete existing[id];
-            }
+        let nextRow = tbody.firstElementChild;
+        for (const id of ids) {
+            const row = existing.get(id) || createMonitorRow(id);
+            if (row !== nextRow) tbody.insertBefore(row, nextRow);
+            nextRow = row.nextElementSibling;
+            existing.set(id, row);
         }
-
-        ids.forEach((sid) => {
-            if (!existing[sid]) {
-                existing[sid] = ensureMonitorRow(sid, session);
-            }
-        });
 
         const states = (session && session.student_states) ? session.student_states : {};
+        const activeBatchStudentIds = new Set((session?.current_batch_student_ids || []).map(String));
         const isOfficialCrlaSession = session?.official_crla === true;
         const sessionEnded = String(session?.status || '').toLowerCase() === 'ended';
         const readingLevels = sessionEnded && session?.reading_levels ? session.reading_levels : {};
-        const setReadingLevel = (cell, value, calculating) => {
-            if (!cell) return;
-            cell.replaceChildren();
-            if (calculating) {
-                const label = document.createElement('span');
-                label.className = 'reading-level-calculating';
-                label.textContent = 'Calculating';
-                const dots = document.createElement('span');
-                dots.className = 'reading-level-dots';
-                dots.setAttribute('aria-hidden', 'true');
-                for (let index = 0; index < 3; index += 1) {
-                    const dot = document.createElement('span');
-                    dot.className = 'reading-level-dot';
-                    dot.textContent = '.';
-                    dots.appendChild(dot);
-                }
-                label.appendChild(dots);
-                cell.appendChild(label);
-                cell.setAttribute('aria-label', 'Calculating Reading Level');
-                return;
-            }
-            cell.textContent = value || 'Not Available';
-            cell.setAttribute('aria-label', value || 'Reading Level not available');
-        };
         const crlaStageLabels = {
             words: 'Words',
             rhymes: 'Rhymes',
@@ -2490,52 +2023,46 @@
             sentences_low: 'Sentences',
             sentences_high: 'Sentences',
             story: 'Story',
+            comprehension: 'Comprehension',
         };
         ids.forEach((sid) => {
-            const row = existing[sid];
-            if (!row) return;
-            const st = states[String(sid)] || {};
-            const statusCol = row.querySelector(`[data-status-col="${sid}"]`);
-            const progressBar = row.querySelector(`[data-progress-bar="${sid}"]`);
-            const progressText = row.querySelector(`[data-progress-text="${sid}"]`);
-            const elapsedCol = row.querySelector(`[data-elapsed-col="${sid}"]`);
-            const readingLevelCol = row.querySelector(`[data-reading-level-col="${sid}"]`);
-            setReadingLevel(readingLevelCol, readingLevels[String(sid)], !sessionEnded);
+            const row = existing.get(sid);
+            const st = states[sid] || {};
+            const statusCol = row.querySelector('[data-status-col]');
+            const progressBar = row.querySelector('[data-progress-bar]');
+            const progressText = row.querySelector('[data-progress-text]');
+            const elapsedCol = row.querySelector('[data-elapsed-col]');
+            const readingLevelCol = row.querySelector('[data-reading-level-col]');
+            readingLevelCol.classList.toggle('is-pending', !sessionEnded);
+            updateText(readingLevelCol, sessionEnded ? (readingLevels[sid] || 'Not Available') : 'Classifying..');
 
             const statusValue = (st.status || 'waiting').toLowerCase().replace(/\s+/g, '_');
-            const statusLabels = {
-                reading: 'Reading',
-                started: 'Reading',
-                in_progress: 'Reading',
-                waiting: 'Waiting',
-                ready: 'Ready',
-                finished: 'Finished',
-                completed: isOfficialCrlaSession ? 'Completed' : 'Finished',
-                paused: 'Paused',
-                needs_attention: 'Needs Attention',
-                disconnected: 'Offline',
-                offline: 'Offline',
+            const canPause = session?.status === 'started' && activeBatchStudentIds.has(sid)
+                && !['completed', 'finished', 'submitted', 'skipped', 'missed'].includes(statusValue)
+                && !['save_requested', 'saved'].includes(st.participation_status);
+            const action = canPause ? (st.paused_by_teacher ? 'resume_student' : 'pause_student') : null;
+            renderStudentControl(row, action);
+            const badges = {
+                reading: ['Reading', 'reading'],
+                started: ['Reading', 'reading'],
+                in_progress: ['Reading', 'reading'],
+                waiting: ['Waiting', 'neutral'],
+                ready: ['Ready', 'ready'],
+                finished: ['Finished', 'completed'],
+                completed: [isOfficialCrlaSession ? 'Completed' : 'Finished', 'completed'],
+                submitted: ['Submitted', 'completed'],
+                paused: ['Paused', 'paused'],
+                needs_attention: ['Needs Attention', 'needs-attention'],
+                disconnected: ['Offline', 'neutral'],
+                offline: ['Offline', 'neutral'],
+                skipped: ['Skipped', 'neutral'],
+                missed: ['Missed', 'neutral'],
             };
-            const statusClasses = {
-                reading: 'status-pill-reading',
-                started: 'status-pill-reading',
-                in_progress: 'status-pill-reading',
-                waiting: 'status-pill-waiting',
-                ready: 'status-pill-ready',
-                finished: 'status-pill-finished',
-                completed: 'status-pill-finished',
-                paused: 'status-pill-paused',
-                needs_attention: 'status-pill-needs_attention',
-                disconnected: 'status-pill-needs_attention',
-                offline: 'status-pill-needs_attention',
-            };
-            const statusLabel = statusLabels[statusValue] || `${statusValue.charAt(0).toUpperCase()}${statusValue.slice(1)}`;
-            const pillClass = statusClasses[statusValue] || 'status-pill-waiting';
-
-            if (statusCol) {
-                statusCol.className = `status-pill ${pillClass}`;
-                statusCol.textContent = statusLabel;
-            }
+            const [statusLabel, tone] = badges[statusValue] || [statusValue.replaceAll('_', ' '), 'neutral'];
+            const statusClass = `monitor-row-status monitor-status-${tone}`;
+            if (statusCol.className !== statusClass) statusCol.className = statusClass;
+            updateText(statusCol, statusLabel);
+            if (row.dataset.monitorStatus !== tone) row.dataset.monitorStatus = tone;
 
             const statusLower = statusValue;
             const rawProgress = Number(st.progress);
@@ -2575,68 +2102,30 @@
                     ? `${crlaStageLabel} · ${itemsCompleted} / ${itemsTotal}`
                     : '--';
 
-            if (statusLower === 'missed') {
-                if (progressBar) {
-                    progressBar.style.width = '0%';
-                    progressBar.setAttribute('aria-valuenow', 0);
-                }
-                if (progressText) progressText.textContent = '--';
-                if (elapsedCol) elapsedCol.textContent = '--';
-                return;
+            let displayedPercent = percent;
+            let displayedStage = isOfficialCrlaSession ? crlaProgressText : progressTextValue;
+            let displayedElapsed = formatElapsed(st.elapsed_seconds);
+
+            if (['missed', 'waiting', 'ready'].includes(statusLower)) {
+                displayedPercent = 0;
+                displayedStage = statusLower === 'ready' ? 'Ready to begin' : '—';
+                displayedElapsed = '—';
+            } else if (['completed', 'submitted', 'finished'].includes(statusLower)) {
+                displayedPercent = itemsTotal > 0 ? reportedPercent : (st.progress == null ? 100 : progressPercent);
+                displayedStage = statusLabel;
+            } else if (statusLower === 'skipped') {
+                displayedPercent = 0;
+                displayedStage = '—';
             }
 
-            if (statusLower === 'waiting') {
-                if (progressBar) {
-                    progressBar.style.width = `0%`;
-                    progressBar.setAttribute('aria-valuenow', 0);
-                }
-                if (progressText) progressText.textContent = '--';
-                if (elapsedCol) elapsedCol.textContent = '--';
-            } else if (statusLower === 'ready') {
-                if (progressBar) {
-                    progressBar.style.width = `0%`;
-                    progressBar.setAttribute('aria-valuenow', 0);
-                }
-                if (progressText) progressText.textContent = '0%';
-                if (elapsedCol) elapsedCol.textContent = '--';
-            } else if (statusLower === 'reading') {
-                if (progressBar) {
-                    progressBar.style.width = `${percent}%`;
-                    progressBar.setAttribute('aria-valuenow', percent);
-                }
-                if (progressText) {
-                    if (isOfficialCrlaSession && isStoryStage) {
-                        progressText.textContent = crlaProgressText;
-                    } else {
-                        progressText.textContent = isOfficialCrlaSession ? crlaProgressText : progressTextValue;
-                    }
-                }
-                if (elapsedCol) elapsedCol.textContent = st.elapsed_seconds ? formatElapsed(st.elapsed_seconds) : '--';
-            } else if (statusLower === 'paused' && isOfficialCrlaSession && isStoryStage) {
-                if (progressBar) {
-                    progressBar.style.width = `${percent}%`;
-                    progressBar.setAttribute('aria-valuenow', percent);
-                }
-                if (progressText) progressText.textContent = crlaProgressText;
-                if (elapsedCol) elapsedCol.textContent = st.elapsed_seconds ? formatElapsed(st.elapsed_seconds) : '--';
-            } else {
-                const finalPercent = st.items_total ? Math.round((Number(st.items_completed) || st.items_total) / (Number(st.items_total) || 1) * 100) : 100;
-                if (progressBar) {
-                    progressBar.style.width = `${finalPercent}%`;
-                    progressBar.setAttribute('aria-valuenow', finalPercent);
-                }
-                if (progressText) {
-                    progressText.textContent = isOfficialCrlaSession
-                        ? (statusLower === 'completed' ? 'Completed' : '--')
-                        : (st.items_total ? `${finalPercent}% • ${st.items_completed || 0} / ${st.items_total}` : `${finalPercent}%`);
-                }
-                if (elapsedCol) elapsedCol.textContent = st.elapsed_seconds ? formatElapsed(st.elapsed_seconds) : '--';
+            const barValue = Math.min(100, Math.max(0, displayedPercent));
+            if (progressBar.getAttribute('aria-valuenow') !== String(barValue)) {
+                progressBar.style.width = `${barValue}%`;
+                progressBar.setAttribute('aria-valuenow', barValue);
             }
+            updateText(progressText, displayedStage === '--' ? '—' : displayedStage);
+            updateText(elapsedCol, displayedElapsed);
         });
-    }
-
-    function updateMonitorForSelection() {
-        updateMonitorRows(lastSessionState, Array.from(selectedStudentIds));
     }
 
     function getParticipantData() {

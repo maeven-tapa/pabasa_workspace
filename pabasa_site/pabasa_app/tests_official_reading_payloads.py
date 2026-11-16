@@ -2,7 +2,8 @@ from types import SimpleNamespace
 
 from django.test import SimpleTestCase
 
-from pabasa_app.views import _official_reading_item_sections
+from pabasa_app.management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
+from pabasa_app.views import _official_reading_item_sections, _official_reading_launch_data
 
 
 class OfficialReadingPayloadTests(SimpleTestCase):
@@ -78,9 +79,27 @@ class OfficialReadingPayloadTests(SimpleTestCase):
             ],
         )
 
-    def test_official_crla_story_qas_are_seeded_in_pairs_by_story(self):
-        from pabasa_app.management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
+    def test_official_crla_story_order_includes_legacy_eosy_material(self):
+        expected_titles = ["Isang Kakaibang Araw", "Ang Pagong at ang Kuneho"]
+        for key, spec in OFFICIAL_CRLA_CONTENT.items():
+            with self.subTest(assessment=key):
+                self.assertEqual([passage["title"] for passage in spec["passages"]], expected_titles)
 
+        eosy = OFFICIAL_CRLA_CONTENT["eosy_crla_posttest"]
+        legacy_passages = list(reversed(eosy["passages"]))
+        material = SimpleNamespace(
+            id=1, title=eosy["title"], code=eosy["code"], language="Filipino",
+            item_type="paragraph", status="published", updated_at=None,
+            system_assessment_key="eosy_crla_posttest", assessment_kind="crla",
+            content_json={"passages": legacy_passages, "story_qas": eosy["story_qas"]},
+        )
+        launch = _official_reading_launch_data(material)
+        self.assertEqual(launch["passages"], eosy["passages"])
+        self.assertEqual(launch["stories"], eosy["passages"])
+        self.assertEqual(launch["story_qas"], eosy["story_qas"])
+        self.assertEqual([p["title"] for p in material.content_json["passages"]], list(reversed(expected_titles)))
+
+    def test_official_crla_story_qas_are_seeded_in_pairs_by_story(self):
         bosy_qas = OFFICIAL_CRLA_CONTENT["bosy_crla_pretest"]["story_qas"]
         eosy_qas = OFFICIAL_CRLA_CONTENT["eosy_crla_posttest"]["story_qas"]
 

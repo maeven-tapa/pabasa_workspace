@@ -120,7 +120,7 @@ class _NumberedCanvas(Canvas):
             self.line(38, 38, 70, 38)
             self.setFont(bold, 7.4)
             self.setFillColor(NAVY)
-            self.drawString(38, 24, 'PABASA')
+            self.drawString(38, 24, 'PAGBASA')
             self.setFont(regular, 7.4)
             self.setFillColor(MUTED)
             self.drawString(80, 24, 'CONFIDENTIAL  /  School leadership report')
@@ -267,7 +267,7 @@ class _Design:
             else:
                 canvas.setFillColor(BLUE)
                 canvas.setFont(self.fonts[2], 18)
-                canvas.drawString(w - 130, h - 53, 'PABASA')
+                canvas.drawString(w - 130, h - 53, 'PAGBASA')
             canvas.setFillColor(AMBER)
             canvas.setFont(self.fonts[1], 8)
             canvas.drawString(38, h - 105 - extra, 'PRINCIPAL\'S EXECUTIVE REPORT')
@@ -281,7 +281,7 @@ class _Design:
         else:
             canvas.setFillColor(NAVY)
             canvas.setFont(self.fonts[2], 15)
-            canvas.drawString(38, h - 36, 'PABASA')
+            canvas.drawString(38, h - 36, 'PAGBASA')
             canvas.setFillColor(MUTED)
             canvas.setFont(self.fonts[0], 8.5)
             canvas.drawRightString(w - 38, h - 35, 'SCHOOL READING PERFORMANCE  /  PRINCIPAL REPORT')
@@ -413,8 +413,8 @@ def build_principal_pdf(snapshot, report_type, headers, rows, logo_path=None):
     detail = _Design(snapshot, detail_page, logo_path)
     output = BytesIO()
     document = BaseDocTemplate(output, pagesize=page, leftMargin=38, rightMargin=38,
-        topMargin=64, bottomMargin=52, title='PABASA | School Reading Performance Report',
-        author='PABASA', subject=f'{REPORT_TYPES[report_type]} | Principal school monitoring')
+        topMargin=64, bottomMargin=52, title='PAGBASA | School Reading Performance Report',
+        author='PAGBASA', subject=f'{REPORT_TYPES[report_type]} | Principal school monitoring')
     first = Frame(38, 52, d.width, page[1] - 260 - d.hero_extra, leftPadding=0, rightPadding=0,
                   topPadding=0, bottomPadding=0, id='executive')
     later = Frame(38, 52, detail.width, detail_page[1] - 116, leftPadding=0, rightPadding=0,

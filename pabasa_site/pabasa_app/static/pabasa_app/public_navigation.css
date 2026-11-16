@@ -50,7 +50,7 @@ body:has(.contextual-section-links) .info-hero[id], body:has(.contextual-section
     .public-site-footer { padding-top: 2.75rem; }
 }
 
-/* One shared secondary-row contract for About and What Is PABASA?. */
+/* One shared secondary-row contract for About and What Is PAGBASA?. */
 .public-secondary-nav { box-sizing: border-box; }
 .public-secondary-nav .nav-link-modern,
 .public-secondary-nav .nav-link-modern:not(.active) {

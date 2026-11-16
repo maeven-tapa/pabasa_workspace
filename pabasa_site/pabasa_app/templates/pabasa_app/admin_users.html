@@ -96,7 +96,7 @@
                 {% for user in users %}
                 <tr class="admin-user-row">
                     <td data-label="Name"><span class="fw-bold d-block">{{ user.first_name }}{% if user.middle_initial %} {{ user.middle_initial }}.{% endif %} {{ user.last_name }}{% if user.suffix %} {{ user.suffix }}{% endif %}</span></td>
-                    <td data-label="PABASA-ID">{{ user.custom_id }}</td>
+                    <td data-label="PAGBASA-ID">{{ user.custom_id }}</td>
                     <td data-label="Email">{{ user.email }}</td>
                     <td data-label="Category"><div>
                         <span class="badge rounded-pill admin-user-badge admin-category-{{ user.role|lower }}">{{ user.role|title }}</span>

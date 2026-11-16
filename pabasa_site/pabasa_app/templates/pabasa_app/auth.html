@@ -174,7 +174,7 @@
 {% block content %}
 <div class="login-loading-screen" id="loginLoadingScreen" aria-live="polite" aria-label="Loading dashboard">
     <div class="login-loading-content">
-        <img class="login-loading-logo" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA">
+        <img class="login-loading-logo" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PAGBASA">
         <div class="login-loading-spinner" role="status" aria-label="Loading"></div>
     </div>
 </div>
@@ -193,7 +193,7 @@
                 <form id="loginForm" method="post" class="d-grid gap-3">
                     {% csrf_token %}
                     <div>
-                        <label class="form-label">PABASA ID</label>
+                        <label class="form-label">PAGBASA ID</label>
                         <input
                             class="form-control"
                             id="pabasaId"
@@ -300,7 +300,7 @@
             event.preventDefault();
             
             if (!pabasaIdPattern.test(pabasaId.value)) {
-                pabasaId.setCustomValidity("PABASA ID must be in the form TCH-1234, G1-1234, G2-1234, G3-1234, G4-1234, G5-1234, G6-1234, or PRN-SES-001.");
+                pabasaId.setCustomValidity("PAGBASA ID must be in the form TCH-1234, G1-1234, G2-1234, G3-1234, G4-1234, G5-1234, G6-1234, or PRN-SES-001.");
                 pabasaId.reportValidity();
                 return;
             }
