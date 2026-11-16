@@ -522,6 +522,8 @@
         let speechFrameCount = 0;
         let speechChunkStartedAt = 0;
         let crlaProcessingAudioActive = false;
+        let crlaProcessingAudioFinished = false;
+        let crlaProcessingAudioQueue = 0;
         // Multisyllable words need the same uninterrupted capture window as
         // longer reading modes. A short fixed chunk can stop after the first
         // syllable, and capture is paused while that chunk is sent to STT.
@@ -4045,18 +4047,33 @@
             helper.hidden = false;
             helper.classList.toggle("is-status-active", animated);
             helper.classList.toggle("is-status-processing", processing);
-            if (processingOverlay) processingOverlay.hidden = !processing;
             if (processingAudio) {
-                if (processing && !crlaProcessingAudioActive) {
+                if (crlaProcessingAudioQueue > 0 && !crlaProcessingAudioActive) {
+                    crlaProcessingAudioQueue -= 1;
                     crlaProcessingAudioActive = true;
+                    crlaProcessingAudioFinished = false;
                     processingAudio.currentTime = 0;
-                    processingAudio.play().catch(() => {});
-                } else if (!processing && crlaProcessingAudioActive) {
-                    crlaProcessingAudioActive = false;
-                    processingAudio.pause();
-                    processingAudio.currentTime = 0;
+                    processingAudio.onended = () => {
+                        crlaProcessingAudioActive = false;
+                        crlaProcessingAudioFinished = true;
+                        renderOfficialCrlaStatus();
+                    };
+                    processingAudio.onerror = () => {
+                        crlaProcessingAudioActive = false;
+                        crlaProcessingAudioFinished = true;
+                        renderOfficialCrlaStatus();
+                    };
+                    processingAudio.play().catch(() => {
+                        crlaProcessingAudioActive = false;
+                        crlaProcessingAudioFinished = true;
+                        renderOfficialCrlaStatus();
+                    });
                 }
             }
+            const processingAudioWaiting = Boolean(
+                crlaProcessingAudioActive || crlaProcessingAudioQueue > 0
+            );
+            if (processingOverlay) processingOverlay.hidden = !(processing || processingAudioWaiting);
             if (text) {
                 if (text.dataset.waveStatus !== status) {
                     text.replaceChildren();
@@ -4077,6 +4094,12 @@
                 }
             }
             if (dots) dots.setAttribute("aria-hidden", "true");
+        }
+
+        async function waitForOfficialCrlaProcessingAudio() {
+            while (crlaProcessingAudioActive || crlaProcessingAudioQueue > 0) {
+                await new Promise((resolve) => window.setTimeout(resolve, 40));
+            }
         }
 
         function syncPhraseMicrophoneButton() {
@@ -4187,6 +4210,7 @@
                     if (crlaLiveSpeech !== stream || !sameCrlaStreamItem(itemContext)) return;
                     const context = currentSpeechContext();
                     isSendingChunk = true;
+                    if (isOfficialAssessmentLaunch && isCrla) crlaProcessingAudioQueue += 1;
                     hasHeardSinceLastChunk = false;
                     if (currentStoryState === "story_reading") storyReadingHasAttempted = true;
                     updateAssessmentNavigationButtons();
@@ -4221,6 +4245,7 @@
                             syllableStitchingContextAt = Date.now();
                         } else resetSyllableStitching();
                         if (data.transcript) appendRawMicInput(window.SpeechDebug.format(data));
+                        if (isOfficialAssessmentLaunch && isCrla) await waitForOfficialCrlaProcessingAudio();
                         handleSpeechResult(data, context);
                         evaluated = true;
                     } finally {
@@ -5165,6 +5190,7 @@
                 updateSpeechProcessingControls();
                 return;
             }
+            if (isOfficialAssessmentLaunch && isCrla) crlaProcessingAudioQueue += 1;
             isSendingChunk = true;
             if (isCrla) setSpeechStatus("Processing...", "Transcribing your speech and checking your reading. Please wait.");
             syncStoryReadingTimerProcessing();
@@ -5305,6 +5331,7 @@
                 if (data.transcript) {
                     appendRawMicInput(window.SpeechDebug.format(data));
                 }
+                if (isOfficialAssessmentLaunch && isCrla) await waitForOfficialCrlaProcessingAudio();
                 handleSpeechResult(data, context);
             } catch (error) {
                 console.warn("PABASA: Reading transcription failed", error);

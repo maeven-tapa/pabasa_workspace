@@ -1,0 +1,39 @@
+# One GitHub main-branch trigger runs this pipeline and reports its result.
+steps:
+  - id: Build
+    name: gcr.io/cloud-builders/docker
+    args: [build, -t, '${_IMAGE}:$COMMIT_SHA', ., -f, Dockerfile]
+  - id: BuildChecks
+    name: gcr.io/cloud-builders/docker
+    args: [run, --rm, '--entrypoint=python', '${_IMAGE}:$COMMIT_SHA', tools/check_build.py]
+  - id: Push
+    name: gcr.io/cloud-builders/docker
+    args: [push, '${_IMAGE}:$COMMIT_SHA']
+  - id: MigrationReadinessGate
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        exec "$$(gcloud info --format='value(basic.python_location)')" tools/cloud_release_gate.py \
+          --project "$PROJECT_ID" --region "$_DEPLOY_REGION" --service "$_SERVICE_NAME" \
+          --image "${_IMAGE}:$COMMIT_SHA" --apply-migrations \
+          --job "pabasa-release-$SHORT_SHA" --image-file /workspace/pabasa-release-image.txt
+  - id: DeployAndVerify
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        exec "$$(gcloud info --format='value(basic.python_location)')" tools/deploy_checked_release.py \
+          --project "$PROJECT_ID" --region "$_DEPLOY_REGION" --service "$_SERVICE_NAME" \
+          --image-file /workspace/pabasa-release-image.txt --commit "$COMMIT_SHA" --build "$BUILD_ID"
+images: ['${_IMAGE}:$COMMIT_SHA']
+options:
+  logging: CLOUD_LOGGING_ONLY
+  dynamicSubstitutions: true
+substitutions:
+  _IMAGE: asia-southeast1-docker.pkg.dev/pabasa-web/cloud-run-source-deploy/pabasa_workspace/pabasa-workspace-deployment--trigger
+  _DEPLOY_REGION: asia-southeast1
+  _SERVICE_NAME: pabasa-workspace-deployment--trigger
+timeout: 1800s
